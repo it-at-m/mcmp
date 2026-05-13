@@ -1,0 +1,33 @@
+All Licenses for the pictures used in the project, including the ones created with AI, are listed below. The information includes the license URL and the file URL for each picture.
+Timestamp: 13.05.2026
+
+almalinux.png
+    License Url: https://github.com/AlmaLinux/wiki/blob/master/LICENSE
+    File Url: https://github.com/AlmaLinux/wiki/blob/1bfd66c690f81d467edbb900ddcacfff11c9414d/docs/.vuepress/public/images/logo.png
+centos.ico:
+    License Url: https://www.centos.org/legal/trademarks/
+    File Url: https://gitlab.com/redhat/centos-stream/rpms/centos-logos/-/blob/9431905e207e037a86316048dce2d449bcef777f/fedora-logo.ico
+checkmk-icon-green.svg:
+    License Url: https://checkmk.com/company/brand-assets
+    File Url: https://checkmk.com/download_file/view/d4fe62e9-90d6-402b-95b8-e5e9d3fce2ac/292
+commingSoon.png:
+    Created with AI
+debian.svg:
+    License Url: https://www.debian.org/logos/index.de.html
+    File Url: https://www.debian.org/logos/openlogo-nd.svg
+linux.svg:
+    License Url: Copyright Larry Ewing (Original http://isc.tamu.edu/~lewing/linux/) Simon Budig (SVG version https://www.home.unix-ag.org/simon/penguin/)
+    File Url: https://www.home.unix-ag.org/simon/penguin/penguin.svg
+logo.png:
+    Copyright IT@M
+MCMP_transparent.png:
+    Copyright IT@M
+MCMP_transparent_black_text.png
+    Copyright IT@M
+opensuse.svg:
+    License Url: https://en.opensuse.org/openSUSE:Artwork_brand
+    File Url: https://github.com/openSUSE/artwork/blob/9f6473fd7928ff2e998cf681306d554ddd58b153/logos/official/logo-color.svg
+other.svg:
+    No Trademark
+wartung.png:
+    Created with AI

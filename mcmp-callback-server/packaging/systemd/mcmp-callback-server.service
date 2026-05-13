@@ -1,0 +1,36 @@
+[Unit]
+Description=MCMP Callback Server
+After=syslog.target network-online.target postgresql.service
+Wants=syslog.target network-online.target postgresql.service
+
+[Service]
+Type=simple
+User=middleware
+Group=middleware
+WorkingDirectory=/opt/lhm/mcmp-callback-server
+ExecStart=/opt/lhm/mcmp-callback-server/mcmp-callback-server
+Restart=always
+RestartSec=5
+StartLimitInterval=0
+StartLimitBurst=5
+LimitNOFILE=65536
+StandardOutput=journal
+StandardError=journal
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ProtectControlGroups=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectHostname=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target

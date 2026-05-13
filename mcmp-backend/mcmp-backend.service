@@ -1,0 +1,28 @@
+[Unit]
+Description=Spring Boot Application - mcmp-backend
+After=syslog.target
+After=network.target
+
+[Service]
+# Benutzer und Gruppe festlegen, unter denen der Service läuft
+User=middleware
+Group=middleware
+
+# Verzeichnisse definieren (Wo sich die JAR-Datei befindet)
+WorkingDirectory=/opt/lhm/mcmp-backend
+
+# Der Befehl zum Starten der Spring Boot Anwendung
+ExecStart=/usr/bin/java -jar -Dspring.profiles.active=local /opt/lhm/mcmp-backend/mcmp-backend.jar
+
+# Neustartverhalten bei Fehlern festlegen
+Restart=always
+RestartSec=10
+
+# Maximale Anzahl der Neustartversuche
+StartLimitInterval=0
+StartLimitBurst=5
+
+[Install]
+# Ermöglicht es, den Service beim Systemstart zu aktivieren
+WantedBy=multi-user.target
+

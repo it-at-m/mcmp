@@ -1,0 +1,13 @@
+[GENERAL]
+Debug = true
+
+[PATCHNIGHT]
+Hostname = 'patchnight.example.com'
+
+[MCMP]
+OAuthUrl          = 'http://kubernetes.docker.internal:8100/auth'
+OAuthRealm        = 'local_realm'
+OAuthClientId     = 'local'
+OAuthClientSecret = 'client_secret'
+ApiEndpoint       = 'http://localhost:8083/clients/eai-backend-service/patchnight/update'
+

@@ -1,0 +1,18 @@
+[GENERAL]
+Passphrase = 'enter a passphrase here with which all passwords will be encrypted'
+Debug      = false
+
+[DATABASE]
+DSN               = 'host=/run/postgresql dbname=cmp sslmode=disable TimeZone=Europe/Berlin'
+Username          = 'example'
+EncryptedPassword = '****************'
+
+[[BAAS]]
+Enabled           = true
+Fqdn              = 'dev-baas.example.com'
+Cloud             = 'vcenterc.example.com'
+
+[[BAAS]]
+Enabled           = true
+Fqdn              = 'test-baas.example.com'
+Cloud             = 'vcenterk.example.com'

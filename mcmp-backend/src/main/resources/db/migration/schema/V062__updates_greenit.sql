@@ -1,0 +1,9 @@
+SET client_encoding = 'UTF8';
+
+ALTER TABLE cmp.job ALTER COLUMN user_id DROP NOT NULL;
+ALTER TABLE cmp.job DROP CONSTRAINT fk_user_id;
+ALTER TABLE cmp.job ADD CONSTRAINT fk_user_id FOREIGN KEY (user_id) REFERENCES cmp."user"(id) ON DELETE SET NULL;
+ALTER TABLE cmp.job ADD COLUMN is_low_priority BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE cmp.action ADD COLUMN is_low_priority BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE cmp.server ADD COLUMN is_power_off_change_pending BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE cmp.server ADD COLUMN is_rightsizing_change_pending BOOLEAN NOT NULL DEFAULT FALSE;

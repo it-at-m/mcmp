@@ -1,0 +1,44 @@
+# =============================================================================
+# Logging Configuration
+# =============================================================================
+[LOGGING]
+Level      = "INFO"   # Log level: DEBUG, INFO, WARN, ERROR
+Output     = "file"   # Output destination: console, file, both
+Format     = "plain"  # Output format: text, json, plain
+Filename   = "/var/log/mcmp-eai-checkmk/mcmp-eai-checkmk.log"
+MaxSize    = 10       # Maximum file size in MB before rotation
+MaxBackups = 7        # Number of old log files to retain
+MaxAge     = 30       # Maximum age in days for log files
+Compress   = true     # Compress rotated log files
+
+# =============================================================================
+# CheckMK Sources
+# Multiple CheckMK systems can be configured using [[CHECKMK]] sections
+# =============================================================================
+
+# Primary CheckMK
+[[CHECKMK]]
+Hostname  = "checkmk1.example.com"
+Username  = "<your-username>"
+Password  = "<your-password>"
+Enabled   = true
+VerifyTLS = true
+
+# Secondary CheckMK
+[[CHECKMK]]
+Hostname  = "checkmk2.example.com"
+Username  = "<your-username>"
+Password  = "<your-password>"
+Enabled   = false
+VerifyTLS = true
+
+# =============================================================================
+# MCMP API Configuration
+# OAuth2 client credentials for authentication with the MCMP backend
+# =============================================================================
+[MCMP]
+OAuthUrl          = "https://keycloak.example.com/auth"
+OAuthRealm        = "mcmp"
+OAuthClientId     = "<your-client-id>"
+OAuthClientSecret = "<your-client-secret>"
+ApiEndpoint       = "https://mcmp-api.example.com/api/checkmk/insert"

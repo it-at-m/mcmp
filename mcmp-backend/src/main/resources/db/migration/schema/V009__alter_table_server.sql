@@ -1,0 +1,14 @@
+SET client_encoding = 'UTF8';
+
+ALTER TABLE cmp.server RENAME COLUMN "linux" TO "role_linux";
+ALTER TABLE cmp.server RENAME COLUMN "windows" TO "role_windows";
+ALTER TABLE cmp.server RENAME COLUMN "oracle" TO "role_oracle";
+ALTER TABLE cmp.server RENAME COLUMN "non_oracle" TO "role_non_oracle";
+ALTER TABLE cmp.server ADD COLUMN "db_oracle" BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE cmp.server ADD COLUMN "db_mariadb" BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE cmp.server ADD COLUMN "db_hana" BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE cmp.server ADD COLUMN "db_mysql" BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE cmp.server ADD COLUMN "db_mssql" BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE cmp.server ADD COLUMN "db_postgres" BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE cmp.server ADD COLUMN "db_mongodb" BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE cmp.server ADD COLUMN "db_adabas" BOOLEAN NOT NULL DEFAULT FALSE;

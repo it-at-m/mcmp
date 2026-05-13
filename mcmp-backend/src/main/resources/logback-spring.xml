@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- The possibly existing properties concerning the "logging.level" in the application.yml
+     have priority over the log level maintained in this file.  -->
+<configuration>
+
+    <springProperty scope="context" name="springAppName" source="spring.application.name"/>
+    <springProperty scope="context" name="siemSyslogHost" source="siem.syslog.host" defaultValue="localhost"/>
+    <springProperty scope="context" name="siemSyslogPort" source="siem.syslog.port" defaultValue="514"/>
+
+    <springProfile name="local | test | docker | podman">
+
+        <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>logs/mcmp-backend.log</file>
+            <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+                <fileNamePattern>logs/mcmp-backend-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+                <cleanHistoryOnStart>true</cleanHistoryOnStart>
+                <maxFileSize>100MB</maxFileSize>
+                <maxHistory>30</maxHistory>
+                <totalSizeCap>1GB</totalSizeCap>
+            </rollingPolicy>
+            <encoder>
+                <pattern>%date{yyyy.MM.dd HH:mm:ss.SSS} | ${springAppName} | TraceId: %X{traceId:-} | SpanId: %X{spanId:-}] | %level | [%thread] | %logger{0} | [%file : %line] - %msg%n</pattern>
+            </encoder>
+        </appender>
+
+        <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <!-- @formatter:off -->
+                <pattern>
+                    %date{yyyy.MM.dd HH:mm:ss.SSS} | ${springAppName} | TraceId: %X{traceId:-} | SpanId: %X{spanId:-}] | %level | [%thread] | %logger{0} | [%file : %line] - %msg%n
+                </pattern>
+                <!-- @formatter:on -->
+            </encoder>
+        </appender>
+
+        <!-- Logger -->
+        <logger name="de.muenchen.mcmp"
+                level="debug"
+                additivity="false">
+            <appender-ref ref="STDOUT" />
+        </logger>
+
+        <logger name="de.muenchen.mcmp.configuration.nfcconverter.NfcHelper"
+                level="info"
+                additivity="false">
+            <appender-ref ref="STDOUT" />
+        </logger>
+
+        <logger name="org.springframework.cache"
+                level="trace"
+                additivity="false">
+            <appender-ref ref="STDOUT" />
+        </logger>
+
+        <logger name="org.springframework.web"
+                level="debug"
+                additivity="false">
+            <appender-ref ref="STDOUT" />
+        </logger>
+
+        <!-- Unterdrücke komplett DispatcherServlet Exception-Logs -->
+        <logger name="org.springframework.web.servlet.DispatcherServlet" level="OFF" />
+        <logger name="org.apache.catalina.core.ContainerBase.[Tomcat].[localhost].[/].[dispatcherServlet]" level="OFF" />
+
+        <logger name="org.hibernate.SQL" level="OFF" />
+        <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="OFF" />
+        <logger name="org.hibernate.orm.jdbc.bind" level="OFF" />
+
+        <!-- Logger usage -->
+        <root level="info">
+            <appender-ref ref="STDOUT" />
+            <appender-ref ref="FILE" />
+        </root>
+    </springProfile>
+
+    <springProfile name="!local &amp; !test &amp; !docker &amp; !podman">
+
+        <appender name="JSON_STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+                <throwableConverter
+                    class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
+                    <!-- default max size of one log line in docker is 16kb - UTF8 ~ 1 Character = 1 Byte -->
+                    <!-- therefore limit stack_traces to a maximum of 8192 characters (to leave room for the rest of the message) -->
+                    <maxLength>8192</maxLength>
+                    <exclude>sun\.reflect\..*\.invoke.*</exclude>
+                    <exclude>net\.sf\.cglib\.proxy\.MethodProxy\.invoke</exclude>
+                    <rootCauseFirst>true</rootCauseFirst>
+                </throwableConverter>
+            </encoder>
+        </appender>
+
+        <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>logs/mcmp-backend.log</file>
+            <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+                <fileNamePattern>logs/mcmp-backend-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+                <cleanHistoryOnStart>true</cleanHistoryOnStart>
+                <maxFileSize>100MB</maxFileSize>
+                <maxHistory>30</maxHistory>
+                <totalSizeCap>3GB</totalSizeCap>
+            </rollingPolicy>
+            <encoder>
+                <pattern>%date{yyyy.MM.dd HH:mm:ss.SSS} | ${springAppName} | TraceId: %X{traceId:-} | SpanId: %X{spanId:-}] | %level | [%thread] | %logger{0} | [%file : %line] - %msg%n</pattern>
+            </encoder>
+        </appender>
+
+        <!-- SIEM/CEF Syslog Appender -->
+        <appender name="SIEM_SYSLOG" class="ch.qos.logback.classic.net.SyslogAppender">
+            <syslogHost>${siemSyslogHost}</syslogHost>
+            <port>${siemSyslogPort}</port>
+            <facility>USER</facility>
+            <suffixPattern>%msg</suffixPattern>
+        </appender>
+
+        <!-- SIEM File Appender -->
+        <appender name="SIEM_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>logs/siem-cef.log</file>
+            <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+                <fileNamePattern>logs/siem-cef-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+                <cleanHistoryOnStart>true</cleanHistoryOnStart>
+                <maxFileSize>100MB</maxFileSize>
+                <maxHistory>30</maxHistory>
+                <totalSizeCap>3GB</totalSizeCap>
+            </rollingPolicy>
+            <encoder>
+                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %msg%n</pattern>
+            </encoder>
+        </appender>
+
+        <appender name="SIEM_DEBUG" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>[SIEM-DEBUG] %msg%n</pattern>
+            </encoder>
+        </appender>
+
+        <logger name="SIEM.CEF" level="INFO" additivity="false">
+            <appender-ref ref="SIEM_SYSLOG" />
+            <appender-ref ref="SIEM_FILE" />
+        </logger>
+
+        <!-- Unterdrücke komplett DispatcherServlet Exception-Logs -->
+        <logger name="org.springframework.web.servlet.DispatcherServlet" level="OFF" />
+        <logger name="org.apache.catalina.core.ContainerBase.[Tomcat].[localhost].[/].[dispatcherServlet]" level="OFF" />
+
+        <root level="info">
+            <appender-ref ref="FILE" />
+        </root>
+    </springProfile>
+</configuration>

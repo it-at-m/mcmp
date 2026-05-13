@@ -1,0 +1,51 @@
+# =============================================================================
+# Logging Configuration
+# =============================================================================
+[LOGGING]
+Level      = "INFO"   # Log level: DEBUG, INFO, WARN, ERROR
+Output     = "file"   # Output destination: console, file, both
+Format     = "plain"  # Output format: text, json, plain
+Filename   = "/var/log/mcmp-eai-olvm.log"
+MaxSize    = 10       # Maximum file size in MB before rotation
+MaxBackups = 7        # Number of old log files to retain
+MaxAge     = 30       # Maximum age in days for log files
+Compress   = true     # Compress rotated log files
+
+# =============================================================================
+# OLVM API Configuration
+# =============================================================================
+[[OLVM]]
+Hostname          = 'olvm1.example.com'
+Enabled           = true
+OAuthUrl          = 'https://olvm1.example.org/ovirt-engine/sso'
+OAuthUsername     = 'olvm_user'
+OAuthPassword     = '*****'
+OAuthGrantType    = 'password'
+OAuthScope        = 'ovirt-app-api'
+
+[[OLVM]]
+Hostname          = 'olvm2.example.com'
+Enabled           = false
+OAuthUrl          = 'https://olvmp002.example.org/ovirt-engine/sso'
+OAuthUsername     = 'olvm_user'
+OAuthPassword     = '*****'
+OAuthGrantType    = 'password'
+OAuthScope        = 'ovirt-app-api'
+
+# =============================================================================
+# MCMP API Configuration
+# =============================================================================
+[[MCMP]]
+OAuthUrl          = 'http://kubernetes1.docker.internal:8100/auth'
+OAuthRealm        = 'local_realm'
+OAuthClientId     = 'local'
+OAuthClientSecret = 'client_secret'
+ApiEndpoint       = 'http://mcmp1.example.org/clients/eai-backend-service/ucsm/import'
+
+[[MCMP]]
+OAuthUrl          = 'http://kubernetes2.docker.internal:8100/auth'
+OAuthRealm        = 'local_realm'
+OAuthClientId     = 'local'
+OAuthClientSecret = 'client_secret'
+ApiEndpoint       = 'https://mcmp2.example.org/clients/eai-backend-service/ucsm/import'
+

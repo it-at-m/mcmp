@@ -1,0 +1,42 @@
+[GENERAL]
+Debug                      = false
+CallbackUrlChange          = 'https://mcmp.example.org:8080/callback/change/'
+CallbackUrlQuickDiscovery  = 'https://mcmp.example.org:8080/callback/quickdiscovery/'
+DefaultServiceNowUserSysId = '1234567890abcdef1234567890abcdef'
+MaxChangeRequestsPerMinute = 20
+
+[DATABASE]
+DSN        = 'host=/run/postgresql dbname=cmp sslmode=disable TimeZone=Europe/Berlin'
+Username   = 'cmp'
+Password   = '********************'
+Passphrase = 'enter a passphrase here with which all passwords will be encrypted'
+
+[FOREMAN]
+Username        = 'user'
+Password        = '********************'
+ApiEndpoint     = 'https://foreman.example.com/api'
+
+[SMTP]
+Server        = 'mail.example.org'
+Port          = 25
+Username      = 'no-reply-mcmp@example.org'
+Password      = '********************'
+ToNonOSS      = 'non-oss@example.org'
+ToNonPostgres = 'non-postgres@example.org'
+CC            = 'cc@example.org'
+Subject       = '[MCMP] Server order with a Non-Postgres database'
+
+[SIEM]
+Enabled = true
+
+[SIEM.File]
+Filename   = "/var/log/siem.log"
+MaxSize    = 100  # in megabytes
+MaxBackups = 31   # number of files
+MaxAge     = 31   # days
+Compress   = true # disabled by default
+
+[SIEM.Syslog]
+Host     = "localhost"
+Port     = 514
+Protocol = "udp" # tcp or udp

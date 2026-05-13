@@ -1,0 +1,21 @@
+[GENERAL]
+Debug = false
+
+[[FOREMAN]]
+Username        = 'user'
+Password        = '********************'
+ApiEndpoint     = 'https://foreman1.example.com/api'
+ParallelQueries = 3
+
+[[FOREMAN]]
+Username        = 'user'
+Password        = '********************'
+ApiEndpoint     = 'https://foreman2.example.com/api'
+ParallelQueries = 3
+
+[MCMP]
+OAuthUrl          = 'http://kubernetes.docker.internal:8100/auth'
+OAuthRealm        = 'local_realm'
+OAuthClientId     = 'local'
+OAuthClientSecret = 'client_secret'
+ApiEndpoint       = 'http://localhost:8080/clients/eai-backend-service/foreman/import'

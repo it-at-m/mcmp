@@ -1,0 +1,13 @@
+SET client_encoding = 'UTF8';
+
+CREATE TABLE cmp.user (
+    "id" BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    "version" bigint NOT NULL DEFAULT 0,
+    "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP(3),
+    "updated_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP(3),
+    "username" VARCHAR(100) NOT NULL UNIQUE,
+    "sys_id" VARCHAR(100) NOT NULL UNIQUE,
+    "department" VARCHAR(100) NOT NULL,
+    "admin" BOOLEAN NOT NULL DEFAULT FALSE
+);
+ALTER TABLE cmp.user OWNER TO cmp;

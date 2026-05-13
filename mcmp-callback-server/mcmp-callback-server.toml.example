@@ -1,0 +1,18 @@
+[GENERAL]
+Debug = false   # GORM und andere Debug-Features
+Port  = 9005
+
+[DATABASE]
+DSN        = 'host=/run/postgresql dbname=cmp sslmode=disable TimeZone=UTC'
+Username   = 'example'
+Password   = 'example'
+
+[LOGGING]
+Level      = "INFO"   # DEBUG, INFO, WARN, ERROR
+Output     = "file"   # console, file, both
+Format     = "plain"  # text, json, plain
+Filename   = "<path-to-mcmp-repo>/mcmp-callback-server/application.log"
+MaxSize    = 100      # Maximale Dateigröße in MB vor Rotation
+MaxBackups = 7        # Anzahl der aufzubewahrenden alten Log-Dateien
+MaxAge     = 30       # Maximales Alter in Tagen für Log-Dateien
+Compress   = true     # Komprimierung der rotierten Dateien

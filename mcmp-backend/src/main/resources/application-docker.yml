@@ -1,0 +1,147 @@
+server:
+   port: 39146
+spring:
+  # Spring JPA
+  jpa:
+    # Logging for database operation
+    show-sql: false
+    properties:
+      hibernate:
+        show_sql: false
+        format_sql: false
+        jdbc:
+          batch_size: 100
+        order_inserts: true
+        order_updates: true
+  datasource:
+    url: jdbc:postgresql://localhost:5432/cmp?reWriteBatchedInserts=true
+    driver-class-name: org.postgresql.Driver
+    password: cmp
+    username: cmp
+  flyway:
+    baseline-on-migrate: true
+    baseline-version: 0
+    validateMigrationNaming: true
+    locations:
+      - classpath:db/migration/schema
+      - classpath:db/migration/testdata
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${sso.url}/auth/realms/${sso.realm}/protocol/openid-connect/certs
+          # adds audience verification - https://docs.spring.io/spring-security/reference/servlet/oauth2/resource-server/jwt.html#_supplying_audiences
+          # requires client to be in audience claim, see https://www.keycloak.org/docs/latest/server_admin/#_audience_resolve
+          #audiences:
+          #  - ${sso.client}
+  mail:
+    host: localhost
+    port: 1025
+    username: "mcmp@localhost"
+    password: "password"
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          ssl:
+            protocols: TLSv1.2
+            trust: "*"
+
+# Disables the health check for the mail component
+management:
+  health:
+    mail:
+      enabled: false
+
+# Define the local keycloak configuration here
+sso:
+  url: http://kubernetes.docker.internal:8100
+  realm: local_realm
+  client: local
+security:
+  user-info-uri: ${sso.url}/auth/realms/${sso.realm}/protocol/openid-connect/userinfo
+  logging-mode: all
+
+logging:
+  level:
+    org.hibernate.SQL: OFF
+    org.hibernate.type.descriptor.sql.BasicBinder: OFF
+    org.hibernate.orm.jdbc.bind: OFF
+
+lhm:
+  roles:
+    admin:
+      users:
+        - writer
+    readonly:
+      departments:
+        - ITM-IBS52
+      users:
+        - reader
+    storage:
+      departments:
+        - ITM-IBS43
+    oracle:
+      departments:
+        - ITM-IBS45
+    non-oracle:
+      departments:
+        - ITM-IBS46
+    linux:
+      departments:
+        - ITM-IBS48
+    windows:
+      departments:
+        - ITM-IBS49
+    network:
+      departments:
+        - ITM-IBS341
+    operator:
+      departments:
+        - ITM-IBS4
+        - ITM-IBS41
+        - ITM-IBS42
+        - ITM-IBS43
+        - ITM-IBS44
+        - ITM-IBS45
+        - ITM-IBS46
+        - ITM-IBS47
+        - ITM-IBS48
+        - ITM-IBS49
+    security:
+      departments:
+        - ITM-IBS72
+  department-filter:
+    enabled: false
+    allowed-departments:
+      - ITM-IBS41
+  api-users:
+    - service-account-local
+
+# Infoblox configuration
+infoblox:
+  skip-search: true
+
+# ServiceNow configuration
+servicenow:
+  skip-search: true
+
+# Testsystem configuration
+testenvironment:
+  enabled: true
+
+appservices:
+  linux: "SNSVC0040479"
+  windows: "SNSVC0040403"
+
+greenit:
+  lockout-period-months: 6
+  default-appservice-number: "SNSVC0040236"
+  mail-to: "greenit@localhost"
+  subject-rightsize: "GreenIT: Changes rightsizing"
+  subject-power-off: "GreenIT: Changes shutdown"
+  filename-rightsize: "GreenIT_rightsizing"
+  filename-power-off: "GreenIT_shutdown"
+

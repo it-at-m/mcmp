@@ -1,0 +1,17 @@
+package de.muenchen.mcmp.types;
+
+public enum AwxStatus {
+    NEW,
+    SKIPPED,
+    RUNNING,
+    SUCCESSFUL,
+    FAILED,
+    ERROR,
+    CANCELED,
+    WAITING_FOR_AWX_ENABLEMENT,
+    WAITING_FOR_AWX_CONFIGURATION,
+    WAITING_FOR_INCIDENT_RESOLUTION,
+    INCIDENT_SUCCESSFUL,
+    INCIDENT_FAILED,
+    LOGICAL_FAILED
+}

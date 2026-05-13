@@ -1,0 +1,162 @@
+package de.muenchen.mcmp.server;
+
+
+import de.muenchen.mcmp.types.CloudType;
+import de.muenchen.mcmp.types.ServerKind;
+import de.muenchen.mcmp.types.ServerRightsizingType;
+import de.muenchen.mcmp.types.ServerType;
+
+import java.time.Instant;
+
+/**
+ * The interface “ServerWithPermissions” models a server entity and an additional method getCanEdit() and
+ * getNumberOfAssignedAppservices() which returns true if the server entity can be edited by the logged in user.
+ */
+public interface ServerWithPermissions {
+    Long getId();
+    Long getVersion();
+    String getCreatedAt();
+    String getUpdatedAt();
+    Long getCloudId();
+    String getCloudName();
+    String getCloudFqdn();
+    CloudType getCloudType();
+    String getCloudServerGui();
+    String getOs();
+    String getUuid();
+    String getInstanceUuid();
+    String getVmId();
+    String getCluster();
+    String getHost();
+    String getLocation();
+    String getName();
+    String getPowerState();
+    Integer getMemoryMb();
+    Integer getMemoryMbPrev();
+    Instant getMemoryMbChangeDate();
+    Instant getMemoryMbChangeDatePrev();
+    Integer getNumCpu();
+    Integer getNumCpuPrev();
+    Instant getNumCpuChangeDate();
+    Instant getNumCpuChangeDatePrev();
+    Integer getNumCoresPerSocket();
+    Boolean getMemoryHotAddEnabled();
+    Boolean getCpuHotAddEnabled();
+    Boolean getCpuHotRemoveEnabled();
+    String getCpuTopology();
+    String getVmxVersion();
+    String getOverallStatus();
+    String getConfigStatus();
+    Boolean getConfigEqualsTools();
+    String getGuestConfigId();
+    String getGuestConfigFullName();
+    String getGuestToolsId();
+    String getGuestToolsFullName();
+    String getGuestToolsState();
+    String getGuestToolsRunningStatus();
+    String getGuestToolsVersionStatus();
+    String getGuestToolsVersionStatus2();
+    String getGuestToolsInstallType();
+    String getGuestToolsVersion();
+    String getGuestToolsFamily();
+    String getGuestToolsHostname();
+    String getGuestToolsIpAddress();
+    String getGuestToolsArchitecture();
+    String getGuestToolsBitness();
+    String getGuestToolsBuildNumber();
+    String getGuestToolsCpeString();
+    String getGuestToolsDistroAddlVersion();
+    String getGuestToolsDistroName();
+    String getGuestToolsDistroVersion();
+    String getGuestToolsFamilyName();
+    String getGuestToolsKernelVersion();
+    String getGuestToolsPrettyName();
+    Short getVdisks();
+    Long getVdisksCapacityInBytes();
+    Instant getBootTime();
+    Boolean getRoleLinux();
+    Boolean getRoleWindows();
+    Boolean getRoleOracle();
+    Boolean getRoleNonOracle();
+    String getPatchnightGroup();
+    String getPatchnightTime();
+    String getServerInfosOwnerMail();
+    String getServerInfosTicketNo();
+    Boolean getTetrationAgentInstalled();
+    Boolean getManaged();
+    String getFqdn();
+    Long getForemanId();
+    String  getForemanSource();
+    Boolean getDbOracle();
+    Boolean getDbMariadb();
+    Boolean getDbHana();
+    Boolean getDbMysql();
+    Boolean getDbMssql();
+    Boolean getDbPostgres();
+    Boolean getDbMongodb();
+    Boolean getDbAdabas();
+    Integer getMemoryMbRecommended();
+    Integer getNumCpuRecommended();
+    Boolean getCanEdit();
+    Boolean getPatchnightIncluded();
+    String getPatchnightEnvironment(); // oder EnvironmentType, je nach Bedarf
+
+    Instant getPatchnightEndDate();
+    Instant getPatchnightStartDate();
+    Instant getPatchnightExitcodeChangeDate();
+    String getSnowServerName();
+    String getSnowServerSysId();
+    String getSnowServerSysClass();
+    String getSnowServerHardwareStatus();
+    Instant getSnowServerLastDiscovered();
+    String getSnowInstanceName();
+    String getSnowInstanceSysId();
+    String getSnowInstanceSysClass();
+    Instant getSnowInstanceLastDiscovered();
+    Short getPatchnightExitcode();
+    String getPatchnightExitstring();
+    String getPatchnightChangeNumber();
+    String getPatchnightChangeSysId();
+    Boolean getLocked();
+
+    Boolean getMaintenanceMode();
+    Instant getMaintenanceModeExpiresAt();
+    Boolean getHasTempAdminPrivileges();
+    Boolean getHasTempRootPrivileges();
+    Instant getTempPrivilegesExpiresAt();
+    Long getRunningJobsCount();
+    Long getRunningGreenItCount();
+    Long getNumberOfAssignedAppservices();
+    Long getHotPlugMemoryLimit();
+    Long getHotPlugMemoryIncrementSize();
+    String getOperatingsystem();
+    ServerKind getServerKind();
+    ServerType getServerType();
+
+    ServerRightsizingType getMemoryMbRightsizing();
+    ServerRightsizingType getNumCpuRightsizing();
+    Boolean getGreenItShutdownChangePending();
+    Instant getGreenItShutdownChangeRejectedDate();
+    Boolean getGreenItRightsizingChangePending();
+    Instant getGreenItRightsizingChangeRejectedDate();
+    String getDn();
+    String getAssociation();
+    Integer getMemorySpeed();
+    Integer getMemoryMbAvailable();
+    Instant getMfgTime();
+    String getModel();
+    Integer getNumOfAdaptors();
+    Integer getNumOfCoresEnabled();
+    Integer getNumOfEthHostIfs();
+    Integer getNumOfFcHostIfs();
+    String getOperState();
+    Integer getUcsmChassisId();
+    Integer getUcsmChassisSlotId();
+    Integer getUcsmServerId();
+    String getVendor();
+    String getVid();
+    String getServerCustomAttributes();
+
+    Float getCpuUtil();
+    Float getMemUsedPercent();
+}

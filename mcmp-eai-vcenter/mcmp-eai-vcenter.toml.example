@@ -1,0 +1,25 @@
+[GENERAL]
+Passphrase = 'enter a passphrase here with which all passwords will be encrypted'
+Debug      = false
+
+[DATABASE]
+DSN               = 'host=/run/postgresql dbname=cmp sslmode=disable TimeZone=UTC'
+Username          = 'cmp'
+EncryptedPassword = '********************'
+
+[[VCENTER]]
+Enabled           = false
+Fqdn              = 'vcenter1.example.org'
+Username          = 'vmware-readonly-user'
+EncryptedPassword = '********************'
+Locked            = false
+UnlockedUUIDs     = ''
+
+[[VCENTER]]
+Enabled           = false
+Fqdn              = 'vcenter2.example.org'
+Username          = 'vmware-readonly-user'
+EncryptedPassword = '********************'
+Locked            = true
+UnlockedUUIDs     = '0e99478a-22dd-4cb0-ac64-b52f8d21015c,0c7a5000-9274-4f8f-8310-300d46471423'
+

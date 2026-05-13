@@ -1,0 +1,12 @@
+SET client_encoding = 'UTF8';
+ALTER TABLE cmp."group" ALTER COLUMN manager_id DROP NOT NULL;
+ALTER TABLE cmp.server ADD COLUMN "snow_server_sys_id" VARCHAR(100);
+ALTER TABLE cmp.server ADD COLUMN "snow_server_sys_class" VARCHAR(50);
+ALTER TABLE cmp.server ADD COLUMN "snow_server_hardware_status" VARCHAR(50);
+ALTER TABLE cmp.server ADD COLUMN "snow_server_last_discovered" TIMESTAMPTZ;
+ALTER TABLE cmp.server ADD COLUMN "snow_instance_sys_id" VARCHAR(100);
+ALTER TABLE cmp.server ADD COLUMN "snow_instance_sys_class" VARCHAR(50);
+ALTER TABLE cmp.server ADD COLUMN "snow_instance_last_discovered" TIMESTAMPTZ;
+ALTER TABLE cmp.appservice ADD COLUMN "csw_enforced" BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE cmp.appservice ADD COLUMN "business_service_numbers" VARCHAR(100);
+ALTER TABLE cmp.appservice ALTER COLUMN "name" TYPE VARCHAR(1000);

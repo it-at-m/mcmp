@@ -1,0 +1,19 @@
+go 1.26.1
+
+use (
+	./mcmp-callback-server
+	./mcmp-eai-awx
+	./mcmp-eai-baas
+	./mcmp-eai-checkmk
+	./mcmp-eai-common
+	./mcmp-eai-foreman
+	./mcmp-eai-netapp-ontap
+	./mcmp-eai-netapp-storagegrid
+	./mcmp-eai-olvm
+	./mcmp-eai-patchnight
+	./mcmp-eai-rightsizing
+	./mcmp-eai-scheduler
+	./mcmp-eai-snow
+	./mcmp-eai-ucs
+	./mcmp-eai-vcenter
+)

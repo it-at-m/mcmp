@@ -1,0 +1,43 @@
+{
+  "app": {
+    "name": {
+      "short": "MCMP",
+      "full": "München Cloud Management Platform"
+    }
+  },
+  "common": {
+    "yes": "Ja",
+    "no": "Nein",
+    "actions": {
+      "save": "Bestätigen",
+      "close": "Schließen",
+      "search": "Suchen"
+    },
+    "toHome": "Zurück zur Startseite",
+    "messages": {}
+  },
+  "views": {
+    "index": {
+      "navText": "Willkommen",
+      "header": "Willkommen beim @:app.name.full von it{'@'}M",
+      "apiGatewayStatus": "Das API-Gateway ist:"
+    },
+    "saveLeave": {
+      "title": "Wirklich verlassen?",
+      "text": "Wollen Sie wirklich nicht die Dokumentation anschauen?"
+    },
+    "unauthorized": {
+      "title": "Nicht berechtigt",
+      "header1": "Sie haben keine ausreichenden Berechtigungen,",
+      "header2": "um auf diese Anwendung zuzugreifen.",
+      "text": "Warum bin ich nicht berechtigt?.",
+      "reload": "Berechtigungen neu laden"
+    }
+  },
+  "components": {
+    "patchnightStatus": {
+      "noDataText": "Keine fehlerhaften Server gefunden"
+    }
+  },
+  "domain": {}
+}

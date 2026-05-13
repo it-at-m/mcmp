@@ -1,0 +1,50 @@
+# =============================================================================
+# General Application Settings
+# =============================================================================
+[GENERAL]
+Timeout = 300         # Global timeout in seconds (default: 300 = 5 minutes)
+
+# =============================================================================
+# Logging Configuration
+# =============================================================================
+[LOGGING]
+Level      = "INFO"   # Log level: DEBUG, INFO, WARN, ERROR
+Output     = "file"   # Output destination: console, file, both
+Format     = "plain"  # Output format: text, json, plain
+Filename   = "/var/log/mcmp-eai-netapp-ontap/application.log"
+MaxSize    = 100      # Maximum file size in MB before rotation
+MaxBackups = 7        # Number of old log files to retain
+MaxAge     = 30       # Maximum age in days for log files
+Compress   = true     # Compress rotated log files
+
+# =============================================================================
+# NetApp StorageGRID Sources
+# Multiple StorageGRID systems can be configured using [[STORAGEGRID]] sections
+# =============================================================================
+
+# Primary STORAGEGRID cluster
+[[STORAGEGRID]]
+Hostname  = "storagegrid1.example.com"
+Username  = "<your-username>"
+Password  = "<your-password>"
+Enabled   = true
+VerifyTLS = false     # Set to true in production environments
+
+# Secondary STORAGEGRID cluster (disabled by default)
+[[STORAGEGRID]]
+Hostname  = "storagegrid2.example.com"
+Username  = "<your-username>"
+Password  = "<your-password>"
+Enabled   = false
+VerifyTLS = false
+
+# =============================================================================
+# MCMP API Configuration
+# OAuth2 client credentials for authentication with the MCMP backend
+# =============================================================================
+[MCMP]
+OAuthUrl          = "https://keycloak.example.com/auth"
+OAuthRealm        = "mcmp"
+OAuthClientId     = "<your-client-id>"
+OAuthClientSecret = "<your-client-secret>"
+ApiEndpoint       = "https://mcmp-api.example.com/api/v1/netapp/storagegrid/update"

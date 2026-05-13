@@ -1,0 +1,44 @@
+# =============================================================================
+# Logging Configuration
+# =============================================================================
+[LOGGING]
+Level      = "INFO"   # Log level: DEBUG, INFO, WARN, ERROR
+Output     = "file"   # Output destination: console, file, both
+Format     = "plain"  # Output format: text, json, plain
+Filename   = "/var/log/mcmp-eai-rightsizing.log"
+MaxSize    = 10       # Maximum file size in MB before rotation
+MaxBackups = 7        # Number of old log files to retain
+MaxAge     = 30       # Maximum age in days for log files
+Compress   = true     # Compress rotated log files
+
+# =============================================================================
+# MCMP API Configuration
+# =============================================================================
+[MCMP]
+# OAuth2 / Keycloak Configuration
+OAuthUrl              = "https://keycloak.example.com/auth"
+OAuthRealm            = "local_realm"
+OAuthClientId         = "<your-client-id>"
+OAuthClientSecret     = "<your-client-secret>"
+
+# API Endpoints
+RightsizingEndpoint   = "http://localhost:8083/clients/eai-backend-service/green-it/vmware/server/rightsizing"
+ServerListEndpoint    = "http://localhost:8083/clients/eai-backend-service/green-it/vmware/server"
+ServerMetricEndpoint  = "http://localhost:8083/clients/eai-backend-service/green-it/vmware/server/%d"
+
+# HTTP Client Configuration
+RequestTimeoutSeconds = "900"
+ConnectTimeoutSeconds = "30"
+ReadTimeoutSeconds    = "900"
+MaxRetries            = "3"
+RetryDelaySeconds     = "2"
+
+# Processor Configuration (Rightsizing Algorithm)
+[PROCESSOR]
+WorkerCount             = 10    # Number of parallel workers (adjust based on available resources)
+CooldownDays            = 7     # Default cooldown after resource changes
+CPUMarginFactor         = 1.20  # 15% safety margin for CPU (1.15 = 115%)
+MemoryMarginFactor      = 1.20  # 15% safety margin for memory (1.15 = 115%)
+MinSampleSize           = 60    # Minimum number of metric samples required for recommendations (10080 => 7 days)
+CPUHighLoadThreshold    = 80    # Threshold above which CPU samples are counted as peak
+MemoryHighLoadThreshold = 90    # Threshold above which memory samples are counted as peaks

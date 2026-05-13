@@ -1,0 +1,15 @@
+package de.muenchen.mcmp.types;
+
+public enum QuickdiscoveryStatus {
+    NEW,
+    SKIPPED,
+    WAITING,
+    SUCCESSFUL,
+    FAILED,
+    ERROR,
+    CANCELED,
+    WAITING_FOR_SERVICE_NOW_ENABLEMENT,
+    WAITING_FOR_SERVICE_NOW_CONFIGURATION,
+    WAITING_FOR_INCIDENT_RESOLUTION,
+    INCIDENT_FAILED
+}

@@ -1,0 +1,29 @@
+server:
+  port: 8085
+
+keycloak:
+  auth-server-url: http://kubernetes.docker.internal:8100/auth
+  realm: local_realm
+  service:
+    client-id: local
+    client-secret: client_secret
+
+infoblox:
+  servers:
+    production:
+      baseUrl: https://nsp001.example.com/wapi/v2.13.1
+      username: test
+      password: test
+      enabled: false
+      request: "network?*mcmp_status=TRUE&_return_type=json&_return_as_object=1&_paging=1&_max_results=10000&_return_fields=comment,extattrs,members,netmask,network,network_container,network_view,options,vlans"
+    testlabor:
+      baseUrl: https://nsp002.example.com/wapi/v2.13.1
+      username: test
+      password: test
+      enabled: false
+      request: "network?*mcmp_status=TRUE&_return_type=json&_return_as_object=1&_paging=1&_max_results=10000&_return_fields=comment,extattrs,members,netmask,network,network_container,network_view,options,vlans"
+
+  controller:
+    endpoint: http://localhost:8083/clients/infoblox-backend-service/infoblox/networks
+
+output: direct:infoblox-route

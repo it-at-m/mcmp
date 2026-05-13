@@ -1,0 +1,225 @@
+stages:
+  - test
+  - deploy-test
+  - deploy-prod
+
+workflow:
+  rules:
+    # Pipeline unterdrücken, wenn DO_RELEASE gesetzt ist (wie im alten unit-test)
+    - if: $DO_RELEASE == "true"
+      when: never
+    # Pipeline bei Push oder manuellem Start (Web) ausführen
+    - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_PIPELINE_SOURCE == "web"
+
+
+variables:
+  # Disable stages
+  DISABLE_TEST: "false"
+  DISABLE_UPLOAD: "false"
+  DISABLE_DEPLOY_TEST: "false"
+
+  #Maven Image, was verwendet wird.
+  MAVEN_IMAGE: docker.io/library/maven:3.9-eclipse-temurin-21
+
+  # Legt das locale .m2-Repository fest - wird für den cache genutzt.
+  # Unterdrückt die Download-Meldungen von Artefakten.
+  MAVEN_OPTS: >-
+    -Dmaven.repo.local=.m2/repository
+    -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN
+
+  # Pfad der settings.xml wird angegeben
+  # '--batch-mode' verhindert das Auftauchen von Benutzereingabeaufforderungen
+  # Profil "gitlab-cicd" wird ausgewählt, relevant für Frontend-Projekte
+  MAVEN_CLI_OPTS: >-
+    -s $MAVEN_SETTINGS
+    --batch-mode
+    -Pgitlab-cicd
+
+  JAVA_TOOL_OPTIONS: >-
+    -Djavax.net.ssl.trustStore=/etc/ssl/certs/java/cacerts
+
+  # Variablen zum Hinzufügen von Maven-OPTs zu den Standard Ops. Variable kann auch nur Job-Spezifik definiert werden.
+  MAVEN_CLI_PRJ_OPTS: ""
+
+  APP_PATH: mcmp-backend
+
+  # zeitzone setzen
+  TZ: Europe/Berlin
+
+  # Standard-Image für den Build
+  NPM_IMAGE: registry.redhat.io/ubi10/nodejs-24
+  # Dependencies sollen gecacht und nicht aktualisiert werden
+  NPM_CLI_OPTS: "--cache .npm --prefer-offline"
+  # Kann derzeit in der rule mit exists noch nicht verwendet werden, siehe: https://gitlab.com/gitlab-org/gitlab/-/issues/283881
+  NPM_DIR: mcmp-frontend
+  ###########################
+  # Gitlab-Instanz-Variable #
+  ###########################
+  #  NPM_TOKEN: [MASKED]
+  # Standardmäßig wird Jest für Unit-Tests des Frontends verwendet.
+  # Projekte, die kein Jest nutzen können den Parameter ändern, damit Jest-spezifische Parameter nicht gesetzt sind.
+  NPM_UNIT_TESTS: "JEST"
+  NODE_EXTRA_CA_CERTS: $REQUESTS_CA_BUNDLE
+
+
+###########################
+# Gitlab-Instanz-Variable #
+###########################
+#  MAVEN_REPO_USER: [MASKED]
+#  MAVEN_SETTINGS: [File_With_Settings]
+
+# Führt Tests durch, erstellt einen Build und lädt ihn ins Artifactory hoch
+unit-test:
+  image: $MAVEN_IMAGE
+  tags:
+    - openshift-prod
+  stage: test
+  coverage: /Total.*?([0-9]{1,3})%/
+  cache:
+    key: mvn
+    paths:
+      - .m2/repository
+  rules:
+    - if: '$DISABLE_TEST == "true"'
+      when: never
+    - if: '$DO_RELEASE == "true"'
+      when: never
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+      changes:
+      - mcmp-backend/**/*
+      - mcmp-frontend/**/*
+  script:
+    - echo "POM file path:" $APP_PATH/pom.xml
+    - echo $APP_PATH
+    - mvn -f $APP_PATH/pom.xml $MAVEN_CLI_OPTS install $MAVEN_CLI_PRJ_OPTS
+    # Ermittelt den Namen der .jar-Datei der Anwendung und gibt ihn über eine .env-Datei für andere Jobs frei
+    - MVN_VERSION=$(mvn -f $APP_PATH/pom.xml $MAVEN_CLI_OPTS org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate -Dexpression=project.version -q -DforceStdout)
+    - echo $MVN_VERSION
+    - MVN_ARTIFACT_ID=$(mvn -f $APP_PATH/pom.xml $MAVEN_CLI_OPTS org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate -Dexpression=project.artifactId -q -DforceStdout)
+    - echo $MVN_ARTIFACT_ID
+    - MVN_GROUP_ID=$(mvn -f $APP_PATH/pom.xml $MAVEN_CLI_OPTS org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate -Dexpression=project.groupId -q -DforceStdout)
+    - echo $MVN_GROUP_ID
+    - echo "APP_JAR_FILE=$MVN_ARTIFACT_ID-$MVN_VERSION.jar" >> build.env
+    - echo "MVN_VERSION=$MVN_VERSION" >> build.env
+    - echo "MVN_ARTIFACT_ID=$MVN_ARTIFACT_ID" >> build.env
+    - echo "MVN_GROUP_ID=$MVN_GROUP_ID" >> build.env
+    - echo "DOWNLOAD_URL_GITLAB=$CI_API_V4_URL/projects/${CI_PROJECT_ID}/jobs/${CI_JOB_ID}/artifacts/target/${MVN_ARTIFACT_ID}-${MVN_VERSION}.jar" >> build.env
+    # Deploy ins Artifactory (nur bei push)
+    - |
+      if [ "$CI_PIPELINE_SOURCE" = "push" ] && [ "$DISABLE_DEPLOYMENT_ARTIFACTORY" != "true" ] && [ "$DISABLE_DEPLOYMENT_ARTIFACTORY" != "1" ] && [ "$DISABLE_UPLOAD" != "true" ]; then
+        mvn -f $APP_PATH/pom.xml $MAVEN_CLI_OPTS deploy -Dmaven.main.skip -Dmaven.deploy.skip=false -Dmaven.test.skip $MAVEN_CLI_PRJ_OPTS
+      fi
+  artifacts:
+    expire_in: 1 week
+    reports:
+      dotenv: build.env
+
+
+build-npm:
+  image: $NPM_IMAGE
+  tags:
+    - openshift-test-capk
+  stage: test
+  cache:
+    key: npm
+    paths:
+      - $NPM_DIR/.npm/
+  variables:
+    NPM_CONFIG_HTTPS_PROXY: $itm_httpsProxy
+    NPM_CONFIG_PROXY: $itm_httpProxy
+    NPM_CONFIG_NOPROXY: $itm_noProxy
+    ARTIFACTORY_HOST: https://artifactory.muenchen.de
+    CLI_VERSION: "2.71.0"
+    NPM_GROUP_ID: "de.muenchen.mcmp.frontend"
+  rules:
+    - if: '$DISABLE_TEST == "true"'
+      when: never
+    - if: ($NPM_DIR == null)
+      when: never
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+      changes:
+        - mcmp-frontend/**/*
+        - mcmp-backend/**/*
+  before_script:
+    - cd $NPM_DIR
+  script:
+    - npm config set proxy $itm_httpProxy
+    - npm config set https-proxy $itm_httpsProxy
+    - npm ci --cache .npm
+    - npm run build:war
+    # Deploy ins Artifactory (nur bei push)
+    - |
+      if [ "$CI_PIPELINE_SOURCE" = "push" ] && [ "$DISABLE_DEPLOYMENT_ARTIFACTORY" != "true" ] && [ "$DISABLE_DEPLOYMENT_ARTIFACTORY" != "1" ] && [ "$DISABLE_UPLOAD" != "true" ]; then
+        NPM_VERSION=$(node -p "require('./package.json').version")
+        if [[ $CI_COMMIT_BRANCH != "main" ]]; then
+          if [[ "$NPM_VERSION" != *-SNAPSHOT ]]; then
+            NPM_VERSION="${NPM_VERSION}-SNAPSHOT"
+          fi
+        fi
+        NPM_NAME=$(node -p "require('./package.json').name")
+        echo "Deploying $NPM_NAME version $NPM_VERSION"
+        curl -sSf -u $MAVEN_REPO_USER:$MAVEN_REPO_PASS -O $ARTIFACTORY_HOST/artifactory/jfrog-releases/artifactory/jfrog-cli/v2-jf/$CLI_VERSION/jfrog-cli-linux-amd64/jf
+        chmod u+x jf
+        ./jf config add artifactory --url=$ARTIFACTORY_HOST --user=$MAVEN_REPO_USER --password=$MAVEN_REPO_PASS
+        if [[ $CI_COMMIT_BRANCH != "main" ]]; then
+          TARGET_REPO="mvn-snapshot-local"
+        else
+          TARGET_REPO="mvn-release-local"
+        fi
+        GROUP_PATH=${NPM_GROUP_ID//.//}
+        TARGET_PATH=$TARGET_REPO/$GROUP_PATH/$NPM_NAME/$NPM_VERSION/$NPM_NAME-$NPM_VERSION.war
+        WAR_FILE=$(find build -name "*.war" | head -n 1)
+        if [ -z "$WAR_FILE" ]; then echo "Fehler: Keine WAR-Datei in $NPM_DIR/build gefunden!"; exit 1; fi
+        echo "Uploading $WAR_FILE to $TARGET_PATH"
+        ./jf rt u "$WAR_FILE" "$TARGET_PATH"
+      fi
+
+deploy-test:mcmp:
+  stage: deploy-test
+  tags:
+    - openshift-test-capk
+  image: quay.io/ansible/awx-ee:24.6.1
+  needs:
+    - job: unit-test
+      optional: true
+    - job: build-npm
+      optional: true
+  rules:
+    - if: $DISABLE_DEPLOY_TEST == 'true'
+      when: never
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH != "main"'
+      changes:
+        - mcmp-backend/**/*
+        - mcmp-frontend/**/*
+  variables:
+    AWX_TEMPLATE: mcmp-k-deploy
+  script:
+    - awx job_templates launch $AWX_TEMPLATE
+      --verbosity 4 --monitor -f human
+      --conf.host $AWX_HOST --conf.username=$AWX_USER --conf.password=$AWX_PW
+
+
+deploy-prod:mcmp:
+  stage: deploy-prod
+  tags:
+    - openshift-test-capk
+  image: quay.io/ansible/awx-ee:24.6.1
+  needs:
+    - job: unit-test
+      optional: true
+    - job: build-npm
+      optional: true
+  rules:
+    - if: $DISABLE_DEPLOY_PROD == 'true'
+      when: never
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"'
+      changes:
+        - mcmp-backend/**/*
+        - mcmp-frontend/**/*
+  variables:
+    AWX_TEMPLATE: mcmp-p-deploy
+  script:
+    - awx job_templates launch $AWX_TEMPLATE
+      --verbosity 4 --monitor -f human
+      --conf.host $AWX_HOST --conf.username=$AWX_USER --conf.password=$AWX_PW

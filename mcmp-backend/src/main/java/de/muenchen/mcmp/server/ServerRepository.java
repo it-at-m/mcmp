@@ -31,7 +31,7 @@ public interface ServerRepository extends JpaRepository<Server, Long> {
           END as os,
           s.server_kind,
           s.server_type,
-          (s.num_cpu_rightsizing <> 'ok' OR s.memory_mb_rightsizing <> 'ok') as hasRightsizingRecommendations
+          (s.num_cpu_rightsizing <> 'ok' OR s.memory_mb_rightsizing <> 'ok' OR s.patchnight_exitcode <> 0) as hasWarnings
     FROM cmp.server s
     WHERE (
         EXISTS (

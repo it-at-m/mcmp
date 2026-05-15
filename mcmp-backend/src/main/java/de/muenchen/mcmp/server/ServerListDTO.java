@@ -13,6 +13,6 @@ public record ServerListDTO(
         String os,
         ServerKind serverKind,
         ServerType serverType,
-        boolean hasRightsizingRecommendations
+        boolean hasWarnings
 ) {
 }

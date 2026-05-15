@@ -118,7 +118,7 @@ public class ServerService {
                 .os(serverList.getOS())
                 .serverKind(serverList.getServerKind())
                 .serverType(serverList.getServerType())
-                .hasRightsizingRecommendations(serverList.getHasRightsizingRecommendations())
+                .hasWarinings(serverList.getHasWarnings())
                 .build();
     }
 

@@ -10,6 +10,6 @@ public interface ServerList {
     String getOS();
     ServerKind getServerKind();
     ServerType getServerType();
-    Boolean getHasRightsizingRecommendations();
+    Boolean getHasWarnings();
 }
 

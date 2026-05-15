@@ -5,5 +5,5 @@ export interface ServerList {
   os?: string;
   serverKind?: string;
   serverType?: string;
-  hasRightsizingRecommendations?: boolean;
+  hasWarnings?: boolean;
 }

@@ -216,9 +216,11 @@
           />
           <span class="server-name-text">{{ item.name.split(".")[0] }}</span>
           <v-tooltip
-            v-if="isAdmin && item.hasRightsizingRecommendations"
+            v-if="
+              item.hasWarinings
+            "
             location="top"
-            text="Ressourcenanpassung empfohlen"
+            text="Handlung erforderlich"
           >
             <template #activator="{ props: tooltipProps }">
               <v-icon
@@ -267,8 +269,6 @@
 </template>
 
 <script setup lang="ts">
-
-
 import type { ServerList } from "@/types/ServerList";
 import type { DataTableHeader } from "vuetify";
 
@@ -286,7 +286,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import serverService from "@/api/serverService";
 import ScrollableListTable from "@/components/common/ScrollableListTable.vue";
 import OsCell from "@/components/Server/OsCell.vue";
-import {useUserStore} from "@/stores/user.ts";
+import { useUserStore } from "@/stores/user.ts";
 
 const loadingServer = ref(false);
 const servers = ref<ServerList[]>([]);
@@ -324,7 +324,7 @@ const headers = ref<DataTableHeader[]>([
 ]);
 
 const isAdmin = computed(
-    () => userStore.getUser?.authorities?.includes("ROLE_ADMIN") || false
+  () => userStore.getUser?.authorities?.includes("ROLE_ADMIN") || false
 );
 
 const filteredServers = computed(() => servers.value);

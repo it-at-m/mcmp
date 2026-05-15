@@ -705,7 +705,7 @@ func (p *Processor) calculateRecommendedCPU(vmName string, currentCPU int, cpuUt
 
 	// Never recommend less than half the current allocation, regardless of server class.
 	if result < currentCPU/2 {
-		result = currentCPU / 2
+		result = int(float64(currentCPU/2) + 0.5)
 	}
 
 	return result
@@ -772,7 +772,7 @@ func (p *Processor) calculateRecommendedMemory(vmName string, currentMemoryMB in
 	}
 
 	if result < currentMemoryMB/2 {
-		result = currentMemoryMB / 2
+		result = int(((currentMemoryMB/2)+512)/1024) * 1024
 	}
 
 	return result

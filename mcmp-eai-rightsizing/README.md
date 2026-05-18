@@ -77,7 +77,7 @@ This project leverages modern Go technologies and enterprise integration pattern
 
 #### 1. Clone the Repository
 ```bash
-git clone git.muenchen.de/mcmp/webanwendung.git
+git clone https://github.com/it-at-m/mcmp.git
 cd mcmp-eai-rightsizing
 ```
 
@@ -293,6 +293,6 @@ Distributed under the MIT License. See `LICENSE` file for more information.
 
 it@M - opensource@muenchen.de
 
-Project Link: [git.muenchen.de/mcmp/webanwendung/mcmp-eai-patchnight](git.muenchen.de/mcmp/webanwendung/mcmp-eai-patchnight)
+Project Link: [github.com/it-at-m/mcmp/mcmp-eai-patchnight](github.com/it-at-m/mcmp/mcmp-eai-patchnight)
 
 <p align="right">(<a href="#top">back to top</a>)</p>

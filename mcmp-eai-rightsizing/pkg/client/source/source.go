@@ -3,10 +3,10 @@ package source
 import (
 	"fmt"
 
-	"git.muenchen.de/mcmp/webanwendung/mcmp-eai-common/pkg/datasource"
-	"git.muenchen.de/mcmp/webanwendung/mcmp-eai-common/pkg/logging"
-	"git.muenchen.de/mcmp/webanwendung/mcmp-eai-rightsizing/pkg/client/mcmp"
-	"git.muenchen.de/mcmp/webanwendung/mcmp-eai-rightsizing/pkg/processor"
+	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/datasource"
+	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/logging"
+	"github.com/it-at-m/mcmp/mcmp-eai-rightsizing/pkg/client/mcmp"
+	"github.com/it-at-m/mcmp/mcmp-eai-rightsizing/pkg/processor"
 )
 
 const exportFilePattern = "rightsizing_export_%s.json"

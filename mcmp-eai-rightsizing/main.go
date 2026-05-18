@@ -135,12 +135,12 @@ import (
 	"path/filepath"
 	"time"
 
-	"git.muenchen.de/mcmp/webanwendung/mcmp-eai-common/pkg/app"
-	"git.muenchen.de/mcmp/webanwendung/mcmp-eai-common/pkg/config"
-	"git.muenchen.de/mcmp/webanwendung/mcmp-eai-common/pkg/logging"
-	"git.muenchen.de/mcmp/webanwendung/mcmp-eai-rightsizing/pkg/client/mcmp"
-	"git.muenchen.de/mcmp/webanwendung/mcmp-eai-rightsizing/pkg/client/source"
-	"git.muenchen.de/mcmp/webanwendung/mcmp-eai-rightsizing/pkg/processor"
+	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/app"
+	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/config"
+	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/logging"
+	"github.com/it-at-m/mcmp/mcmp-eai-rightsizing/pkg/client/mcmp"
+	"github.com/it-at-m/mcmp/mcmp-eai-rightsizing/pkg/client/source"
+	"github.com/it-at-m/mcmp/mcmp-eai-rightsizing/pkg/processor"
 )
 
 // Application name constant used for configuration file naming and identification.

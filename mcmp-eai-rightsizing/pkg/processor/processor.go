@@ -58,8 +58,8 @@ import (
 	"sync"
 	"time"
 
-	"git.muenchen.de/mcmp/webanwendung/mcmp-eai-common/pkg/logging"
-	"git.muenchen.de/mcmp/webanwendung/mcmp-eai-rightsizing/pkg/client/mcmp"
+	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/logging"
+	"github.com/it-at-m/mcmp/mcmp-eai-rightsizing/pkg/client/mcmp"
 )
 
 const (
@@ -1005,7 +1005,7 @@ func (p *Processor) peakFactor(values []float64, threshold float64) float64 {
 			currentRun++
 
 			// Measure intensity above threshold
-			totalExcess += (v - threshold)
+			totalExcess += v - threshold
 
 			if currentRun > longestRun {
 				longestRun = currentRun

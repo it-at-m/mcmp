@@ -1,4 +1,4 @@
-package mcmp
+package db
 
 import (
 	"time"

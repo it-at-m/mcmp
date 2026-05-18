@@ -1,4 +1,4 @@
-package mcmp
+package db
 
 import (
 	"database/sql/driver"
@@ -28,10 +28,10 @@ func (s *EnvironmentType) Scan(value interface{}) error {
 	return fmt.Errorf("cannot scan %T into EnvironmentType", value)
 }
 
-func (s EnvironmentType) Value() (driver.Value, error) {
-	return string(s), nil
+func (s *EnvironmentType) Value() (driver.Value, error) {
+	return string(*s), nil
 }
 
-func (s EnvironmentType) String() string {
-	return string(s)
+func (s *EnvironmentType) String() string {
+	return string(*s)
 }

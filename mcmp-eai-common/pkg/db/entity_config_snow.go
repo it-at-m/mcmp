@@ -1,4 +1,4 @@
-package mcmp
+package db
 
 type ConfigSnow struct {
 	ID               int64   `gorm:"primaryKey;autoIncrement" json:"id"`

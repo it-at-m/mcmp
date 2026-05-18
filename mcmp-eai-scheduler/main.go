@@ -3,12 +3,14 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"net"
 	"net/url"
 	"os"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
@@ -16,23 +18,26 @@ import (
 	"sync"
 	"time"
 
-	"git.muenchen.de/mcmp/webanwendung/mcmp-eai-common/pkg/lock"
-	"git.muenchen.de/mcmp/webanwendung/mcmp-eai-scheduler/pkg/clients/foreman"
-	"git.muenchen.de/mcmp/webanwendung/mcmp-eai-scheduler/pkg/clients/logging"
-	"git.muenchen.de/mcmp/webanwendung/mcmp-eai-scheduler/pkg/clients/mail"
-	"git.muenchen.de/mcmp/webanwendung/mcmp-eai-scheduler/pkg/clients/mcmp"
-	"git.muenchen.de/mcmp/webanwendung/mcmp-eai-scheduler/pkg/clients/snow"
 	"github.com/euerla/goawx/client"
 	"github.com/google/uuid"
-	"github.com/spf13/viper"
+	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/app"
+	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/config"
+	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/db"
+	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/lock"
+	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/logging"
+	"github.com/it-at-m/mcmp/mcmp-eai-scheduler/pkg/clients/foreman"
+	"github.com/it-at-m/mcmp/mcmp-eai-scheduler/pkg/clients/mail"
+	"github.com/it-at-m/mcmp/mcmp-eai-scheduler/pkg/clients/siem"
+	"github.com/it-at-m/mcmp/mcmp-eai-scheduler/pkg/clients/snow"
 )
 
 // Global debug flag that controls verbose logging throughout the application
 var (
-	debug          = false
-	berlinLocation *time.Location
-	changeRegex    = regexp.MustCompile(`(?i)\${CHANGE}`)
-	ansiRegex      = regexp.MustCompile("\x1b\\[[0-9;]*[a-zA-Z]")
+	logger                    *logging.StructuredLogger
+	berlinLocation            *time.Location
+	changeRegex               = regexp.MustCompile(`(?i)\${CHANGE}`)
+	ansiRegex                 = regexp.MustCompile("\x1b\\[[0-9;]*[a-zA-Z]")
+	ErrWrongNumberOfArguments = errors.New("wrong number of arguments")
 )
 
 // Application name constant used for configuration file naming and identification
@@ -85,7 +90,21 @@ type Config struct {
 	FOREMAN  ForemanConfig
 	DATABASE Database
 	SMTP     SmtpConfig
-	SIEM     logging.SiemConfig
+	SIEM     siem.SiemConfig
+	LOGGING  logging.LogConfig
+}
+
+func (cfg *Config) validateConfig() error {
+	if cfg.GENERAL.CallbackUrlChange == "" {
+		return fmt.Errorf("callback URL for Change Ticket is not configured")
+	}
+	if cfg.GENERAL.CallbackUrlQuickDiscovery == "" {
+		return fmt.Errorf("callback URL for Quick Discovery is not configured")
+	}
+	if cfg.GENERAL.DefaultServiceNowUserSysId == "" {
+		return fmt.Errorf("default ServiceNow user sys_id is not configured")
+	}
+	return nil
 }
 
 func init() {
@@ -100,99 +119,25 @@ func init() {
 // It handles command line argument parsing and delegates to the run function
 // The application expects no command line arguments and will show usage if any are provided
 func main() {
-	// Define flags
-	syncAwx := flag.Bool("sync-awx", false, "Updates existing database records with missing AWX data")
-
-	// Define custom usage function that displays program usage information
-	flag.Usage = func() {
-		_, err := fmt.Fprintf(flag.CommandLine.Output(), "usage: %s [options]\n", os.Args[0])
-		if err != nil {
-			log.Fatal(err)
-		}
-		flag.PrintDefaults()
-	}
-
-	// Parse command line flags
-	flag.Parse()
-
-	// Execute based on flags
-	run(*syncAwx)
-}
-
-func syncMissingAwxData(cfg *Config) {
-	mcmpClient, err := mcmp.New(cfg.DATABASE.Username, cfg.DATABASE.Password, cfg.DATABASE.DSN, cfg.DATABASE.Passphrase, cfg.GENERAL.Debug)
-	if err != nil {
-		log.Fatalf("Failed to create MCMP client: %v", err)
-	}
-	defer mcmpClient.Close()
-
-	configAwxList, err := mcmpClient.GetAllConfigAwx()
-	if err != nil {
-		log.Fatalf("Failed to get all config awx: %v", err)
-	}
-	awxClients := make(map[int64]*awx.AWX)
-	for _, configAwx := range configAwxList {
-		if configAwx.Enabled {
-			awxClient, err := awx.NewAWX(configAwx.ApiEndpoint, configAwx.ApiUsername, configAwx.ApiPassword, nil)
+	app.Bootstrap(func(ctx context.Context) error {
+		// Parse command line flags
+		flag.Usage = func() {
+			exePath, err := os.Executable()
 			if err != nil {
-				debugPrintf("Failed to create AWX client for awx ID %d: %v", configAwx.ID, err)
-				continue
+				_, _ = fmt.Fprintf(os.Stderr, "failed to get executable path: %v\n", err)
 			}
-			awxClients[configAwx.ID] = awxClient
-			debugPrintf("Created AWX client for client ID: %d", configAwx.ID)
+			_, _ = fmt.Fprintf(flag.CommandLine.Output(), "Usage: %s\n", filepath.Base(exePath))
+			flag.PrintDefaults()
 		}
-	}
+		flag.Parse()
 
-	jobs, err := mcmpClient.GetWorkflowJobsToProcess()
-	if err != nil {
-		log.Fatalf("Failed to get jobs: %v", err)
-	}
-	for _, job := range jobs {
-		awxClient, ok := awxClients[job.Awx.ID]
-		fmt.Printf("Job: %d\n", job.ID)
-		if !ok {
-			fmt.Printf("AWX Client is not enabled or not configured. Job ID %d", job.ID)
-			continue
+		if len(os.Args) != 1 {
+			return ErrWrongNumberOfArguments
 		}
 
-		if err := fetchAndPopulateAwxJobData(context.Background(), awxClient, mcmpClient, job); err != nil {
-			log.Printf("Error updating job data for job %d: %v", job.ID, err)
-		}
-
-		if err := syncWorkflowNodes(context.Background(), awxClient, mcmpClient, job); err != nil {
-			log.Printf("Warning: failed to collect workflow nodes for job %d: %v", job.ID, err)
-		}
-
-		if err := mcmpClient.UpdateJob(job); err != nil {
-			log.Printf("Failed to update job %d: %v", job.ID, err)
-		}
-	}
-
-	jobs, err = mcmpClient.GetJobsToProcess()
-	if err != nil {
-		log.Fatalf("Failed to get jobs: %v", err)
-	}
-	jobs, err = mcmpClient.GetJobsToProcess()
-	if err != nil {
-		log.Fatalf("Failed to get jobs: %v", err)
-	}
-
-	for _, job := range jobs {
-		awxClient, ok := awxClients[job.Awx.ID]
-		fmt.Printf("Job: %d", job.ID)
-		if !ok {
-			fmt.Printf("AWX Client is not enabled or not configured. Job ID %d", job.ID)
-			continue
-		}
-
-		if err := fetchAndPopulateAwxJobData(context.Background(), awxClient, mcmpClient, job); err != nil {
-			log.Printf("Error updating job data for job %d: %v", job.ID, err)
-		}
-
-		if err := mcmpClient.UpdateJob(job); err != nil {
-			log.Printf("Failed to update job %d: %v", job.ID, err)
-		}
-	}
+		// Execute main application logic
+		return run()
+	})
 }
 
 // Run executes the main application logic
@@ -202,79 +147,76 @@ func syncMissingAwxData(cfg *Config) {
 // 3. Retrieves and exports ServiceNow data
 // 4. Authenticates with Keycloak to get an access token
 // 5. Sends processed data to MCMP API
-func run(syncAwx bool) {
+func run() error {
 	release, err := lock.Acquire(appname)
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("failed to acquire lock: %w", err)
 	}
 	defer release()
 
 	// Load configuration from TOML file using the generic ReadConfig function
-	cfg := ReadConfig[Config](appname)
-	debug = cfg.GENERAL.Debug
-
-	if syncAwx {
-		log.Println("Starting AWX data synchronization...")
-		syncMissingAwxData(cfg)
-		log.Println("AWX data synchronization completed.")
-		return
+	cfg, err := config.LoadConfig[Config](appname)
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	if cfg.GENERAL.CallbackUrlChange == "" {
-		log.Fatalf("Callback URL for Change Ticket is not configured")
-	}
-	callbackUrlChange := ensureTrailingSlash(cfg.GENERAL.CallbackUrlChange)
-
-	if cfg.GENERAL.CallbackUrlQuickDiscovery == "" {
-		log.Fatalf("Callback URL for Quick Discovery is not configured")
-	}
-	callbackUrlQuickDiscovery := ensureTrailingSlash(cfg.GENERAL.CallbackUrlQuickDiscovery)
-
-	if cfg.GENERAL.DefaultServiceNowUserSysId == "" {
-		log.Fatalf("Default ServiceNow user sys_id ist not configured")
+	// Initialize Logger using the centralized setup from common
+	logger, err = logging.SetupGlobalLogger(cfg.LOGGING)
+	if err != nil {
+		return fmt.Errorf("failed to initialize logger: %w", err)
 	}
 
-	siemLogger := logging.NewSiemLogger(cfg.SIEM)
+	if err := cfg.validateConfig(); err != nil {
+		return err
+	}
+
+	siemLogger := siem.NewSiemLogger(cfg.SIEM)
 	if cfg.SIEM.Enabled {
-		debugPrintf("SIEM Logger initialized. File: %s, Syslog: %s:%d", cfg.SIEM.File.Filename, cfg.SIEM.Syslog.Host, cfg.SIEM.Syslog.Port)
+		logger.DebugPrintf("SIEM Logger initialized. File: %s, Syslog: %s:%d", cfg.SIEM.File.Filename, cfg.SIEM.Syslog.Host, cfg.SIEM.Syslog.Port)
 	}
+
 	foremanClient, err := createForemanClient(cfg)
 	if err != nil {
-		log.Fatalf("failed to create Foreman client: %v", err)
+		return fmt.Errorf("failed to create Foreman client: %w", err)
 	}
 
-	mcmpClient, err := mcmp.New(cfg.DATABASE.Username, cfg.DATABASE.Password, cfg.DATABASE.DSN, cfg.DATABASE.Passphrase, cfg.GENERAL.Debug)
+	mcmpClient, err := db.New(cfg.DATABASE.Username, cfg.DATABASE.Password, cfg.DATABASE.DSN, cfg.DATABASE.Passphrase, cfg.GENERAL.Debug, logger.GetWriter())
 	if err != nil {
-		log.Fatalf("Failed to create MCMP client: %v", err)
+		return fmt.Errorf("failed to create MCMP client: %w", err)
 	}
-	defer mcmpClient.Close()
+	defer func(mcmpClient *db.Client) {
+		err := mcmpClient.Close()
+		if err != nil {
+			logger.Error("Failed to close MCMP client", "error", err)
+		}
+	}(mcmpClient)
 
 	configAwxList, err := mcmpClient.GetAllConfigAwx()
 	if err != nil {
-		log.Fatalf("Failed to get all config awx: %v", err)
+		return fmt.Errorf("failed to get all config awx: %w", err)
 	}
 	awxClients := make(map[int64]*awx.AWX)
 	for _, configAwx := range configAwxList {
 		if configAwx.Enabled {
 			awxClient, err := awx.NewAWX(configAwx.ApiEndpoint, configAwx.ApiUsername, configAwx.ApiPassword, nil)
 			if err != nil {
-				debugPrintf("Failed to create AWX client for awx ID %d: %v", configAwx.ID, err)
+				logger.DebugPrintf("Failed to create AWX client for awx ID %d: %v", configAwx.ID, err)
 				continue
 			}
 			awxClients[configAwx.ID] = awxClient
-			debugPrintf("Created AWX client for client ID: %d", configAwx.ID)
+			logger.DebugPrintf("Created AWX client for client ID: %d", configAwx.ID)
 		}
 	}
 
 	configSnowList, err := mcmpClient.GetAllConfigSnow()
 	if err != nil {
-		log.Fatalf("Failed to get all config snow: %v", err)
+		return fmt.Errorf("failed to get all config snow: %w", err)
 	}
 	snowClients := make(map[int64]*snow.Client)
 	for _, configSnow := range configSnowList {
 		if configSnow.Enabled {
 			snowConfig := snow.ClientConfig{
-				Debug:           debug,
+				Debug:           cfg.GENERAL.Debug,
 				AuthServerURL:   configSnow.ApiClientAuthUrl,
 				ClientID:        configSnow.ApiClientID,
 				ClientSecret:    configSnow.ApiClientSecret,
@@ -286,16 +228,19 @@ func run(syncAwx bool) {
 			}
 			snowClient, err := snow.NewClient(snowConfig)
 			if err != nil {
-				debugPrintf("Failed to create ServiceNow client for snow ID %d: %v", configSnow.ID, err)
+				logger.DebugPrintf("Failed to create ServiceNow client for snow ID %d: %v", configSnow.ID, err)
 				continue
 			}
-			if debug {
-				snowClient.EnableDebug()
-			}
 			snowClients[configSnow.ID] = snowClient
-			debugPrintf("Created ServiceNow client for client ID: %d", configSnow.ID)
+			logger.DebugPrintf("Created ServiceNow client for client ID: %d", configSnow.ID)
 		}
 	}
+	return processJobs(cfg, mcmpClient, awxClients, snowClients, foremanClient, siemLogger)
+}
+
+func processJobs(cfg *Config, mcmpClient *db.Client, awxClients map[int64]*awx.AWX, snowClients map[int64]*snow.Client, foremanClient *foreman.Client, siemLogger *siem.SiemLogger) error {
+	callbackUrlChange := ensureTrailingSlash(cfg.GENERAL.CallbackUrlChange)
+	callbackUrlQuickDiscovery := ensureTrailingSlash(cfg.GENERAL.CallbackUrlQuickDiscovery)
 
 	// Counter for created change tickets
 	createdChangeTickets := 0
@@ -303,12 +248,12 @@ func run(syncAwx bool) {
 	if maxChangeTickets <= 0 {
 		// If not configured or invalid, use a safe default
 		maxChangeTickets = 10
-		debugPrintf("MaxChangeRequestsPerMinute not configured or invalid, using default: %d", maxChangeTickets)
+		logger.DebugPrintf("MaxChangeRequestsPerMinute not configured or invalid, using default: %d", maxChangeTickets)
 	}
 
 	jobs, err := mcmpClient.GetJobsByStatus()
 	if err != nil {
-		log.Fatalf("Failed to get jobs: %v", err)
+		return fmt.Errorf("failed to get jobs: %w", err)
 	}
 
 	// Before the job loop: Map to track running AWX jobs per server
@@ -316,70 +261,68 @@ func run(syncAwx bool) {
 
 	// First, identify all running AWX jobs per server
 	for _, job := range jobs {
-		if job.ServerID != nil && job.Status == mcmp.JobStatusAwxRunning {
+		if job.ServerID != nil && job.Status == db.JobStatusAwxRunning {
 			runningAwxJobsByServer[*job.ServerID] = true
 		}
 	}
 
 	for _, job := range jobs {
-		log.Printf("--------------------------------------------------------------------------------")
-		log.Printf("PROCESSING JOB %d | Status: %s | Title: %s", job.ID, job.Status, *job.Title)
-		log.Printf("  Details: Change: %s | AWX: %s | QuickDiscovery: %s | Tagging: %s  |  Non-Postgres Email: %s",
-			job.ChangeStatus, job.AwxStatus, job.QuickDiscoveryStatus, job.TaggingStatus, job.NonPostgresEmailStatus)
+		logger.Info("--------------------------------------------------------------------------------")
+		logger.Info("PROCESSING JOB", "id", job.ID, "status", job.Status, "title", *job.Title)
+		logger.Info("  Details", "change", job.ChangeStatus, "awx", job.AwxStatus, "quickDiscovery", job.QuickDiscoveryStatus, "tagging", job.TaggingStatus, "email", job.NonPostgresEmailStatus)
 
-		if job.Status == mcmp.JobStatusWaitingForApproval {
-			log.Printf("  -> Job %d is waiting for approval. Skipping.", job.ID)
+		if job.Status == db.JobStatusWaitingForApproval {
+			logger.Info("  -> Job is waiting for approval. Skipping.", "id", job.ID)
 			continue
 		}
 		if job.ServerInstallation {
 			_, err := getSnowClientForJob(snowClients, job)
 			if err != nil {
-				log.Printf("  -> Error getting ServiceNow client for job %d: %v", job.ID, err)
+				logger.Warn("  -> Error getting ServiceNow client for job", "id", job.ID, "error", err)
 				handleMissingConfig(mcmpClient, job)
 				continue
 			}
 		}
 
-		if job.Status == mcmp.JobStatusNew || job.Status == mcmp.JobStatusWaitingForServiceNowEnablement || job.Status == mcmp.JobStatusWaitingForServiceNowConfiguration {
+		if job.Status == db.JobStatusNew || job.Status == db.JobStatusWaitingForServiceNowEnablement || job.Status == db.JobStatusWaitingForServiceNowConfiguration {
 			if job.ChangeRequired == true {
 				// Check if we have reached the limit for this program run
 				if createdChangeTickets >= maxChangeTickets {
-					log.Printf("  -> Status 'New' & Change Required: Skipping Job %d - Max change tickets limit reached (%d/%d)",
-						job.ID, createdChangeTickets, maxChangeTickets)
+					logger.Info("  -> Status 'New' & Change Required: Skipping Job - Max change tickets limit reached", "id", job.ID, "limit", maxChangeTickets)
 					continue
 				}
 
-				log.Printf("  -> Status 'New' & Change Required: Creating ServiceNow Change Ticket for Job %d", job.ID)
+				logger.Info("  -> Status 'New' & Change Required: Creating ServiceNow Change Ticket for Job", "id", job.ID)
 				createSnowChangeTicket(callbackUrlChange, mcmpClient, snowClients, job, cfg.GENERAL.DefaultServiceNowUserSysId)
 				// Only increment counter if ticket was actually created
 				// Check if the status changed to waiting_for_approval
-				if job.ChangeStatus == mcmp.ChangeStatusWaitingForApproval {
+				if job.ChangeStatus == db.ChangeStatusWaitingForApproval {
 					createdChangeTickets++
-					log.Printf("  -> Successfully created change ticket %d/%d for Job %d", createdChangeTickets, maxChangeTickets, job.ID)
+					logger.Info("  -> Successfully created change ticket", "current", createdChangeTickets, "limit", maxChangeTickets, "id", job.ID)
 				}
 				continue
 			} else {
 				now := time.Now().In(berlinLocation)
 				if job.ChangeStartDate == nil || (job.ChangeStartDate != nil && now.After(*job.ChangeStartDate)) {
-					log.Printf("  -> Status 'New' & Change Not Required: Auto-approving Job %d", job.ID)
-					job.ChangeStatus = mcmp.ChangeStatusSkipped
-					job.Status = mcmp.JobStatusApproved
+					logger.Info("  -> Status 'New' & Change Not Required: Auto-approving Job", "id", job.ID)
+					job.ChangeStatus = db.ChangeStatusSkipped
+					job.Status = db.JobStatusApproved
 					err = mcmpClient.UpdateJob(job)
 					if err != nil {
-						log.Printf("Failed to update job %d: %v", job.ID, err)
+						logger.Error("Failed to update job", "id", job.ID, "error", err)
 					}
 				} else {
-					log.Printf("  -> Status 'New' & Change Not Required: Waiting for ChangeStartDate for Job %d", job.ID)
+					logger.Info("  -> Status 'New' & Change Not Required: Waiting for ChangeStartDate for Job", "id", job.ID)
 					continue
 				}
 			}
 		}
-		if job.Status == mcmp.JobStatusApproved || job.Status == mcmp.JobStatusWaitingForAwxEnablement || job.Status == mcmp.JobStatusWaitingForAwxConfiguration {
-			log.Printf("  -> Status 'Approved': Initiating AWX Job for Job %d", job.ID)
+		if job.Status == db.JobStatusApproved || job.Status == db.JobStatusWaitingForAwxEnablement || job.Status == db.JobStatusWaitingForAwxConfiguration {
+			logger.Info("  -> Status 'Approved': Initiating AWX Job for Job", "id", job.ID)
 
 			// Check if an AWX job is already running for this server
 			if job.ServerID != nil && runningAwxJobsByServer[*job.ServerID] {
-				log.Printf("  --> Skipping AWX job creation for job ID %d - another AWX job is already running for server ID %d", job.ID, *job.ServerID)
+				logger.Info("  --> Skipping AWX job creation - another AWX job is already running for server", "jobId", job.ID, "serverId", *job.ServerID)
 				continue
 			}
 
@@ -387,13 +330,13 @@ func run(syncAwx bool) {
 
 			err = createAwxJob(mcmpClient, awxClients, job)
 			if err != nil {
-				log.Printf("Failed to create AWX job for job ID %d: %v", job.ID, err)
+				logger.Error("Failed to create AWX job for job ID", "id", job.ID, "error", err)
 				job.AwxError = new(err.Error())
 				job.Title = replaceVariables(job.ActionErrorTitle, err.Error())
 				job.Description = replaceVariables(job.ActionErrorDescription, err.Error())
 				err = mcmpClient.UpdateJob(job)
 				if err != nil {
-					log.Printf("Failed to update job %d: %v", job.ID, err)
+					logger.Error("Failed to update job", "id", job.ID, "error", err)
 				}
 			} else {
 				if job.ServerInstallation {
@@ -407,100 +350,100 @@ func run(syncAwx bool) {
 			}
 			continue
 		}
-		if job.Status == mcmp.JobStatusAwxRunning {
-			log.Printf("  -> Status 'AWX Running': Checking progress for Job %d", job.ID)
+		if job.Status == db.JobStatusAwxRunning {
+			logger.Info("  -> Status 'AWX Running': Checking progress for Job", "id", job.ID)
 			isRunning, err := getAwxJobStatus(mcmpClient, awxClients, job)
 			if err != nil {
-				log.Printf("Failed to get AWX Status for job ID %d: %v", job.ID, err)
+				logger.Error("Failed to get AWX Status for job ID", "id", job.ID, "error", err)
 				continue
 			}
 			if isRunning {
 				continue
 			}
 		}
-		if job.Status == mcmp.JobStatusAwxCompleted {
-			log.Printf("  -> Status 'AWX Completed': Checking for Quick Discovery requirement for Job %d", job.ID)
-			if job.AwxStatus != mcmp.AwxStatusCanceled && (job.ServerInstallation || job.QuickDiscovery) {
+		if job.Status == db.JobStatusAwxCompleted {
+			logger.Info("  -> Status 'AWX Completed': Checking for Quick Discovery requirement for Job", "id", job.ID)
+			if job.AwxStatus != db.AwxStatusCanceled && (job.ServerInstallation || job.QuickDiscovery) {
 				err = startQuickDiscovery(callbackUrlQuickDiscovery, mcmpClient, snowClients, job)
 				if err != nil {
-					log.Printf("Failed to start Quick Discovery for job ID %d: %v", job.ID, err)
+					logger.Error("Failed to start Quick Discovery for job ID", "id", job.ID, "error", err)
 				}
 				continue
 			} else {
-				job.QuickDiscoveryStatus = mcmp.QuickdiscoveryStatusSkipped
-				job.Status = mcmp.JobStatusQuickdiscoveryCompleted
+				job.QuickDiscoveryStatus = db.QuickdiscoveryStatusSkipped
+				job.Status = db.JobStatusQuickdiscoveryCompleted
 				err = mcmpClient.UpdateJob(job)
 				if err != nil {
-					log.Printf("Failed to update job %d: %v", job.ID, err)
+					logger.Error("Failed to update job", "id", job.ID, "error", err)
 				}
 			}
 		}
 
-		if job.Status == mcmp.JobStatusWaitingForQuickdiscovery {
-			log.Printf("  -> Status 'Waiting for Quick Discovery': Job %d is pending external callback", job.ID)
+		if job.Status == db.JobStatusWaitingForQuickdiscovery {
+			logger.Info("  -> Status 'Waiting for Quick Discovery': Job is pending external callback", "id", job.ID)
 			continue
 		}
 
-		if job.Status == mcmp.JobStatusQuickdiscoveryFailed {
-			log.Printf("  -> Status 'Quick Discovery Failed': Checking retry limits for Job %d", job.ID)
-			if job.QuickDiscoveryErrorCounter < 7 {
+		if job.Status == db.JobStatusQuickdiscoveryFailed {
+			logger.Info("  -> Status 'Quick Discovery Failed': Checking retry limits for Job", "id", job.ID)
+			if job.QuickDiscoveryErrorCounter < 10 {
 				job.QuickDiscoveryErrorCounter += 1
-				job.QuickDiscoveryStatus = mcmp.QuickdiscoveryStatusNew
-				job.Status = mcmp.JobStatusWaitingForQuickdiscovery
+				job.QuickDiscoveryStatus = db.QuickdiscoveryStatusNew
+				job.Status = db.JobStatusWaitingForQuickdiscovery
 				err = mcmpClient.UpdateJob(job)
 				if err != nil {
-					log.Printf("Failed to update job %d: %v", job.ID, err)
+					logger.Error("Failed to update job", "id", job.ID, "error", err)
 				} else {
 					err = startQuickDiscovery(callbackUrlQuickDiscovery, mcmpClient, snowClients, job)
 					if err != nil {
-						log.Printf("Failed to start Quick Discovery for job ID %d: %v", job.ID, err)
+						logger.Error("Failed to start Quick Discovery for job ID", "id", job.ID, "error", err)
 					}
 				}
 				continue
 			} else {
-				job.Status = mcmp.JobStatusQuickdiscoveryCompleted
+				job.Status = db.JobStatusQuickdiscoveryCompleted
 				job.Title = replaceVariables(job.ActionErrorTitle, "Quick Discovery failed")
 				job.Description = replaceVariables(job.ActionErrorDescription, "Quick Discovery failed")
 				err = mcmpClient.UpdateJob(job)
 				if err != nil {
-					log.Printf("Failed to update job %d: %v", job.ID, err)
+					logger.Error("Failed to update job", "id", job.ID, "error", err)
 				}
 			}
 		}
 
-		if job.Status == mcmp.JobStatusQuickdiscoveryCompleted {
-			log.Printf("  -> Status 'Quick Discovery Completed': Proceeding to Tagging for Job %d", job.ID)
+		if job.Status == db.JobStatusQuickdiscoveryCompleted {
+			logger.Info("  -> Status 'Quick Discovery Completed': Proceeding to Tagging for Job", "id", job.ID)
 			if job.ServerInstallation {
 				err = tagCI(mcmpClient, snowClients, foremanClient, job)
 				if err != nil {
-					log.Printf("Failed to Tag CI for job ID %d: %v", job.ID, err)
+					logger.Error("Failed to Tag CI for job ID", "id", job.ID, "error", err)
 				}
 			} else {
-				job.TaggingStatus = mcmp.TaggingStatusSkipped
-				job.Status = mcmp.JobStatusTaggingCompleted
+				job.TaggingStatus = db.TaggingStatusSkipped
+				job.Status = db.JobStatusTaggingCompleted
 				err = mcmpClient.UpdateJob(job)
 				if err != nil {
-					log.Printf("Failed to update job %d: %v", job.ID, err)
+					logger.Error("Failed to update job", "id", job.ID, "error", err)
 				}
 			}
 		}
 
-		if job.Status == mcmp.JobStatusTaggingFailed {
-			log.Printf("  -> Status 'Tagging Failed': Marking Job %d as completed (with errors)", job.ID)
-			job.Status = mcmp.JobStatusTaggingCompleted
+		if job.Status == db.JobStatusTaggingFailed {
+			logger.Info("  -> Status 'Tagging Failed': Marking Job as completed (with errors)", "id", job.ID)
+			job.Status = db.JobStatusTaggingCompleted
 			job.Title = replaceVariables(job.ActionErrorTitle, "Tagging failed")
 			job.Description = replaceVariables(job.ActionErrorDescription, "Tagging failed")
 			err = mcmpClient.UpdateJob(job)
 			if err != nil {
-				log.Printf("Failed to update job %d: %v", job.ID, err)
+				logger.Error("Failed to update job", "id", job.ID, "error", err)
 			}
 		}
 
-		if job.Status == mcmp.JobStatusTaggingCompleted {
+		if job.Status == db.JobStatusTaggingCompleted {
 			log.Printf("  -> Status 'Tagging Completed': Finalizing Job %d", job.ID)
 			errMsg := ""
 			errFlag := false
-			if job.AwxStatus == mcmp.AwxStatusError || job.AwxStatus == mcmp.AwxStatusFailed || job.AwxStatus == mcmp.AwxStatusCanceled {
+			if job.AwxStatus == db.AwxStatusError || job.AwxStatus == db.AwxStatusFailed || job.AwxStatus == db.AwxStatusCanceled {
 				awxErr := ""
 				if job.AwxError != nil {
 					awxErr = *job.AwxError
@@ -508,7 +451,7 @@ func run(syncAwx bool) {
 				errMsg = fmt.Sprintf("AWX-Status: %s\nAWX-Error: %s\n", job.AwxStatus, awxErr)
 				errFlag = true
 			}
-			if job.QuickDiscoveryStatus == mcmp.QuickdiscoveryStatusError || job.QuickDiscoveryStatus == mcmp.QuickdiscoveryStatusCanceled || job.QuickDiscoveryStatus == mcmp.QuickdiscoveryStatusFailed {
+			if job.QuickDiscoveryStatus == db.QuickdiscoveryStatusError || job.QuickDiscoveryStatus == db.QuickdiscoveryStatusCanceled || job.QuickDiscoveryStatus == db.QuickdiscoveryStatusFailed {
 				qdErr := ""
 				if job.QuickDiscoveryError != nil {
 					qdErr = *job.QuickDiscoveryError
@@ -516,7 +459,7 @@ func run(syncAwx bool) {
 				errMsg = fmt.Sprintf("QuickDiscovery-Status: %s\nQuickDiscovery-Error: %s\n", job.QuickDiscoveryStatus, qdErr)
 				errFlag = true
 			}
-			if job.TaggingStatus == mcmp.TaggingStatusError || job.TaggingStatus == mcmp.TaggingStatusCanceled || job.TaggingStatus == mcmp.TaggingStatusFailed {
+			if job.TaggingStatus == db.TaggingStatusError || job.TaggingStatus == db.TaggingStatusCanceled || job.TaggingStatus == db.TaggingStatusFailed {
 				tagErr := ""
 				if job.TaggingError != nil {
 					tagErr = *job.TaggingError
@@ -527,48 +470,49 @@ func run(syncAwx bool) {
 
 			job.JobEndDate = new(time.Now().In(berlinLocation))
 			if errFlag {
-				job.Status = mcmp.JobStatusFailed
+				job.Status = db.JobStatusFailed
 				job.Title = replaceVariables(job.ActionErrorTitle, errMsg)
 				job.Description = replaceVariables(job.ActionErrorDescription, errMsg)
 				job.Notification = true
 				if job.ChangeRequired {
 					err = closeSnowChangeTicket(snow.Unsuccessful, *job.Description, snowClients, job)
 					if err != nil {
-						log.Printf("Failed to close ServiceNow Change Ticket for job ID %d: %v", job.ID, err)
+						logger.Warn("Failed to close ServiceNow Change Ticket for job ID", "id", job.ID, "error", err)
 					}
 				}
 			} else {
-				job.Status = mcmp.JobStatusSuccessful
+				job.Status = db.JobStatusSuccessful
 				job.Title = job.ActionSuccessTitle
 				job.Description = job.ActionSuccessDescription
 				if job.ChangeRequired {
 					err = closeSnowChangeTicket(snow.Successful, *job.Description, snowClients, job)
 					if err != nil {
-						log.Printf("Failed to close ServiceNow Change Ticket for job ID %d: %v", job.ID, err)
+						logger.Warn("Failed to close ServiceNow Change Ticket for job ID", "id", job.ID, "error", err)
 					}
 				}
 			}
 
 			err = mcmpClient.UpdateJob(job)
 			if err != nil {
-				log.Printf("Failed to update job %d at end of processing: %v", job.ID, err)
+				logger.Error("Failed to update job at end of processing", "id", job.ID, "error", err)
 			}
 		}
 
-		log.Printf("END Processing Job %d | New Status: %s", job.ID, job.Status)
+		logger.Info("END Processing Job", "id", job.ID, "newStatus", job.Status)
 
 	}
+	return nil
 }
 
-func getAwxJobStatus(mcmpClient *mcmp.Client, awxClients map[int64]*awx.AWX, job *mcmp.Job) (bool, error) {
+func getAwxJobStatus(mcmpClient *db.Client, awxClients map[int64]*awx.AWX, job *db.Job) (bool, error) {
 	if job.AwxEstimatedRuntime != nil && *job.AwxEstimatedRuntime > 1 && job.AwxStartDate != nil {
 		estimatedEnd := job.AwxStartDate.Add(time.Duration(*job.AwxEstimatedRuntime) * time.Minute).In(berlinLocation)
 		now := time.Now().In(berlinLocation)
 		if now.Before(estimatedEnd) {
 			if job.AwxJobId != nil {
-				log.Printf("  -> AWX Job %d (MCMP Job %d) is estimated to run until %s. Skipping status check.", *job.AwxJobId, job.ID, estimatedEnd.Format(time.RFC3339))
+				logger.Info("  -> AWX Job is estimated to run. Skipping status check.", "awxId", *job.AwxJobId, "mcmpId", job.ID, "until", estimatedEnd.Format(time.RFC3339))
 			} else {
-				log.Printf("  -> AWX Job (unknown ID) (MCMP Job %d) is estimated to run until %s. Skipping status check.", job.ID, estimatedEnd.Format(time.RFC3339))
+				logger.Info("  -> AWX Job (unknown ID) is estimated to run. Skipping status check.", "mcmpId", job.ID, "until", estimatedEnd.Format(time.RFC3339))
 			}
 			return true, nil
 		}
@@ -579,7 +523,7 @@ func getAwxJobStatus(mcmpClient *mcmp.Client, awxClients map[int64]*awx.AWX, job
 		return false, fmt.Errorf("AWX Client is not enabled or not configured. Job ID %d", job.ID)
 	}
 
-	err := fetchAndPopulateAwxJobData(context.Background(), awxClient, mcmpClient, job)
+	err := fetchAndPopulateAwxJobData(context.Background(), awxClient, job)
 	if err != nil {
 		return true, err
 	}
@@ -588,12 +532,12 @@ func getAwxJobStatus(mcmpClient *mcmp.Client, awxClients map[int64]*awx.AWX, job
 	if job.AwxJobStatus != nil {
 		s := *job.AwxJobStatus
 		if s != "successful" && s != "failed" && s != "error" && s != "canceled" {
-			log.Printf("  -> AWX Job %d is still running. Status: %s", *job.AwxJobId, s)
+			logger.Info("  -> AWX Job is still running.", "awxId", *job.AwxJobId, "status", s)
 			return true, nil
 		}
 	}
 
-	if job.AwxTemplateType == mcmp.AwxTemplateTypeTemplate {
+	if job.AwxTemplateType == db.AwxTemplateTypeTemplate {
 		var jobSuccess bool
 		var errorMessage string
 		if job.AwxJobReturnCompleted == nil {
@@ -621,8 +565,8 @@ func getAwxJobStatus(mcmpClient *mcmp.Client, awxClients map[int64]*awx.AWX, job
 		}
 
 		if jobSuccess {
-			job.Status = mcmp.JobStatusAwxCompleted
-			job.AwxStatus = mcmp.AwxStatusSuccessful
+			job.Status = db.JobStatusAwxCompleted
+			job.AwxStatus = db.AwxStatusSuccessful
 			err = mcmpClient.UpdateJob(job)
 			if err != nil {
 				return false, err
@@ -630,16 +574,16 @@ func getAwxJobStatus(mcmpClient *mcmp.Client, awxClients map[int64]*awx.AWX, job
 			return false, nil
 		}
 
-		log.Printf("  -> AWX Job failed. Error: %s", errorMessage)
-		job.Status = mcmp.JobStatusAwxCompleted
-		job.AwxStatus = mcmp.AwxStatusFailed
+		logger.Info("  -> AWX Job failed.", "error", errorMessage)
+		job.Status = db.JobStatusAwxCompleted
+		job.AwxStatus = db.AwxStatusFailed
 		job.AwxError = new(errorMessage)
 		err = mcmpClient.UpdateJob(job)
 		if err != nil {
 			return false, err
 		}
 		return false, nil
-	} else if job.AwxTemplateType == mcmp.AwxTemplateTypeWorkflow {
+	} else if job.AwxTemplateType == db.AwxTemplateTypeWorkflow {
 		err := syncWorkflowNodes(context.Background(), awxClient, mcmpClient, job)
 		if err != nil {
 			return true, err
@@ -647,13 +591,13 @@ func getAwxJobStatus(mcmpClient *mcmp.Client, awxClients map[int64]*awx.AWX, job
 
 		switch *job.AwxJobStatus {
 		case "successful":
-			job.Status = mcmp.JobStatusAwxCompleted
-			job.AwxStatus = mcmp.AwxStatusSuccessful
+			job.Status = db.JobStatusAwxCompleted
+			job.AwxStatus = db.AwxStatusSuccessful
 
 		case "failed":
-			log.Printf("  -> AWX Workflow Job failed. Status: %s", *job.AwxJobStatus)
-			job.Status = mcmp.JobStatusAwxCompleted
-			job.AwxStatus = mcmp.AwxStatusFailed
+			logger.Info("  -> AWX Workflow Job failed.", "status", *job.AwxJobStatus)
+			job.Status = db.JobStatusAwxCompleted
+			job.AwxStatus = db.AwxStatusFailed
 			job.AwxError = new(fmt.Sprintf("AWX-Status: %s", *job.AwxJobStatus))
 
 			err = mcmpClient.UpdateJob(job)
@@ -662,13 +606,13 @@ func getAwxJobStatus(mcmpClient *mcmp.Client, awxClients map[int64]*awx.AWX, job
 			}
 			return false, nil
 		case "canceled":
-			log.Printf("  -> AWX Workflow Job canceled.")
-			job.Status = mcmp.JobStatusAwxCompleted
-			job.AwxStatus = mcmp.AwxStatusCanceled
+			logger.Info("  -> AWX Workflow Job canceled.")
+			job.Status = db.JobStatusAwxCompleted
+			job.AwxStatus = db.AwxStatusCanceled
 		case "error":
-			log.Printf("  -> AWX Workflow Job failed. Status: %s", *job.AwxJobStatus)
-			job.Status = mcmp.JobStatusAwxCompleted
-			job.AwxStatus = mcmp.AwxStatusError
+			logger.Info("  -> AWX Workflow Job failed.", "status", *job.AwxJobStatus)
+			job.Status = db.JobStatusAwxCompleted
+			job.AwxStatus = db.AwxStatusError
 
 		}
 		err = mcmpClient.UpdateJob(job)
@@ -738,42 +682,42 @@ func checkJobArtifacts(artifacts interface{}) (*bool, *string, *string) {
 	return completedPtr, messagePtr, dataPtr
 }
 
-func createAwxJob(mcmpClient *mcmp.Client, awxClients map[int64]*awx.AWX, job *mcmp.Job) error {
-	debugPrintf("START - create awx job\n")
+func createAwxJob(mcmpClient *db.Client, awxClients map[int64]*awx.AWX, job *db.Job) error {
+	logger.DebugPrintf("START - create awx job\n")
 	if !(job.AwxJobEnabled) {
-		log.Printf("Job %d is not a awx job. Skipping creation of awx job.", job.ID)
-		job.AwxStatus = mcmp.AwxStatusSkipped
-		job.Status = mcmp.JobStatusAwxCompleted
+		logger.Info("Job is not a awx job. Skipping creation of awx job.", "id", job.ID)
+		job.AwxStatus = db.AwxStatusSkipped
+		job.Status = db.JobStatusAwxCompleted
 		err := mcmpClient.UpdateJob(job)
 		if err != nil {
-			log.Printf("Failed to update job %d: %v", job.ID, err)
+			logger.Error("Failed to update job", "id", job.ID, "error", err)
 		}
 		return nil
 	}
 	if job.AwxID == nil || *job.AwxID == 0 {
-		log.Printf("Awx ID is not configured for job %d. Skipping creation of awx job.", job.ID)
-		if job.Status != mcmp.JobStatusWaitingForAwxConfiguration {
-			job.Status = mcmp.JobStatusWaitingForAwxConfiguration
+		logger.Info("Awx ID is not configured for job. Skipping creation of awx job.", "id", job.ID)
+		if job.Status != db.JobStatusWaitingForAwxConfiguration {
+			job.Status = db.JobStatusWaitingForAwxConfiguration
 			err := mcmpClient.UpdateJob(job)
 			if err != nil {
-				log.Printf("Failed to update job %d: %v", job.ID, err)
+				logger.Error("Failed to update job", "id", job.ID, "error", err)
 			}
 		}
 		return nil
 	}
 	awxClient, ok := awxClients[job.Awx.ID]
 	if !ok {
-		log.Printf("AWX Client is not enabled for job %d. Skipping creation of awx job.", job.ID)
-		if job.Status != mcmp.JobStatusWaitingForAwxEnablement {
-			job.Status = mcmp.JobStatusWaitingForAwxEnablement
+		logger.Info("AWX Client is not enabled for job. Skipping creation of awx job.", "id", job.ID)
+		if job.Status != db.JobStatusWaitingForAwxEnablement {
+			job.Status = db.JobStatusWaitingForAwxEnablement
 			err := mcmpClient.UpdateJob(job)
 			if err != nil {
-				log.Printf("Failed to update job %d: %v", job.ID, err)
+				logger.Error("Failed to update job", "id", job.ID, "error", err)
 			}
 		}
 		return nil
 	}
-	debugPrintf("create awx job %+v\n", job)
+	logger.DebugPrintf("create awx job %+v\n", job)
 	jobTemplateID := *job.AwxTemplateID
 	data := make(map[string]interface{})
 	params := make(map[string]string)
@@ -814,7 +758,7 @@ func createAwxJob(mcmpClient *mcmp.Client, awxClients map[int64]*awx.AWX, job *m
 		if err == nil {
 			data["credentials"] = values
 		} else {
-			log.Printf("failed to parse credentials: %v  %v", *job.AwxCredentials, err)
+			logger.Warn("failed to parse credentials", "jobId", job.ID, "credentials", *job.AwxCredentials, "error", err)
 		}
 	}
 	if job.AwxJobType != nil && *job.AwxJobType != "" {
@@ -872,7 +816,7 @@ func createAwxJob(mcmpClient *mcmp.Client, awxClients map[int64]*awx.AWX, job *m
 		if err == nil {
 			data["instance_groups"] = values
 		} else {
-			log.Printf("failed to parse instance groups: %v  %v", *job.AwxInstanceGroups, err)
+			logger.Warn("failed to parse instance groups", "jobId", job.ID, "groups", *job.AwxInstanceGroups, "error", err)
 		}
 	}
 	if job.AwxLabels != nil && *job.AwxLabels != "" {
@@ -880,13 +824,13 @@ func createAwxJob(mcmpClient *mcmp.Client, awxClients map[int64]*awx.AWX, job *m
 		if err == nil {
 			data["labels"] = values
 		} else {
-			log.Printf("failed to parse labels: %v  %v", *job.AwxLabels, err)
+			logger.Warn("failed to parse labels", "jobId", job.ID, "labels", *job.AwxLabels, "error", err)
 		}
 	}
 
 	job.AwxStartDate = new(time.Now().In(berlinLocation))
-	if job.AwxTemplateType == mcmp.AwxTemplateTypeTemplate {
-		log.Printf("  -> Launching AWX Job Template %d for Job %d", jobTemplateID, job.ID)
+	if job.AwxTemplateType == db.AwxTemplateTypeTemplate {
+		logger.Info("  -> Launching AWX Job Template", "templateId", jobTemplateID, "mcmpId", job.ID)
 		// Start Job Template
 		jobResult, err := awxClient.JobTemplateService.Launch(int(jobTemplateID), data, params)
 		if err != nil {
@@ -897,17 +841,17 @@ func createAwxJob(mcmpClient *mcmp.Client, awxClients map[int64]*awx.AWX, job *m
 		job.AwxJobId = new(int64(jobResult.ID))
 		awxJobLink, err := getAwxJobURL(job.Awx.ApiEndpoint, jobResult.ID)
 		if err != nil {
-			log.Printf("failed to create awx job url: %v", err)
+			logger.Warn("failed to create awx job url", "error", err)
 		} else {
 			job.AwxJobLink = awxJobLink
 		}
 
 		job.AwxVariables = prepareAndSortMap(data)
-		job.AwxStatus = mcmp.AwxStatusRunning
-		job.Status = mcmp.JobStatusAwxRunning
-		log.Printf("  -> AWX Job launched successfully with ID: %d", jobResult.ID)
-	} else if job.AwxTemplateType == mcmp.AwxTemplateTypeWorkflow {
-		log.Printf("  -> Launching AWX Workflow Job Template %d for Job %d", jobTemplateID, job.ID)
+		job.AwxStatus = db.AwxStatusRunning
+		job.Status = db.JobStatusAwxRunning
+		logger.Info("  -> AWX Job launched successfully", "awxId", jobResult.ID)
+	} else if job.AwxTemplateType == db.AwxTemplateTypeWorkflow {
+		logger.Info("  -> Launching AWX Workflow Job Template", "templateId", jobTemplateID, "mcmpId", job.ID)
 		// Start Workflow Job Template
 		jobResult, err := awxClient.WorkflowJobTemplateService.Launch(int(jobTemplateID), data, params)
 		if err != nil {
@@ -917,15 +861,15 @@ func createAwxJob(mcmpClient *mcmp.Client, awxClients map[int64]*awx.AWX, job *m
 		job.AwxJobId = new(int64(jobResult.ID))
 		awxJobLink, err := getAwxWorkflowJobURL(job.Awx.ApiEndpoint, jobResult.ID)
 		if err != nil {
-			log.Printf("failed to create awx workflow job url: %v", err)
+			logger.Warn("failed to create awx workflow job url", "error", err)
 		} else {
 			job.AwxJobLink = awxJobLink
 		}
 
 		job.AwxVariables = prepareAndSortMap(data)
-		job.AwxStatus = mcmp.AwxStatusRunning
-		job.Status = mcmp.JobStatusAwxRunning
-		log.Printf("  -> AWX Workflow Job launched successfully with ID: %d", jobResult.ID)
+		job.AwxStatus = db.AwxStatusRunning
+		job.Status = db.JobStatusAwxRunning
+		logger.Info("  -> AWX Workflow Job launched successfully", "awxId", jobResult.ID)
 	}
 
 	err := mcmpClient.UpdateJob(job)
@@ -939,7 +883,7 @@ func extractBaseURL(fullURL string) (string, error) {
 	// Parse URL
 	parsedURL, err := url.Parse(fullURL)
 	if err != nil {
-		return "", fmt.Errorf("error parsing the URLL: %w", err)
+		return "", fmt.Errorf("error parsing the URL: %w", err)
 	}
 
 	// Assemble Base-URL (Scheme + Host)
@@ -996,8 +940,8 @@ func getAwxWorkflowJobURL(awxUrl string, jobId int) (*string, error) {
 	return new(fmt.Sprintf("%s/#/jobs/workflow/%d/output", awxBaseUrl, jobId)), nil
 }
 
-func closeSnowChangeTicket(changeCloseCode snow.ChangeCloseCode, changeCloseNote string, snowClients map[int64]*snow.Client, job *mcmp.Job) error {
-	debugPrintf("close snow change %+v\n", job)
+func closeSnowChangeTicket(changeCloseCode snow.ChangeCloseCode, changeCloseNote string, snowClients map[int64]*snow.Client, job *db.Job) error {
+	logger.DebugPrintf("close snow change %+v\n", job)
 	if job.ChangeRequired {
 		snowClient, ok := snowClients[job.Snow.ID]
 		if !ok {
@@ -1006,7 +950,7 @@ func closeSnowChangeTicket(changeCloseCode snow.ChangeCloseCode, changeCloseNote
 		if job.ServerInstallation {
 			err := addCiToChange(snowClients, job)
 			if err != nil {
-				log.Printf("Failed to add CI to change ticket. job %d: %v", job.ID, err)
+				logger.Warn("Failed to add CI to change ticket.", "jobId", job.ID, "error", err)
 			}
 		}
 		closeChangeRequest := snow.ChangeCloseRequest{
@@ -1023,14 +967,14 @@ func closeSnowChangeTicket(changeCloseCode snow.ChangeCloseCode, changeCloseNote
 	return nil
 }
 
-func addCiToChange(snowClients map[int64]*snow.Client, job *mcmp.Job) error {
-	debugPrintf("add ci to change %+v\n", job)
+func addCiToChange(snowClients map[int64]*snow.Client, job *db.Job) error {
+	logger.DebugPrintf("add ci to change %+v\n", job)
 
 	val := "nil"
 	if job.QuickDiscoveryCiSysid != nil {
 		val = *job.QuickDiscoveryCiSysid
 	}
-	debugPrintf("DEBUG: ChangeRequired=%v, ServerInstallation=%v, QuickDiscoveryCiSysid=%s", job.ChangeRequired, job.ServerInstallation, val)
+	logger.DebugPrintf("DEBUG: ChangeRequired=%v, ServerInstallation=%v, QuickDiscoveryCiSysid=%s", job.ChangeRequired, job.ServerInstallation, val)
 
 	if job.ChangeRequired && job.ServerInstallation && job.QuickDiscoveryCiSysid != nil && *job.QuickDiscoveryCiSysid != "" {
 		snowClient, ok := snowClients[job.Snow.ID]
@@ -1078,11 +1022,11 @@ func resolveFQDNToIP(fqdn string) (string, error) {
 }
 
 // tagCI processes the tagging functionality by validating inputs, tagging CIs, updating job statuses, and handling errors.
-func tagCI(mcmpClient *mcmp.Client, snowClients map[int64]*snow.Client, foremanClient *foreman.Client, job *mcmp.Job) error {
+func tagCI(mcmpClient *db.Client, snowClients map[int64]*snow.Client, foremanClient *foreman.Client, job *db.Job) error {
 	var snowClient *snow.Client
-	debugPrintf(strings.Repeat("*", 50))
-	debugPrintf("* JobID %d : START - tagging\n", job.ID)
-	debugPrintf(strings.Repeat("*", 50))
+	logger.DebugPrintf("**************************************************")
+	logger.DebugPrintf("* JobID %d : START - tagging", job.ID)
+	logger.DebugPrintf("**************************************************")
 
 	// Validation
 	errorMsg := ""
@@ -1118,18 +1062,18 @@ func tagCI(mcmpClient *mcmp.Client, snowClients map[int64]*snow.Client, foremanC
 	if !job.ServerInstallation {
 		errorMsg += "Server Installation is not set.\n"
 	}
-	if job.TaggingStatus != mcmp.TaggingStatusNew {
+	if job.TaggingStatus != db.TaggingStatusNew {
 		errorMsg += fmt.Sprintf("Tagging Status is not set to 'new'. Current Tagging Status = '%s'\n", job.TaggingStatus)
 	}
 
 	if snowClient == nil || errorMsg != "" {
-		log.Printf("  -> Tagging validation failed: %s", errorMsg)
+		logger.Info("  -> Tagging validation failed", "error", errorMsg)
 		job.TaggingError = &errorMsg
-		job.Status = mcmp.JobStatusTaggingFailed
-		job.TaggingStatus = mcmp.TaggingStatusFailed
+		job.Status = db.JobStatusTaggingFailed
+		job.TaggingStatus = db.TaggingStatusFailed
 		err := mcmpClient.UpdateJob(job)
 		if err != nil {
-			log.Printf("Failed to update job %d: %v", job.ID, err)
+			logger.Error("Failed to update job", "id", job.ID, "error", err)
 		}
 		return nil
 	}
@@ -1157,7 +1101,7 @@ func tagCI(mcmpClient *mcmp.Client, snowClients map[int64]*snow.Client, foremanC
 
 	if len(collectedErrors) > 0 {
 		fullErrorMsg := strings.Join(collectedErrors, "\n")
-		log.Printf("  -> Tagging errors occurred:\n%s", fullErrorMsg)
+		logger.Info("  -> Tagging errors occurred", "errors", fullErrorMsg)
 		job.TaggingError = &fullErrorMsg
 	} else {
 		job.TaggingError = nil
@@ -1166,26 +1110,26 @@ func tagCI(mcmpClient *mcmp.Client, snowClients map[int64]*snow.Client, foremanC
 	// Status Update based on errors
 	// Only if both serverCiError and vmwareCiError are incorrect should an error be set.
 	if serverCiError && vmwareCiError {
-		job.Status = mcmp.JobStatusTaggingFailed
-		job.TaggingStatus = mcmp.TaggingStatusFailed
+		job.Status = db.JobStatusTaggingFailed
+		job.TaggingStatus = db.TaggingStatusFailed
 	} else {
-		job.Status = mcmp.JobStatusTaggingCompleted
-		job.TaggingStatus = mcmp.TaggingStatusSuccessful
+		job.Status = db.JobStatusTaggingCompleted
+		job.TaggingStatus = db.TaggingStatusSuccessful
 	}
 
 	err = mcmpClient.UpdateJob(job)
 	if err != nil {
-		log.Printf("Failed to update job %d: %v", job.ID, err)
+		logger.Error("Failed to update job", "id", job.ID, "error", err)
 	}
 
-	debugPrintf(strings.Repeat("*\n", 50))
-	debugPrintf("* JobID %d : END - tagging\n", job.ID)
-	debugPrintf(strings.Repeat("*\n", 50))
+	logger.DebugPrintf("**************************************************")
+	logger.DebugPrintf("* JobID %d : END - tagging", job.ID)
+	logger.DebugPrintf("**************************************************")
 	return nil
 }
 
-func tagQuickDiscoveryCI(snowClient *snow.Client, job *mcmp.Job) error {
-	debugPrintf(" - Tag CI sys_id = '%s' to AppService Number '%s'\n", *job.QuickDiscoveryCiSysid, job.Appservice.Number)
+func tagQuickDiscoveryCI(snowClient *snow.Client, job *db.Job) error {
+	logger.DebugPrintf(" - Tag CI sys_id = '%s' to AppService Number '%s'\n", *job.QuickDiscoveryCiSysid, job.Appservice.Number)
 	err := snowClient.PostTag(job.Appservice.Number, *job.QuickDiscoveryCiSysid)
 	if err != nil {
 		return fmt.Errorf(" Failed to tag CI sys_id '%s' to AppService Number '%s', Error: %w", *job.QuickDiscoveryCiSysid, job.Appservice.Number, err)
@@ -1193,9 +1137,9 @@ func tagQuickDiscoveryCI(snowClient *snow.Client, job *mcmp.Job) error {
 	return nil
 }
 
-func tagVmwareInstanceCI(mcmpClient *mcmp.Client, snowClient *snow.Client, foremanClient *foreman.Client, job *mcmp.Job) error {
-	debugPrintf(" - Find VMWare Instance CI for Hostname '%s'\n", *job.Hostname)
-	debugPrintf(" -- Determine UUID for the host '%s' using the Foreman API\n", *job.Hostname)
+func tagVmwareInstanceCI(mcmpClient *db.Client, snowClient *snow.Client, foremanClient *foreman.Client, job *db.Job) error {
+	logger.DebugPrintf(" - Find VMWare Instance CI for Hostname '%s'\n", *job.Hostname)
+	logger.DebugPrintf(" -- Determine UUID for the host '%s' using the Foreman API\n", *job.Hostname)
 
 	host, err := foremanClient.GetHost(*job.Hostname)
 	if err != nil {
@@ -1206,8 +1150,8 @@ func tagVmwareInstanceCI(mcmpClient *mcmp.Client, snowClient *snow.Client, forem
 		return fmt.Errorf("warning: Failed to find Server with UUID %s in foreman", host.UUID)
 	}
 
-	debugPrintf(" -- Foreman UUID = %s\n", host.UUID)
-	debugPrintf(" -- Search for instance UUID %s in the database\n", host.UUID)
+	logger.DebugPrintf(" -- Foreman UUID = %s\n", host.UUID)
+	logger.DebugPrintf(" -- Search for instance UUID %s in the database\n", host.UUID)
 
 	servers, err := mcmpClient.FindServerByInstanceUUID(host.UUID)
 	if err != nil {
@@ -1225,25 +1169,25 @@ func tagVmwareInstanceCI(mcmpClient *mcmp.Client, snowClient *snow.Client, forem
 	// We update the job here temporarily to secure the ServerID connection,
 	// even if errors occur later
 	if err := mcmpClient.UpdateJob(job); err != nil {
-		log.Printf("Failed to update job %d with server ID: %v", job.ID, err)
+		logger.Error("Failed to update job with server ID", "id", job.ID, "error", err)
 	}
 
 	server.SnowServerSysID = job.QuickDiscoveryCiSysid
 	server.SnowServerSysClass = new("cmdb_ci_server")
 	if err := mcmpClient.UpdateServer(&server); err != nil {
-		log.Printf("Failed to update server %d: %v", server.ID, err)
+		logger.Error("Failed to update server", "id", server.ID, "error", err)
 	}
 
-	serverAssignment := mcmp.ServerAssignment{
+	serverAssignment := db.ServerAssignment{
 		ServerID:     server.ID,
 		AppserviceID: job.Appservice.ID,
 	}
 	if err := mcmpClient.SaveServerAssignment(&serverAssignment); err != nil {
-		log.Printf("Failed to save server assignment: %v", err)
+		logger.Error("Failed to save server assignment", "error", err)
 	}
 
-	debugPrintf(" -- Found server with ID %d, name %s, uuid %s, instance uuid %s for host %s\n", server.ID, server.Name, server.UUID, *server.InstanceUUID, *job.Hostname)
-	debugPrintf(" -- Determine sys_id for the VMware instance in Service Now using bios_uuid = %s\n", server.UUID)
+	logger.DebugPrintf(" -- Found server with ID %d, name %s, uuid %s, instance uuid %s for host %s\n", server.ID, server.Name, server.UUID, *server.InstanceUUID, *job.Hostname)
+	logger.DebugPrintf(" -- Determine sys_id for the VMware instance in Service Now using bios_uuid = %s\n", server.UUID)
 
 	vmwareInstanceCIs, err := snowClient.FindVMwareInstance(server.UUID)
 	if err != nil {
@@ -1259,13 +1203,13 @@ func tagVmwareInstanceCI(mcmpClient *mcmp.Client, snowClient *snow.Client, forem
 	}
 
 	vmwareInstanceCI := vmwareInstanceCIs[0]
-	debugPrintf(" -- Found vmwareInstanceCI with name %s and sys_id %s and vm instance uuid %s\n", vmwareInstanceCI.Name, vmwareInstanceCI.SysId, vmwareInstanceCI.VmInstanceUUID)
-	debugPrintf(" -- Tag CI sys_id = '%s' to AppService Number '%s'\n", vmwareInstanceCI.SysId, job.Appservice.Number)
+	logger.DebugPrintf(" -- Found vmwareInstanceCI with name %s and sys_id %s and vm instance uuid %s\n", vmwareInstanceCI.Name, vmwareInstanceCI.SysId, vmwareInstanceCI.VmInstanceUUID)
+	logger.DebugPrintf(" -- Tag CI sys_id = '%s' to AppService Number '%s'\n", vmwareInstanceCI.SysId, job.Appservice.Number)
 
 	server.SnowInstanceSysID = new(vmwareInstanceCI.SysId)
 	server.SnowInstanceSysClass = new("cmdb_ci_vmware_instance")
 	if err := mcmpClient.UpdateServer(&server); err != nil {
-		log.Printf("Failed to update server %d: %v", server.ID, err)
+		logger.Error("Failed to update server", "id", server.ID, "error", err)
 	}
 
 	err = snowClient.PostTag(job.Appservice.Number, vmwareInstanceCI.SysId)
@@ -1276,23 +1220,23 @@ func tagVmwareInstanceCI(mcmpClient *mcmp.Client, snowClient *snow.Client, forem
 	return nil
 }
 
-func startQuickDiscovery(mcmpCallbackUrlQuickDiscovery string, mcmpClient *mcmp.Client, snowClients map[int64]*snow.Client, job *mcmp.Job) error {
-	debugPrintf("START - quick discovery\n")
+func startQuickDiscovery(mcmpCallbackUrlQuickDiscovery string, mcmpClient *db.Client, snowClients map[int64]*snow.Client, job *db.Job) error {
+	logger.DebugPrintf("START - quick discovery\n")
 
 	// 1. Check if QuickDiscovery is necessary at all
 	if !(job.QuickDiscovery || job.ServerInstallation) {
-		log.Printf("Job %d: Quick Discovery or Server Installation is not set.", job.ID)
-		job.QuickDiscoveryStatus = mcmp.QuickdiscoveryStatusSkipped
-		job.Status = mcmp.JobStatusQuickdiscoveryCompleted
+		logger.Info("Job: Quick Discovery or Server Installation is not set.", "id", job.ID)
+		job.QuickDiscoveryStatus = db.QuickdiscoveryStatusSkipped
+		job.Status = db.JobStatusQuickdiscoveryCompleted
 		err := mcmpClient.UpdateJob(job)
 		if err != nil {
-			log.Printf("Failed to update job %d: %v", job.ID, err)
+			logger.Error("Failed to update job", "id", job.ID, "error", err)
 		}
 		return nil
 	}
 
 	// 2. Only process jobs in "New" status
-	if job.QuickDiscoveryStatus != mcmp.QuickdiscoveryStatusNew {
+	if job.QuickDiscoveryStatus != db.QuickdiscoveryStatusNew {
 		return nil
 	}
 
@@ -1303,34 +1247,34 @@ func startQuickDiscovery(mcmpCallbackUrlQuickDiscovery string, mcmpClient *mcmp.
 
 	// 3. Hostname Validation
 	if job.Hostname == nil || *job.Hostname == "" {
-		debugPrintf("quick discovery hostname not set\n")
-		job.QuickDiscoveryStatus = mcmp.QuickdiscoveryStatusFailed
-		job.Status = mcmp.JobStatusQuickdiscoveryFailed
+		logger.DebugPrintf("quick discovery hostname not set\n")
+		job.QuickDiscoveryStatus = db.QuickdiscoveryStatusFailed
+		job.Status = db.JobStatusQuickdiscoveryFailed
 		job.QuickDiscoveryErrorCounter = 100
 
 		errMsg := "hostname not set"
 		if err := updateQuickDiscoveryError(mcmpClient, job, errMsg); err != nil {
-			log.Printf("Failed to update job %d: %v", job.ID, err)
+			logger.Error("Failed to update job", "id", job.ID, "error", err)
 		}
-		return fmt.Errorf(errMsg)
+		return errors.New(errMsg)
 	}
 
-	debugPrintf("quick discovery hostname %s\n", *job.Hostname)
+	logger.DebugPrintf("quick discovery hostname %s\n", *job.Hostname)
 
 	// 4. DNS Resolution
 	ip, err := resolveFQDNToIP(*job.Hostname)
 	if err != nil {
-		debugPrintf("DNS resolution error: %v\n", err)
-		job.QuickDiscoveryStatus = mcmp.QuickdiscoveryStatusFailed
-		job.Status = mcmp.JobStatusQuickdiscoveryFailed
+		logger.DebugPrintf("DNS resolution error: %v\n", err)
+		job.QuickDiscoveryStatus = db.QuickdiscoveryStatusFailed
+		job.Status = db.JobStatusQuickdiscoveryFailed
 
 		if updateErr := updateQuickDiscoveryError(mcmpClient, job, err.Error()); updateErr != nil {
-			log.Printf("Failed to update job %d: %v", job.ID, updateErr)
+			logger.Error("Failed to update job", "id", job.ID, "error", updateErr)
 		}
 		return err
 	}
 
-	debugPrintf("IP-Address: %s\n", ip)
+	logger.DebugPrintf("IP-Address: %s\n", ip)
 
 	// 5. Get ServiceNow Client
 	snowClient, ok := snowClients[job.Snow.ID]
@@ -1345,29 +1289,29 @@ func startQuickDiscovery(mcmpCallbackUrlQuickDiscovery string, mcmpClient *mcmp.
 	}
 	err = snowClient.QuickDiscovery(quickDiscoveryRequest)
 	if err != nil {
-		log.Printf("Failed to start quick discovery for job ID %d: %v", job.ID, err)
+		logger.Warn("Failed to start quick discovery for job ID", "id", job.ID, "error", err)
 		if updateErr := updateQuickDiscoveryError(mcmpClient, job, err.Error()); updateErr != nil {
-			log.Printf("Failed to update job %d: %v", job.ID, updateErr)
+			logger.Error("Failed to update job", "id", job.ID, "error", updateErr)
 		}
 		return err
 	}
 
 	// 7. Successful update
 	job.IP = &ip
-	job.QuickDiscoveryStatus = mcmp.QuickdiscoveryStatusWaiting
-	job.Status = mcmp.JobStatusWaitingForQuickdiscovery
+	job.QuickDiscoveryStatus = db.QuickdiscoveryStatusWaiting
+	job.Status = db.JobStatusWaitingForQuickdiscovery
 	err = mcmpClient.UpdateJob(job)
 	if err != nil {
-		log.Printf("Failed to update job %d: %v", job.ID, err)
+		logger.Error("Failed to update job", "id", job.ID, "error", err)
 		return err
 	}
 
-	debugPrintf("END - quick discovery\n")
+	logger.DebugPrintf("END - quick discovery\n")
 	return nil
 }
 
 // updateQuickDiscoveryError updates the job with an error message
-func updateQuickDiscoveryError(mcmpClient *mcmp.Client, job *mcmp.Job, errorMsg string) error {
+func updateQuickDiscoveryError(mcmpClient *db.Client, job *db.Job, errorMsg string) error {
 	if job.QuickDiscoveryError == nil || *job.QuickDiscoveryError == "" {
 		job.QuickDiscoveryError = &errorMsg
 	} else {
@@ -1376,8 +1320,8 @@ func updateQuickDiscoveryError(mcmpClient *mcmp.Client, job *mcmp.Job, errorMsg 
 	return mcmpClient.UpdateJob(job)
 }
 
-func createSnowChangeTicket(mcmpCallbackUrlChange string, mcmpClient *mcmp.Client, snowClients map[int64]*snow.Client, job *mcmp.Job, defaultServiceNowUserSysId string) {
-	debugPrintf("START - create snow change\n")
+func createSnowChangeTicket(mcmpCallbackUrlChange string, mcmpClient *db.Client, snowClients map[int64]*snow.Client, job *db.Job, defaultServiceNowUserSysId string) {
+	logger.DebugPrintf("START - create snow change\n")
 
 	// 1. Pre-Check: Is a change necessary at all?
 	if !shouldCreateChangeTicket(job) {
@@ -1388,12 +1332,12 @@ func createSnowChangeTicket(mcmpCallbackUrlChange string, mcmpClient *mcmp.Clien
 	// 2. Validation: ServiceNow configuration and client
 	snowClient, err := getSnowClientForJob(snowClients, job)
 	if err != nil {
-		log.Printf("%v. Skipping creation of snow change ticket.", err)
+		logger.Warn("Skipping creation of snow change ticket", "error", err)
 		handleMissingConfig(mcmpClient, job)
 		return
 	}
 
-	debugPrintf("create snow change\n")
+	logger.DebugPrintf("create snow change\n")
 
 	// 3. Date Setup
 	ensureChangeDates(job)
@@ -1423,30 +1367,30 @@ func createSnowChangeTicket(mcmpCallbackUrlChange string, mcmpClient *mcmp.Clien
 	}
 
 	handleSnowChangeSuccess(mcmpClient, snowClient, job, sysID, number)
-	debugPrintf("END - create snow change\n")
+	logger.DebugPrintf("END - create snow change\n")
 }
 
 // shouldCreateChangeTicket determines if a change ticket should be created based on the job's properties and status.
-func shouldCreateChangeTicket(job *mcmp.Job) bool {
+func shouldCreateChangeTicket(job *db.Job) bool {
 	return job.ChangeRequired &&
-		(job.Status == mcmp.JobStatusNew ||
-			job.Status == mcmp.JobStatusWaitingForServiceNowEnablement ||
-			job.Status == mcmp.JobStatusWaitingForServiceNowConfiguration)
+		(job.Status == db.JobStatusNew ||
+			job.Status == db.JobStatusWaitingForServiceNowEnablement ||
+			job.Status == db.JobStatusWaitingForServiceNowConfiguration)
 }
 
 // handleSkippedChange updates the job status to skipped and approved for non-change ticket jobs, then saves it to the database.
-func handleSkippedChange(mcmpClient *mcmp.Client, job *mcmp.Job) {
-	log.Printf("Job %d is not a change ticket. Skipping creation of snow change ticket.", job.ID)
-	job.ChangeStatus = mcmp.ChangeStatusSkipped
-	job.Status = mcmp.JobStatusApproved
+func handleSkippedChange(mcmpClient *db.Client, job *db.Job) {
+	logger.Info("Job is not a change ticket. Skipping creation of snow change ticket.", "id", job.ID)
+	job.ChangeStatus = db.ChangeStatusSkipped
+	job.Status = db.JobStatusApproved
 	if err := mcmpClient.UpdateJob(job); err != nil {
-		log.Printf("Failed to update job %d: %v", job.ID, err)
+		logger.Error("Failed to update job", "id", job.ID, "error", err)
 	}
 }
 
 // getSnowClientForJob retrieves the ServiceNow client for the specified job using the provided map of the client.
 // It returns an error if the job's Snow ID is not set or if the corresponding client is not available.
-func getSnowClientForJob(snowClients map[int64]*snow.Client, job *mcmp.Job) (*snow.Client, error) {
+func getSnowClientForJob(snowClients map[int64]*snow.Client, job *db.Job) (*snow.Client, error) {
 	if job.SnowID == nil || *job.SnowID == 0 {
 		return nil, fmt.Errorf("service now ID is not configured for job id %d", job.ID)
 	}
@@ -1459,22 +1403,22 @@ func getSnowClientForJob(snowClients map[int64]*snow.Client, job *mcmp.Job) (*sn
 
 // handleMissingConfig ensures the job's status is updated based on the presence and value of SnowID in the provided job.
 // It updates the job to WaitingForServiceNowConfiguration if SnowID is nil or 0, else to WaitingForServiceNowEnablement.
-func handleMissingConfig(mcmpClient *mcmp.Client, job *mcmp.Job) {
+func handleMissingConfig(mcmpClient *db.Client, job *db.Job) {
 	if job.SnowID == nil || *job.SnowID == 0 {
-		if job.Status != mcmp.JobStatusWaitingForServiceNowConfiguration {
-			job.Status = mcmp.JobStatusWaitingForServiceNowConfiguration
+		if job.Status != db.JobStatusWaitingForServiceNowConfiguration {
+			job.Status = db.JobStatusWaitingForServiceNowConfiguration
 			_ = mcmpClient.UpdateJob(job)
 		}
 	} else {
-		if job.Status != mcmp.JobStatusWaitingForServiceNowEnablement {
-			job.Status = mcmp.JobStatusWaitingForServiceNowEnablement
+		if job.Status != db.JobStatusWaitingForServiceNowEnablement {
+			job.Status = db.JobStatusWaitingForServiceNowEnablement
 			_ = mcmpClient.UpdateJob(job)
 		}
 	}
 }
 
 // ensureChangeDates ensures that the job's ChangeStartDate and ChangeEndDate are set, assigning default values if nil.
-func ensureChangeDates(job *mcmp.Job) {
+func ensureChangeDates(job *db.Job) {
 	now := time.Now().In(berlinLocation)
 	if job.ChangeStartDate == nil {
 		job.ChangeStartDate = &now
@@ -1485,7 +1429,7 @@ func ensureChangeDates(job *mcmp.Job) {
 }
 
 // performNormalChange creates a normal change request in ServiceNow and returns the SysID, change number, and an error, if any.
-func performNormalChange(client *snow.Client, callbackBaseUrl string, job *mcmp.Job, defaultServiceNowUserSysId string) (string, string, error) {
+func performNormalChange(client *snow.Client, callbackBaseUrl string, job *db.Job, defaultServiceNowUserSysId string) (string, string, error) {
 	var requestedBy string
 	var assignedTo string
 	var assignmentGroup string
@@ -1536,7 +1480,7 @@ func performNormalChange(client *snow.Client, callbackBaseUrl string, job *mcmp.
 
 // performStandardChange creates a standard change ticket in ServiceNow using the provided client, job details, and callback URL.
 // It returns the ticket's SysID, Number, and any error encountered during the operation.
-func performStandardChange(client *snow.Client, callbackBaseUrl string, job *mcmp.Job, defaultServiceNowUserSysId string) (string, string, error) {
+func performStandardChange(client *snow.Client, callbackBaseUrl string, job *db.Job, defaultServiceNowUserSysId string) (string, string, error) {
 	// Standard Change strictly requires a template
 	template := ""
 	if job.ChangeTemplate != nil {
@@ -1587,23 +1531,23 @@ func performStandardChange(client *snow.Client, callbackBaseUrl string, job *mcm
 }
 
 // handleSnowChangeError manages errors that occur while creating ServiceNow change tickets for a given job.
-func handleSnowChangeError(mcmpClient *mcmp.Client, job *mcmp.Job, err error) {
-	log.Printf("Failed to create ServiceNow change ticket for job ID %d: %v", job.ID, err)
+func handleSnowChangeError(mcmpClient *db.Client, job *db.Job, err error) {
+	logger.Warn("Failed to create ServiceNow change ticket for job ID", "id", job.ID, "error", err)
 
 	errorMsg := err.Error()
-	job.ChangeStatus = mcmp.ChangeStatusFailed
-	job.Status = mcmp.JobStatusFailed
+	job.ChangeStatus = db.ChangeStatusFailed
+	job.Status = db.JobStatusFailed
 	job.ChangeError = &errorMsg
 	job.Title = replaceVariables(job.ActionErrorTitle, errorMsg)
 	job.Description = replaceVariables(job.ActionErrorDescription, errorMsg)
 
 	if updateErr := mcmpClient.UpdateJob(job); updateErr != nil {
-		log.Printf("Failed to update job %d after snow error: %v", job.ID, updateErr)
+		logger.Error("Failed to update job after snow error", "id", job.ID, "error", updateErr)
 	}
 }
 
 // handleSnowChangeSuccess handles successful completion (fetch URL, Update DB)
-func handleSnowChangeSuccess(mcmpClient *mcmp.Client, snowClient *snow.Client, job *mcmp.Job, sysID, number string) {
+func handleSnowChangeSuccess(mcmpClient *db.Client, snowClient *snow.Client, job *db.Job, sysID, number string) {
 	changeUrl, err := snowClient.GetChangeURL(sysID)
 	if err != nil {
 		// Wenn URL abrufen fehlschlägt, ist es trotzdem ein Fehler im Prozess
@@ -1611,68 +1555,17 @@ func handleSnowChangeSuccess(mcmpClient *mcmp.Client, snowClient *snow.Client, j
 		return
 	}
 
-	log.Printf("  -> ServiceNow Change Ticket created successfully. Number: %s", number)
+	logger.Info("  -> ServiceNow Change Ticket created successfully.", "number", number)
 
-	job.ChangeStatus = mcmp.ChangeStatusWaitingForApproval
+	job.ChangeStatus = db.ChangeStatusWaitingForApproval
 	job.ChangeNumber = &number
 	job.ChangeSysId = &sysID
 	job.ChangeLink = &changeUrl
-	job.Status = mcmp.JobStatusWaitingForApproval
+	job.Status = db.JobStatusWaitingForApproval
 
 	if err := mcmpClient.UpdateJob(job); err != nil {
-		log.Printf("Failed to update job %d after success: %v", job.ID, err)
+		logger.Error("Failed to update job after success", "id", job.ID, "error", err)
 	}
-}
-
-// ReadConfig is a generic function that loads configuration from a TOML file
-// It uses a Viper library to handle configuration file parsing and environment variable support
-//
-// Type Parameters:
-//   - T: The configuration struct type that matches the TOML file structure
-//
-// Parameters:
-//   - appname: The base name for the configuration file (without extension)
-//
-// Returns:
-//   - *T: Pointer to the populated configuration struct
-//
-// Configuration file search locations (in order):
-// 1. $HOME/.{appname}/{appname}.toml
-// 2. ./{appname}.toml (current directory)
-// 3. /opt/lhm/scripts/{appname}.toml
-//
-// The function will terminate the application if the configuration file
-// cannot be found, read, or parsed successfully.
-func ReadConfig[T any](appname string) *T {
-	// Set configuration file name (without extension)
-	viper.SetConfigName(appname)
-
-	// Set configuration file type to TOML format
-	viper.SetConfigType("toml")
-
-	// Add configuration file search paths
-	// These paths are searched in the order they are added
-	viper.AddConfigPath("$HOME/." + appname) // User-specific config in home directory
-	viper.AddConfigPath(".")                 // Current working directory
-	viper.AddConfigPath("/opt/lhm/scripts")  // System-wide configuration directory
-
-	// Attempt to read the configuration file
-	err := viper.ReadInConfig()
-	if err != nil {
-		log.Fatalf("Config error: %v", err)
-	}
-
-	// Create instance of the generic configuration type
-	var cfg T
-
-	// Unmarshal the configuration data into the struct
-	// Viper automatically maps TOML keys to struct fields
-	err = viper.Unmarshal(&cfg)
-	if err != nil {
-		log.Fatalf("Config unmarshal error: %v", err)
-	}
-
-	return &cfg
 }
 
 // ensureTrailingSlash checks if a string ends with "/" and adds it if necessary
@@ -1689,26 +1582,9 @@ func ensureTrailingSlash(s string) string {
 	return s
 }
 
-// debugPrintf provides conditional debug logging functionality
-// It only outputs log messages when the global debug flag is enabled
-// This allows for verbose logging during development and troubleshooting
-// without cluttering production logs
-//
-// Parameters:
-//   - format: Printf-style format string
-//   - a: Variable arguments for format string placeholders
-//
-// The function uses the standard log package with timestamp prefixes
-// Debug messages are sent to the default logger output (typically stderr)
-func debugPrintf(format string, a ...interface{}) {
-	if debug {
-		log.Printf(format, a...)
-	}
-}
-
 // getCISysIDs extracts the CI sys_ids from a job
 // Returns a []string with the sys_ids if they are not empty
-func getCISysIDs(job *mcmp.Job) []string {
+func getCISysIDs(job *db.Job) []string {
 	sysIDs := make([]string, 0)
 
 	// Check SnowInstanceSysID and add if not empty
@@ -1725,7 +1601,7 @@ func getCISysIDs(job *mcmp.Job) []string {
 }
 
 // getApplicationAserviceSysID retrieves the SysID of the Appservice from the provided job object if available.
-func getApplicationAserviceSysID(job *mcmp.Job) string {
+func getApplicationAserviceSysID(job *db.Job) string {
 	if job.Appservice != nil && job.Appservice.SysID != "" {
 		return job.Appservice.SysID
 	}
@@ -1820,17 +1696,15 @@ func prepareAndSortMap(data map[string]interface{}) *string {
 	return sortExtraVarsFromMap(data)
 }
 
-// sortExtraVarsFromMap takes a map, and returns a sorted, indented JSON string.
+// sortExtraVarsFromMap takes a map and returns a sorted, indented JSON string.
 func sortExtraVarsFromMap(data map[string]interface{}) *string {
 	sortedJSON, err := marshalSortedJSON(data)
 	if err != nil {
-		debugPrintf("failed to marshal sorted data: %v", err)
-		msg := fmt.Sprintf("failed to marshal data to JSON: %v", err)
-		return &msg
+		logger.DebugPrintf("failed to marshal sorted data: %v", err)
+		return new(fmt.Sprintf("failed to marshal data to JSON: %v", err))
 	}
 
-	sortedStr := string(sortedJSON)
-	return &sortedStr
+	return new(string(sortedJSON))
 }
 
 // sortExtraVars takes a JSON string, unmarshals it, and returns a sorted, indented JSON string.
@@ -1842,7 +1716,7 @@ func sortExtraVars(extraVars string) *string {
 
 	var extraVarsMap map[string]interface{}
 	if err := json.Unmarshal([]byte(extraVars), &extraVarsMap); err != nil {
-		debugPrintf("failed to unmarshal extra_vars for sorting: %v", err)
+		logger.DebugPrintf("failed to unmarshal extra_vars for sorting: %v", err)
 		return &extraVars
 	}
 
@@ -1946,7 +1820,7 @@ func createForemanClient(cfg *Config) (*foreman.Client, error) {
 	// Initialize Foreman API client with comprehensive security and performance configuration
 	// The client configuration includes authentication, TLS security, retry logic, and performance tuning
 	foremanConfig := foreman.ClientConfig{
-		Debug:           debug,                    // Enable debug logging for API communication
+		Debug:           cfg.GENERAL.Debug,        // Enable debug logging for API communication
 		Username:        cfg.FOREMAN.Username,     // Basic authentication username
 		Password:        cfg.FOREMAN.Password,     // Basic authentication password
 		ApiEndpoint:     cfg.FOREMAN.ApiEndpoint,  // Base URL for Foreman API endpoints
@@ -1958,13 +1832,13 @@ func createForemanClient(cfg *Config) (*foreman.Client, error) {
 	// The client encapsulates all HTTP communication logic and authentication handling
 	foremanClient, err := foreman.NewClient(foremanConfig)
 	if err != nil {
-		log.Fatalf("Failed to create Foreman client: %v", err)
+		return nil, err
 	}
 	return foremanClient, nil
 }
 
 // logVmStatusChange logs a virtual machine status change event using siemLogger and job details.
-func logVmStatusChange(siemLogger *logging.SiemLogger, job *mcmp.Job, defaultServiceNowUserSysId string) {
+func logVmStatusChange(siemLogger *siem.SiemLogger, job *db.Job, defaultServiceNowUserSysId string) {
 	if job.AwxError != nil {
 		return
 	}
@@ -2029,9 +1903,9 @@ func splitAndTrim(s string, sep string) []string {
 	return result
 }
 
-func sendNonPostgresEmail(cfg *Config, mcmpClient *mcmp.Client, job *mcmp.Job) {
-	if job.ServerInstallation && job.NonPostgres && job.NonPostgresEmailStatus == mcmp.EmailStatusNew {
-		log.Printf("  -> Initiating Non-Postgres Email notification for Job %d", job.ID)
+func sendNonPostgresEmail(cfg *Config, mcmpClient *db.Client, job *db.Job) {
+	if job.ServerInstallation && job.NonPostgres && job.NonPostgresEmailStatus == db.EmailStatusNew {
+		logger.Info("  -> Initiating Non-Postgres Email notification for Job", "id", job.ID)
 
 		to := splitAndTrim(cfg.SMTP.ToNonPostgres, ",")
 
@@ -2049,34 +1923,34 @@ func sendNonPostgresEmail(cfg *Config, mcmpClient *mcmp.Client, job *mcmp.Job) {
 		err := mail.SendEmail(cfg.SMTP.Server, cfg.SMTP.Port, cfg.SMTP.Username, cfg.SMTP.Password, to, cc, cfg.SMTP.Subject, justification, true)
 
 		if err != nil {
-			log.Printf("Job-ID: %d - Error sending email: %v\n", job.ID, err)
-			job.NonPostgresEmailStatus = mcmp.EmailStatusFailed
+			logger.Warn("Error sending email", "jobId", job.ID, "error", err)
+			job.NonPostgresEmailStatus = db.EmailStatusFailed
 		} else {
-			log.Printf("  -> Non-Postgres Email sent successfully for Job %d", job.ID)
-			job.NonPostgresEmailStatus = mcmp.EmailStatusSent
+			logger.Info("  -> Non-Postgres Email sent successfully for Job", "id", job.ID)
+			job.NonPostgresEmailStatus = db.EmailStatusSent
 		}
 
 		if err := mcmpClient.UpdateJob(job); err != nil {
-			log.Printf("Failed to update job %d after email attempt: %v", job.ID, err)
+			logger.Error("Failed to update job after email attempt", "id", job.ID, "error", err)
 		}
-	} else if job.NonPostgresEmailStatus == mcmp.EmailStatusNew {
-		log.Printf("  -> Non-Postgres Email not required for Job %d. Skipping.", job.ID)
-		job.NonPostgresEmailStatus = mcmp.EmailStatusSkipped
+	} else if job.NonPostgresEmailStatus == db.EmailStatusNew {
+		logger.Info("  -> Non-Postgres Email not required for Job. Skipping.", "id", job.ID)
+		job.NonPostgresEmailStatus = db.EmailStatusSkipped
 		if err := mcmpClient.UpdateJob(job); err != nil {
-			log.Printf("Failed to update job %d to skipped email status: %v", job.ID, err)
+			logger.Error("Failed to update job to skipped email status", "id", job.ID, "error", err)
 		}
 	}
 }
 
 // updateAwxJobDates updates the start and end dates of a job based on AWX results
-func updateAwxJobDates(job *mcmp.Job, started time.Time, finished time.Time, templateType string) {
+func updateAwxJobDates(job *db.Job, started time.Time, finished time.Time, templateType string) {
 	if !started.IsZero() {
-		debugPrintf("     AwxTemplateType%s jobResult.Started : %s\n", templateType, started.Format(time.RFC3339Nano))
+		logger.DebugPrintf("     AwxTemplateType%s jobResult.Started : %s\n", templateType, started.Format(time.RFC3339Nano))
 		job.AwxStartDate = new(started.In(berlinLocation))
 	}
 
 	if !finished.IsZero() {
-		debugPrintf("     AwxTemplateType%s jobResult.Finished : %s\n", templateType, finished.Format(time.RFC3339Nano))
+		logger.DebugPrintf("     AwxTemplateType%s jobResult.Finished : %s\n", templateType, finished.Format(time.RFC3339Nano))
 		job.AwxEndDate = new(finished.In(berlinLocation))
 	} else {
 		job.AwxEndDate = new(time.Now().In(berlinLocation))
@@ -2111,7 +1985,7 @@ func retry(ctx context.Context, maxRetries int, initialBackoff time.Duration, ma
 }
 
 // collectAllWorkflowNodes recursively collects all job details from a workflow job and its nested workflow jobs concurrently.
-func collectAllWorkflowNodes(ctx context.Context, awxClient *awx.AWX, apiEndpoint string, workflowJobID int64, parentWorkflowJobID int64, depth int) ([]mcmp.JobNode, error) {
+func collectAllWorkflowNodes(ctx context.Context, awxClient *awx.AWX, apiEndpoint string, workflowJobID int64, parentWorkflowJobID int64, depth int) ([]db.JobNode, error) {
 	var nodes []*awx.WorkflowJobNode
 	err := retry(ctx, 3, 1*time.Second, 10*time.Second, func() error {
 		var listErr error
@@ -2124,7 +1998,7 @@ func collectAllWorkflowNodes(ctx context.Context, awxClient *awx.AWX, apiEndpoin
 		return nil, fmt.Errorf("failed to get workflow job nodes for workflow ID %d: %w", workflowJobID, err)
 	}
 
-	results := make([][]mcmp.JobNode, len(nodes))
+	results := make([][]db.JobNode, len(nodes))
 	var wg sync.WaitGroup
 	var errOnce sync.Once
 	var firstErr error
@@ -2145,7 +2019,7 @@ func collectAllWorkflowNodes(ctx context.Context, awxClient *awx.AWX, apiEndpoin
 
 			jobInfos, err := processNode(ctx, awxClient, apiEndpoint, node, parentWorkflowJobID, depth)
 			if err != nil {
-				log.Printf("processNode Error : %v\n", err)
+				logger.Warn("processNode Error", "error", err)
 				errOnce.Do(func() { firstErr = err })
 				return
 			}
@@ -2159,7 +2033,7 @@ func collectAllWorkflowNodes(ctx context.Context, awxClient *awx.AWX, apiEndpoin
 		return nil, firstErr
 	}
 
-	var collectedJobs []mcmp.JobNode
+	var collectedJobs []db.JobNode
 	for _, res := range results {
 		collectedJobs = append(collectedJobs, res...)
 	}
@@ -2167,8 +2041,8 @@ func collectAllWorkflowNodes(ctx context.Context, awxClient *awx.AWX, apiEndpoin
 	return sortJobNodesHierarchically(collectedJobs, parentWorkflowJobID), nil
 }
 
-func sortJobNodesHierarchically(nodes []mcmp.JobNode, rootParentID int64) []mcmp.JobNode {
-	byParent := make(map[int64][]mcmp.JobNode)
+func sortJobNodesHierarchically(nodes []db.JobNode, rootParentID int64) []db.JobNode {
+	byParent := make(map[int64][]db.JobNode)
 	for _, node := range nodes {
 		byParent[node.ParentJobID] = append(byParent[node.ParentJobID], node)
 	}
@@ -2196,7 +2070,7 @@ func sortJobNodesHierarchically(nodes []mcmp.JobNode, rootParentID int64) []mcmp
 		})
 	}
 
-	var result []mcmp.JobNode
+	var result []db.JobNode
 	var walk func(int64)
 	walk = func(pID int64) {
 		for _, node := range byParent[pID] {
@@ -2214,8 +2088,8 @@ func sortJobNodesHierarchically(nodes []mcmp.JobNode, rootParentID int64) []mcmp
 }
 
 // processNode handles the extraction and formatting of a single workflow node.
-func processNode(ctx context.Context, awxClient *awx.AWX, apiEndpoint string, node *awx.WorkflowJobNode, parentWorkflowJobID int64, depth int) ([]mcmp.JobNode, error) {
-	jobInfo := mcmp.JobNode{
+func processNode(ctx context.Context, awxClient *awx.AWX, apiEndpoint string, node *awx.WorkflowJobNode, parentWorkflowJobID int64, depth int) ([]db.JobNode, error) {
+	jobInfo := db.JobNode{
 		NodeID:         int64(node.ID),
 		NodeIdentifier: &node.Identifier,
 		ParentJobID:    parentWorkflowJobID,
@@ -2243,14 +2117,14 @@ func processNode(ctx context.Context, awxClient *awx.AWX, apiEndpoint string, no
 		if templateType == "job" {
 			link, err := getAwxTemplateURL(apiEndpoint, id)
 			if err != nil {
-				log.Printf("failed to get AWX template URL for job ID %d: %v", id, err)
+				logger.Warn("failed to get AWX template URL", "id", id, "error", err)
 			} else {
 				jobInfo.TemplateLink = link
 			}
 		} else if templateType == "workflow_job" {
 			link, err := getAwxWorkflowTemplateURL(apiEndpoint, id)
 			if err != nil {
-				log.Printf("failed to get AWX template URL for job ID %d: %v", id, err)
+				logger.Warn("failed to get AWX template URL", "id", id, "error", err)
 			} else {
 				jobInfo.TemplateLink = link
 			}
@@ -2286,7 +2160,7 @@ func processNode(ctx context.Context, awxClient *awx.AWX, apiEndpoint string, no
 		templateType = *jobInfo.TemplateType
 	}
 
-	var collectedJobs []mcmp.JobNode
+	var collectedJobs []db.JobNode
 
 	if isStandardJob(templateType) {
 		if node.SummaryFields != nil && node.SummaryFields.Job != nil {
@@ -2294,7 +2168,7 @@ func processNode(ctx context.Context, awxClient *awx.AWX, apiEndpoint string, no
 
 			jobDetails, link, err := fetchJobDetailsAndLink(ctx, awxClient, apiEndpoint, templateType, int(jobID))
 			if err != nil {
-				fmt.Printf("Warning: failed to get details for %s ID %d (node ID %d): %v\n", templateType, jobID, node.ID, err)
+				logger.DebugPrintf("Warning: failed to get details for %s ID %d (node ID %d): %v\n", templateType, jobID, node.ID, err)
 				jobInfo.JobAwxID = &jobID
 				jobInfo.JobStatus = new("UNKNOWN (details error)")
 			} else {
@@ -2314,7 +2188,7 @@ func processNode(ctx context.Context, awxClient *awx.AWX, apiEndpoint string, no
 			})
 
 			if err != nil {
-				fmt.Printf("Warning: failed to get workflow job details for WF ID %d (node ID %d): %v\n", jobID, node.ID, err)
+				logger.DebugPrintf("Warning: failed to get workflow job details for WF ID %d (node ID %d): %v\n", jobID, node.ID, err)
 				jobInfo.JobAwxID = new(int64(jobID))
 				if jobInfo.TemplateName != nil {
 					jobInfo.JobName = jobInfo.TemplateName // Use template name as fallback
@@ -2350,7 +2224,7 @@ func processNode(ctx context.Context, awxClient *awx.AWX, apiEndpoint string, no
 			nestedWorkflowJobID := int64(node.SummaryFields.Job.ID)
 			nestedJobs, err := collectAllWorkflowNodes(ctx, awxClient, apiEndpoint, nestedWorkflowJobID, *jobInfo.JobAwxID, depth+1)
 			if err != nil {
-				fmt.Printf("Warning: error collecting nested workflow jobs for workflow ID %d (node ID %d): %v\n", nestedWorkflowJobID, node.ID, err)
+				logger.DebugPrintf("Warning: error collecting nested workflow jobs for workflow ID %d (node ID %d): %v\n", nestedWorkflowJobID, node.ID, err)
 			}
 			collectedJobs = append(collectedJobs, nestedJobs...)
 		}
@@ -2411,7 +2285,7 @@ func fetchJobDetailsAndLink(ctx context.Context, awxClient *awx.AWX, apiEndpoint
 }
 
 // populateJobDetails maps the API response to our DisplayJobInfo struct.
-func populateJobDetails(ctx context.Context, jobInfo *mcmp.JobNode, jobDetails *awx.Job, link *string, awxClient *awx.AWX, templateType string) {
+func populateJobDetails(ctx context.Context, jobInfo *db.JobNode, jobDetails *awx.Job, link *string, awxClient *awx.AWX, templateType string) {
 	jobInfo.JobAwxID = new(int64(jobDetails.ID))
 	jobInfo.JobName = &jobDetails.Name
 	jobInfo.JobType = &jobDetails.Type
@@ -2513,7 +2387,7 @@ func stripANSI(str string) string {
 	return ansiRegex.ReplaceAllString(str, "")
 }
 
-func fetchAndPopulateAwxJobData(ctx context.Context, awxClient *awx.AWX, mcmpClient *mcmp.Client, job *mcmp.Job) error {
+func fetchAndPopulateAwxJobData(ctx context.Context, awxClient *awx.AWX, job *db.Job) error {
 	if job.AwxJobId == nil {
 		return fmt.Errorf("job %d has no AwxJobId", job.ID)
 	}
@@ -2526,7 +2400,7 @@ func fetchAndPopulateAwxJobData(ctx context.Context, awxClient *awx.AWX, mcmpCli
 	var templateID int
 	var jobExplanation string
 
-	if job.AwxTemplateType == mcmp.AwxTemplateTypeTemplate {
+	if job.AwxTemplateType == db.AwxTemplateTypeTemplate {
 		res, err := awxClient.JobService.GetJob(int(*job.AwxJobId), nil)
 		if err != nil {
 			return err
@@ -2595,8 +2469,8 @@ func fetchAndPopulateAwxJobData(ctx context.Context, awxClient *awx.AWX, mcmpCli
 	return nil
 }
 
-func syncWorkflowNodes(ctx context.Context, awxClient *awx.AWX, mcmpClient *mcmp.Client, job *mcmp.Job) error {
-	if job.AwxTemplateType != mcmp.AwxTemplateTypeWorkflow || job.AwxJobId == nil {
+func syncWorkflowNodes(ctx context.Context, awxClient *awx.AWX, mcmpClient *db.Client, job *db.Job) error {
+	if job.AwxTemplateType != db.AwxTemplateTypeWorkflow || job.AwxJobId == nil {
 		return nil
 	}
 	nodes, err := collectAllWorkflowNodes(ctx, awxClient, job.Awx.ApiEndpoint, *job.AwxJobId, *job.AwxJobId, 1)
@@ -2609,7 +2483,7 @@ func syncWorkflowNodes(ctx context.Context, awxClient *awx.AWX, mcmpClient *mcmp
 	for _, node := range nodes {
 		node.JobID = job.ID
 		if err := mcmpClient.SaveJobNode(&node); err != nil {
-			log.Printf("Failed to save job node %d for job %d: %v", node.NodeID, job.ID, err)
+			logger.Warn("Failed to save job node", "nodeId", node.NodeID, "jobId", job.ID, "error", err)
 		}
 	}
 	return nil
@@ -2617,14 +2491,14 @@ func syncWorkflowNodes(ctx context.Context, awxClient *awx.AWX, mcmpClient *mcmp
 
 // determineRootCause identifies the root cause of a failed workflow by evaluating
 // if a failed node's error was caught by a failure path or had successful descendants.
-func determineRootCause(nodes []mcmp.JobNode) {
-	nodeMap := make(map[int64]*mcmp.JobNode)
+func determineRootCause(nodes []db.JobNode) {
+	nodeMap := make(map[int64]*db.JobNode)
 	for i := range nodes {
 		nodes[i].JobIsRootCause = false // Initialize for all
 		nodeMap[nodes[i].NodeID] = &nodes[i]
 	}
 
-	var potentialRootCauses []*mcmp.JobNode
+	var potentialRootCauses []*db.JobNode
 
 	for i := range nodes {
 		node := &nodes[i]
@@ -2636,10 +2510,10 @@ func determineRootCause(nodes []mcmp.JobNode) {
 		}
 	}
 
-	// In case of multiple potential root causes (e.g. parallel paths),
+	// In case of multiple potential root causes (e.g., parallel paths),
 	// select the one that finished earliest.
 	if len(potentialRootCauses) > 0 {
-		var rootCause *mcmp.JobNode
+		var rootCause *db.JobNode
 		for _, cause := range potentialRootCauses {
 			if rootCause == nil {
 				rootCause = cause
@@ -2655,7 +2529,7 @@ func determineRootCause(nodes []mcmp.JobNode) {
 
 // hasSuccessfulPath recursively checks if there is any successful node
 // in the downstream paths (success, failure, always).
-func hasSuccessfulPath(node *mcmp.JobNode, nodeMap map[int64]*mcmp.JobNode) bool {
+func hasSuccessfulPath(node *db.JobNode, nodeMap map[int64]*db.JobNode) bool {
 	var nextNodes []int
 	nextNodes = append(nextNodes, node.SuccessNodes...)
 	nextNodes = append(nextNodes, node.FailureNodes...)

@@ -46,9 +46,9 @@ func (c *Config) Validate() error {
 	if c.OAuthUrl == "" {
 		return fmt.Errorf("OAuth2 URL is required")
 	}
-//	if c.OAuthTokenUrl == "" {
-//		return fmt.Errorf("OAuth2 token URL is required")
-//	}
+	//	if c.OAuthTokenUrl == "" {
+	//		return fmt.Errorf("OAuth2 token URL is required")
+	//	}
 	if c.OAuthGrantType == "client_credentials" {
 		if c.OAuthRealm == "" {
 			return fmt.Errorf("OAuth2 realm is required for client credentials")

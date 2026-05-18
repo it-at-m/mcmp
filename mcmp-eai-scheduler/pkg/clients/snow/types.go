@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"git.muenchen.de/mcmp/webanwendung/mcmp-eai-common/pkg/logging"
+	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/logging"
 )
 
 type (
@@ -201,7 +201,7 @@ type (
 		CIs                    []string `json:"cis"`
 	}
 
-	// DiscoveryWithCallback repräsentiert den Request Body für die Quick Discovery Methode
+	// QuickDiscoveryRequest DiscoveryWithCallback repräsentiert den Request Body für die Quick Discovery Methode
 	QuickDiscoveryRequest struct {
 		CallbackURL string `json:"callbackUrl" binding:"required,url"`
 		DiscoveryIP string `json:"discovery_ip" binding:"required,ip"`

@@ -1,4 +1,4 @@
-package mcmp
+package db
 
 import (
 	"database/sql/driver"
@@ -24,10 +24,10 @@ func (s *AwxTemplateType) Scan(value interface{}) error {
 	return fmt.Errorf("cannot scan %T into AwxTemplateType", value)
 }
 
-func (s AwxTemplateType) Value() (driver.Value, error) {
-	return string(s), nil
+func (s *AwxTemplateType) Value() (driver.Value, error) {
+	return string(*s), nil
 }
 
-func (s AwxTemplateType) String() string {
-	return string(s)
+func (s *AwxTemplateType) String() string {
+	return string(*s)
 }

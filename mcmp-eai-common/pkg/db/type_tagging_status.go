@@ -1,4 +1,4 @@
-package mcmp
+package db
 
 import (
 	"database/sql/driver"
@@ -29,10 +29,10 @@ func (s *TaggingStatus) Scan(value interface{}) error {
 	return fmt.Errorf("cannot scan %T into TaggingStatus", value)
 }
 
-func (s TaggingStatus) Value() (driver.Value, error) {
-	return string(s), nil
+func (s *TaggingStatus) Value() (driver.Value, error) {
+	return string(*s), nil
 }
 
-func (s TaggingStatus) String() string {
-	return string(s)
+func (s *TaggingStatus) String() string {
+	return string(*s)
 }

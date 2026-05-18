@@ -1,4 +1,4 @@
-package mcmp
+package db
 
 import (
 	"database/sql/driver"
@@ -36,11 +36,11 @@ func (s *QuickdiscoveryStatus) Scan(value interface{}) error {
 }
 
 // Value implements the driver.Valuer interface for QuickdiscoveryStatus by returning its string representation.
-func (s QuickdiscoveryStatus) Value() (driver.Value, error) {
-	return string(s), nil
+func (s *QuickdiscoveryStatus) Value() (driver.Value, error) {
+	return string(*s), nil
 }
 
 // String converts the QuickdiscoveryStatus to its string representation and returns it.
-func (s QuickdiscoveryStatus) String() string {
-	return string(s)
+func (s *QuickdiscoveryStatus) String() string {
+	return string(*s)
 }

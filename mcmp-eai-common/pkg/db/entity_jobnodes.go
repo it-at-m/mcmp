@@ -1,4 +1,4 @@
-package mcmp
+package db
 
 import (
 	"time"
@@ -38,7 +38,7 @@ type JobNode struct {
 	SuccessNodes       []int      `gorm:"-" json:"success_nodes"`
 	FailureNodes       []int      `gorm:"-" json:"failure_nodes"`
 	AlwaysNodes        []int      `gorm:"-" json:"always_nodes"`
-	JobIsRootCause        bool       `gorm:"column:job_is_root_cause;default:false" json:"is_root_cause"`
+	JobIsRootCause     bool       `gorm:"column:job_is_root_cause;default:false" json:"is_root_cause"`
 	JobArtifacts       *string    `gorm:"column:job_artifacts;type:text" json:"job_artifacts"`
 }
 

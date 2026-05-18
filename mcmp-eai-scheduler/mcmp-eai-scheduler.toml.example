@@ -40,3 +40,13 @@ Compress   = true # disabled by default
 Host     = "localhost"
 Port     = 514
 Protocol = "udp" # tcp or udp
+
+[LOGGING]
+Level      = "INFO"   # DEBUG, INFO, WARN, ERROR
+Output     = "file"   # console, file, both
+Format     = "plain"  # text, json, plain
+Filename   = "<path-to-mcmp-repo>/mcmp-eai-scheduler/application.log"
+MaxSize    = 100      # Maximale Dateigröße in MB vor Rotation
+MaxBackups = 7        # Anzahl der aufzubewahrenden alten Log-Dateien
+MaxAge     = 30       # Maximales Alter in Tagen für Log-Dateien
+Compress   = true     # Komprimierung der rotierten Dateien

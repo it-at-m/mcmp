@@ -1,4 +1,4 @@
-package mcmp
+package db
 
 type ServerAssignment struct {
 	ServerID     int64 `gorm:"column:server_id;primaryKey;not null" json:"server_id"`

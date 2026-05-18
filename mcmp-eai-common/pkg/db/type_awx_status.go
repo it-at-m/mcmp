@@ -1,4 +1,4 @@
-package mcmp
+package db
 
 import (
 	"database/sql/driver"
@@ -31,10 +31,10 @@ func (s *AwxStatus) Scan(value interface{}) error {
 	return fmt.Errorf("cannot scan %T into AwxStatus", value)
 }
 
-func (s AwxStatus) Value() (driver.Value, error) {
-	return string(s), nil
+func (s *AwxStatus) Value() (driver.Value, error) {
+	return string(*s), nil
 }
 
-func (s AwxStatus) String() string {
-	return string(s)
+func (s *AwxStatus) String() string {
+	return string(*s)
 }

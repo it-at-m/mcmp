@@ -1,10 +1,11 @@
-package mcmp
+package db
 
 import (
 	"database/sql/driver"
 	"fmt"
 )
 
+// ChangeStatus represents the status of a change, defined as a string value.
 type ChangeStatus string
 
 const (
@@ -19,6 +20,9 @@ const (
 	ChangeStatusWaitingForServiceNowConfiguration ChangeStatus = "waiting_for_service_now_configuration"
 )
 
+// Scan implements the sql.Scanner interface to convert a database value into a ChangeStatus type.
+// It supports nil values and string types.
+// Returns an error if the value cannot be converted to ChangeStatus.
 func (s *ChangeStatus) Scan(value interface{}) error {
 	if value == nil {
 		*s = ""
@@ -31,10 +35,12 @@ func (s *ChangeStatus) Scan(value interface{}) error {
 	return fmt.Errorf("cannot scan %T into ChangeStatus", value)
 }
 
-func (s ChangeStatus) Value() (driver.Value, error) {
-	return string(s), nil
+// Value converts a ChangeStatus instance to a driver.Value, returning the string representation and a nil error.
+func (s *ChangeStatus) Value() (driver.Value, error) {
+	return string(*s), nil
 }
 
-func (s ChangeStatus) String() string {
-	return string(s)
+// String returns the ChangeStatus value as a string.
+func (s *ChangeStatus) String() string {
+	return string(*s)
 }

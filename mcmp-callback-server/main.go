@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -16,9 +17,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/it-at-m/mcmp/mcmp-callback-server/pkg/clients/mcmp"
 	"github.com/it-at-m/mcmp/mcmp-callback-server/pkg/config"
 	cfg "github.com/it-at-m/mcmp/mcmp-eai-common/pkg/config"
+	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/db"
 	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/logging"
 )
 
@@ -39,7 +40,7 @@ type MCMPClient interface {
 	// Returns:
 	//   - *mcmp.Job: The job object if found
 	//   - error: An error if the job doesn't exist or database access fails
-	FindJobByID(id int64) (*mcmp.Job, error)
+	FindJobByID(id int64) (*db.Job, error)
 
 	// UpdateJob persists changes to an existing job record in the database.
 	//
@@ -48,7 +49,26 @@ type MCMPClient interface {
 	//
 	// Returns:
 	//   - error: An error if the update operation fails
-	UpdateJob(job *mcmp.Job) error
+	UpdateJob(job *db.Job) error
+
+	// FindJobIncidentByID retrieves a job incident from the database by its unique identifier.
+	//
+	// Parameters:
+	//   - id: The unique job incident identifier (primary key)
+	//
+	// Returns:
+	//   - *mcmp.JobIncident: The job incident object if found
+	//   - error: An error if the incident doesn't exist or database access fails
+	FindJobIncidentByID(id int64) (*db.JobIncident, error)
+
+	// UpdateJobIncident persists changes to an existing job incident record in the database.
+	//
+	// Parameters:
+	//   - incident: The job incident object with updated fields to be saved
+	//
+	// Returns:
+	//   - error: An error if the update operation fails
+	UpdateJobIncident(incident *db.JobIncident) error
 
 	// Close releases all database connections and performs cleanup operations.
 	// This method should be called when the client is no longer needed.
@@ -135,7 +155,7 @@ func NewServer(cfg *config.Config) (*Server, error) {
 	log.SetPrefix("[STDLIB] ")
 
 	// Initialize MCMP database client with same log destination as application logger
-	client, err := mcmp.New(cfg.DATABASE.Username, cfg.DATABASE.Password, cfg.DATABASE.DSN, cfg.GENERAL.Debug, logger.GetWriter())
+	client, err := db.New(cfg.DATABASE.Username, cfg.DATABASE.Password, cfg.DATABASE.DSN, "", cfg.GENERAL.Debug, logger.GetWriter())
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize MCMP client: %w", err)
 	}
@@ -184,6 +204,10 @@ const (
 	// Expected format: /callback/change/{job_id}
 	pathChange = "/callback/change/"
 
+	// pathIncident defines the URL path prefix for Incident callbacks from ServiceNow.
+	// Expected format: /callback/incident/{job_incident_id}
+	pathIncident = "/callback/incident/"
+
 	// maxRequestBodySize limits the maximum size of incoming request bodies
 	// to prevent memory exhaustion attacks (1 MB = 1,048,576 bytes)
 	maxRequestBodySize = 1 << 20 // 1 MB
@@ -202,16 +226,19 @@ const (
 	approvalStatusNotRequested = "not requested"
 
 	// Error message constants for consistent error reporting
-	errMsgMethodNotAllowed          = "Method not allowed"
-	errMsgInvalidJSON               = "Invalid JSON format"
-	errMsgJobNotFound               = "Job not found: %v"
-	errMsgFailedToUpdateJob         = "Failed to update job: %v"
-	errMsgInternalServerError       = "Internal server error"
-	errMsgChangeNotRequired         = "Job does not require change approval"
-	errMsgQuickDiscoveryNotRequired = "Job does not require QuickDiscovery"
-	errMsgInvalidChangeStatus       = "Invalid ChangeStatus: expected '%s', got '%s'"
-	errMsgInvalidQDStatus           = "Invalid QuickDiscoveryStatus: expected '%s', got '%s'"
-	errMsgInvalidJobStatus          = "Invalid JobStatus: expected '%s', got '%s'"
+	errMsgMethodNotAllowed          = "method not allowed"
+	errMsgInvalidJSON               = "invalid JSON format"
+	errMsgJobNotFound               = "job not found: %v"
+	errMsgFailedToUpdateJob         = "failed to update job: %v"
+	errMsgInternalServerError       = "internal server error"
+	errMsgChangeNotRequired         = "job does not require change approval"
+	errMsgQuickDiscoveryNotRequired = "job does not require QuickDiscovery"
+	errMsgInvalidChangeStatus       = "invalid ChangeStatus: expected '%s', got '%s'"
+	errMsgInvalidQDStatus           = "invalid QuickDiscoveryStatus: expected '%s', got '%s'"
+	errMsgInvalidJobStatus          = "invalid JobStatus: expected '%s', got '%s'"
+	errMsgIncidentNotFound          = "job incident not found: %v"
+	errMsgFailedToUpdateIncident    = "failed to update job incident: %v"
+	errMsgInvalidIncidentStatus     = "invalid IncidentStatus: expected '%s', got '%s'"
 
 	// Response status constants
 	responseStatusSuccess = "success"
@@ -290,6 +317,57 @@ type QuickDiscoveryCallbackRequest struct {
 	} `json:"result"`
 }
 
+// IncidentCallbackRequest represents the structure of incoming POST requests
+// from the ServiceNow Incident management system. This structure captures the
+// final resolution state of an incident after it has been processed.
+//
+// Fields:
+//   - Success: Indicates whether the incident was resolved successfully
+//   - ErrorMessage: Contains error details if Success is false
+//   - Result: Nested structure containing the resolution details
+//   - Result.ResolvedBy: SysID of the user who resolved the incident
+//   - Result.CloseCode: Label/value pair describing how the incident was closed
+//   - Result.ResolvedAt: Timestamp when the incident was resolved
+//   - Result.State: Label/value pair describing the final incident state
+//   - Result.CloseNotes: Free-text notes added when closing the incident
+//
+// Example JSON (resolved):
+//
+//	{
+//	  "success": true,
+//	  "error_message": "",
+//	  "result": {
+//	    "resolved_by": "00000000000000000000000000000000",
+//	    "close_code": {
+//	      "label": "Gelöst (vor Ort, dauerhaft)",
+//	      "value": "Solved (Permanently)"
+//	    },
+//	    "resolved_at": "2026-05-13T07:02:13.000+0000Z",
+//	    "state": {
+//	      "label": "Gelöst",
+//	      "value": "6"
+//	    },
+//	    "close_notes": "Gelöst"
+//	  }
+//	}
+type IncidentCallbackRequest struct {
+	Success      bool   `json:"success"`
+	ErrorMessage string `json:"error_message"`
+	Result       struct {
+		ResolvedBy string `json:"resolved_by"`
+		CloseCode  struct {
+			Label string `json:"label"`
+			Value string `json:"value"`
+		} `json:"close_code"`
+		ResolvedAt string `json:"resolved_at"`
+		State      struct {
+			Label string `json:"label"`
+			Value string `json:"value"`
+		} `json:"state"`
+		CloseNotes string `json:"close_notes"`
+	} `json:"result"`
+}
+
 // ErrorResponse represents the standardized structure for all error responses
 // returned by the API. This ensures consistency across all endpoints and makes
 // error handling predictable for client.
@@ -330,7 +408,10 @@ type ErrorResponse struct {
 func main() {
 	// Define custom usage function that displays program usage information
 	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), "usage: %s\n", os.Args[0])
+		_, err := fmt.Fprintf(flag.CommandLine.Output(), "usage: %s\n", os.Args[0])
+		if err != nil {
+			return
+		}
 		flag.PrintDefaults()
 	}
 
@@ -344,7 +425,10 @@ func main() {
 		startServer()
 	default:
 		// Any additional arguments are considered an error
-		fmt.Fprintln(os.Stderr, "error: wrong number of arguments")
+		_, err := fmt.Fprintln(os.Stderr, "error: wrong number of arguments")
+		if err != nil {
+			return
+		}
 		flag.Usage()
 		os.Exit(1)
 	}
@@ -404,6 +488,7 @@ func startServer() {
 	// - Outer: withLogging logs all requests including those that panicked
 	mux.HandleFunc(pathChange, srv.withLogging(srv.withRecovery(srv.handleChangeCallback)))
 	mux.HandleFunc(pathQuickDiscovery, srv.withLogging(srv.withRecovery(srv.handleQuickDiscoveryCallback)))
+	mux.HandleFunc(pathIncident, srv.withLogging(srv.withRecovery(srv.handleIncidentCallback)))
 
 	// Server configuration with timeouts
 	server := &http.Server{
@@ -424,7 +509,7 @@ func startServer() {
 	// Start server in a goroutine
 	go func() {
 		srv.infoLog("Starting server", "port", c.GENERAL.Port)
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			serverErrChan <- err
 		}
 	}()
@@ -540,16 +625,16 @@ func (s *Server) handleChangeCallback(w http.ResponseWriter, r *http.Request) {
 	// Update job based on an approval result
 	if callbackData.Success && strings.EqualFold(callbackData.Result.Approval, approvalStatusApproved) {
 		// approved
-		job.ChangeStatus = mcmp.ChangeStatusApproved
-		job.Status = mcmp.JobStatusApproved
+		job.ChangeStatus = db.ChangeStatusApproved
+		job.Status = db.JobStatusApproved
 		s.debugLog("Setting ChangeStatus to approved",
 			"job_id", id,
-			"status", mcmp.ChangeStatusApproved,
+			"status", db.ChangeStatusApproved,
 			"approval", callbackData.Result.Approval)
 	} else if !callbackData.Success && strings.EqualFold(callbackData.Result.Approval, approvalStatusRejected) {
 		// rejected
-		job.ChangeStatus = mcmp.ChangeStatusRejected
-		job.Status = mcmp.JobStatusRejected
+		job.ChangeStatus = db.ChangeStatusRejected
+		job.Status = db.JobStatusRejected
 		if callbackData.ErrorMessage != "" {
 			job.ChangeError = &callbackData.ErrorMessage
 		}
@@ -557,12 +642,12 @@ func (s *Server) handleChangeCallback(w http.ResponseWriter, r *http.Request) {
 		job.Description = replaceErrorPlaceholder(job.ActionErrorDescription, msgChangeRejected)
 		s.debugLog("Setting ChangeStatus to rejected",
 			"job_id", id,
-			"status", mcmp.ChangeStatusRejected,
+			"status", db.ChangeStatusRejected,
 			"error_message", callbackData.ErrorMessage)
 	} else if !callbackData.Success && (strings.EqualFold(callbackData.Result.Approval, approvalStatusApproved) || strings.EqualFold(callbackData.Result.Approval, approvalStatusNotRequested)) {
 		// canceled
-		job.ChangeStatus = mcmp.ChangeStatusCanceled
-		job.Status = mcmp.JobStatusCanceled
+		job.ChangeStatus = db.ChangeStatusCanceled
+		job.Status = db.JobStatusCanceled
 		if callbackData.ErrorMessage != "" {
 			job.ChangeError = &callbackData.ErrorMessage
 		}
@@ -570,7 +655,7 @@ func (s *Server) handleChangeCallback(w http.ResponseWriter, r *http.Request) {
 		job.Description = replaceErrorPlaceholder(job.ActionErrorDescription, msgChangeCanceled)
 		s.debugLog("Setting ChangeStatus to canceled",
 			"job_id", id,
-			"status", mcmp.ChangeStatusCanceled,
+			"status", db.ChangeStatusCanceled,
 			"error_message", callbackData.ErrorMessage)
 	} else {
 		s.errorLog("Invalid approval result", "job_id", id, "success", callbackData.Success, "error_message", callbackData.ErrorMessage, "approval", callbackData.Result.Approval)
@@ -695,18 +780,18 @@ func (s *Server) handleQuickDiscoveryCallback(w http.ResponseWriter, r *http.Req
 
 	// Update job based on success flag
 	if callbackData.Success {
-		job.Status = mcmp.JobStatusQuickdiscoveryCompleted
-		job.QuickDiscoveryStatus = mcmp.QuickdiscoveryStatusSuccessful
+		job.Status = db.JobStatusQuickdiscoveryCompleted
+		job.QuickDiscoveryStatus = db.QuickdiscoveryStatusSuccessful
 		job.QuickDiscoveryCiSysid = &callbackData.Result.CiSysid
 		job.QuickDiscoveryCiName = &callbackData.Result.CiName
 		s.debugLog("Setting QuickDiscoveryStatus to successful",
 			"job_id", id,
-			"status", mcmp.QuickdiscoveryStatusSuccessful,
+			"status", db.QuickdiscoveryStatusSuccessful,
 			"ci_name", callbackData.Result.CiName,
 			"ci_sysid", callbackData.Result.CiSysid)
 	} else {
-		job.Status = mcmp.JobStatusQuickdiscoveryFailed
-		job.QuickDiscoveryStatus = mcmp.QuickdiscoveryStatusFailed
+		job.Status = db.JobStatusQuickdiscoveryFailed
+		job.QuickDiscoveryStatus = db.QuickdiscoveryStatusFailed
 		if callbackData.ErrorMessage != "" {
 			job.Title = replaceErrorPlaceholder(job.ActionErrorTitle, callbackData.ErrorMessage)
 			job.Description = replaceErrorPlaceholder(job.ActionErrorDescription, callbackData.ErrorMessage)
@@ -719,7 +804,7 @@ func (s *Server) handleQuickDiscoveryCallback(w http.ResponseWriter, r *http.Req
 		}
 		s.debugLog("Setting QuickDiscoveryStatus to failed",
 			"job_id", id,
-			"status", mcmp.QuickdiscoveryStatusFailed,
+			"status", db.QuickdiscoveryStatusFailed,
 			"error_message", callbackData.ErrorMessage)
 	}
 
@@ -745,6 +830,141 @@ func (s *Server) handleQuickDiscoveryCallback(w http.ResponseWriter, r *http.Req
 		"job_id", id,
 		"new_status", job.QuickDiscoveryStatus,
 		"success", callbackData.Success)
+}
+
+// handleIncidentCallback processes POST callbacks from the ServiceNow Incident
+// management system. This handler receives the final state of an incident after
+// it has been resolved (or failed to be resolved) and updates the corresponding
+// job_incident record in the database.
+//
+// HTTP Method: POST only
+//
+// URL Format: /callback/incident/{job_incident_id}
+//   - job_incident_id: Numeric identifier of the job_incident record (int64)
+//
+// Request Body: JSON formatted IncidentCallbackRequest
+//
+// Response Codes:
+//   - 200 OK: Successfully processed callback
+//   - 400 Bad Request: Invalid URL, ID format, JSON, or incident state
+//   - 404 Not Found: Job incident ID doesn't exist
+//   - 405 Method Not Allowed: Non-POST request
+//   - 500 Internal Server Error: Database update failed
+//
+// Response Body (Success):
+//
+//	{
+//	  "status": "success",
+//	  "incident_id": 123,
+//	  "new_status": "resolved"
+//	}
+func (s *Server) handleIncidentCallback(w http.ResponseWriter, r *http.Request) {
+	// Only accept POST requests
+	if r.Method != http.MethodPost {
+		sendErrorResponse(w, http.StatusMethodNotAllowed, errMsgMethodNotAllowed)
+		return
+	}
+
+	// Parse incident ID from URL path
+	id, err := parseJobIDFromPath(r.URL.Path, pathIncident)
+	if err != nil {
+		sendErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	s.debugLog("Received Incident callback", "incident_id", id)
+
+	// Parse JSON request body
+	var callbackData IncidentCallbackRequest
+	if err := readAndParseJSON(r, &callbackData); err != nil {
+		s.errorLog("Failed to parse JSON request", "error", err, "incident_id", id)
+		sendErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Find incident by ID
+	incident, err := s.mcmpClient.FindJobIncidentByID(id)
+	if err != nil {
+		s.errorLog("Error finding job incident", "error", err, "incident_id", id)
+		sendErrorResponse(w, http.StatusNotFound, fmt.Sprintf(errMsgIncidentNotFound, err))
+		return
+	}
+
+	// Validate incident state
+	if err := validateIncident(incident); err != nil {
+		s.errorLog("Job incident validation failed", "error", err, "incident_id", id)
+		sendErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Update incident fields from callback data
+	incident.Success = new(callbackData.Success)
+
+	if callbackData.ErrorMessage != "" {
+		incident.ErrorMessage = new(callbackData.ErrorMessage)
+	}
+	if callbackData.Result.CloseCode.Label != "" {
+		incident.CloseCodeLabel = new(callbackData.Result.CloseCode.Label)
+	}
+	if callbackData.Result.CloseCode.Value != "" {
+		incident.CloseCodeValue = new(callbackData.Result.CloseCode.Value)
+	}
+	if callbackData.Result.State.Label != "" {
+		incident.StateLabel = new(callbackData.Result.State.Label)
+	}
+	if callbackData.Result.State.Value != "" {
+		incident.StateValue = new(callbackData.Result.State.Value)
+	}
+	if callbackData.Result.CloseNotes != "" {
+		incident.CloseNotes = new(callbackData.Result.CloseNotes)
+	}
+
+	// Parse resolved_at timestamp if provided
+	if callbackData.Result.ResolvedAt != "" {
+		if parsed, parseErr := parseIncidentTimestamp(callbackData.Result.ResolvedAt); parseErr == nil {
+			incident.ResolvedAt = &parsed
+		} else {
+			s.warnLog("Failed to parse resolved_at timestamp", "incident_id", id, "resolved_at", callbackData.Result.ResolvedAt, "error", parseErr)
+		}
+	}
+
+	// Determine new incident status based on success flag
+	if callbackData.Success {
+		incident.Status = db.IncidentStatusResolved
+		s.debugLog("Setting IncidentStatus to resolved", "incident_id", id, "status", db.IncidentStatusResolved)
+	} else {
+		incident.Status = db.IncidentStatusFailed
+		s.debugLog("Setting IncidentStatus to failed", "incident_id", id, "status", db.IncidentStatusFailed, "error_message", callbackData.ErrorMessage)
+	}
+
+	// Save updated incident
+	if err := s.mcmpClient.UpdateJobIncident(incident); err != nil {
+		s.errorLog("Error updating job incident", "error", err, "incident_id", id)
+		sendErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf(errMsgFailedToUpdateIncident, err))
+		return
+	}
+
+	// Send success response
+	response := map[string]interface{}{
+		"status":      responseStatusSuccess,
+		"incident_id": id,
+		"new_status":  string(incident.Status),
+	}
+	if err := sendJSONResponse(w, http.StatusOK, response); err != nil {
+		s.errorLog("Failed to send response", "error", err, "incident_id", id)
+		return
+	}
+
+	s.infoLog("Successfully processed Incident callback", "incident_id", id, "new_status", incident.Status, "success", callbackData.Success)
+}
+
+// validateIncident validates that a job incident is in a state that allows
+// receiving a resolution callback. Only incidents in status 'open' may be updated.
+func validateIncident(incident *db.JobIncident) error {
+	if incident.Status != db.IncidentStatusOpen {
+		return fmt.Errorf(errMsgInvalidIncidentStatus, db.IncidentStatusOpen, incident.Status)
+	}
+	return nil
 }
 
 // parseJobIDFromPath extracts and validates the numeric job ID from a callback URL path.
@@ -861,7 +1081,12 @@ func readAndParseJSON(r *http.Request, v interface{}) error {
 	if err != nil {
 		return fmt.Errorf("error reading request body")
 	}
-	defer r.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			log.Printf("Error closing request body: %v", err)
+		}
+	}(r.Body)
 
 	if err := json.Unmarshal(body, v); err != nil {
 		return fmt.Errorf("invalid JSON format [body = \"%s\"]", string(body))
@@ -971,18 +1196,18 @@ func sendErrorResponse(w http.ResponseWriter, status int, message string) {
 //   - Job must have ChangeRequired flag set to true
 //   - Job's ChangeStatus must be 'waiting_for_approval'
 //   - Job's Status must be 'waiting_for_approval'
-func validateChangeJob(job *mcmp.Job) error {
+func validateChangeJob(job *db.Job) error {
 	if !job.ChangeRequired {
 		return fmt.Errorf(errMsgChangeNotRequired)
 	}
-	if job.ChangeStatus != mcmp.ChangeStatusWaitingForApproval {
+	if job.ChangeStatus != db.ChangeStatusWaitingForApproval {
 		return fmt.Errorf(errMsgInvalidChangeStatus,
-			mcmp.ChangeStatusWaitingForApproval,
+			db.ChangeStatusWaitingForApproval,
 			job.ChangeStatus)
 	}
-	if job.Status != mcmp.JobStatusWaitingForApproval {
+	if job.Status != db.JobStatusWaitingForApproval {
 		return fmt.Errorf(errMsgInvalidJobStatus,
-			mcmp.JobStatusWaitingForApproval,
+			db.JobStatusWaitingForApproval,
 			job.Status)
 	}
 	return nil
@@ -1002,18 +1227,18 @@ func validateChangeJob(job *mcmp.Job) error {
 //   - Job must have QuickDiscovery flag set to true
 //   - Job's QuickDiscoveryStatus must be 'waiting'
 //   - Job's Status must be 'waiting_for_quickdiscovery'
-func validateQuickDiscoveryJob(job *mcmp.Job) error {
+func validateQuickDiscoveryJob(job *db.Job) error {
 	if !job.QuickDiscovery && !job.ServerInstallation {
 		return fmt.Errorf(errMsgQuickDiscoveryNotRequired)
 	}
-	if job.QuickDiscoveryStatus != mcmp.QuickdiscoveryStatusWaiting {
+	if job.QuickDiscoveryStatus != db.QuickdiscoveryStatusWaiting {
 		return fmt.Errorf(errMsgInvalidQDStatus,
-			mcmp.QuickdiscoveryStatusWaiting,
+			db.QuickdiscoveryStatusWaiting,
 			job.QuickDiscoveryStatus)
 	}
-	if job.Status != mcmp.JobStatusWaitingForQuickdiscovery {
+	if job.Status != db.JobStatusWaitingForQuickdiscovery {
 		return fmt.Errorf(errMsgInvalidJobStatus,
-			mcmp.JobStatusWaitingForQuickdiscovery,
+			db.JobStatusWaitingForQuickdiscovery,
 			job.Status)
 	}
 	return nil
@@ -1162,4 +1387,38 @@ func replaceErrorPlaceholder(template *string, errorMessage string) *string {
 	result = strings.ReplaceAll(result, "${error}", errorMessage)
 
 	return &result
+}
+
+// parseIncidentTimestamp parses an incident timestamp coming from ServiceNow.
+// ServiceNow sends timestamps such as "2026-05-13T07:02:13.000+0000Z" which is
+// not strictly RFC3339 (it contains both a numeric offset and a trailing Z).
+// We accept several common formats to be robust.
+func parseIncidentTimestamp(value string) (time.Time, error) {
+	layouts := []string{
+		"2006-01-02T15:04:05.000-0700Z",
+		"2006-01-02T15:04:05.000Z0700",
+		"2006-01-02T15:04:05.000-0700",
+		"2006-01-02T15:04:05.000Z07:00",
+		"2006-01-02T15:04:05Z07:00",
+		time.RFC3339Nano,
+		time.RFC3339,
+	}
+	// First try a normalized form: drop a trailing 'Z' if a numeric offset is present.
+	normalized := value
+	if len(normalized) > 6 {
+		tail := normalized[len(normalized)-6:]
+		// matches +0000Z or -0000Z (offset followed by Z)
+		if (tail[0] == '+' || tail[0] == '-') && tail[5] == 'Z' {
+			normalized = normalized[:len(normalized)-1]
+		}
+	}
+	for _, layout := range layouts {
+		if t, err := time.Parse(layout, normalized); err == nil {
+			return t, nil
+		}
+		if t, err := time.Parse(layout, value); err == nil {
+			return t, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("unrecognized timestamp format: %q", value)
 }

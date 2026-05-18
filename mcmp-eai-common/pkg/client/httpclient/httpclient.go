@@ -179,8 +179,8 @@ func (c *Client) DoWithRetry(ctx context.Context, req *http.Request) ([]byte, in
 
 			// If status is OK-ish (2xx), or CLIENT ERROR (4xx), return immediately (don't retry 4xx)
 			if resp.StatusCode < 500 {
-				defer resp.Body.Close()
 				body, err := io.ReadAll(resp.Body)
+				_ = resp.Body.Close()
 				if err != nil {
 					return nil, resp.StatusCode, fmt.Errorf("reading response body failed: %w", err)
 				}
@@ -332,8 +332,7 @@ func (c *Client) isRetryableError(err error) bool {
 		return false
 	}
 
-	var netErr net.Error
-	if errors.As(err, &netErr) && netErr.Timeout() {
+	if netErr, ok := errors.AsType[net.Error](err); ok && netErr.Timeout() {
 		return true
 	}
 

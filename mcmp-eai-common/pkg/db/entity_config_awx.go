@@ -1,4 +1,4 @@
-package mcmp
+package db
 
 type ConfigAwx struct {
 	ID             int64   `gorm:"primaryKey;autoIncrement" json:"id"`

@@ -250,7 +250,7 @@ func (c *ClientConfig) validateAndSetDefaults() error {
 		c.GrantType = "client_credentials"
 	}
 
-	validationErrors := []string{}
+	var validationErrors []string
 	if c.TokenURL == "" {
 		validationErrors = append(validationErrors, "token URL is required")
 	} else if !strings.HasPrefix(c.TokenURL, "http") {
@@ -482,10 +482,10 @@ func (c *Client) doRequestWithRetry(ctx context.Context, method, endpoint string
 			}
 			return nil, fmt.Errorf("failed to send HTTP request: %w", lastErr)
 		}
-		defer resp.Body.Close()
 
 		// Read complete response body
 		body, err := io.ReadAll(resp.Body)
+		_ = resp.Body.Close()
 		if err != nil {
 			lastErr = fmt.Errorf("failed to read response body: %w", err)
 			if attempt < c.config.MaxRetries {

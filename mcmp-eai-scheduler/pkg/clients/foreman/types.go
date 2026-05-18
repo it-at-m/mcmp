@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"git.muenchen.de/mcmp/webanwendung/mcmp-eai-common/pkg/client/httpclient"
-	"git.muenchen.de/mcmp/webanwendung/mcmp-eai-common/pkg/logging"
+	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/client/httpclient"
+	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/logging"
 )
 
 type (
@@ -446,7 +446,6 @@ func (e *APIError) Error() string {
 	return fmt.Sprintf("Foreman API error %d: %s", e.StatusCode, e.Message)
 }
 
-// Utility methods for Host
 func (h *Host) GetPrimaryInterface() *Interface {
 	for _, iface := range h.Interfaces {
 		if iface.Primary {

@@ -191,7 +191,7 @@ nbdist/
 *.sw?
 
 # mcmp
-refarch-gateway/application-local.yml
+refarch-gateway/*
 mcmp-frontend/build
 mcmp-frontend/reports
 

@@ -66,6 +66,5 @@ func TestCreatePerfQuerySpecs(t *testing.T) {
 }
 
 func toUTCPtr(t time.Time) *time.Time {
-	utcTime := t.UTC()
-	return &utcTime
+	return new(t.UTC())
 }

@@ -80,7 +80,7 @@ func Test_DecryptString(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			x, _ := DecryptString(tt.args.passphrase, tt.args.ciphertext)
-			if got := string(x); !reflect.DeepEqual(got, tt.want) {
+			if got := x; !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Decrypt() = \"%v\", want \"%v\"", got, tt.want)
 			}
 		})
@@ -106,7 +106,7 @@ func Test_EncryptString_DecryptString(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ciphertext, _ := EncryptString(tt.args.passphrase, tt.args.data)
 			plaintext, _ := DecryptString(tt.args.passphrase, ciphertext)
-			if got := string(plaintext); !reflect.DeepEqual(got, tt.want) {
+			if got := plaintext; !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Encrypt -> Decrypt() = \"%v\", want \"%v\"", got, tt.want)
 			}
 		})

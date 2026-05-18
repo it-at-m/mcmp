@@ -69,7 +69,7 @@ func (c *Client) Logout() error {
 func (c *Client) GetVCenterHostStatusSnMap() (hostMap map[string]VCenterHostStatus, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("Recovered in GetVCenterHostStatusSnMap(). Error: %#v", r)
+			err = fmt.Errorf("recovered in GetVCenterHostStatusSnMap(). Error: %#v", r)
 			debug.PrintStack()
 		}
 	}()
@@ -223,7 +223,7 @@ func (c *Client) getPerfData(vms []mo.VirtualMachine, perfManager *performance.M
 	for _, counterName := range counterNames {
 		counter, ok := counters[string(counterName)]
 		if !ok {
-			return nil, fmt.Errorf("Counter %s existiert nicht.", counterName)
+			return nil, fmt.Errorf("counter %s existiert nicht", counterName)
 		}
 		counterIds[counterName] = counter.Key
 	}
@@ -235,7 +235,7 @@ func (c *Client) getPerfData(vms []mo.VirtualMachine, perfManager *performance.M
 		specs := createPerfQuerySpecs(vms, counterKey, intervalSeconds, startTime, endTime)
 		results, err := perfManager.Query(c.context, specs)
 		if err != nil {
-			return nil, fmt.Errorf("Fehler bei Abfrage für Counter %s: %v", counterName, err)
+			return nil, fmt.Errorf("fehler bei Abfrage für Counter %s: %v", counterName, err)
 		}
 
 		processPerfDataGeneral(results, counterName, resultMetrics, intervalDuration, counterKey)
@@ -282,7 +282,7 @@ func (c *Client) getPerfData(vms []mo.VirtualMachine, perfManager *performance.M
 					validMetrics = false
 					break
 				}
-				vmMetrics[MetricName(metricName)] = calcMetrics(values)
+				vmMetrics[metricName] = calcMetrics(values)
 			}
 
 			if !validMetrics {

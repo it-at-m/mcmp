@@ -145,7 +145,7 @@ func (t *oauth2Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	return t.rt.RoundTrip(req)
 }
 
-// SendPatchnightData sends JSON data to a MCMP endpoint using HTTP POST request with automatic OAuth2 authentication.
+// SendSNowData SendPatchnightData sends JSON data to a MCMP endpoint using HTTP POST request with automatic OAuth2 authentication.
 // This method replaces PostPatchnightData with better error handling and validation.
 //
 // The function performs the following operations:

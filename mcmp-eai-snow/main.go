@@ -124,18 +124,18 @@ func run() {
 
 	// Create and configure ServiceProcessor for handling ServiceNow data operations
 	// The processor encapsulates the business logic for data retrieval and transformation
-	processor := processor.NewServiceProcessor(snowClient, debug)
+	serviceProcessor := processor.NewServiceProcessor(snowClient, debug)
 
 	// Process application services from ServiceNow
 	// This involves fetching app services and their related data (CIs, groups, users)
-	err = processor.ProcessAppServices()
+	err = serviceProcessor.ProcessAppServices()
 	if err != nil {
 		log.Fatalf("Error processing AppServices: %v", err)
 	}
 
 	// Retrieve the processed ServiceNow data structure
 	// This contains all collected data ready for export
-	snowData := processor.GetSnowData()
+	snowData := serviceProcessor.GetSnowData()
 	debugPrintf("SnowData created:")
 	debugPrintf("- Users: %d", len(snowData.Users))
 	debugPrintf("- Groups: %d", len(snowData.Groups))
@@ -144,7 +144,7 @@ func run() {
 
 	// Export ServiceNow data as JSON string for API transmission
 	// The JSON format is required by the MCMP API for data ingestion
-	jsonData, err := processor.ExportSnowDataAsJSON()
+	jsonData, err := serviceProcessor.ExportSnowDataAsJSON()
 	if err != nil {
 		log.Fatalf("Error during JSON export: %v", err)
 	}
@@ -152,7 +152,7 @@ func run() {
 
 	// Export ServiceNow data to a local file for backup/debugging purposes
 	// This creates a persistent copy of the data that was sent to MCMP
-	err = processor.ExportSnowDataToFile("snowdata_export.json")
+	err = serviceProcessor.ExportSnowDataToFile("snowdata_export.json")
 	if err != nil {
 		log.Fatalf("Error during file export: %v", err)
 	}

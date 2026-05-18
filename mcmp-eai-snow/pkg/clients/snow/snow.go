@@ -56,7 +56,7 @@ func NewClient(config ClientConfig) (*Client, error) {
 		return nil, fmt.Errorf("API endpoint is required")
 	}
 	if config.ProxyURL == "" {
-		return nil, fmt.Errorf("Proxy URL is required")
+		return nil, fmt.Errorf("proxy URL is required")
 	}
 
 	// Set default values for optional parameters
@@ -251,8 +251,8 @@ func (c *Client) GetVMwareInstances() ([]CmdbCi, error) {
 	limit := 1000
 
 	for {
-		url := fmt.Sprintf("%s?sysparm_offset=%d&sysparm_limit=%d", c.urlVMwareInstance, offset, limit)
-		resp, err := c.getRequest(url)
+		requestURL := fmt.Sprintf("%s?sysparm_offset=%d&sysparm_limit=%d", c.urlVMwareInstance, offset, limit)
+		resp, err := c.getRequest(requestURL)
 		if err != nil {
 			return nil, err
 		}

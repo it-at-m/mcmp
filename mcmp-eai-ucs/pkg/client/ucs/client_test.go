@@ -548,12 +548,9 @@ func Test_getKvmServer(t *testing.T) {
 		t.Errorf("GetKvmServer error : %v", err)
 	}
 
-	// ... existing code (Assertions unverändert) ...
 	ks1 := KvmServer{Serial: "ABC1234EFGH", Dn: "sys/chassis-2/blade-4", EquipmentMgmtIP: "192.168.100.6", MgmtIPs: []string{"192.168.100.4", "192.168.100.6", "192.168.100.8", "192.168.100.9", "fd9e:21a7:a92c:2323::3", "fd9e:21a7:a92c:2323::5"}, FsmStatus: "inProgress", FsmCurrent: "Discover", FsmCompletionTime: nil}
 	ks2location, _ := time.LoadLocation("Europe/Berlin")
-	ks2time := time.Date(2022, 10, 28, 13, 50, 20, 935000000, ks2location)
-
-	ks2 := KvmServer{Serial: "FCH2000ABCD", Dn: "sys/rack-unit-3", EquipmentMgmtIP: "192.168.100.10", MgmtIPs: []string{"192.168.100.10", "192.168.100.11", "192.168.100.15", "192.168.100.17", "fd9e:21a7:a92c:2323::2", "fd9e:21a7:a92c:2323::4"}, FsmStatus: "success", FsmCurrent: "Turnup", FsmCompletionTime: &ks2time}
+	ks2 := KvmServer{Serial: "FCH2000ABCD", Dn: "sys/rack-unit-3", EquipmentMgmtIP: "192.168.100.10", MgmtIPs: []string{"192.168.100.10", "192.168.100.11", "192.168.100.15", "192.168.100.17", "fd9e:21a7:a92c:2323::2", "fd9e:21a7:a92c:2323::4"}, FsmStatus: "success", FsmCurrent: "Turnup", FsmCompletionTime: new(time.Date(2022, 10, 28, 13, 50, 20, 935000000, ks2location))}
 
 	expectedKvmServers := make([]KvmServer, 2)
 	expectedKvmServers[0] = ks1
@@ -580,7 +577,7 @@ func Test_getServerMgmtIPsMap(t *testing.T) {
 <mgmtIf access="unspecified" adminState="enable" aggrPortId="0" chassisId="N/A" discovery="present" dn="sys/rack-unit-3/mgmt/if-1" epDn="sys/rack-unit-3/adaptor-1/ext-eth-1" extBroadcast="0.0.0.0" extGw="192.168.100.1" extIp="192.168.100.7" extMask="255.255.255.0" fsmDescr="" fsmPrev="nop" fsmProgr="100" fsmRmtInvErrCode="none" fsmRmtInvErrDescr="" fsmRmtInvRslt="" fsmStageDescr="" fsmStamp="never" fsmStatus="nop" fsmTry="0" id="1" ifRole="unknown" ifType="physical" instanceId="1" ip="127.6.224.3" locale="" mac="00:42:68:81:0E:CE" mask="0.0.0.0" name="" peerAggrPortId="0" peerChassisId="N/A" peerDn="sys/switch-B/slot-1/switch-ether/port-18" peerPortId="0" peerSlotId="0" portId="18" slotId="1" stateQual="unspecified" subject="blade" switchId="B" transport="" type="" vnet="1"/>
 <mgmtIf access="unspecified" adminState="disable" aggrPortId="0" chassisId="N/A" discovery="present" dn="sys/rack-unit-3/mgmt/if-2" epDn="sys/rack-unit-3/adaptor-1/ext-eth-2" extBroadcast="0.0.0.0" extGw="192.168.100.1" extIp="192.168.100.7" extMask="255.255.255.0" fsmDescr="" fsmPrev="nop" fsmProgr="100" fsmRmtInvErrCode="none" fsmRmtInvErrDescr="" fsmRmtInvRslt="" fsmStageDescr="" fsmStamp="never" fsmStatus="nop" fsmTry="0" id="2" ifRole="unknown" ifType="physical" instanceId="1" ip="127.5.224.3" locale="" mac="00:42:68:81:0E:CF" mask="0.0.0.0" name="" peerAggrPortId="0" peerChassisId="N/A" peerDn="sys/switch-A/slot-1/switch-ether/port-18" peerPortId="0" peerSlotId="0" portId="18" slotId="1" stateQual="unspecified" subject="blade" switchId="A" transport="" type="" vnet="1"/>
 </outConfigs> </configResolveClass>`), 200, nil
-			case strings.Contains(string(b), "vnicIpV4ProfDerivedAddr\""):
+			case strings.Contains(b, "vnicIpV4ProfDerivedAddr\""):
 				return []byte(`<configResolveClass cookie="1669818979/057e283b-11dc-4fed-ad4c-8162977ad9f7" response="yes" classId="vnicIpV4ProfDerivedAddr">
 <outConfigs>
 <vnicIpV4ProfDerivedAddr addr="192.168.100.4" childAction="deleteNonPresent" defGw="192.168.100.1" dn="sys/chassis-2/blade-4/mgmt/ipv4-prof-addr" subnet="255.255.255.0"/> 
@@ -588,7 +585,7 @@ func Test_getServerMgmtIPsMap(t *testing.T) {
 <vnicIpV4ProfDerivedAddr addr="0.0.0.0" childAction="deleteNonPresent" defGw="0.0.0.0" dn="sys/rack-unit-1/mgmt/ipv4-prof-addr" subnet="255.255.255.0"/>
 </outConfigs>
 </configResolveClass>`), 200, nil
-			case strings.Contains(string(b), "vnicIpV4MgmtPooledAddr\""):
+			case strings.Contains(b, "vnicIpV4MgmtPooledAddr\""):
 				return []byte(`<configResolveClass cookie="1668770734/8706e3f7-7413-4588-989a-84e6c0c5f925" response="yes" classId="vnicIpV4MgmtPooledAddr">
 <outConfigs>
 <vnicIpV4MgmtPooledAddr addr="192.168.100.6" childAction="deleteNonPresent" defGw="192.168.100.1" dn="sys/chassis-2/blade-4/mgmt/iface-in-band/network/ipv4-pooled-addr" name="ext-mgmt" operName="org-root/ip-pool-ext-mgmt" primDns="0.0.0.0" secDns="0.0.0.0" subnet="255.255.255.0"/>  
@@ -597,7 +594,7 @@ func Test_getServerMgmtIPsMap(t *testing.T) {
 <vnicIpV4MgmtPooledAddr addr="192.168.100.17" childAction="deleteNonPresent" defGw="192.168.100.1" dn="sys/rack-unit-3/mgmt/spiface-in-band/network/ipv4-pooled-addr" name="ext-mgmt" operName="" primDns="0.0.0.0" secDns="0.0.0.0" subnet="255.255.255.0"/>
 </outConfigs>
 </configResolveClass>`), 200, nil
-			case strings.Contains(string(b), "vnicIpV4StaticAddr\""):
+			case strings.Contains(b, "vnicIpV4StaticAddr\""):
 				return []byte(`<configResolveClass cookie="1668770734/8706e3f7-7413-4588-989a-84e6c0c5f925" response="yes" classId="vnicIpV4StaticAddr">
 <outConfigs>
 <vnicIpV4StaticAddr addr="192.168.100.8" childAction="deleteNonPresent" defGw="192.168.100.1" dn="sys/chassis-2/blade-4/mgmt/ipv4-static-addr" primDns="0.0.0.0" secDns="0.0.0.0" subnet="255.255.255.0"/>
@@ -608,7 +605,7 @@ func Test_getServerMgmtIPsMap(t *testing.T) {
 <vnicIpV4StaticAddr addr="192.168.100.11" childAction="deleteNonPresent" defGw="192.168.100.1" dn="sys/rack-unit-3/mgmt/iface-in-band/network/ipv4-static-addr" primDns="0.0.0.0" secDns="0.0.0.0" subnet="255.255.255.0"/>
 </outConfigs>
 </configResolveClass>`), 200, nil
-			case strings.Contains(string(b), "vnicIpV6MgmtPooledAddr\""):
+			case strings.Contains(b, "vnicIpV6MgmtPooledAddr\""):
 				return []byte(`<configResolveClass cookie="1668770734/8706e3f7-7413-4588-989a-84e6c0c5f925" response="yes" classId="vnicIpV6MgmtPooledAddr">
 <outConfigs>
 <vnicIpV6MgmtPooledAddr addr="::" childAction="deleteNonPresent" defGw="::" dn="org-root/ls-testSPT/iface-in-band/network/ipv6-pooled-addr" name="ipv6-test" operName="" prefix="64" primDns="::" secDns="::"/>
@@ -617,7 +614,7 @@ func Test_getServerMgmtIPsMap(t *testing.T) {
 <vnicIpV6MgmtPooledAddr addr="::" childAction="deleteNonPresent" defGw="::" dn="sys/rack-unit-3/mgmt/iface-in-band/network/ipv6-pooled-addr" name="ipv6_1addr" operName="" prefix="64" primDns="::" secDns="::"/>
 </outConfigs>
 </configResolveClass>`), 200, nil
-			case strings.Contains(string(b), "vnicIpV6StaticAddr\""):
+			case strings.Contains(b, "vnicIpV6StaticAddr\""):
 				return []byte(`<configResolveClass cookie="1668770734/8706e3f7-7413-4588-989a-84e6c0c5f925" response="yes" classId="vnicIpV6StaticAddr">
 <outConfigs>
 <vnicIpV6StaticAddr addr="fd9e:21a7:a92c:2323::3" childAction="deleteNonPresent" defGw="fd9e:21a7:a92c:2323::1" dn="org-root/ls-test1/iface-in-band/network/ipv6-static-addr" prefix="64" primDns="::" secDns="::"/>
@@ -645,7 +642,7 @@ func Test_getServerMgmtIPsMap(t *testing.T) {
 	expectedMap := make(map[string][]string)
 	expectedMap["sys/chassis-2/blade-4"] = []string{"192.168.100.4", "192.168.100.6", "192.168.100.8", "192.168.100.9", "fd9e:21a7:a92c:2323::3", "fd9e:21a7:a92c:2323::5"}
 	expectedMap["sys/rack-unit-3"] = []string{"192.168.100.7", "192.168.100.10", "192.168.100.11", "192.168.100.15", "192.168.100.17", "fd9e:21a7:a92c:2323::2", "fd9e:21a7:a92c:2323::4"}
-	expectedMap["sys/rack-unit-1"] = []string{}
+	expectedMap["sys/rack-unit-1"] = nil
 
 	if !reflect.DeepEqual(expectedMap, serverMgmtIPsMap) {
 		t.Errorf("GetServerMgmtIPsMap\nexpected: %v\n but was : %v", expectedMap, serverMgmtIPsMap)
@@ -664,10 +661,10 @@ func Test_removeDuplicateIPs(t *testing.T) {
 		args args
 		want want
 	}{
-		{"1", args{ips: []string{}}, want{ips: []string{}}},
-		{"2", args{ips: []string{""}}, want{ips: []string{}}},
-		{"3", args{ips: []string{"0.0.0.0"}}, want{ips: []string{}}},
-		{"4", args{ips: []string{"::"}}, want{ips: []string{}}},
+		{"1", args{ips: []string{}}, want{ips: nil}},
+		{"2", args{ips: []string{""}}, want{ips: nil}},
+		{"3", args{ips: []string{"0.0.0.0"}}, want{ips: nil}},
+		{"4", args{ips: []string{"::"}}, want{ips: nil}},
 		{"5", args{ips: []string{"127.0.0.1"}}, want{ips: []string{"127.0.0.1"}}},
 		{"6", args{ips: []string{"127.0.0.1", "127.0.0.1"}}, want{ips: []string{"127.0.0.1"}}},
 		{"7", args{ips: []string{"127.0.0.2", "127.0.0.1"}}, want{ips: []string{"127.0.0.1", "127.0.0.2"}}},
@@ -698,10 +695,10 @@ func Test_sortIPs(t *testing.T) {
 		args args
 		want want
 	}{
-		{"1", args{ips: []string{}}, want{ips: []string{}}},
-		{"2", args{ips: []string{""}}, want{ips: []string{}}},
-		{"3", args{ips: []string{"0.0.0.0"}}, want{ips: []string{}}},
-		{"4", args{ips: []string{"::"}}, want{ips: []string{}}},
+		{"1", args{ips: []string{}}, want{ips: nil}},
+		{"2", args{ips: []string{""}}, want{ips: nil}},
+		{"3", args{ips: []string{"0.0.0.0"}}, want{ips: nil}},
+		{"4", args{ips: []string{"::"}}, want{ips: nil}},
 		{"5", args{ips: []string{"127.0.0.1"}}, want{ips: []string{"127.0.0.1"}}},
 		{"6", args{ips: []string{"127.0.0.1", "127.0.0.1"}}, want{ips: []string{"127.0.0.1"}}},
 		{"7", args{ips: []string{"127.0.0.2", "127.0.0.1"}}, want{ips: []string{"127.0.0.1", "127.0.0.2"}}},

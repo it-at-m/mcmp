@@ -387,7 +387,7 @@ func addServerMgmtIPs(ipAttribute string, values []map[string]string, serverMgmt
 
 func removeDuplicateIPs(values []string) []string {
 	keys := make(map[string]bool)
-	list := []string{}
+	var list []string
 	for _, value := range values {
 		if value != "" && value != "0.0.0.0" && value != "::" {
 			if _, contains := keys[value]; !contains {
@@ -402,6 +402,9 @@ func removeDuplicateIPs(values []string) []string {
 
 func sortIPs(ips []string) []string {
 	uniqueIPs := removeDuplicateIPs(ips)
+	if len(uniqueIPs) == 0 {
+		return nil
+	}
 	netIPs := make([]net.IP, 0, len(uniqueIPs))
 	for _, ip := range uniqueIPs {
 		netIPs = append(netIPs, net.ParseIP(ip))

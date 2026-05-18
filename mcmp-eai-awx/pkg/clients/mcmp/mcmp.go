@@ -36,24 +36,15 @@ import (
 )
 
 const (
-	// Application Identification
-	UserAgentDefault = "MCMP-EAI-AWX/1.0"
-
-	// TLS Configuration
-	DefaultTLSVersion = tls.VersionTLS13
-
-	// HTTP Transport Settings
+	UserAgentDefault             = "MCMP-EAI-AWX/1.0"
+	DefaultTLSVersion            = tls.VersionTLS13
 	DefaultMaxIdleConns          = 100
 	DefaultIdleConnTimeout       = 90 * time.Second
 	DefaultTLSHandshakeTimeout   = 10 * time.Second
 	DefaultExpectContinueTimeout = 1 * time.Second
-
-	// Default Timeouts
-	DefaultRequestTimeout = 30 * time.Second
-
-	// HTTP Status Codes
-	MinSuccessStatusCode = 200
-	MaxSuccessStatusCode = 299
+	DefaultRequestTimeout        = 30 * time.Second
+	MinSuccessStatusCode         = 200
+	MaxSuccessStatusCode         = 299
 )
 
 // ClientConfig holds the configuration for creating a new MCMP client
@@ -186,7 +177,7 @@ type oauth2Transport struct {
 // This function is used to ensure that all required configuration parameters are provided
 // and that the provided values are valid.
 func validateConfig(config ClientConfig) error {
-	validationErrors := []string{}
+	var validationErrors []string
 
 	if config.AuthServerURL == "" {
 		validationErrors = append(validationErrors, "auth server URL is required")
@@ -219,7 +210,7 @@ func (t *oauth2Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	return t.rt.RoundTrip(req)
 }
 
-// SendForemanData sends JSON data to a MCMP endpoint using HTTP POST request with automatic OAuth2 authentication.
+// SendAWXInventory sends JSON data to a MCMP endpoint using HTTP POST request with automatic OAuth2 authentication.
 // This method replaces PostPatchnightData with better error handling and validation.
 //
 // The function performs the following critical operations:

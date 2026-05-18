@@ -13,9 +13,9 @@ import (
 	"syscall"
 	"time"
 
+	awx "github.com/euerla/goawx/client"
 	"github.com/it-at-m/mcmp/mcmp-eai-awx/pkg/clients/mcmp"
 	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/config"
-	awx "github.com/euerla/goawx/client"
 )
 
 // Global debug flag that controls verbose logging throughout the application
@@ -254,30 +254,30 @@ func run(ctx context.Context) error {
 		WindowsMaintenanceModeHosts: make([]InventoryHost, 0),
 	}
 
-	for _, config := range cfg.AWX {
-		if config.Enabled {
-			awxClient, err := awx.NewAWX(config.ApiEndpoint, config.Username, config.Password, nil)
+	for _, awxConfig := range cfg.AWX {
+		if awxConfig.Enabled {
+			awxClient, err := awx.NewAWX(awxConfig.ApiEndpoint, awxConfig.Username, awxConfig.Password, nil)
 			if err != nil {
-				return fmt.Errorf("failed to create %s AWX client : %w", config.ApiEndpoint, err)
+				return fmt.Errorf("failed to create %s AWX client : %w", awxConfig.ApiEndpoint, err)
 			}
 			params := map[string]string{
 				"page_size": awxPageSize,
 			}
-			linuxRootPermits, err := awxClient.InventoriesService.GetHostsByInventoryID(config.LinuxRootPermitsInventoryId, params)
+			linuxRootPermits, err := awxClient.InventoriesService.GetHostsByInventoryID(awxConfig.LinuxRootPermitsInventoryId, params)
 			if err != nil {
-				return fmt.Errorf("failed to get Linux root permits inventory from %s : %w", config.ApiEndpoint, err)
+				return fmt.Errorf("failed to get Linux root permits inventory from %s : %w", awxConfig.ApiEndpoint, err)
 			}
 			processHosts(linuxRootPermits.Results, &inventoryResult.LinuxHosts, "Linux Root Permits", logger)
 
-			windowsRootPermits, err := awxClient.InventoriesService.GetHostsByInventoryID(config.WindowsAdminPermitsInventoryId, params)
+			windowsRootPermits, err := awxClient.InventoriesService.GetHostsByInventoryID(awxConfig.WindowsAdminPermitsInventoryId, params)
 			if err != nil {
-				return fmt.Errorf("failed to get Windows admin permits inventory from %s : %w", config.ApiEndpoint, err)
+				return fmt.Errorf("failed to get Windows admin permits inventory from %s : %w", awxConfig.ApiEndpoint, err)
 			}
 			processHosts(windowsRootPermits.Results, &inventoryResult.WindowsHosts, "Windows Admin Permits", logger)
 
-			windowsMaintenanceModeHosts, err := awxClient.InventoriesService.GetHostsByInventoryID(config.WindowsMaintenanceModeInventoryId, params)
+			windowsMaintenanceModeHosts, err := awxClient.InventoriesService.GetHostsByInventoryID(awxConfig.WindowsMaintenanceModeInventoryId, params)
 			if err != nil {
-				return fmt.Errorf("failed to get Windows maintenance mode inventory from %s : %w", config.ApiEndpoint, err)
+				return fmt.Errorf("failed to get Windows maintenance mode inventory from %s : %w", awxConfig.ApiEndpoint, err)
 			}
 			processHosts(windowsMaintenanceModeHosts.Results, &inventoryResult.WindowsMaintenanceModeHosts, "Windows Maintenance", logger)
 		}
@@ -309,7 +309,7 @@ func run(ctx context.Context) error {
 	// Transmit processed host data to MCMP API endpoint using secure HTTP POST
 	// This completes the data synchronization pipeline with comprehensive error handling
 	if err := mcmpClient.SendAWXInventory(ctx, cfg.MCMP.ApiEndpoint, []byte(jsonData)); err != nil {
-		return fmt.Errorf("Error sending data to MCMP: %w", err)
+		return fmt.Errorf("error sending data to MCMP: %w", err)
 	}
 	logDebugf("Data successfully sent to MCMP")
 	return nil

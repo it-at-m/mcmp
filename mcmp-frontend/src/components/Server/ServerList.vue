@@ -217,7 +217,7 @@
           <span class="server-name-text">{{ item.name.split(".")[0] }}</span>
           <v-tooltip
             v-if="
-              item.hasWarinings
+              item.hasWarnings
             "
             location="top"
             text="Handlung erforderlich"

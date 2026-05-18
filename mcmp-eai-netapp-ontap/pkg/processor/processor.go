@@ -9,10 +9,10 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/logging"
 	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/utils"
 	"github.com/it-at-m/mcmp/mcmp-eai-netapp-ontap/pkg/client/netapp/ontap"
-	"github.com/hashicorp/go-multierror"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -164,8 +164,7 @@ func (p *Processor) AggregateData(ctx context.Context) (*ontap.OntapData, error)
 					if strings.HasSuffix(currentVol.SVM.Name, "dcc") {
 						nfsMountPath = nil
 					} else {
-						path := fmt.Sprintf("%s:%s", svmFQDN, q.NAS.Path)
-						nfsMountPath = &path
+						nfsMountPath = new(fmt.Sprintf("%s:%s", svmFQDN, q.NAS.Path))
 					}
 
 					qtd := ontap.QTreeData{
@@ -238,8 +237,7 @@ func (p *Processor) AggregateData(ctx context.Context) (*ontap.OntapData, error)
 			if strings.HasSuffix(currentVol.SVM.Name, "dcc") {
 				volNFSMountPath = nil
 			} else {
-				path := fmt.Sprintf("%s:%s", svmFQDN, currentVol.NAS.Path)
-				volNFSMountPath = &path
+				volNFSMountPath = new(fmt.Sprintf("%s:%s", svmFQDN, currentVol.NAS.Path))
 			}
 
 			aggregateUUIDs := make([]string, 0, len(aggregates))

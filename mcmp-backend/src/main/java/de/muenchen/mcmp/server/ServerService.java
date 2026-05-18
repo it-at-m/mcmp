@@ -118,7 +118,7 @@ public class ServerService {
                 .os(serverList.getOS())
                 .serverKind(serverList.getServerKind())
                 .serverType(serverList.getServerType())
-                .hasWarinings(serverList.getHasWarnings())
+                .hasWarnings(serverList.getHasWarnings())
                 .build();
     }
 

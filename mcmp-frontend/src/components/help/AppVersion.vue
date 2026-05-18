@@ -36,7 +36,7 @@
           >
             <a
               class="links"
-              :href="`https://git.muenchen.de/mcmp/webanwendung/-/commit/${encodeURIComponent(String(value))}`"
+              :href="`https://github.com/it-at-m/mcmp/commit/${encodeURIComponent(String(value))}`"
               target="_blank"
               rel="noopener noreferrer"
             >

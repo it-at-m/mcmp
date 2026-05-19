@@ -490,7 +490,11 @@ func (c *Client) GetVMwareInstances() ([]CmdbCi, error) {
 func (c *Client) FindVMwareInstance(uuid string) ([]CmdbCi, error) {
 	limit := 1000
 
-	requestURL := fmt.Sprintf("%s?sysparm_limit=%d&bios_uuid="+uuid, c.urlVMwareInstance, limit)
+	params := url.Values{}
+	params.Add("sysparm_limit", fmt.Sprintf("%d", limit))
+	params.Add("bios_uuid", uuid)
+
+	requestURL := fmt.Sprintf("%s?%s", c.urlVMwareInstance, params.Encode())
 	resp, err := c.getRequest(requestURL)
 	if err != nil {
 		return nil, err

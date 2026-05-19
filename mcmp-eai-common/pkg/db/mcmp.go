@@ -114,6 +114,7 @@ func New(username, password, dsn, passphrase string, debug bool, logWriter io.Wr
 		return nil, fmt.Errorf("failed to get SQL DB instance: %w", err)
 	}
 	if err := sqlDB.Ping(); err != nil {
+		_ = sqlDB.Close()
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 	return &Client{

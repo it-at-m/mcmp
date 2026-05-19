@@ -73,8 +73,8 @@ This project leverages modern Go technologies and enterprise integration pattern
 
 #### 1. Clone the Repository
 ```bash
-git clone github.com/it-at-m/mcmp.git
-cd mcmp-eai-netapp-storagegrid
+git clone https://github.com/it-at-m/mcmp.git
+cd mcmp/mcmp-eai-netapp-storagegrid
 ```
 
 #### 2. Install Dependencies

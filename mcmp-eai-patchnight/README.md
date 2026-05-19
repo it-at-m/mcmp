@@ -57,8 +57,8 @@ This project leverages modern Go technologies and enterprise integration pattern
 
 #### 1. Clone the Repository
 ```bash
-git clone github.com/it-at-m/mcmp.git
-cd mcmp-eai-patchnight
+git clone https://github.com/it-at-m/mcmp.git
+cd mcmp/mcmp-eai-patchnight
 ```
 
 #### 2. Install Dependencies

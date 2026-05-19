@@ -70,8 +70,8 @@ The Foreman API is documented here: https://docs.theforeman.org/api/
 #### 1. Clone the Repository
 
 ```bash
-git clone github.com/it-at-m/mcmp.git
-cd mcmp-eai-foreman
+git clone https://github.com/it-at-m/mcmp.git
+cd mcmp/mcmp-eai-foreman
 ```
 
 #### 2. Install Dependencies

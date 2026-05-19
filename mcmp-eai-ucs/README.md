@@ -31,17 +31,20 @@
 The application uses a TOML configuration file (`mcmp-eai-ucs.toml`) with the following sections:
 
 #### Logging Configuration
+
 - **Level**: DEBUG, INFO, WARN, ERROR.
 - **Output**: console, file, or both.
 - **Format**: text, json, or plain.
 
 #### UCSM / CIMC Configuration (Arrays)
+
 - **Hostname**: Management IP or FQDN of the UCS Manager or CIMC.
 - **Username / Password**: API credentials.
 - **Enabled**: Toggle for specific sources.
 - **VerifyTLS**: SSL certificate verification setting.
 
 #### MCMP API Configuration (Array)
+
 - **OAuthUrl / OAuthRealm**: Keycloak authentication settings.
 - **OAuthClientId / OAuthClientSecret**: OAuth2 credentials.
 - **ApiEndpoint**: MCMP API endpoint for UCS data import.
@@ -64,17 +67,20 @@ The application uses a TOML configuration file (`mcmp-eai-ucs.toml`) with the fo
 ### Installation
 
 #### 1. Clone the Repository
+
 ```bash
-git clone github.com/it-at-m/mcmp.git
-cd mcmp-eai-ucs
+git clone https://github.com/it-at-m/mcmp.git
+cd mcmp/mcmp-eai-ucs
 ```
 
 #### 2. Install Dependencies
+
 ```bash
 go mod tidy
 ```
 
 #### 3. Build the Application
+
 ```bash
 go build
 ```
@@ -82,26 +88,30 @@ go build
 ### Configuration
 
 #### 1. Create Configuration File
+
 ```bash
 cp mcmp-eai-ucs.toml.example mcmp-eai-ucs.toml
 ```
 
 #### 2. Edit Configuration
+
 Configure your `UCSM`, `CIMC`, and `MCMP` sections in `mcmp-eai-ucs.toml`.
 
 ### Execution
 
 #### Standard Operation
+
 ```bash
 ./mcmp-eai-ucs
 ```
 
 #### Debug Mode
+
 Set `Level = "DEBUG"` in the `[LOGGING]` section of the configuration file.
 
 ## Architecture
 
-```
+```text
 mcmp-eai-ucs/
 ├── pkg/
 │   ├── client/

@@ -167,7 +167,7 @@ Password = "db_password"
 1) Clone the repository
 ```bash
 git clone https://github.com/it-at-m/mcmp.git
-cd mcmp-callback-server
+cd mcmp/mcmp-callback-server
 ```
 
 2) Install dependencies

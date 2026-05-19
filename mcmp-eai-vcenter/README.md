@@ -51,8 +51,8 @@ This project leverages modern Go technologies and VMware integration libraries:
 
 #### 1. Clone the Repository
 ```bash
-git clone github.com/it-at-m/mcmp.git
-cd webanwendung/mcmp-eai-vcenter
+git clone https://github.com/it-at-m/mcmp.git
+cd mcmp/mcmp-eai-vcenter
 ```
 
 #### 2. Install Dependencies

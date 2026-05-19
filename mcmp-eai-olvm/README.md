@@ -68,8 +68,8 @@ This project leverages modern Go technologies and enterprise integration pattern
 
 #### 1. Clone the Repository
 ```bash
-git clone github.com/it-at-m/mcmp.git
-cd webanwendung/mcmp-eai-olvm
+git clone https://github.com/it-at-m/mcmp.git
+cd mcmp/mcmp-eai-olvm
 ```
 
 #### 2. Install Dependencies

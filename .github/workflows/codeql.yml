@@ -61,7 +61,7 @@ jobs:
           cache-dependency-path: mcmp-frontend/package-lock.json
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
@@ -75,6 +75,6 @@ jobs:
           mvn -B -ntp -DskipTests -f mcmp-eai-infoblox/pom.xml clean package
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{ matrix.language }}"

@@ -137,7 +137,6 @@
     </template>
     <v-row>
       <v-col cols="3">
-        <div v-if="isAdminUser">
           <h3>
             <v-tooltip v-if="!selectedServer.numCpuRecommended ||
                               selectedServer.numCpuRecommended == 0 ||
@@ -186,13 +185,8 @@
 
             CPU<info-tooltip text="Central Processing Unit" />
           </h3>
-        </div>
-        <div v-else>
-          <h3>CPU<info-tooltip text="Central Processing Unit" /></h3>
-        </div>
       </v-col>
       <v-col cols="3">
-        <div v-if="isAdminUser">
           <h3>
             <v-tooltip v-if="!selectedServer.memoryMbRecommended ||
                               selectedServer.memoryMbRecommended == 0 ||
@@ -240,10 +234,6 @@
             </v-tooltip>
             Arbeitsspeicher
           </h3>
-        </div>
-        <div v-else>
-          <h3>Arbeitsspeicher</h3>
-        </div>
       </v-col>
       <v-col
         cols="3"
@@ -319,7 +309,7 @@
     <v-row>
       <v-col
         v-if="
-          isAdminUser &&
+          !isCpuInCooldown &&
           props.selectedServer.numCpuRecommended &&
           props.selectedServer.numCpuRecommended != 0 &&
           selectedServer.numCpuRecommended != selectedServer.numCpu
@@ -349,7 +339,7 @@
       ></v-col>
       <v-col
         v-if="
-          isAdminUser &&
+          !isMemoryInCooldown &&
           selectedServer.memoryMbRecommended &&
           selectedServer.memoryMbRecommended != 0 &&
           selectedServer.memoryMbRecommended != selectedServer.memoryMb
@@ -681,7 +671,6 @@ import EditResources from "@/components/Server/EditResources.vue";
 import { useFormatter } from "@/composables/formatter.js";
 import { STATUS_INDICATORS } from "@/constants.ts";
 import { useSnackbarStore } from "@/stores/snackbar.ts";
-import { useUserStore } from "@/stores/user";
 import Server from "@/types/Server";
 
 const loading = ref(true);
@@ -698,11 +687,6 @@ const props = defineProps<{
 const emit = defineEmits<(e: "changed") => void>();
 const firstAppservice = computed(
   () => props.selectedServer.appservices?.[0] ?? null
-);
-
-const userStore = useUserStore();
-const isAdminUser = computed(() =>
-  userStore.getUser?.authorities.includes("ROLE_ADMIN")
 );
 
 function getPrices() {

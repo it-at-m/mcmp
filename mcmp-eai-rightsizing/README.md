@@ -78,7 +78,7 @@ This project leverages modern Go technologies and enterprise integration pattern
 #### 1. Clone the Repository
 ```bash
 git clone https://github.com/it-at-m/mcmp.git
-cd mcmp-eai-rightsizing
+cd mcmp/mcmp-eai-rightsizing
 ```
 
 #### 2. Install Dependencies
@@ -293,6 +293,6 @@ Distributed under the MIT License. See `LICENSE` file for more information.
 
 it@M - opensource@muenchen.de
 
-Project Link: [https://github.com/it-at-m/mcmp/tree/main/mcmp-eai-rightsizing](https://github.com/it-at-m/mcmp/tree/main/mcmp-eai-rightsizing)
+Project Link: [mcmp-eai-rightsizing](https://github.com/it-at-m/mcmp/tree/main/mcmp-eai-rightsizing)
 
 <p align="right">(<a href="#top">back to top</a>)</p>

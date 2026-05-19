@@ -704,8 +704,8 @@ func (p *Processor) calculateRecommendedCPU(vmName string, currentCPU int, cpuUt
 	}
 
 	// Never recommend less than half the current allocation, regardless of server class.
-	if result < currentCPU/2 {
-		result = int(float64(currentCPU/2) + 0.5)
+	if float64(result) < float64(currentCPU)/2 {
+		result = int(math.Round(float64(currentCPU) / 2))
 	}
 
 	return result
@@ -771,8 +771,9 @@ func (p *Processor) calculateRecommendedMemory(vmName string, currentMemoryMB in
 		result = 4 * 1024
 	}
 
-	if result < currentMemoryMB/2 {
-		result = int(((currentMemoryMB/2)+512)/1024) * 1024
+	// Never recommend less than half the current allocation, regardless of server class.
+	if float64(result) < float64(currentMemoryMB)/2 {
+		result = int(math.Round(float64(currentMemoryMB)/2/1024)) * 1024
 	}
 
 	return result
@@ -1005,7 +1006,7 @@ func (p *Processor) peakFactor(values []float64, threshold float64) float64 {
 			currentRun++
 
 			// Measure intensity above threshold
-			totalExcess += v - threshold
+			totalExcess += (v - threshold)
 
 			if currentRun > longestRun {
 				longestRun = currentRun

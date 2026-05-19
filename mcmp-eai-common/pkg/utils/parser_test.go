@@ -91,7 +91,7 @@ func Test_ParseDate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ut := ParseDate(tt.args.ut)
-			if (tt.want.nil && ut != nil) || (!tt.want.nil && (ut == nil || *ut != tt.want.ut)) {
+			if (tt.want.nil && ut != nil) || (!tt.want.nil && (ut == nil || !ut.Equal(tt.want.ut))) {
 				t.Errorf("ParseDate(\"%v\") = (%v), want (%v)", tt.args.ut, ut, tt.want.ut)
 			}
 		})

@@ -13,7 +13,7 @@
         density="compact"
         color="transparent"
       >
-        <div class="ml-4 d-flex align-center">
+        <div v-if="$slots['prepend-title'] && $slots['prepend-title']().length" class="ml-4 d-flex align-center">
           <slot name="prepend-title" />
         </div>
         <v-toolbar-title

@@ -31,27 +31,7 @@ export default {
         loading.value = false;
       });
   },
-  updatevCenterc(
-    loading: Ref<boolean>,
-    appservice: AppserviceList
-  ): Promise<Appservice> {
-    loading.value = true;
-    return fetch(
-      `${getApiBase()}${APPSERVICE_BASE}/updateVcenterc/${appservice.id}?enableVcenterc=${appservice.enableVcenterc}`,
-      putConfig({})
-    )
-      .then((response) => {
-        defaultResponseHandler(
-          response,
-          true,
-          "Appservice vCenterc erfolgreich aktualisiert."
-        );
-        return response.json();
-      })
-      .finally(() => {
-        loading.value = false;
-      });
-  },
+
   getAppservice(loading: Ref<boolean>, id: number): Promise<Appservice> {
     loading.value = true;
     return fetch(`${getApiBase()}${APPSERVICE_BASE}/${id}`, getConfig())

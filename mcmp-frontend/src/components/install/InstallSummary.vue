@@ -220,7 +220,6 @@ watch(
       delete copy.osType;
       Object.assign(copy, { requester_username: userStore.getUser?.username });
       Object.assign(copy, { memory_mb: copy.memory * 1024 });
-      delete copy.isVCenterC;
       delete copy.memory;
       delete copy.categoryType;
       appserviceService

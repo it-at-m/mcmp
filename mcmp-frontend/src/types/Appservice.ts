@@ -16,7 +16,6 @@ export default class Appservice {
     public changeGroupId: number,
     public changeGroupName: string,
     public changeGroupSysId: string,
-    public enableVcenterc: boolean,
     public cswEnforced: boolean,
     public servers: ServerListExtended[]
   ) {}

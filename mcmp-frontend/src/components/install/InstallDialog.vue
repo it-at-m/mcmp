@@ -213,7 +213,6 @@ function reset() {
 function createDefaultInstallServerDetails(): installServerDetails {
   return new installServerDetails(
     null,
-    false,
     null,
     null,
     null,

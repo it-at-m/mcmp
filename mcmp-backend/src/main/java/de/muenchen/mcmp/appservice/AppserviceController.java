@@ -2,10 +2,7 @@ package de.muenchen.mcmp.appservice;
 
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @AllArgsConstructor
@@ -37,11 +34,4 @@ public class AppserviceController {
 
         return appserviceService.getAppservices();
     }*/
-
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
-    @PutMapping("/updateVcenterc/{id}")
-    public AppserviceDTO updateAppserviceVcenterc(@PathVariable("id") final Long id,
-                                                  @RequestParam final Boolean enableVcenterc) {
-        return appserviceService.updateAppserviceVcenterc(id, enableVcenterc);
-    }
 }

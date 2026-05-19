@@ -9,8 +9,6 @@ public record AppserviceListDTO(
         @NotNull Long id,
         @NotNull String name,
         @NotNull Boolean hasServers,
-        @NotNull Boolean enableVcenterc,
         EnvironmentType environment
-
 ) {
 }

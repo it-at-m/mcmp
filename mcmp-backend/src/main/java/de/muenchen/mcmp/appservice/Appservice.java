@@ -8,9 +8,7 @@ import de.muenchen.mcmp.types.EnvironmentType;
 import de.muenchen.mcmp.user.User;
 import jakarta.persistence.*;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 import lombok.*;
 import org.hibernate.annotations.*;
 
@@ -62,17 +60,12 @@ public class Appservice extends AbstractEntity {
     @ToString.Exclude
     private Group changeGroup;
 
-    @ColumnDefault("false")
-    @Column(name = "enable_vcenterc", nullable = false)
-    private Boolean enableVcenterc = false;
-
     @ManyToMany
     @JoinTable(name = "server_assignment",
             joinColumns = @JoinColumn(name = "appservice_id"),
             inverseJoinColumns = @JoinColumn(name = "server_id"))
     @ToString.Exclude
     private Set<Server> servers = new LinkedHashSet<>();
-
 
     @NotNull
     @ColumnDefault("false")
@@ -81,7 +74,6 @@ public class Appservice extends AbstractEntity {
 
     @Column(name = "business_service_numbers", columnDefinition = "text")
     private String businessServiceNumbers;
-
 
     /**
      * Determines the current environment for an application service.

@@ -2,21 +2,36 @@ package db
 
 import (
 	"database/sql/driver"
+	"errors"
 	"fmt"
+)
+
+var (
+	// ErrNilDestination is returned when the destination pointer is nil.
+	ErrNilDestination = errors.New("destination pointer is nil")
 )
 
 // ScanString attempts to scan a value into a string-like type T, handling strings, byte slices, and nil values.
 func ScanString[T ~string](ptr *T, value interface{}) error {
+	if ptr == nil {
+		return ErrNilDestination
+	}
 	if value == nil {
 		*ptr = ""
 		return nil
 	}
-	if str, ok := value.(string); ok {
-		*ptr = T(str)
+	switch v := value.(type) {
+	case string:
+		*ptr = T(v)
 		return nil
-	}
-	if b, ok := value.([]byte); ok {
-		*ptr = T(b)
+	case []byte:
+		*ptr = T(v)
+		return nil
+	case int64:
+		*ptr = T(fmt.Sprintf("%d", v))
+		return nil
+	case fmt.Stringer:
+		*ptr = T(v.String())
 		return nil
 	}
 	return fmt.Errorf("cannot scan %T into %T", value, ptr)

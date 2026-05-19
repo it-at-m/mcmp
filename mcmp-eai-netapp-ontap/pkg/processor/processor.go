@@ -164,7 +164,8 @@ func (p *Processor) AggregateData(ctx context.Context) (*ontap.OntapData, error)
 					if strings.HasSuffix(currentVol.SVM.Name, "dcc") {
 						nfsMountPath = nil
 					} else {
-						nfsMountPath = new(fmt.Sprintf("%s:%s", svmFQDN, q.NAS.Path))
+						s := fmt.Sprintf("%s:%s", svmFQDN, q.NAS.Path)
+						nfsMountPath = &s
 					}
 
 					qtd := ontap.QTreeData{
@@ -237,7 +238,8 @@ func (p *Processor) AggregateData(ctx context.Context) (*ontap.OntapData, error)
 			if strings.HasSuffix(currentVol.SVM.Name, "dcc") {
 				volNFSMountPath = nil
 			} else {
-				volNFSMountPath = new(fmt.Sprintf("%s:%s", svmFQDN, currentVol.NAS.Path))
+				s := fmt.Sprintf("%s:%s", svmFQDN, currentVol.NAS.Path)
+				volNFSMountPath = &s
 			}
 
 			aggregateUUIDs := make([]string, 0, len(aggregates))

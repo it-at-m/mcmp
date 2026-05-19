@@ -503,9 +503,10 @@ func (c *Client) UpdateServer(server *Server) error {
 	snowInstanceSysID := server.SnowInstanceSysID
 	snowInstanceSysClass := server.SnowInstanceSysClass
 
-	for attempt := 1; attempt <= defaultMaxRetries; attempt++ {
+	return c.retryOperation(func() error {
 		server.UpdatedAt = time.Now().In(berlinLocation)
 		server.Version += 1
+
 		err := c.db.Model(server).
 			Select("snow_server_sys_id", "snow_server_sys_class", "snow_instance_sys_id", "snow_instance_sys_class", "updated_at", "version").
 			Updates(map[string]interface{}{
@@ -517,34 +518,20 @@ func (c *Client) UpdateServer(server *Server) error {
 				"version":                 server.Version,
 			}).Error
 
-		if err == nil {
-			if attempt > 1 {
-				log.Printf("Server with ID %d successfully saved after %d attempts\n", server.ID, attempt)
-			}
-			return nil
-		}
-		log.Printf("Attempt %d/%d failed while saving server with ID %d: %v\n", attempt, defaultMaxRetries, server.ID, err)
-
-		if attempt == defaultMaxRetries {
-			return fmt.Errorf("error saving server with ID %d after %d attempts: %w", server.ID, defaultMaxRetries, err)
-		}
-		var freshServer Server
-		err = c.db.First(&freshServer, server.ID).Error
 		if err != nil {
-			return fmt.Errorf("error reloading server with ID %d: %w", server.ID, err)
+			var freshServer Server
+			if reloadErr := c.db.First(&freshServer, server.ID).Error; reloadErr == nil {
+				freshServer.SnowServerSysID = snowServerSysID
+				freshServer.SnowServerSysClass = snowServerSysClass
+				freshServer.SnowInstanceSysID = snowInstanceSysID
+				freshServer.SnowInstanceSysClass = snowInstanceSysClass
+				*server = freshServer
+			}
+			return err
 		}
 
-		freshServer.SnowServerSysID = snowServerSysID
-		freshServer.SnowServerSysClass = snowServerSysClass
-		freshServer.SnowInstanceSysID = snowInstanceSysID
-		freshServer.SnowInstanceSysClass = snowInstanceSysClass
-		*server = freshServer
-		delay := defaultBaseDelay * time.Duration(1<<uint(attempt-1))
-		log.Printf("Waiting %v before retry...\n", delay)
-		time.Sleep(delay)
-	}
-
-	return fmt.Errorf("error saving server with ID %d: maximum number of attempts reached", server.ID)
+		return nil
+	})
 }
 
 func (c *Client) SaveServerAssignment(server *ServerAssignment) error {
@@ -578,37 +565,22 @@ func (c *Client) UpdateJobNode(node *JobNode) error {
 		return fmt.Errorf("no DB client available")
 	}
 
-	for attempt := 1; attempt <= defaultMaxRetries; attempt++ {
+	return c.retryOperation(func() error {
 		node.UpdatedAt = time.Now().In(berlinLocation)
 
 		// Omit ID and CreatedAt from updates to prevent accidental changes
 		err := c.db.Model(node).Omit("ID", "CreatedAt").Updates(node).Error
 
-		if err == nil {
-			if attempt > 1 {
-				log.Printf("JobNode with ID %d successfully updated after %d attempts\n", node.ID, attempt)
+		if err != nil {
+			// Reload the node to ensure we have the correct state for the next attempt
+			var freshNode JobNode
+			if reloadErr := c.db.First(&freshNode, node.ID).Error; reloadErr == nil {
+				// Re-apply original updates if needed, though here we update the whole struct
+				*node = freshNode
 			}
-			return nil
+			return err
 		}
 
-		log.Printf("Attempt %d/%d failed while updating job node with ID %d: %v\n", attempt, defaultMaxRetries, node.ID, err)
-
-		if attempt == defaultMaxRetries {
-			return fmt.Errorf("error updating job node with ID %d after %d attempts: %w", node.ID, defaultMaxRetries, err)
-		}
-
-		// Reload the node to ensure we have the correct state for the next attempt
-		var freshNode JobNode
-		if err := c.db.First(&freshNode, node.ID).Error; err != nil {
-			return fmt.Errorf("error reloading job node with ID %d: %w", node.ID, err)
-		}
-
-		// Re-apply values from the original node that should be preserved during the retry
-		// (Assuming ID and other base fields are already correct in the object)
-		delay := defaultBaseDelay * time.Duration(1<<uint(attempt-1))
-		log.Printf("Waiting %v before retry...\n", delay)
-		time.Sleep(delay)
-	}
-
-	return fmt.Errorf("error updating job node with ID %d: maximum number of attempts reached", node.ID)
+		return nil
+	})
 }

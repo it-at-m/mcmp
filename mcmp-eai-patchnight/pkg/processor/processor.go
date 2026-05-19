@@ -325,7 +325,8 @@ func (sp *ServiceProcessor) processWindowsPatchnightData(ctx context.Context) ([
 
 			titles := strings.TrimSpace(string(st.UpdateTitles))
 			if titles != "" {
-				mcmpServer.ExitString = new(titles)
+				tmpTitles := titles
+				mcmpServer.ExitString = &tmpTitles
 			}
 		}
 
@@ -353,8 +354,10 @@ func (sp *ServiceProcessor) addWindowsIncludedServers(
 
 		if nextPatchnight != nil {
 			loc := berlinLocation()
-			mcmpServer.StartDate = new(nextPatchnight.StartDate.In(loc))
-			mcmpServer.EndDate = new(nextPatchnight.EndDate.In(loc))
+			tmpStart := nextPatchnight.StartDate.In(loc)
+			mcmpServer.StartDate = &tmpStart
+			tmpEnd := nextPatchnight.EndDate.In(loc)
+			mcmpServer.EndDate = &tmpEnd
 		}
 
 		// Apply Windows update status information if available
@@ -364,7 +367,8 @@ func (sp *ServiceProcessor) addWindowsIncludedServers(
 
 			titles := strings.TrimSpace(string(st.UpdateTitles))
 			if titles != "" {
-				mcmpServer.ExitString = new(titles)
+				tmpTitles := titles
+				mcmpServer.ExitString = &tmpTitles
 			}
 		}
 

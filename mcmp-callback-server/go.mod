@@ -2,9 +2,7 @@ module github.com/it-at-m/mcmp/mcmp-callback-server
 
 go 1.26.3
 
-replace github.com/it-at-m/mcmp/mcmp-eai-common => ../mcmp-eai-common
-
-require github.com/it-at-m/mcmp/mcmp-eai-common v0.0.0-20260513111523-d4db31dd453f
+require github.com/it-at-m/mcmp/mcmp-eai-common v0.0.0-20260519124024-9567aff22177
 
 require (
 	github.com/fsnotify/fsnotify v1.10.1 // indirect

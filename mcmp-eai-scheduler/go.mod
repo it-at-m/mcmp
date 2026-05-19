@@ -2,12 +2,10 @@ module github.com/it-at-m/mcmp/mcmp-eai-scheduler
 
 go 1.26.3
 
-replace github.com/it-at-m/mcmp/mcmp-eai-common => ../mcmp-eai-common
-
 require (
 	github.com/euerla/goawx v0.0.0-20260428183549-bdffcc4c68b8
 	github.com/google/uuid v1.6.0
-	github.com/it-at-m/mcmp/mcmp-eai-common v0.0.0-20260513111523-d4db31dd453f
+	github.com/it-at-m/mcmp/mcmp-eai-common v0.0.0-20260519124024-9567aff22177
 	golang.org/x/oauth2 v0.36.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )

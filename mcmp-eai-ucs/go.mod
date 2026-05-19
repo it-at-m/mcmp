@@ -2,8 +2,6 @@ module github.com/it-at-m/mcmp/mcmp-eai-ucs
 
 go 1.26.3
 
-replace github.com/it-at-m/mcmp/mcmp-eai-common => ../mcmp-eai-common
-
 require github.com/it-at-m/mcmp/mcmp-eai-common v0.0.0-20260513111523-d4db31dd453f
 
 require (

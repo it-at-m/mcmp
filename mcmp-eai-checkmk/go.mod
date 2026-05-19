@@ -20,5 +20,3 @@ require (
 	golang.org/x/text v0.37.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )
-
-replace github.com/it-at-m/mcmp/mcmp-eai-common => ../mcmp-eai-common

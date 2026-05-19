@@ -2,8 +2,6 @@ module github.com/it-at-m/mcmp/mcmp-eai-awx
 
 go 1.26.3
 
-replace github.com/it-at-m/mcmp/mcmp-eai-common => ../mcmp-eai-common
-
 require (
 	github.com/euerla/goawx v0.0.0-20260428183549-bdffcc4c68b8
 	github.com/it-at-m/mcmp/mcmp-eai-common v0.0.0-20260513111523-d4db31dd453f

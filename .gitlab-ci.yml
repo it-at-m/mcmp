@@ -18,6 +18,7 @@ variables:
   DISABLE_TEST: "false"
   DISABLE_UPLOAD: "false"
   DISABLE_DEPLOY_TEST: "false"
+  DISABLE_DEPLOY_PROD: "false"
 
   #Maven Image, was verwendet wird.
   MAVEN_IMAGE: docker.io/library/maven:3.9-eclipse-temurin-21

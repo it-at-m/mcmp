@@ -244,6 +244,6 @@ Distributed under the MIT License. See `LICENSE` for details.
 
 opensource@muenchen.de
 
-Project Link: https://github.com/it-at-m/mcmp/mcmp-callback-server
+Project Link: [https://github.com/it-at-m/mcmp/tree/main/mcmp-callback-server](https://github.com/it-at-m/mcmp/tree/main/mcmp-callback-server)
 
 <p align="right">(<a href="#top">back to top</a>)</p>

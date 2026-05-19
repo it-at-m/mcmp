@@ -288,6 +288,6 @@ Distributed under the MIT License. See `LICENSE` file for more information.
 
 it@M - opensource@muenchen.de
 
-Project Link: [github.com/it-at-m/mcmp/mcmp-eai-vcenter](github.com/it-at-m/mcmp/mcmp-eai-vcenter)
+Project Link: [https://github.com/it-at-m/mcmp/tree/main/mcmp-eai-vcenter](https://github.com/it-at-m/mcmp/tree/main/mcmp-eai-vcenter)
 
 <p align="right">(<a href="#top">back to top</a>)</p>

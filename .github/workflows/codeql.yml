@@ -57,7 +57,7 @@ jobs:
 
       - name: Set up Node.js
         if: matrix.language == 'javascript-typescript'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: mcmp-frontend/package.json
           cache: npm

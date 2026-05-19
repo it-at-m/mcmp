@@ -124,14 +124,14 @@ func run(ctx context.Context) error {
 	// This includes: host retrieval, detailed data fetching, transformation, and internal storage
 	err = serviceProcessor.ProcessForemanHosts(ctx)
 	if err != nil {
-		return fmt.Errorf("error processing Foreman data: %v", err)
+		return fmt.Errorf("error processing Foreman data: %w", err)
 	}
 
 	// Generate JSON representation of processed data for API transmission
 	// The JSON format conforms to MCMP API specifications with proper structure validation
 	jsonData, err := serviceProcessor.ExportForemanDataAsJSON(ctx)
 	if err != nil {
-		return fmt.Errorf("error during JSON export: %v", err)
+		return fmt.Errorf("error during JSON export: %w", err)
 	}
 	logger.DebugPrintf("JSON export successful, length: %d characters", len(jsonData))
 
@@ -139,7 +139,7 @@ func run(ctx context.Context) error {
 	// The local file serves as a record of data transmitted to MCMP for troubleshooting
 	err = serviceProcessor.ExportForemanDataToFile(ctx, "foreman_export.json")
 	if err != nil {
-		return fmt.Errorf("error during file export: %v", err)
+		return fmt.Errorf("error during file export: %w", err)
 	}
 
 	// Initialize MCMP Client analog to other EAI services

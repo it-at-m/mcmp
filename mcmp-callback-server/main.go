@@ -1077,16 +1077,17 @@ func readAndParseJSON(r *http.Request, v interface{}) error {
 	// Limit request body size to prevent memory exhaustion attacks
 	r.Body = http.MaxBytesReader(nil, r.Body, maxRequestBodySize)
 
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		return fmt.Errorf("error reading request body")
-	}
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()
 		if err != nil {
 			log.Printf("Error closing request body: %v", err)
 		}
 	}(r.Body)
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		return fmt.Errorf("error reading request body")
+	}
 
 	if err := json.Unmarshal(body, v); err != nil {
 		return fmt.Errorf("invalid JSON format [body = \"%s\"]", string(body))

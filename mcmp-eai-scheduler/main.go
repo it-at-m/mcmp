@@ -267,9 +267,13 @@ func processJobs(cfg *Config, mcmpClient *db.Client, awxClients map[int64]*awx.A
 	}
 
 	for _, job := range jobs {
+		titleVal := "<nil>"
+		if job.Title != nil {
+			titleVal = *job.Title
+		}
 		logger.Info("--------------------------------------------------------------------------------")
-		logger.Info("PROCESSING JOB", "id", job.ID, "status", job.Status, "title", *job.Title)
-		logger.Info("  Details", "change", job.ChangeStatus, "awx", job.AwxStatus, "quickDiscovery", job.QuickDiscoveryStatus, "tagging", job.TaggingStatus, "email", job.NonPostgresEmailStatus)
+		logger.Info("PROCESSING JOB", "id", job.ID, "status", job.Status, "title", titleVal)
+		logger.Info("  Details", "title", titleVal, "change", job.ChangeStatus, "awx", job.AwxStatus, "quickDiscovery", job.QuickDiscoveryStatus, "tagging", job.TaggingStatus, "email", job.NonPostgresEmailStatus)
 
 		if job.Status == db.JobStatusWaitingForApproval {
 			logger.Info("  -> Job is waiting for approval. Skipping.", "id", job.ID)

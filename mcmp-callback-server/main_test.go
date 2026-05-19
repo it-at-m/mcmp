@@ -1064,6 +1064,7 @@ func BenchmarkServer_handleChangeCallback(b *testing.B) {
 				ID:             123,
 				ChangeRequired: true,
 				ChangeStatus:   db.ChangeStatusWaitingForApproval,
+				Status:         db.JobStatusWaitingForApproval,
 			}, nil
 		},
 		updateJobFunc: func(job *db.Job) error {
@@ -1125,6 +1126,7 @@ func BenchmarkServer_handleQuickDiscoveryCallback(b *testing.B) {
 				ID:                   123,
 				QuickDiscovery:       true,
 				QuickDiscoveryStatus: db.QuickdiscoveryStatusWaiting,
+				Status:               db.JobStatusWaitingForQuickdiscovery,
 			}, nil
 		},
 		updateJobFunc: func(job *db.Job) error {

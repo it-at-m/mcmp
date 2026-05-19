@@ -1,11 +1,8 @@
 package db
 
-import (
-	"database/sql/driver"
-	"fmt"
-)
+import "database/sql/driver"
 
-// QuickdiscoveryStatus represents the status of a quick discovery process as a string type.
+// QuickdiscoveryStatus represents the status of a quick discovery process, defined as a string value.
 type QuickdiscoveryStatus string
 
 const (
@@ -18,29 +15,32 @@ const (
 	QuickdiscoveryStatusCanceled                          QuickdiscoveryStatus = "canceled"
 	QuickdiscoveryStatusWaitingForServiceNowEnablement    QuickdiscoveryStatus = "waiting_for_service_now_enablement"
 	QuickdiscoveryStatusWaitingForServiceNowConfiguration QuickdiscoveryStatus = "waiting_for_service_now_configuration"
+	QuickdiscoveryStatusWaitingForIncidentResolution      QuickdiscoveryStatus = "waiting_for_incident_resolution"
+	QuickdiscoveryStatusIncidentFailed                    QuickdiscoveryStatus = "incident_failed"
 )
 
-// Scan implements the sql.Scanner interface for QuickdiscoveryStatus to allow database scanning of its value.
-// It assigns the string representation of the database value to the QuickdiscoveryStatus instance.
-// Returns an error if the provided value cannot be converted to a string.
+// Scan converts a database value into a QuickdiscoveryStatus. It handles nil, string, and []byte types, returning an error otherwise.
 func (s *QuickdiscoveryStatus) Scan(value interface{}) error {
-	if value == nil {
-		*s = ""
-		return nil
-	}
-	if str, ok := value.(string); ok {
-		*s = QuickdiscoveryStatus(str)
-		return nil
-	}
-	return fmt.Errorf("cannot scan %T into QuickdiscoveryStatus", value)
+	return ScanString(s, value)
 }
 
-// Value implements the driver.Valuer interface for QuickdiscoveryStatus by returning its string representation.
-func (s *QuickdiscoveryStatus) Value() (driver.Value, error) {
-	return string(*s), nil
+// Value returns the database value for the status.
+// Mixed receivers are intentional here: Scan needs a pointer, Value/String are better as values for string types.
+// noinspection GoMixedReceiverTypes
+func (s QuickdiscoveryStatus) Value() (driver.Value, error) {
+	return ValueString(s)
 }
 
-// String converts the QuickdiscoveryStatus to its string representation and returns it.
-func (s *QuickdiscoveryStatus) String() string {
-	return string(*s)
+// String returns the string representation of the status.
+// Mixed receivers are intentional here: Scan needs a pointer, Value/String are better as values for string types.
+// noinspection GoMixedReceiverTypes
+func (s QuickdiscoveryStatus) String() string {
+	return string(s)
+}
+
+// GormDataType specifies the custom Gorm data type for the QuickdiscoveryStatus type as "quickdiscovery_status".
+// Mixed receivers are intentional here: Scan needs a pointer, Value/String are better as values for string types.
+// noinspection GoMixedReceiverTypes
+func (QuickdiscoveryStatus) GormDataType() string {
+	return "quickdiscovery_status"
 }

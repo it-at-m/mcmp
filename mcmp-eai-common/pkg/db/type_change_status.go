@@ -1,9 +1,6 @@
 package db
 
-import (
-	"database/sql/driver"
-	"fmt"
-)
+import "database/sql/driver"
 
 // ChangeStatus represents the status of a change, defined as a string value.
 type ChangeStatus string
@@ -18,29 +15,32 @@ const (
 	ChangeStatusCanceled                          ChangeStatus = "canceled"
 	ChangeStatusWaitingForServiceNowEnablement    ChangeStatus = "waiting_for_service_now_enablement"
 	ChangeStatusWaitingForServiceNowConfiguration ChangeStatus = "waiting_for_service_now_configuration"
+	ChangeStatusWaitingForIncidentResolution      ChangeStatus = "waiting_for_incident_resolution"
+	ChangeStatusIncidentFailed                    ChangeStatus = "incident_failed"
 )
 
-// Scan implements the sql.Scanner interface to convert a database value into a ChangeStatus type.
-// It supports nil values and string types.
-// Returns an error if the value cannot be converted to ChangeStatus.
+// Scan converts a database value into a ChangeStatus. It handles nil, string, and []byte types, returning an error otherwise.
 func (s *ChangeStatus) Scan(value interface{}) error {
-	if value == nil {
-		*s = ""
-		return nil
-	}
-	if str, ok := value.(string); ok {
-		*s = ChangeStatus(str)
-		return nil
-	}
-	return fmt.Errorf("cannot scan %T into ChangeStatus", value)
+	return ScanString(s, value)
 }
 
-// Value converts a ChangeStatus instance to a driver.Value, returning the string representation and a nil error.
-func (s *ChangeStatus) Value() (driver.Value, error) {
-	return string(*s), nil
+// Value returns the database value for the status.
+// Mixed receivers are intentional here: Scan needs a pointer, Value/String are better as values for string types.
+// noinspection GoMixedReceiverTypes
+func (s ChangeStatus) Value() (driver.Value, error) {
+	return ValueString(s)
 }
 
-// String returns the ChangeStatus value as a string.
-func (s *ChangeStatus) String() string {
-	return string(*s)
+// String returns the string representation of the status.
+// Mixed receivers are intentional here: Scan needs a pointer, Value/String are better as values for string types.
+// noinspection GoMixedReceiverTypes
+func (s ChangeStatus) String() string {
+	return string(s)
+}
+
+// GormDataType specifies the custom Gorm data type for the ChangeStatus type as "change_status".
+// Mixed receivers are intentional here: Scan needs a pointer, Value/String are better as values for string types.
+// noinspection GoMixedReceiverTypes
+func (ChangeStatus) GormDataType() string {
+	return "change_status"
 }

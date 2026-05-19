@@ -1,10 +1,8 @@
 package db
 
-import (
-	"database/sql/driver"
-	"fmt"
-)
+import "database/sql/driver"
 
+// JobStatus represents the status of a job, defined as a string value.
 type JobStatus string
 
 const (
@@ -28,24 +26,32 @@ const (
 	JobStatusWaitingForServiceNowConfiguration JobStatus = "waiting_for_service_now_configuration"
 	JobStatusQuickdiscoveryFailed              JobStatus = "quickdiscovery_failed"
 	JobStatusTaggingFailed                     JobStatus = "tagging_failed"
+	JobStatusWaitingForIncidentResolution      JobStatus = "waiting_for_incident_resolution"
+	JobStatusIncidentFailed                    JobStatus = "incident_failed"
 )
 
+// Scan converts a database value into a JobStatus. It handles nil, string, and []byte types, returning an error otherwise.
 func (s *JobStatus) Scan(value interface{}) error {
-	if value == nil {
-		*s = ""
-		return nil
-	}
-	if str, ok := value.(string); ok {
-		*s = JobStatus(str)
-		return nil
-	}
-	return fmt.Errorf("cannot scan %T into JobStatus", value)
+	return ScanString(s, value)
 }
 
-func (s *JobStatus) Value() (driver.Value, error) {
-	return string(*s), nil
+// Value returns the database value for the status.
+// Mixed receivers are intentional here: Scan needs a pointer, Value/String are better as values for string types.
+// noinspection GoMixedReceiverTypes
+func (s JobStatus) Value() (driver.Value, error) {
+	return ValueString(s)
 }
 
-func (s *JobStatus) String() string {
-	return string(*s)
+// String returns the string representation of the status.
+// Mixed receivers are intentional here: Scan needs a pointer, Value/String are better as values for string types.
+// noinspection GoMixedReceiverTypes
+func (s JobStatus) String() string {
+	return string(s)
+}
+
+// GormDataType specifies the custom Gorm data type for the JobStatus type as "job_status".
+// Mixed receivers are intentional here: Scan needs a pointer, Value/String are better as values for string types.
+// noinspection GoMixedReceiverTypes
+func (JobStatus) GormDataType() string {
+	return "job_status"
 }

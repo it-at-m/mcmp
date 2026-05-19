@@ -1,9 +1,6 @@
 package db
 
-import (
-	"database/sql/driver"
-	"fmt"
-)
+import "database/sql/driver"
 
 // IncidentStatus represents the status of a ServiceNow incident, defined as a string value.
 type IncidentStatus string
@@ -14,27 +11,28 @@ const (
 	IncidentStatusFailed   IncidentStatus = "failed"
 )
 
-// Scan implements the sql.Scanner interface to convert a database value into an IncidentStatus type.
-// It supports nil values and string types.
-// Returns an error if the value cannot be converted to IncidentStatus.
+// Scan converts a database value into an IncidentStatus. It handles nil, string, and []byte types, returning an error otherwise.
 func (s *IncidentStatus) Scan(value interface{}) error {
-	if value == nil {
-		*s = ""
-		return nil
-	}
-	if str, ok := value.(string); ok {
-		*s = IncidentStatus(str)
-		return nil
-	}
-	return fmt.Errorf("cannot scan %T into IncidentStatus", value)
+	return ScanString(s, value)
 }
 
-// Value converts an IncidentStatus instance to a driver.Value, returning the string representation and a nil error.
-func (s *IncidentStatus) Value() (driver.Value, error) {
-	return string(*s), nil
+// Value returns the database value for the status.
+// Mixed receivers are intentional here: Scan needs a pointer, Value/String are better as values for string types.
+// noinspection GoMixedReceiverTypes
+func (s IncidentStatus) Value() (driver.Value, error) {
+	return ValueString(s)
 }
 
-// String returns the IncidentStatus value as a string.
-func (s *IncidentStatus) String() string {
-	return string(*s)
+// String returns the string representation of the status.
+// Mixed receivers are intentional here: Scan needs a pointer, Value/String are better as values for string types.
+// noinspection GoMixedReceiverTypes
+func (s IncidentStatus) String() string {
+	return string(s)
+}
+
+// GormDataType specifies the custom Gorm data type for the IncidentStatus type as "incident_status".
+// Mixed receivers are intentional here: Scan needs a pointer, Value/String are better as values for string types.
+// noinspection GoMixedReceiverTypes
+func (IncidentStatus) GormDataType() string {
+	return "incident_status"
 }

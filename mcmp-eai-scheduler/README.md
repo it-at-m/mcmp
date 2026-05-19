@@ -81,7 +81,7 @@ The ServiceNow API is documented here: https://git.muenchen.de/servicenow/cmp-ap
 
 #### 1. Clone the Repository
 ```bash
-git clone github.com/it-at-m/mcmp/mcmp-eai-scheduler.git
+git clone https://github.com/it-at-m/mcmp.git
 cd mcmp-eai-scheduler
 ```
 

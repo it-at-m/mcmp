@@ -40,7 +40,7 @@ changes:
       emailVerified: true
       email: ibs341@example.org
       attributes:
-        department: [ "ITM-IBS341" ]
+        department: ["ITM-IBS341"]
   - updateUserPassword:
       name: ibs341
       password: "ibs341"
@@ -52,7 +52,7 @@ changes:
       emailVerified: true
       email: ibs41@example.org
       attributes:
-        department: [ "ITM-IBS41" ]
+        department: ["ITM-IBS41"]
   - updateUserPassword:
       name: ibs41
       password: "ibs41"
@@ -64,7 +64,7 @@ changes:
       emailVerified: true
       email: ibs42@example.org
       attributes:
-        department: [ "ITM-IBS42" ]
+        department: ["ITM-IBS42"]
   - updateUserPassword:
       name: ibs42
       password: "ibs42"
@@ -76,7 +76,7 @@ changes:
       emailVerified: true
       email: ibs45@example.org
       attributes:
-        department: [ "ITM-IBS45" ]
+        department: ["ITM-IBS45"]
   - updateUserPassword:
       name: ibs45
       password: "ibs45"
@@ -88,7 +88,7 @@ changes:
       emailVerified: true
       email: ibs46@example.org
       attributes:
-        department: [ "ITM-IBS46" ]
+        department: ["ITM-IBS46"]
   - updateUserPassword:
       name: ibs46
       password: "ibs46"
@@ -100,7 +100,7 @@ changes:
       emailVerified: true
       email: ibs48@example.org
       attributes:
-        department: [ "ITM-IBS48" ]
+        department: ["ITM-IBS48"]
   - updateUserPassword:
       name: ibs48
       password: "ibs48"
@@ -112,7 +112,7 @@ changes:
       emailVerified: true
       email: ibs49@example.org
       attributes:
-        department: [ "ITM-IBS49" ]
+        department: ["ITM-IBS49"]
   - updateUserPassword:
       name: ibs49
       password: "ibs49"
@@ -124,7 +124,7 @@ changes:
       emailVerified: true
       email: ibs51@example.org
       attributes:
-        department: [ "ITM-IBS51" ]
+        department: ["ITM-IBS51"]
   - updateUserPassword:
       name: ibs51
       password: "ibs51"
@@ -136,7 +136,7 @@ changes:
       emailVerified: true
       email: ibs72@example.org
       attributes:
-        department: [ "ITM-IBS72" ]
+        department: ["ITM-IBS72"]
   - updateUserPassword:
       name: ibs72
       password: "ibs72"

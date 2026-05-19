@@ -14,7 +14,7 @@ import (
 func ConfigDB(username, passphrase, encryptedPassword string, debug bool) (escapedUsername string, escapedPassword string, gormLogger logger.Interface, err error) {
 	password, err := cipher.DecryptString(passphrase, encryptedPassword)
 	if err != nil {
-		return "", "", nil, fmt.Errorf("decrypt database password error: %v", err)
+		return "", "", nil, fmt.Errorf("decrypt database password error: %w", err)
 	}
 	escapedUsername = url.QueryEscape(username)
 	//	escapedPassword = url.QueryEscape(password)

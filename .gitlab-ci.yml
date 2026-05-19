@@ -159,7 +159,14 @@ build-npm:
         fi
         NPM_NAME=$(node -p "require('./package.json').name")
         echo "Deploying $NPM_NAME version $NPM_VERSION"
-        curl -sSf -u $MAVEN_REPO_USER:$MAVEN_REPO_PASS -O $ARTIFACTORY_HOST/artifactory/jfrog-releases/artifactory/jfrog-cli/v2-jf/$CLI_VERSION/jfrog-cli-linux-amd64/jf
+        JF_URL="$ARTIFACTORY_HOST/artifactory/jfrog-releases/artifactory/jfrog-cli/v2-jf/$CLI_VERSION/jfrog-cli-linux-amd64/jf"
+        JF_SHA256_URL="$JF_URL.sha256"
+        curl -fsSL -u $MAVEN_REPO_USER:$MAVEN_REPO_PASS "$JF_SHA256_URL" -o jf.sha256
+        EXPECTED_SHA256=$(awk '{print $1}' jf.sha256)
+        if [ -z "$EXPECTED_SHA256" ]; then echo "Fehler: Keine gueltige SHA256-Pruefsumme fuer jf erhalten"; exit 1; fi
+        curl -fsSL -u $MAVEN_REPO_USER:$MAVEN_REPO_PASS "$JF_URL" -o jf
+        ACTUAL_SHA256=$(sha256sum jf | awk '{print $1}')
+        if [ "$ACTUAL_SHA256" != "$EXPECTED_SHA256" ]; then echo "Fehler: SHA256-Pruefsumme fuer jf stimmt nicht"; exit 1; fi
         chmod u+x jf
         ./jf config add artifactory --url=$ARTIFACTORY_HOST --user=$MAVEN_REPO_USER --password=$MAVEN_REPO_PASS
         if [[ $CI_COMMIT_BRANCH != "main" ]]; then

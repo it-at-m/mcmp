@@ -121,7 +121,7 @@ services:
       - "host.containers.internal:host-gateway"
     healthcheck:
       <<: *healthcheck
-      test: [ "CMD-SHELL", "curl http://localhost:8080/actuator/health/liveness" ]
+      test: ["CMD-SHELL", "curl http://localhost:8080/actuator/health/liveness"]
     security_opt: *security_settings
 
   mailpit:

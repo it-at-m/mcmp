@@ -35,7 +35,7 @@ const (
 	Gray                                Status = "gray"   // Unknown or invalid → There is insufficient information available.
 	IPv4                                IpType = "IPv4"
 	IPv6                                IpType = "IPv6"
-	ESXI_HOSTNAME_PREFIX                       = "esxi"
+	EsxiHostnamePrefix                         = "esxi"
 	unknownDiskMode                            = "unknown"
 	unknownProvisioning                        = "unknown"
 	unknownUnitNumber                          = int32(-1)
@@ -466,15 +466,13 @@ func (storedVM *Server) CompareAndUpdate(newVM Server, timeNow time.Time) bool {
 		storedVM.PowerState = newVM.PowerState
 		// Track memory changes with history
 		if storedVM.MemoryMB != newVM.MemoryMB {
-			temp := storedVM.MemoryMB
-			storedVM.MemoryMBPrev = &temp
+			storedVM.MemoryMBPrev = new(storedVM.MemoryMB)
 			storedVM.MemoryMBChangeDate = &timeNow
 		}
 		storedVM.MemoryMB = newVM.MemoryMB
 		// Track CPU changes with history
 		if storedVM.NumCpu != newVM.NumCpu {
-			temp := storedVM.NumCpu
-			storedVM.NumCpuPrev = &temp
+			storedVM.NumCpuPrev = new(storedVM.NumCpu)
 			storedVM.NumCpuChangeDate = &timeNow
 		}
 		storedVM.NumCpu = newVM.NumCpu
@@ -1127,14 +1125,14 @@ func processVM(db *gorm.DB, cloud Cloud, vm mo.VirtualMachine,
 
 	// OverallStatus prüfen
 	overallStatus := string(vm.OverallStatus)
-	if !isValidStatus(string(overallStatus)) {
+	if !isValidStatus(overallStatus) {
 		log.Printf("WARNING: Unknown OverallStatus '%s' for VM '%s'. Default value 'gray' is used.\n", overallStatus, vm.Summary.Config.Name)
 		overallStatus = string(Gray) // Standardwert für unbekannte Status
 	}
 
 	// ConfigStatus prüfen
 	configStatus := string(vm.ConfigStatus)
-	if !isValidStatus(string(configStatus)) {
+	if !isValidStatus(configStatus) {
 		log.Printf("WARNING: Unknown ConfigStatus '%s' for VM '%s'. Default value 'gray' is used.\n", configStatus, vm.Summary.Config.Name)
 		configStatus = string(Gray) // Standardwert für unbekannte Status
 	}
@@ -1165,8 +1163,8 @@ func processVM(db *gorm.DB, cloud Cloud, vm mo.VirtualMachine,
 		MemoryHotAddEnabled:         convertPtrToBool(vm.Config.MemoryHotAddEnabled),
 		CpuHotAddEnabled:            convertPtrToBool(vm.Config.CpuHotAddEnabled),
 		CpuHotRemoveEnabled:         convertPtrToBool(vm.Config.CpuHotRemoveEnabled),
-		HotPlugMemoryLimit:          int64ToPtr(vm.Config.HotPlugMemoryLimit),
-		HotPlugMemoryIncrementSize:  int64ToPtr(vm.Config.HotPlugMemoryIncrementSize),
+		HotPlugMemoryLimit:          new(vm.Config.HotPlugMemoryLimit),
+		HotPlugMemoryIncrementSize:  new(vm.Config.HotPlugMemoryIncrementSize),
 		CpuTopology:                 convertCpuAffinityToString(vm.Config.CpuAffinity),
 		VmxVersion:                  RemoveVMXPrefix(vm.Config.Version),
 		OverallStatus:               Status(overallStatus),
@@ -1217,9 +1215,8 @@ func processVM(db *gorm.DB, cloud Cloud, vm mo.VirtualMachine,
 		if err := db.Create(&newVM).Error; err != nil {
 			log.Printf("Error saving VM %s: %v", newVM.Name, err)
 			return
-		} else {
-			storedVM = newVM
 		}
+		storedVM = newVM
 	} else {
 		if storedVM.CompareAndUpdate(newVM, timeNow) {
 			if err := db.Save(&storedVM).Error; err != nil {
@@ -1875,18 +1872,18 @@ func identifyLocation(input string) string {
 	}
 
 	// Check minimum length
-	const minLength = len(ESXI_HOSTNAME_PREFIX) + locationCodeLength
+	const minLength = len(EsxiHostnamePrefix) + locationCodeLength
 	if len(input) < minLength {
 		return ""
 	}
 
 	// Case-insensitive prefix check
-	if !strings.EqualFold(input[:len(ESXI_HOSTNAME_PREFIX)], ESXI_HOSTNAME_PREFIX) {
+	if !strings.EqualFold(input[:len(EsxiHostnamePrefix)], EsxiHostnamePrefix) {
 		return ""
 	}
 
 	// Extract location code
-	locationCode := input[len(ESXI_HOSTNAME_PREFIX) : len(ESXI_HOSTNAME_PREFIX)+locationCodeLength]
+	locationCode := input[len(EsxiHostnamePrefix) : len(EsxiHostnamePrefix)+locationCodeLength]
 
 	// Optional: Validate that it is alphanumeric
 	for _, char := range locationCode {
@@ -1926,11 +1923,6 @@ func convertPtrToBool(ptr *bool) bool {
 		return false
 	}
 	return *ptr
-}
-
-// int64ToPtr converts an int64 value to a pointer to that value and returns it.
-func int64ToPtr(i int64) *int64 {
-	return &i
 }
 
 // convertPtrToInt64 converts a pointer to an int64 value into its dereferenced int64 value or returns 0 if the pointer is nil.

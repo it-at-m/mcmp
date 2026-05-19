@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"git.muenchen.de/mcmp/webanwendung/mcmp-eai-common/pkg/logging"
+	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/logging"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 )
@@ -56,7 +56,7 @@ func NewClient(config ClientConfig) (*Client, error) {
 		return nil, fmt.Errorf("API endpoint is required")
 	}
 	if config.ProxyURL == "" {
-		return nil, fmt.Errorf("Proxy URL is required")
+		return nil, fmt.Errorf("proxy URL is required")
 	}
 
 	// Set default values for optional parameters
@@ -464,8 +464,8 @@ func (c *Client) GetVMwareInstances() ([]CmdbCi, error) {
 	limit := 1000
 
 	for {
-		url := fmt.Sprintf("%s?sysparm_offset=%d&sysparm_limit=%d", c.urlVMwareInstance, offset, limit)
-		resp, err := c.getRequest(url)
+		apiEndpoint := fmt.Sprintf("%s?sysparm_offset=%d&sysparm_limit=%d", c.urlVMwareInstance, offset, limit)
+		resp, err := c.getRequest(apiEndpoint)
 		if err != nil {
 			return nil, err
 		}
@@ -490,8 +490,12 @@ func (c *Client) GetVMwareInstances() ([]CmdbCi, error) {
 func (c *Client) FindVMwareInstance(uuid string) ([]CmdbCi, error) {
 	limit := 1000
 
-	url := fmt.Sprintf("%s?sysparm_limit=%d&bios_uuid="+uuid, c.urlVMwareInstance, limit)
-	resp, err := c.getRequest(url)
+	params := url.Values{}
+	params.Add("sysparm_limit", fmt.Sprintf("%d", limit))
+	params.Add("bios_uuid", uuid)
+
+	requestURL := fmt.Sprintf("%s?%s", c.urlVMwareInstance, params.Encode())
+	resp, err := c.getRequest(requestURL)
 	if err != nil {
 		return nil, err
 	}

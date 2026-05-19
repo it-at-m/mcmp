@@ -168,27 +168,27 @@ func run(ctx context.Context) error {
 
 	// Create and configure ServiceProcessor for handling Patchnight data operations
 	// The processor encapsulates the business logic for data retrieval and transformation
-	processor := processor.NewServiceProcessor(patchnightClient, debug)
+	serviceProcessor := processor.NewServiceProcessor(patchnightClient, debug)
 
 	// Process patchnight data from Patchnight
 	// This involves fetching app services and their related data (CIs, groups, users)
-	if err := processor.ProcessPatchnightData(); err != nil {
-		return fmt.Errorf("Error processing patchnight data: %v", err)
+	if err := serviceProcessor.ProcessPatchnightData(); err != nil {
+		return fmt.Errorf("error processing patchnight data: %v", err)
 	}
 
 	// Export Patchnight data as JSON string for API transmission
 	// The JSON format is required by the MCMP API for data ingestion
-	jsonData, err := processor.ExportToJSON()
+	jsonData, err := serviceProcessor.ExportToJSON()
 	if err != nil {
-		return fmt.Errorf("Error during JSON export: %v", err)
+		return fmt.Errorf("error during JSON export: %v", err)
 	}
 	logDebugf("JSON export successful, length: %d characters", len(jsonData))
 
 	// Export Patchnight data to a local file for backup/debugging purposes
 	// This creates a persistent copy of the data that was sent to MCMP
-	err = processor.ExportToFile("patchnight_export.json")
+	err = serviceProcessor.ExportToFile("patchnight_export.json")
 	if err != nil {
-		return fmt.Errorf("Error during file export: %v", err)
+		return fmt.Errorf("error during file export: %v", err)
 	}
 
 	// Create MCMP client for API communication
@@ -205,13 +205,13 @@ func run(ctx context.Context) error {
 	}
 	mcmpClient, err := mcmp.NewClient(mcmpConfig)
 	if err != nil {
-		return fmt.Errorf("Failed to create MCMP client: %v", err)
+		return fmt.Errorf("failed to create MCMP client: %v", err)
 	}
 
 	// Send processed Patchnight data to MCMP API endpoint
 	// This completes the data synchronization process
 	if err := mcmpClient.SendPatchnightData(ctx, cfg.MCMP.ApiEndpoint, []byte(jsonData)); err != nil {
-		return fmt.Errorf("Error sending data to MCMP: %v", err)
+		return fmt.Errorf("error sending data to MCMP: %v", err)
 	}
 	logDebugf("Data successfully sent to MCMP")
 	return nil

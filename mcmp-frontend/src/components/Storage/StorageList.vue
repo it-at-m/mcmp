@@ -121,7 +121,7 @@ const loadItems = async (page = 1) => {
     const sortOrder = sortBy.value.length ? sortBy.value[0].order : "asc";
 
     const sanitizedSearch = (search.value || "")
-      .replace(/[^a-zA-Z0-9 .-_]/g, "")
+      .replace(/[^a-zA-Z0-9 ._-]/g, "")
       .trim();
 
     const response = await storageService.getUnifiedStorage(

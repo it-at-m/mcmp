@@ -167,7 +167,7 @@ Password = "db_password"
 1) Clone the repository
 ```bash
 git clone https://github.com/it-at-m/mcmp.git
-cd mcmp-callback-server
+cd mcmp/mcmp-callback-server
 ```
 
 2) Install dependencies
@@ -244,6 +244,6 @@ Distributed under the MIT License. See `LICENSE` for details.
 
 opensource@muenchen.de
 
-Project Link: https://github.com/it-at-m/mcmp/mcmp-callback-server
+Project Link: [https://github.com/it-at-m/mcmp/tree/main/mcmp-callback-server](https://github.com/it-at-m/mcmp/tree/main/mcmp-callback-server)
 
 <p align="right">(<a href="#top">back to top</a>)</p>

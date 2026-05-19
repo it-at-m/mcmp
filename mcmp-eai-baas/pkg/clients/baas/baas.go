@@ -95,7 +95,7 @@ func New(hostname string) *Client {
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
 			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
+				InsecureSkipVerify: false,
 				MinVersion:         tls.VersionTLS13,
 			},
 		},

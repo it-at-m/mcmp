@@ -55,8 +55,8 @@ This project leverages modern Go technologies and enterprise integration pattern
 
 #### 1. Clone the Repository
 ```bash
-git clone github.com/it-at-m/mcmp/mcmp-eai-baas.git
-cd mcmp-eai-baas
+git clone https://github.com/it-at-m/mcmp.git
+cd mcmp/mcmp-eai-baas
 ```
 
 #### 2. Install Dependencies
@@ -275,7 +275,7 @@ Distributed under the MIT License. See `LICENSE` file for more information.
 
 it@M - opensource@muenchen.de
 
-Project Link: [github.com/it-at-m/mcmp/mcmp-eai-baas](github.com/it-at-m/mcmp/mcmp-eai-baas)
+Project Link: [https://github.com/it-at-m/mcmp/tree/main/mcmp-eai-baas](https://github.com/it-at-m/mcmp/tree/main/mcmp-eai-baas)
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 ```

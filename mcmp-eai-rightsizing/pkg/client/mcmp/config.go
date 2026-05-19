@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	commonmcmp "git.muenchen.de/mcmp/webanwendung/mcmp-eai-common/pkg/client/mcmp"
+	commonmcmp "github.com/it-at-m/mcmp/mcmp-eai-common/pkg/client/mcmp"
 )
 
 var (

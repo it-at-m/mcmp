@@ -13,6 +13,9 @@
         density="compact"
         color="transparent"
       >
+        <div v-if="$slots['prepend-title'] && $slots['prepend-title']().length" class="ml-4 d-flex align-center">
+          <slot name="prepend-title" />
+        </div>
         <v-toolbar-title
           class="text-h6"
           :text="title"
@@ -20,7 +23,6 @@
 
         <slot name="toolbar-actions" />
 
-        <!-- Tooltip für den Expand/Collapse Button -->
         <v-tooltip location="bottom">
           <template #activator="{ props: tooltipProps }">
             <v-btn
@@ -65,6 +67,5 @@ const props = withDefaults(
   }
 );
 
-// Initialisierung des Expand-Status basierend auf Props
 const expanded = ref(props.disableExpansion ? true : props.isDefaultExpanded);
 </script>

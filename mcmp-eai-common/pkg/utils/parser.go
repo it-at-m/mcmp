@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 )
@@ -8,9 +9,9 @@ import (
 var location, _ = time.LoadLocation("Europe/Berlin")
 
 func ParseUint(str string) (uint, error) {
-	u64, err := strconv.ParseUint(str, 10, 64)
+	u64, err := strconv.ParseUint(str, 10, 0)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("parse uint %q: %w", str, err)
 	}
 	return uint(u64), nil
 }

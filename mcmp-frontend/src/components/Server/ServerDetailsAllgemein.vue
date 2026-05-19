@@ -137,22 +137,22 @@
     </template>
     <v-row>
       <v-col cols="3">
-        <div v-if="isAdminUser">
           <h3>
-            <v-tooltip
-              v-if="
-                !selectedServer.numCpuRecommended ||
-                selectedServer.numCpuRecommended == 0
-              "
-              location="bottom"
-              text="Keine Empfehlung möglich"
-            >
+            <v-tooltip v-if="!selectedServer.numCpuRecommended ||
+                              selectedServer.numCpuRecommended == 0 ||
+                              isCpuInCooldown"
+                                    location="bottom"
+                                    :text="isCpuInCooldown && selectedServer.numCpuRecommended && selectedServer.numCpuRecommended != 0
+                            ? `Empfehlung pausiert – Neue Empfehlung verfügbar ab ${cpuCooldownUntil}`
+                            : 'Keine Empfehlung möglich'">
               <template #activator="{ props }">
                 <v-icon
-                  v-bind="props"
-                  :icon="mdiHelpCircle"
-                  color="grey"
-                  size="small"
+                    v-bind="props"
+                    :icon="isCpuInCooldown && selectedServer.numCpuRecommended && selectedServer.numCpuRecommended != 0
+                            ? mdiPauseCircle
+                            : mdiHelpCircle"
+                    color="grey"
+                    size="small"
                 />
               </template>
             </v-tooltip>
@@ -185,29 +185,23 @@
 
             CPU<info-tooltip text="Central Processing Unit" />
           </h3>
-        </div>
-        <div v-else>
-          <h3>CPU<info-tooltip text="Central Processing Unit" /></h3>
-        </div>
       </v-col>
       <v-col cols="3">
-        <div v-if="isAdminUser">
           <h3>
-            <v-tooltip
-              v-if="
-                !selectedServer.memoryMbRecommended ||
-                selectedServer.memoryMbRecommended == 0
-              "
-              location="bottom"
-              text="Keine Empfehlung möglich"
-            >
+            <v-tooltip v-if="!selectedServer.memoryMbRecommended ||
+                              selectedServer.memoryMbRecommended == 0 ||
+                              isMemoryInCooldown"
+                                    location="bottom"
+                                    :text="isMemoryInCooldown && selectedServer.memoryMbRecommended && selectedServer.memoryMbRecommended != 0
+                            ? `Empfehlung pausiert – Neue Empfehlung verfügbar ab ${memoryCooldownUntil}`
+                            : 'Keine Empfehlung möglich'">
               <template #activator="{ props }">
-                <v-icon
-                  v-bind="props"
-                  :icon="mdiHelpCircle"
-                  color="grey"
-                  size="small"
-                />
+                <v-icon v-bind="props"
+                        :icon="isMemoryInCooldown && selectedServer.memoryMbRecommended && selectedServer.memoryMbRecommended != 0
+                            ? mdiPauseCircle
+                            : mdiHelpCircle"
+                        color="grey"
+                        size="small"/>
               </template>
             </v-tooltip>
             <v-icon
@@ -240,10 +234,6 @@
             </v-tooltip>
             Arbeitsspeicher
           </h3>
-        </div>
-        <div v-else>
-          <h3>Arbeitsspeicher</h3>
-        </div>
       </v-col>
       <v-col
         cols="3"
@@ -319,7 +309,7 @@
     <v-row>
       <v-col
         v-if="
-          isAdminUser &&
+          !isCpuInCooldown &&
           props.selectedServer.numCpuRecommended &&
           props.selectedServer.numCpuRecommended != 0 &&
           selectedServer.numCpuRecommended != selectedServer.numCpu
@@ -349,7 +339,7 @@
       ></v-col>
       <v-col
         v-if="
-          isAdminUser &&
+          !isMemoryInCooldown &&
           selectedServer.memoryMbRecommended &&
           selectedServer.memoryMbRecommended != 0 &&
           selectedServer.memoryMbRecommended != selectedServer.memoryMb
@@ -669,7 +659,7 @@
 <script setup lang="ts">
 import type Price from "@/types/Price";
 
-import { mdiAlertCircle, mdiCheckCircle, mdiHelpCircle } from "@mdi/js";
+import {mdiAlertCircle, mdiCheckCircle, mdiHelpCircle, mdiPauseCircle} from "@mdi/js";
 import { computed, onMounted, ref } from "vue";
 
 import jobService from "@/api/jobService.ts";
@@ -681,7 +671,6 @@ import EditResources from "@/components/Server/EditResources.vue";
 import { useFormatter } from "@/composables/formatter.js";
 import { STATUS_INDICATORS } from "@/constants.ts";
 import { useSnackbarStore } from "@/stores/snackbar.ts";
-import { useUserStore } from "@/stores/user";
 import Server from "@/types/Server";
 
 const loading = ref(true);
@@ -698,11 +687,6 @@ const props = defineProps<{
 const emit = defineEmits<(e: "changed") => void>();
 const firstAppservice = computed(
   () => props.selectedServer.appservices?.[0] ?? null
-);
-
-const userStore = useUserStore();
-const isAdminUser = computed(() =>
-  userStore.getUser?.authorities.includes("ROLE_ADMIN")
 );
 
 function getPrices() {
@@ -754,6 +738,47 @@ function change_cpu_ram(
       emit("changed");
     });
 }
+
+const isCpuInCooldown = computed(() => {
+  if (!props.selectedServer.numCpuChangeDate) return false
+
+  const changeDate = new Date(props.selectedServer.numCpuChangeDate)
+  const cooldownUntil = new Date(changeDate)
+  cooldownUntil.setDate(cooldownUntil.getDate() + 7)
+
+  return new Date() < cooldownUntil
+})
+
+const cpuCooldownUntil = computed(() => {
+  if (!props.selectedServer.numCpuChangeDate) return ''
+
+  const changeDate = new Date(props.selectedServer.numCpuChangeDate)
+  const cooldownUntil = new Date(changeDate)
+  cooldownUntil.setDate(cooldownUntil.getDate() + 7)
+
+  return cooldownUntil.toLocaleDateString('de-DE')
+})
+
+
+const isMemoryInCooldown = computed(() => {
+if (!props.selectedServer.memoryMbChangeDate) return false
+
+const changeDate = new Date(props.selectedServer.memoryMbChangeDate)
+const endsAt = new Date(changeDate)
+endsAt.setDate(endsAt.getDate() + 7)
+
+return new Date() < endsAt
+})
+
+const memoryCooldownUntil = computed(() => {
+if (!props.selectedServer.memoryMbChangeDate) return ''
+
+const changeDate = new Date(props.selectedServer.memoryMbChangeDate)
+const endsAt = new Date(changeDate)
+endsAt.setDate(endsAt.getDate() + 7)
+
+return endsAt.toLocaleDateString('de-DE')
+})
 </script>
 
 <!--suppress CssUnresolvedCustomProperty -->

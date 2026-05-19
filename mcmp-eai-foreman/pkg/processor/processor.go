@@ -13,9 +13,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/logging"
 	"github.com/it-at-m/mcmp/mcmp-eai-foreman/pkg/clients/foreman"
-	"github.com/it-at-m/mcmp/mcmp-eai-foreman/pkg/clients/mcmp"
-	"github.com/it-at-m/mcmp/mcmp-eai-foreman/pkg/logging"
 )
 
 type (
@@ -66,7 +65,7 @@ type (
 		mcmpClient           MCMPClientInterface      // MCMP API client implementation
 		endpoint             string                   // MCMP endpoint URL for data transmission
 		debug                bool                     // Debug mode flag for verbose logging
-		foremanData          *mcmp.ForemanData        // Processed and transformed host data
+		foremanData          *ForemanData             // Processed and transformed host data
 	}
 )
 
@@ -112,7 +111,7 @@ func NewServiceProcessor(foremanClients []*foreman.Client, debug bool) *ServiceP
 		DebugLogger:    logger,
 		foremanClients: clients,
 		debug:          debug,
-		foremanData:    &mcmp.ForemanData{Hosts: []mcmp.Host{}},
+		foremanData:    &ForemanData{Hosts: []Host{}},
 	}
 }
 
@@ -180,7 +179,7 @@ func (sp *ServiceProcessor) ProcessForemanHosts(ctx context.Context) error {
 	}
 
 	// Channels for results and errors
-	resultChannel := make(chan mcmp.Host, totalHostCount)
+	resultChannel := make(chan Host, totalHostCount)
 	errorChannel := make(chan error, totalHostCount)
 
 	// WaitGroup to track all workers
@@ -223,7 +222,7 @@ func (sp *ServiceProcessor) ProcessForemanHosts(ctx context.Context) error {
 	}()
 
 	// Collect results with real-time progress tracking
-	var processedHosts []mcmp.Host
+	var processedHosts []Host
 	var errors []error
 	processedCount := 0
 
@@ -313,7 +312,7 @@ func (sp *ServiceProcessor) printProgressUpdate(processed, total int) {
 // The worker implements graceful error handling - if detailed host information
 // cannot be retrieved, it falls back to using basic host information and
 // reports the error without stopping processing.
-func (sp *ServiceProcessor) processHostWorker(ctx context.Context, client ForemanClientInterface, hostChan <-chan foreman.Host, resultChan chan<- mcmp.Host, errorChan chan<- error) {
+func (sp *ServiceProcessor) processHostWorker(ctx context.Context, client ForemanClientInterface, hostChan <-chan foreman.Host, resultChan chan<- Host, errorChan chan<- error) {
 	// Extract hostname from client endpoint
 	endpoint := client.GetAPIEndpoint()
 	foremanHostname := endpoint
@@ -409,16 +408,16 @@ func (sp *ServiceProcessor) processHostWorker(ctx context.Context, client Forema
 //	// Result: mcmpHost contains all transformed data with proper type mappings
 //
 // The method is null-safe and returns an empty mcmp.Host structure if the input is nil.
-func (sp *ServiceProcessor) transformForemanHostToMCMP(foremanHost *foreman.Host, foremanHostname string) mcmp.Host {
+func (sp *ServiceProcessor) transformForemanHostToMCMP(foremanHost *foreman.Host, foremanHostname string) Host {
 	if foremanHost == nil {
-		return mcmp.Host{}
+		return Host{}
 	}
 
 	// Transform interfaces if they exist
-	var interfaces []mcmp.Interface
+	var interfaces []Interface
 	if foremanHost.Interfaces != nil {
 		for _, networkInterface := range foremanHost.Interfaces {
-			mcmpInterface := mcmp.Interface{
+			mcmpInterface := Interface{
 				CreatedAt:  networkInterface.CreatedAt,
 				DomainName: networkInterface.DomainName,
 				Execution:  networkInterface.Execution,
@@ -447,7 +446,7 @@ func (sp *ServiceProcessor) transformForemanHostToMCMP(foremanHost *foreman.Host
 	if foremanHostname != "" {
 		hostNamePtr = &foremanHostname
 	}
-	mcmpHost := mcmp.Host{
+	mcmpHost := Host{
 		ID:                        foremanHost.ID,
 		Name:                      foremanHost.Name,
 		Fqdn:                      sp.extractStringValueFromFacts(foremanHost.Facts, "fqdn"),
@@ -523,7 +522,7 @@ func (sp *ServiceProcessor) transformForemanHostToMCMP(foremanHost *foreman.Host
 //	for _, host := range data.Hosts {
 //	    fmt.Printf("Host: %s, IP: %s", host.Name, host.IP)
 //	}
-func (sp *ServiceProcessor) GetForemanData() *mcmp.ForemanData {
+func (sp *ServiceProcessor) GetForemanData() *ForemanData {
 	return sp.foremanData
 }
 
@@ -662,7 +661,7 @@ func (sp *ServiceProcessor) debugPrintf(format string, args ...interface{}) {
 //
 // The function sets the corresponding boolean fields in the Host struct.
 // For unknown schemas, Linux = true is set as default.
-func (sp *ServiceProcessor) determineDatabaseAndOSType(host *mcmp.Host, factLhmManagedPostgresql bool, factLhmManagedMariaDB bool, factLhmManagedMySQLDB bool, factLhmManagedMongoDB bool) {
+func (sp *ServiceProcessor) determineDatabaseAndOSType(host *Host, factLhmManagedPostgresql bool, factLhmManagedMariaDB bool, factLhmManagedMySQLDB bool, factLhmManagedMongoDB bool) {
 	if host == nil || host.Name == "" {
 		return
 	}
@@ -950,7 +949,7 @@ func (sp *ServiceProcessor) extractBooleanValueFromFacts(facts map[string]interf
 // Parameters:
 //   - mcmpHost: Pointer to mcmp.Host structure that will be updated
 //   - foremanHost: Pointer to foreman.Host structure with the source data
-func (sp *ServiceProcessor) processPatchnightInformation(mcmpHost *mcmp.Host, foremanHost *foreman.Host) {
+func (sp *ServiceProcessor) processPatchnightInformation(mcmpHost *Host, foremanHost *foreman.Host) {
 	patchnightInfo, err := sp.extractPatchnightInfoFromHostCollections(foremanHost.HostCollections)
 	if err != nil {
 		sp.debugPrintf("Error extracting patchnight info for host %s: %v", foremanHost.Name, err)
@@ -1068,59 +1067,59 @@ func (sp *ServiceProcessor) formatPatchnightTime(timeStr string) (string, error)
 //
 // Returns:
 //   - []mcmp.Mountpoint: Slice of extracted mountpoints with nfs or cifs filesystem
-func (sp *ServiceProcessor) extractMountpointsFromFacts(facts map[string]interface{}) []mcmp.Mountpoint {
-	return extractByPattern[mcmp.Mountpoint](
+func (sp *ServiceProcessor) extractMountpointsFromFacts(facts map[string]interface{}) []Mountpoint {
+	return extractByPattern[Mountpoint](
 		sp,
 		facts,
 		mountpointPattern,
-		func(name string, data map[string]interface{}) *mcmp.Mountpoint {
+		func(name string, data map[string]interface{}) *Mountpoint {
 			return sp.createMountpointFromData(name, data)
 		},
-		func(mp *mcmp.Mountpoint) string {
+		func(mp *Mountpoint) string {
 			return fmt.Sprintf("Extracted mountpoint: %s (filesystem: %s)", mp.MountPoint, mp.Filesystem)
 		},
 	)
 }
 
 // extractPartitionsFromFacts extracts and returns a slice of Partition objects from the provided facts map.
-func (sp *ServiceProcessor) extractPartitionsFromFacts(facts map[string]interface{}) []mcmp.Partition {
-	return extractByPattern[mcmp.Partition](
+func (sp *ServiceProcessor) extractPartitionsFromFacts(facts map[string]interface{}) []Partition {
+	return extractByPattern[Partition](
 		sp,
 		facts,
 		partitionsPattern,
-		func(name string, data map[string]interface{}) *mcmp.Partition {
+		func(name string, data map[string]interface{}) *Partition {
 			return sp.createPartitionsFromData(name, data)
 		},
-		func(p *mcmp.Partition) string {
+		func(p *Partition) string {
 			return fmt.Sprintf("Extracted partition: %s ", p.Partition)
 		},
 	)
 }
 
 // extractLogicalVolumesFromFacts extracts and returns a slice of LogicalVolume objects from the provided facts map.
-func (sp *ServiceProcessor) extractLogicalVolumesFromFacts(facts map[string]interface{}) []mcmp.LogicalVolume {
-	return extractByPattern[mcmp.LogicalVolume](
+func (sp *ServiceProcessor) extractLogicalVolumesFromFacts(facts map[string]interface{}) []LogicalVolume {
+	return extractByPattern[LogicalVolume](
 		sp,
 		facts,
 		logicalVolumesPattern,
-		func(name string, data map[string]interface{}) *mcmp.LogicalVolume {
+		func(name string, data map[string]interface{}) *LogicalVolume {
 			return sp.createLogicalVolumeFromData(name, data)
 		},
-		func(lv *mcmp.LogicalVolume) string {
+		func(lv *LogicalVolume) string {
 			return fmt.Sprintf("Extracted logical volume: %s ", lv.LogicalVolume)
 		},
 	)
 }
 
 // createMountpointFromData creates a mountpoint from the collected data
-func (sp *ServiceProcessor) createMountpointFromData(mountPath string, data map[string]interface{}) *mcmp.Mountpoint {
+func (sp *ServiceProcessor) createMountpointFromData(mountPath string, data map[string]interface{}) *Mountpoint {
 	// Validate filesystem
 	filesystem := sp.getStringFromData(data, "filesystem")
 	if filesystem == "" || (filesystem != "nfs" && filesystem != "cifs") {
 		return nil
 	}
 
-	mountpoint := &mcmp.Mountpoint{
+	mountpoint := &Mountpoint{
 		MountPoint:     mountPath,
 		Filesystem:     filesystem,
 		Device:         sp.getStringFromData(data, "device"),
@@ -1133,8 +1132,8 @@ func (sp *ServiceProcessor) createMountpointFromData(mountPath string, data map[
 }
 
 // extractPartitionsFromFacts creates a partition from the collected data
-func (sp *ServiceProcessor) createPartitionsFromData(partitionPath string, data map[string]interface{}) *mcmp.Partition {
-	partition := &mcmp.Partition{
+func (sp *ServiceProcessor) createPartitionsFromData(partitionPath string, data map[string]interface{}) *Partition {
+	partition := &Partition{
 		Partition:  partitionPath,
 		MountPoint: sp.getStringFromData(data, "mount"),
 		Filesystem: sp.getStringFromData(data, "filesystem"),
@@ -1147,8 +1146,8 @@ func (sp *ServiceProcessor) createPartitionsFromData(partitionPath string, data 
 }
 
 // extractLogicalVolumeFromFacts creates a logical volume from the collected data
-func (sp *ServiceProcessor) createLogicalVolumeFromData(logicalVolumePath string, data map[string]interface{}) *mcmp.LogicalVolume {
-	logicalVolume := &mcmp.LogicalVolume{
+func (sp *ServiceProcessor) createLogicalVolumeFromData(logicalVolumePath string, data map[string]interface{}) *LogicalVolume {
+	logicalVolume := &LogicalVolume{
 		LogicalVolume: logicalVolumePath,
 		Active:        sp.getStringFromData(data, "active"),
 		Attr:          sp.getStringFromData(data, "attr"),

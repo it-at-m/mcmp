@@ -1,11 +1,12 @@
 package foreman
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"time"
 
-	"github.com/it-at-m/mcmp/mcmp-eai-foreman/pkg/logging"
+	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/logging"
 )
 
 type (
@@ -14,6 +15,7 @@ type (
 	// This interface enables dependency injection and testing with mock implementations
 	HTTPClient interface {
 		Do(req *http.Request) (res *http.Response, err error)
+		GetJSON(ctx context.Context, url string, target interface{}) error
 	}
 
 	// ClientConfig holds the configuration for creating a new SNow client
@@ -451,7 +453,6 @@ func (e *APIError) Error() string {
 	return fmt.Sprintf("Foreman API error %d: %s", e.StatusCode, e.Message)
 }
 
-// Utility-Methoden für Host
 func (h *Host) GetPrimaryInterface() *Interface {
 	for _, iface := range h.Interfaces {
 		if iface.Primary {

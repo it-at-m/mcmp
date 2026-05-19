@@ -167,6 +167,7 @@ local.properties
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio and WebStorm
 .idea
 *.iml
+.run
 
 # Covers Netbeans:
 **/nbproject/private/
@@ -190,7 +191,7 @@ nbdist/
 *.sw?
 
 # mcmp
-refarch-gateway/application-local.yml
+refarch-gateway/*
 mcmp-frontend/build
 mcmp-frontend/reports
 

@@ -58,8 +58,8 @@ import (
 	"sync"
 	"time"
 
-	"git.muenchen.de/mcmp/webanwendung/mcmp-eai-common/pkg/logging"
-	"git.muenchen.de/mcmp/webanwendung/mcmp-eai-rightsizing/pkg/client/mcmp"
+	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/logging"
+	"github.com/it-at-m/mcmp/mcmp-eai-rightsizing/pkg/client/mcmp"
 )
 
 const (
@@ -704,8 +704,8 @@ func (p *Processor) calculateRecommendedCPU(vmName string, currentCPU int, cpuUt
 	}
 
 	// Never recommend less than half the current allocation, regardless of server class.
-	if result < currentCPU/2 {
-		result = currentCPU / 2
+	if float64(result) < float64(currentCPU)/2 {
+		result = int(math.Round(float64(currentCPU) / 2))
 	}
 
 	return result
@@ -771,8 +771,9 @@ func (p *Processor) calculateRecommendedMemory(vmName string, currentMemoryMB in
 		result = 4 * 1024
 	}
 
-	if result < currentMemoryMB/2 {
-		result = currentMemoryMB / 2
+	// Never recommend less than half the current allocation, regardless of server class.
+	if float64(result) < float64(currentMemoryMB)/2 {
+		result = int(math.Round(float64(currentMemoryMB)/2/1024)) * 1024
 	}
 
 	return result

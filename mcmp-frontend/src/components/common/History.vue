@@ -73,6 +73,12 @@
                   :is-default-expanded="true"
                   top-margin="0"
                 >
+                  <template #prepend-title>
+                    <job-status-icon
+                      :status="item.status"
+                      class="mr-2"
+                    />
+                  </template>
                   <div class="detail-content">
                     <div class="detail-row">
                       <span class="detail-label">Beschreibung:</span>
@@ -88,9 +94,9 @@
                     </div>
                     <div class="detail-row">
                       <span class="detail-label">Status:</span>
-                      <span class="detail-value"
-                        ><job-status-icon :status="item.status"
-                      /></span>
+                      <div class="detail-value">
+                        <workflow-status :job="item" />
+                      </div>
                     </div>
                     <div class="detail-row">
                       <span class="detail-label">Erstellt am:</span>
@@ -180,9 +186,15 @@
                 <common-card
                   v-if="item.changeRequired"
                   title="ServiceNow"
-                  :is-default-expanded="true"
+                  :is-default-expanded="false"
                   top-margin="0"
                 >
+                  <template #prepend-title>
+                    <job-status-icon
+                      :status="item.changeStatus"
+                      class="mr-2"
+                    />
+                  </template>
                   <div class="detail-content">
                     <div
                       class="detail-row"
@@ -231,9 +243,15 @@
                 <common-card
                   v-if="item.awxJobEnabled"
                   title="AWX"
-                  :is-default-expanded="true"
+                  :is-default-expanded="false"
                   top-margin="0"
                 >
+                  <template #prepend-title>
+                    <job-status-icon
+                      :status="item.awxStatus"
+                      class="mr-2"
+                    />
+                  </template>
                   <div
                     class="detail-content"
                     v-if="item.awxTemplateType === 'template'"
@@ -702,9 +720,15 @@
                 <common-card
                   v-if="item.quickdiscovery || item.serverInstallation"
                   title="QuickDiscovery"
-                  :is-default-expanded="true"
+                  :is-default-expanded="false"
                   top-margin="0"
                 >
+                  <template #prepend-title>
+                    <job-status-icon
+                      :status="item.quickdiscoveryStatus"
+                      class="mr-2"
+                    />
+                  </template>
                   <div class="detail-content">
                     <div class="detail-row">
                       <span class="detail-label">Hostname:</span>
@@ -754,9 +778,15 @@
                 <common-card
                   v-if="item.serverInstallation"
                   title="Tagging"
-                  :is-default-expanded="true"
+                  :is-default-expanded="false"
                   top-margin="0"
                 >
+                  <template #prepend-title>
+                    <job-status-icon
+                      :status="item.taggingStatus"
+                      class="mr-2"
+                    />
+                  </template>
                   <div class="detail-content">
                     <div class="detail-row">
                       <span class="detail-label">Status:</span>
@@ -780,7 +810,10 @@
       </template>
       <!-- eslint-disable-next-line vue/valid-v-slot -->
       <template #item.status="{ item }">
-        <job-status-icon :status="item.status" />
+        <workflow-status
+          :job="item"
+          hide-labels
+        />
       </template>
       <template #item.id="{ item }">
         <div style="display: flex; align-items: center">
@@ -816,18 +849,12 @@ import type JobList from "@/types/JobList";
 import type JobNodeHierarchy from "@/types/JobNodeHierarchy";
 
 import {
-  mdiAlertCircle,
   mdiArrowDown,
   mdiArrowUp,
-  mdiAutorenew,
-  mdiCancel,
   mdiCheckCircle,
   mdiCloseCircle,
   mdiCog,
   mdiCogs,
-  mdiHelpCircle,
-  mdiMinusCircle,
-  mdiNewBox,
   mdiRefresh,
 } from "@mdi/js";
 import { computed, ref, watch } from "vue";
@@ -837,6 +864,7 @@ import jobService from "@/api/jobService";
 import CommonCard from "@/components/common/CommonCard.vue";
 import IncidentStatusIcon from "@/components/common/IncidentStatusIcon.vue";
 import JobStatusIcon from "@/components/common/JobStatusIcon.vue";
+import WorkflowStatus from "@/components/common/WorkflowStatus.vue";
 import { formatDuration, formatToBerlinDateTime } from "@/util/formatter";
 
 const props = withDefaults(

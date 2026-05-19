@@ -81,7 +81,7 @@ The ServiceNow API is documented here: https://git.muenchen.de/servicenow/cmp-ap
 
 #### 1. Clone the Repository
 ```bash
-git clone git.muenchen.de/mcmp/webanwendung/mcmp-eai-scheduler.git
+git clone https://github.com/it-at-m/mcmp.git
 cd mcmp-eai-scheduler
 ```
 
@@ -159,6 +159,6 @@ Distributed under the MIT License. See `LICENSE` file for more information.
 
 it@M - opensource@muenchen.de
 
-Project Link: [git.muenchen.de/mcmp/webanwendung/mcmp-eai-scheduler](git.muenchen.de/mcmp/webanwendung/mcmp-eai-scheduler)
+Project Link: [https://github.com/it-at-m/mcmp/tree/main/mcmp-eai-scheduler](https://github.com/it-at-m/mcmp/tree/main/mcmp-eai-scheduler)
 
 <p align="right">(<a href="#top">back to top</a>)</p>

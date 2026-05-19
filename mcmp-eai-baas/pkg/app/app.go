@@ -12,7 +12,7 @@ import (
 	"gorm.io/gorm"
 )
 
-var debugLogger = logging.NewDebugLogger(log.Default())
+var debugLogger = logging.NewDebugLogger(&logging.StdLoggerWrapper{Logger: log.Default()})
 
 func CryptPassword() error {
 	reader := bufio.NewReader(os.Stdin)

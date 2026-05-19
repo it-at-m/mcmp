@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"git.muenchen.de/mcmp/webanwendung/mcmp-eai-common/pkg/logging"
+	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/logging"
 )
 
 // MockHttpClient provides a mock implementation of HTTP client for testing purposes.

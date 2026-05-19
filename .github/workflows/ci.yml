@@ -1,0 +1,62 @@
+name: CI Build Check
+
+on:
+  push:
+    branches: [ "main", "dev" ]
+  pull_request:
+    branches: [ "main", "dev" ]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  
+jobs:
+  build-go:
+    name: Build Go
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.work
+          cache: true
+      - name: Build all Go modules
+        run: |
+          for dir in $(go work edit -json | jq -r '.Use[].DiskPath'); do
+            echo "Building module in $dir..."
+            go build -C "$dir" -v ./...
+          done
+
+  build-java:
+    name: Build Java (Maven)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'maven'
+      - name: Build Backend & EAI Modules
+        run: |
+          mvn -B -ntp clean compile -f mcmp-backend/pom.xml
+          mvn -B -ntp clean compile -f mcmp-eai-infoblox/pom.xml
+
+  build-frontend:
+    name: Build Frontend (Vue/TS)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: mcmp-frontend/package.json
+          cache: 'npm'
+          cache-dependency-path: mcmp-frontend/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+        working-directory: mcmp-frontend
+      - name: Build Frontend
+        run: npm run build
+        working-directory: mcmp-frontend

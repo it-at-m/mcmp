@@ -47,6 +47,18 @@ func (m *MockSnowClient) GetAppServices() ([]snow.AppService, error) {
 	return m.appServices, nil
 }
 
+func (m *MockSnowClient) GetLockedShutdown() (map[string]string, error) {
+	return make(map[string]string), nil
+}
+
+func (m *MockSnowClient) GetLockedRightsize() (map[string]string, error) {
+	return make(map[string]string), nil
+}
+
+func (m *MockSnowClient) GetServerForVMwareInstance(vmInstanceSysID string) (snow.Server, error) {
+	return snow.Server{}, nil
+}
+
 func (m *MockSnowClient) GetVMwareInstances() ([]snow.CmdbCi, error) {
 	var vmwareInstances []snow.CmdbCi
 	for _, ci := range m.cmdbCIs {

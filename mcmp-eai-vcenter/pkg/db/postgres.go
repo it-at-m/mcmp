@@ -11,12 +11,12 @@ import (
 func OpenPostgres(general config.General, database config.Database) (*gorm.DB, error) {
 	escapedUsername, escapedPassword, gormLogger, err := ConfigDB(database.Username, general.Passphrase, database.EncryptedPassword, general.Debug)
 	if err != nil {
-		return nil, fmt.Errorf("Config database error: %v", err)
+		return nil, fmt.Errorf("config database error: %w", err)
 	}
 	DSN := fmt.Sprintf("%s user=%s password=%s", database.DSN, escapedUsername, escapedPassword)
 	db, err := gorm.Open(postgres.Open(DSN), &gorm.Config{Logger: gormLogger})
 	if err != nil {
-		return nil, fmt.Errorf("Open Postgres error: %v", err)
+		return nil, fmt.Errorf("open Postgres error: %w", err)
 	}
 	return db, nil
 }

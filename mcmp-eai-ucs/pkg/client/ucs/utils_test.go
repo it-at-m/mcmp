@@ -37,10 +37,6 @@ func Test_ParseUint(t *testing.T) {
 	}
 }
 
-func toTimePtr(t time.Time) *time.Time {
-	return &t
-}
-
 func Test_ParseUcsTime(t *testing.T) {
 	type args struct {
 		ut string
@@ -55,15 +51,15 @@ func Test_ParseUcsTime(t *testing.T) {
 		args args
 		want want
 	}{
-		{"1", args{"2022-11-09T16:00:29.721"}, want{toTimePtr(time.Date(2022, 11, 9, 16, 0, 29, 721000000, location)), false}},
-		{"2", args{"2022-11-09T16:00:29"}, want{toTimePtr(time.Date(2022, 11, 9, 16, 0, 29, 0, location)), false}},
+		{"1", args{"2022-11-09T16:00:29.721"}, want{new(time.Date(2022, 11, 9, 16, 0, 29, 721000000, location)), false}},
+		{"2", args{"2022-11-09T16:00:29"}, want{new(time.Date(2022, 11, 9, 16, 0, 29, 0, location)), false}},
 		{"3", args{""}, want{nil, true}},
-		{"4", args{"2024-08-20T13:04:35+00:00"}, want{toTimePtr(time.Date(2024, 8, 20, 15, 4, 35, 0, location)), false}}, // M7 UTC Time
-		{"5", args{"2024-08-20T13:04:35-00:00"}, want{toTimePtr(time.Date(2024, 8, 20, 15, 4, 35, 0, location)), false}},
-		{"6", args{"2024-08-20T13:04:35+02:00"}, want{toTimePtr(time.Date(2024, 8, 20, 13, 4, 35, 0, location)), false}},
-		{"7", args{"2024-08-20T13:04:35-02:00"}, want{toTimePtr(time.Date(2024, 8, 20, 17, 4, 35, 0, location)), false}},
-		{"8", args{"2019-03-25T00:00:00.000"}, want{toTimePtr(time.Date(2019, 3, 25, 0, 0, 0, 0, location)), false}},
-		{"9", args{"2018-11-29T00:00:00.000"}, want{toTimePtr(time.Date(2018, 11, 29, 0, 0, 0, 0, location)), false}},
+		{"4", args{"2024-08-20T13:04:35+00:00"}, want{new(time.Date(2024, 8, 20, 15, 4, 35, 0, location)), false}}, // M7 UTC Time
+		{"5", args{"2024-08-20T13:04:35-00:00"}, want{new(time.Date(2024, 8, 20, 15, 4, 35, 0, location)), false}},
+		{"6", args{"2024-08-20T13:04:35+02:00"}, want{new(time.Date(2024, 8, 20, 13, 4, 35, 0, location)), false}},
+		{"7", args{"2024-08-20T13:04:35-02:00"}, want{new(time.Date(2024, 8, 20, 17, 4, 35, 0, location)), false}},
+		{"8", args{"2019-03-25T00:00:00.000"}, want{new(time.Date(2019, 3, 25, 0, 0, 0, 0, location)), false}},
+		{"9", args{"2018-11-29T00:00:00.000"}, want{new(time.Date(2018, 11, 29, 0, 0, 0, 0, location)), false}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -88,8 +84,8 @@ func Test_ParseDate(t *testing.T) {
 		args args
 		want want
 	}{
-		{"1", args{"2022-11-09"}, want{toTimePtr(time.Date(2022, 11, 9, 0, 0, 0, 0, location))}},
-		{"2", args{"2023-01-15"}, want{toTimePtr(time.Date(2023, 1, 15, 0, 0, 0, 0, location))}},
+		{"1", args{"2022-11-09"}, want{new(time.Date(2022, 11, 9, 0, 0, 0, 0, location))}},
+		{"2", args{"2023-01-15"}, want{new(time.Date(2023, 1, 15, 0, 0, 0, 0, location))}},
 		{"3", args{""}, want{nil}},
 	}
 	for _, tt := range tests {

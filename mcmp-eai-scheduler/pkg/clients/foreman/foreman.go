@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"git.muenchen.de/mcmp/webanwendung/mcmp-eai-common/pkg/client/httpclient"
-	"git.muenchen.de/mcmp/webanwendung/mcmp-eai-common/pkg/logging"
+	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/client/httpclient"
+	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/logging"
 )
 
 // URL constants for Foreman API endpoints

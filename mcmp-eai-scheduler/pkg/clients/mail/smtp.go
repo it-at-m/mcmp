@@ -85,7 +85,12 @@ func SendEmail(server string, port int, username string, password string, to []s
 	if err != nil {
 		return err
 	}
-	defer c.Quit()
+	defer func(c *smtp.Client) {
+		err := c.Quit()
+		if err != nil {
+			fmt.Println("Error closing SMTP connection:", err)
+		}
+	}(c)
 
 	// Configure STARTTLS (enforce TLS 1.2)
 	tlsConfig := &tls.Config{

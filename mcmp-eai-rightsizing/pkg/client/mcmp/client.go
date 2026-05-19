@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	commonmcmp "git.muenchen.de/mcmp/webanwendung/mcmp-eai-common/pkg/client/mcmp"
-	"git.muenchen.de/mcmp/webanwendung/mcmp-eai-common/pkg/logging"
+	commonmcmp "github.com/it-at-m/mcmp/mcmp-eai-common/pkg/client/mcmp"
+	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/logging"
 )
 
 var ErrServerIDRequired = errors.New("server ID is required")

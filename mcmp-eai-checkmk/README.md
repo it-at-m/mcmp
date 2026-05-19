@@ -86,8 +86,8 @@ This project leverages modern Go technologies and enterprise integration pattern
 
 #### 1. Clone the Repository
 ```bash
-git clone github.com/it-at-m/mcmp.git
-cd mcmp-eai-checkmk
+git clone https://github.com/it-at-m/mcmp.git
+cd mcmp/mcmp-eai-checkmk
 ```
 
 #### 2. Install Dependencies
@@ -349,6 +349,6 @@ Distributed under the MIT License. See `LICENSE` file for more information.
 
 it@M - opensource@muenchen.de
 
-Project Link: [github.com/it-at-m/mcmp/mcmp-eai-patchnight](github.com/it-at-m/mcmp/mcmp-eai-patchnight)
+Project Link: [https://github.com/it-at-m/mcmp/tree/main/mcmp-eai-checkmk](https://github.com/it-at-m/mcmp/tree/main/mcmp-eai-checkmk)
 
 <p align="right">(<a href="#top">back to top</a>)</p>

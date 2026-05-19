@@ -188,10 +188,8 @@ func (c *Client) post(ctx context.Context, data []byte) ([]byte, error) {
 	}
 	body, statusCode, err := c.client.PostXML(ctx, c.getBaseURL(), data)
 	if err != nil {
-		return nil, fmt.Errorf("ucs PostXML failed: %w", err)
+		return nil, fmt.Errorf("ucs PostXML failed: %w, status code: %d", err, statusCode)
 	}
-
-	c.logger.Debug("post response", "status code", statusCode, "body", string(body))
 	return body, nil
 }
 
@@ -200,10 +198,8 @@ func (c *Client) postXmlStruct(ctx context.Context, xmlStruct interface{}) ([]by
 	if err != nil {
 		return nil, fmt.Errorf("marshal xml request: %w", err)
 	}
-	c.logger.DebugPrintf("buf before regex: %s", string(buf))
 	re := regexp.MustCompile("></.*?>")
 	result := re.ReplaceAllString(string(buf), " />")
-	c.logger.Debug("post request", "result", result)
 	data := []byte(result)
 	return c.post(ctx, data)
 }
@@ -234,7 +230,7 @@ func (c *Client) Login(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	c.logger.Debug("login", "cookie", aaaLoginRes.OutCookie, "error code", aaaLoginRes.ErrorCode)
+	c.logger.Debug("login", "error code", aaaLoginRes.ErrorCode)
 
 	if aaaLoginRes.ErrorCode != 0 {
 		return fmt.Errorf("%w: %s (%d)", ErrAAALogin, aaaLoginRes.ErrorDescr, aaaLoginRes.ErrorCode)
@@ -391,7 +387,7 @@ func addServerMgmtIPs(ipAttribute string, values []map[string]string, serverMgmt
 
 func removeDuplicateIPs(values []string) []string {
 	keys := make(map[string]bool)
-	list := []string{}
+	var list []string
 	for _, value := range values {
 		if value != "" && value != "0.0.0.0" && value != "::" {
 			if _, contains := keys[value]; !contains {
@@ -406,6 +402,9 @@ func removeDuplicateIPs(values []string) []string {
 
 func sortIPs(ips []string) []string {
 	uniqueIPs := removeDuplicateIPs(ips)
+	if len(uniqueIPs) == 0 {
+		return nil
+	}
 	netIPs := make([]net.IP, 0, len(uniqueIPs))
 	for _, ip := range uniqueIPs {
 		netIPs = append(netIPs, net.ParseIP(ip))

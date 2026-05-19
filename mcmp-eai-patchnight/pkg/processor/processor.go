@@ -30,12 +30,10 @@ var (
 // This interface allows for dependency injection and easier testing by providing
 // a mockable abstraction over the actual patchnight client implementation
 type PatchnightClientInterface interface {
-	// Linux APIs
 	FetchLinuxPatchnightDates(context.Context) ([]patchnight.PatchnightDate, error)
 	FetchLinuxIncludedServers(context.Context) ([]patchnight.PatchnightLinuxIncludedServer, error)
 	FetchLinuxExcludedServers(context.Context) ([]patchnight.PatchnightLinuxExcludedServer, error)
 
-	// Windows APIs
 	FetchWindowsPatchnightDates(context.Context) ([]patchnight.PatchnightDate, error)
 	FetchWindowsKIncludedServers(ctx context.Context) ([]string, error)
 	FetchWindowsPIncludedServers(ctx context.Context) ([]string, error)
@@ -323,13 +321,12 @@ func (sp *ServiceProcessor) processWindowsPatchnightData(ctx context.Context) ([
 		// If status information is available, also write it for excluded servers
 		key := strings.ToLower(strings.TrimSpace(name))
 		if st, ok := statusByServer[key]; ok {
-			code := int8(st.UpdateStatus)
-			mcmpServer.Exitcode = &code
+			mcmpServer.Exitcode = new(int8(st.UpdateStatus))
 
 			titles := strings.TrimSpace(string(st.UpdateTitles))
 			if titles != "" {
-				msg := titles
-				mcmpServer.ExitString = &msg
+				tmpTitles := titles
+				mcmpServer.ExitString = &tmpTitles
 			}
 		}
 
@@ -357,22 +354,21 @@ func (sp *ServiceProcessor) addWindowsIncludedServers(
 
 		if nextPatchnight != nil {
 			loc := berlinLocation()
-			start := nextPatchnight.StartDate.In(loc)
-			end := nextPatchnight.EndDate.In(loc)
-			mcmpServer.StartDate = &start
-			mcmpServer.EndDate = &end
+			tmpStart := nextPatchnight.StartDate.In(loc)
+			mcmpServer.StartDate = &tmpStart
+			tmpEnd := nextPatchnight.EndDate.In(loc)
+			mcmpServer.EndDate = &tmpEnd
 		}
 
 		// Apply Windows update status information if available
 		key := strings.ToLower(strings.TrimSpace(name))
 		if st, ok := statusByServer[key]; ok {
-			code := int8(st.UpdateStatus)
-			mcmpServer.Exitcode = &code
+			mcmpServer.Exitcode = new(int8(st.UpdateStatus))
 
 			titles := strings.TrimSpace(string(st.UpdateTitles))
 			if titles != "" {
-				msg := titles
-				mcmpServer.ExitString = &msg
+				tmpTitles := titles
+				mcmpServer.ExitString = &tmpTitles
 			}
 		}
 

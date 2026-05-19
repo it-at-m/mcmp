@@ -71,8 +71,8 @@ The AWX API is documented here: https://docs.ansible.com/ansible-tower/latest/ht
 #### 1. Clone the Repository
 
 ```bash
-git clone github.com/it-at-m/mcmp.git
-cd mcmp-eai-awx
+git clone https://github.com/it-at-m/mcmp.git
+cd mcmp/mcmp-eai-awx
 ```
 
 #### 2. Install Dependencies
@@ -165,6 +165,6 @@ Distributed under the MIT License. See `LICENSE` file for more information.
 
 it@M - opensource@muenchen.de
 
-Project Link: [github.com/it-at-m/mcmp/mcmp-eai-foreman](github.com/it-at-m/mcmp/mcmp-eai-foreman)
+Project Link: [https://github.com/it-at-m/mcmp/tree/main/mcmp-eai-awx](https://github.com/it-at-m/mcmp/tree/main/mcmp-eai-awx)
 
 <p align="right">(<a href="#top">back to top</a>)</p>

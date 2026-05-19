@@ -93,8 +93,7 @@ func (p *Processor) parseServerAttributes(attrs map[string]string, serverType Se
 
 	var mfgTimeStr *string
 	if mfgTime != nil {
-		str := mfgTime.Format(time.RFC3339)
-		mfgTimeStr = &str
+		mfgTimeStr = new(mfgTime.Format(time.RFC3339))
 	}
 
 	server := Server{
@@ -114,13 +113,13 @@ func (p *Processor) parseServerAttributes(attrs map[string]string, serverType Se
 		PowerState:        new(attrs["operPower"]),
 		OperState:         new(attrs["operState"]),
 		UUID:              new(attrs["serial"]),
-	//	ServerId:          new(parseUint(attrs["serverId"])),
-		AvailableMemory:   new(parseUint64(attrs["availableMemory"])),
-		MemoryMB:          new(parseUint64(attrs["totalMemory"])),
-		Vendor:            new(attrs["vendor"]),
-		Vid:               new(attrs["vid"]),
-		ServerType:        serverType,
-		ServerKind:        ServerKindHardware,
+		//	ServerId:          new(parseUint(attrs["serverId"])),
+		AvailableMemory: new(parseUint64(attrs["availableMemory"])),
+		MemoryMB:        new(parseUint64(attrs["totalMemory"])),
+		Vendor:          new(attrs["vendor"]),
+		Vid:             new(attrs["vid"]),
+		ServerType:      serverType,
+		ServerKind:      ServerKindHardware,
 	}
 
 	switch serverType {

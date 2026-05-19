@@ -11,11 +11,11 @@
 
     <groupId>de.muenchen.mcmp</groupId>
     <artifactId>mcmp-backend</artifactId>
-    <version>1.0.25-SNAPSHOT</version>
+    <version>1.0.27-SNAPSHOT</version>
 
     <name>mcmp-backend</name>
     <description>This is the backend project for the MCMP</description>
-    <url>https://github.com/it-at-m/refarch-templates</url>
+    <url>https://github.com/it-at-m/mcmp</url>
     <licenses>
         <license>
             <name>MIT</name>
@@ -23,6 +23,19 @@
             <distribution>repo</distribution>
         </license>
     </licenses>
+    <scm>
+        <url>https://github.com/it-at-m/mcmp.git</url>
+        <connection>scm:git:https://github.com/it-at-m/mcmp.git</connection>
+        <developerConnection>scm:git:https://github.com/it-at-m/mcmp.git</developerConnection>
+        <tag>HEAD</tag>
+    </scm>
+    <developers>
+        <developer>
+            <organization>it@M</organization>
+            <email>opensource@muenchen.de</email>
+            <url>https://github.com/it-at-m</url>
+        </developer>
+    </developers>
 
     <properties>
         <!-- Compilation -->
@@ -322,12 +335,6 @@
             <version>20260313.1</version>
         </dependency>
     </dependencies>
-
-    <scm>
-        <connection>scm:git:https://github.com/it-at-m/refarch-templates.git</connection>
-        <developerConnection>scm:git:https://github.com/it-at-m/refarch-templates.git</developerConnection>
-        <tag>HEAD</tag>
-    </scm>
 
     <build>
         <plugins>

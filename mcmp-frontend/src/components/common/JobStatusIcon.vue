@@ -1,5 +1,8 @@
 <template>
-  <v-tooltip :text="status ?? ''">
+  <v-tooltip
+    :text="status ?? ''"
+    :disabled="hideTooltip"
+  >
     <template #activator="{ props }">
       <div
         :class="[
@@ -20,15 +23,23 @@
 </template>
 
 <script setup lang="ts">
-import { mdiAlertCircle, mdiAutorenew, mdiCancel, mdiCheckCircle, mdiClockOutline, mdiCloseCircle, mdiCogSync, mdiDatabaseSync, mdiHelpCircle, mdiMinusCircle, mdiNewBox, mdiProgressWrench, mdiRedo } from "@mdi/js";
+import {
+  mdiAutorenew,
+  mdiCancel,
+  mdiCheckCircle,
+  mdiClockOutline,
+  mdiCloseCircle,
+  mdiCogSync,
+  mdiMinusCircle,
+  mdiNewBox,
+  mdiProgressWrench,
+  mdiRedo,
+} from "@mdi/js";
 import { computed } from "vue";
-
-
-
-
 
 const props = defineProps<{
   status: string | null | undefined;
+  hideTooltip?: boolean;
 }>();
 
 const upperStatus = computed(() => props.status?.toUpperCase() ?? "");
@@ -153,6 +164,7 @@ const backgroundClass = computed(() => {
 });
 </script>
 
+<!--suppress CssUnresolvedCustomProperty -->
 <style scoped>
 .status-icon {
   display: flex;

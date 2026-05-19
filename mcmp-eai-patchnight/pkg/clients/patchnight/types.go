@@ -460,9 +460,7 @@ func (w *WindowsPatchnightStatus) Validate() error {
 	// is available, set a generic error message.
 	if w.UpdateStatus != 0 {
 		if strings.TrimSpace(string(w.UpdateTitles)) == "" {
-			w.UpdateTitles = UpdateTitlesString(
-				"An unknown error occurred while retrieving update titles for this server.",
-			)
+			w.UpdateTitles = "An unknown error occurred while retrieving update titles for this server."
 		}
 	}
 
@@ -586,7 +584,7 @@ func (u *UpdateTitlesString) UnmarshalJSON(data []byte) error {
 	// As a last resort, if neither string nor []string worked, store the raw
 	// JSON data as string. This ensures we never lose information, even if the
 	// source format changes unexpectedly (e.g. number, object, mixed array).
-	*u = UpdateTitlesString(string(data))
+	*u = UpdateTitlesString(data)
 	return nil
 }
 

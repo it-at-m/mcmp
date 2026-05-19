@@ -70,8 +70,8 @@ The ServiceNow API is documented here: https://git.muenchen.de/servicenow/cmp-ap
 
 #### 1. Clone the Repository
 ```bash
-git clone github.com/it-at-m/mcmp/mcmp-eai-snow.git
-cd mcmp-eai-snow
+git clone https://github.com/it-at-m/mcmp.git
+cd mcmp/mcmp-eai-snow
 ```
 
 #### 2. Install Dependencies
@@ -170,6 +170,6 @@ Distributed under the MIT License. See `LICENSE` file for more information.
 
 it@M - opensource@muenchen.de
 
-Project Link: [github.com/it-at-m/mcmp/mcmp-eai-snow](github.com/it-at-m/mcmp/mcmp-eai-snow)
+Project Link: https://github.com/it-at-m/mcmp/tree/main/mcmp-eai-snow
 
 <p align="right">(<a href="#top">back to top</a>)</p>

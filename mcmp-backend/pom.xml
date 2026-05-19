@@ -15,7 +15,7 @@
 
     <name>mcmp-backend</name>
     <description>This is the backend project for the MCMP</description>
-    <url>https://github.com/it-at-m/refarch-templates</url>
+    <url>https://github.com/it-at-m/mcmp</url>
     <licenses>
         <license>
             <name>MIT</name>

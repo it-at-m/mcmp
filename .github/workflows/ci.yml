@@ -19,9 +19,10 @@ jobs:
           cache: true
       - name: Build all Go modules
         run: |
-          go build -v ./mcmp-callback-server/...
-          go build -v ./mcmp-eai-scheduler/...
-          
+          for dir in $(go work edit -json | jq -r '.Use[].DiskPath'); do
+            echo "Building module in $dir..."
+            go build -C "$dir" -v ./...
+          done
 
   build-java:
     name: Build Java (Maven)

@@ -86,7 +86,7 @@ func SendEmail(server string, port int, username string, password string, to []s
 		return err
 	}
 	defer func(c *smtp.Client) {
-		err := c.Close()
+		err := c.Quit()
 		if err != nil {
 			fmt.Println("Error closing SMTP connection:", err)
 		}

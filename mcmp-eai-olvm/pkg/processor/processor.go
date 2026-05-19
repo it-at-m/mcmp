@@ -160,7 +160,8 @@ func formatBootTime(startTime int64) *string {
 	if startTime == 0 {
 		return nil
 	}
-	return new(time.UnixMilli(startTime).Format(time.RFC3339))
+	s := time.UnixMilli(startTime).Format(time.RFC3339)
+	return &s
 }
 
 // parseMemoryMB parses a raw memory string (bytes, base-10) returned by the
@@ -178,7 +179,8 @@ func (p *Processor) parseMemoryMB(memoryStr string) *uint64 {
 		p.logger.Warn("failed to parse memory", "memory", memoryStr, "error", err)
 		return nil
 	}
-	return new(memBytes / (1024 * 1024))
+	val := memBytes / (1024 * 1024)
+	return &val
 }
 
 // parseUint parses a base-10 string into a *uint suitable for CPU topology
@@ -195,5 +197,6 @@ func (p *Processor) parseUint(s string) *uint {
 		p.logger.Warn("failed to parse uint", "value", s, "error", err)
 		return nil
 	}
-	return new(uint(val))
+	valRes := uint(val)
+	return &valRes
 }

@@ -59,7 +59,12 @@
       />
       <br />
       <h4>Beschreibung:</h4>
-      <v-text-field v-model="description" />
+      <v-text-field
+        v-model="description"
+        :maxlength="50"
+        :rules="[validationRules.maxLengthRule(50, 'Maximal 50 Zeichen erlaubt.')]"
+        :counter="50"
+      />
       <CommonAlert
         color="notice_red"
         v-if="withShutdown"
@@ -92,6 +97,7 @@ import { computed, inject, ref } from "vue";
 import jobService from "@/api/jobService";
 import CommonAlert from "@/components/common/CommonAlert.vue";
 import CommonDialog from "@/components/common/CommonDialog.vue";
+import { useRules } from "@/composables/rules";
 
 const props = defineProps<{
   server?: Server;
@@ -107,6 +113,7 @@ const emit = defineEmits<{
   (e: "save", save: boolean): boolean;
 }>();
 
+const validationRules = useRules();
 const registerOpenDialog = inject<() => void>("registerOpenDialog");
 const unregisterOpenDialog = inject<() => void>("unregisterOpenDialog");
 

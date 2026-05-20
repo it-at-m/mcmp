@@ -337,11 +337,15 @@ public class JobController {
             throw new MissingFormatArgumentException("Duration value must be provided.");
         }
         int duration = Integer.parseInt(durationObj.toString());
-
-        String description = (descriptionObj == null) ? "" : descriptionObj.toString();
         if (duration < 1 || duration > 10) {
             log.warn("Invalid duration value provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
             throw new IllegalArgumentException("Duration must be between 1 and 10 days.");
+        }
+
+        String description = (descriptionObj == null) ? "" : descriptionObj.toString();
+        if (description.length() > 50) {
+            log.warn("User {} provided a snapshot description that is too long.", AuthUtils.getUsername());
+            throw new IllegalArgumentException("The description must not exceed 50 characters.");
         }
 
         boolean withShutdown = true;

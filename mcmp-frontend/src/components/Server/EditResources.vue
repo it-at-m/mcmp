@@ -9,11 +9,11 @@
     max-width="1000"
     :icon="rightsize ? mdiAlertCircleCheck : mdiPencil"
     show-actions
-    :submitActivated="validated"
+    :submit-activated="validated"
+    show-change-warning
+    :check-for-enabled-actions="['VMWARE_CHANGE_CPU_RAM']"
     @dialog-cancel="close"
     @dialog-confirm="save"
-    showChangeWarning
-    :checkForEnabledActions="['VMWARE_CHANGE_CPU_RAM']"
   >
     <template #activator="{ props }">
       <v-tooltip
@@ -41,8 +41,21 @@
     <v-form ref="form">
       <v-row class="mb-1">
         <v-col
+          v-if="
+            server.dbPostgres &&
+            ram != formatter.calculateMBtoGB(server.memoryMb)
+          "
           cols="12"
+        >
+          <common-alert color="notice_red">
+            <h4>Hinweis:</h4>
+            Die Speicherparameter der DB werden erst in der darauffolgenden
+            Nacht angepasst.
+          </common-alert>
+        </v-col>
+        <v-col
           v-if="!isNonOracleUser && (server.dbAdabas || server.dbMssql)"
+          cols="12"
         >
           <common-alert color="notice_red">
             <h4>Hinweis:</h4>
@@ -52,7 +65,6 @@
           </common-alert>
         </v-col>
         <v-col
-          cols="12"
           v-if="
             ram < formatter.calculateMBtoGB(server.memoryMb) ||
             ram > formatter.calculateMBtoGB(server.hotPlugMemoryLimit) ||
@@ -61,6 +73,7 @@
             cpus < server.numCpu ||
             (cpus > server.numCpu && !server.cpuHotAddEnabled)
           "
+          cols="12"
         >
           <common-alert color="notice_red">
             <h4>Hinweis:</h4>
@@ -75,8 +88,8 @@
           <v-col cols="12"></v-col>
         </v-col>
         <v-col
-          cols="12"
           v-if="ram >= 100 || cpus >= 72"
+          cols="12"
         >
           <common-alert color="notice_red">
             <div class="links">
@@ -176,13 +189,14 @@
           <v-checkbox
             v-model="schedule"
             label="Durchführungszeitpunkt anpassen"
-            @change="changeToSchedule"
             :disabled="schedulePatchnight"
+            @change="changeToSchedule"
           />
           <common-time-picker
             v-if="schedule"
-            lableText="Durchführungs"
-            :timeRules="[
+            v-model:raw-date-in="rawDate"
+            lable-text="Durchführungs"
+            :time-rules="[
               validationRules.notEmptyRule(
                 'Endzeitpunkt darf nicht leer sein.'
               ),
@@ -192,13 +206,12 @@
                 'Endzeitpunkt darf nicht in der Vergangenheit liegen.'
               ),
             ]"
-            v-model:rawDateIn="rawDate"
           />
           <v-tooltip
+            v-if="!rightsize"
             text="Server ist nicht Teil der Patchnight!"
             location="top"
             :open-on-hover="!server.patchnightIncluded"
-            v-if="!rightsize"
           >
             <template #activator="{ props: tooltipProps }">
               <span v-bind="tooltipProps">
@@ -210,8 +223,8 @@
                       .formatToGermanLocalTime(server.patchnightStartDate)
                       .split(',')[0]
                   "
-                  @change="setTimePatchnight"
                   :disabled="schedule || !server.patchnightIncluded"
+                  @change="setTimePatchnight"
                 />
               </span>
             </template>

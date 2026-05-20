@@ -1,6 +1,9 @@
 # MCMP Web Application
 
-This repository contains the MCMP (Munich Cloud Management Platform) project.
+MCMP (Munich Cloud Management Platform) allows users to independently manage the virtual servers assigned to them.
+AWX jobs can be controlled through an authorization model based on application services and change groups from ServiceNow.
+This enables users to independently order, modify, or restart virtual servers, databases, or load balancers.
+
 
 ## Architecture
 - `mcmp-backend/`: Java Spring Boot API. DB migrations via Flyway. MapStruct + Lombok for DTOs.

@@ -1,13 +1,16 @@
+import { fileURLToPath, URL } from "node:url";
+
 import jsEslintConfig from "@eslint/js";
 import vueI18nEslintConfig from "@intlify/eslint-plugin-vue-i18n";
 import vuePrettierEslintConfigSkipFormatting from "@vue/eslint-config-prettier/skip-formatting";
-import { defineConfigWithVueTs, vueTsConfigs } from "@vue/eslint-config-typescript";
+import { defineConfigWithVueTs, vueTsConfigs, } from "@vue/eslint-config-typescript";
 import { ESLint } from "eslint";
 import vueEslintConfig from "eslint-plugin-vue";
-import { globalIgnores } from "eslint/config";
+import { includeIgnoreFile } from "eslint/config";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const prettierIgnorePath = fileURLToPath(
+  new URL(".prettierignore", import.meta.url)
+);
 
 export default defineConfigWithVueTs(
   ESLint.defaultConfig,
@@ -38,7 +41,7 @@ export default defineConfigWithVueTs(
     },
     settings: {
       "vue-i18n": {
-        localeDir: path.resolve(__dirname, "./src/locales/*.json"),
+        localeDir: "./src/locales/*.json",
         messageSyntaxVersion: "^11.0.0",
       },
       "import/core-modules": ["vue-router/auto-routes"],
@@ -55,12 +58,7 @@ export default defineConfigWithVueTs(
       "vue/multi-word-component-names": "off",
     },
   },
-  globalIgnores([
-    "dist",
-    "target",
-    "node_modules",
-    "env.d.ts",
-    "route-map.d.ts",
-    "src/api/generated/*/**",
-  ])
+  includeIgnoreFile(prettierIgnorePath, {
+    gitignoreResolution: true,
+  })
 );

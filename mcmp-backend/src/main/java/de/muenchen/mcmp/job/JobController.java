@@ -87,6 +87,8 @@ public class JobController {
     private static final String STORAGE_STANDARD_CIFS_AND_CIFSCLONE_REGEX = "^\\\\\\\\svm[pkc][0-9]{2}dcc\\.srv\\.muenchen\\.de\\\\(sc|scc|wc)_[pskcd]_[a-z0-9]{3,20}_[a-z0-9]{3,20}$";
     private static final String STORAGE_CREATE_SNAPSHOT_NFS = "STORAGE_CREATE_SNAPSHOT_NFS";
     private static final String STORAGE_CREATE_SNAPSHOT_CIFS = "STORAGE_CREATE_SNAPSHOT_CIFS";
+    private static final String STORAGE_DELETE_SNAPSHOT_NFS = "STORAGE_DELETE_SNAPSHOT_NFS";
+    private static final String STORAGE_DELETE_SNAPSHOT_CIFS = "STORAGE_DELETE_SNAPSHOT_CIFS";
 
     private final UserService userService;
 
@@ -1311,6 +1313,83 @@ public class JobController {
             jobService.storageCreateSnapshotNfs(storageItem, description);
         } else {
             jobService.storageCreateSnapshotCifs(storageItem, description);
+        }
+    }
+
+    @PostMapping("/create/" + STORAGE_DELETE_SNAPSHOT_NFS)
+    public void storageDeleteSnapshotNfs(@RequestParam(name = "serverId") final Long serverId,
+                                          @RequestBody final Map<String, Object> awxExtraVars) {
+        handleStorageDeleteSnapshotShare(
+                awxExtraVars,
+                serverId,
+                StorageType.NFS,
+                "NFS",
+                STORAGE_DELETE_SNAPSHOT_NFS,
+                STORAGE_NFSV3_AND_NFSV3CLONE_REGEX,
+                UnifiedStorageItemDto::getNfs_mount_path
+        );
+    }
+
+    @PostMapping("/create/" + STORAGE_DELETE_SNAPSHOT_CIFS)
+    public void storageDeleteSnapshotCifs(@RequestParam(name = "serverId") final Long serverId,
+                                           @RequestBody final Map<String, Object> awxExtraVars) {
+        handleStorageDeleteSnapshotShare(
+                awxExtraVars,
+                serverId,
+                StorageType.CIFS,
+                "CIFS",
+                STORAGE_DELETE_SNAPSHOT_CIFS,
+                STORAGE_STANDARD_CIFS_AND_CIFSCLONE_REGEX,
+                UnifiedStorageItemDto::getCifs_mount_path
+        );
+    }
+
+    private void handleStorageDeleteSnapshotShare(Map<String, Object> awxExtraVars,
+                                                   Long serverId,
+                                                   StorageType storageType,
+                                                   String storageLabel,
+                                                   String jobIdentifier,
+                                                   String mountPathRegex,
+                                                   java.util.function.Function<UnifiedStorageItemDto, String> mountPathExtractor) {
+        final String snapshotNameRegex = "^[a-z0-9_.-]{3,60}$";
+        Object storageUuidObj = awxExtraVars.get("uuid");
+        Object snapshotNameObj = awxExtraVars.get("snapshotName");
+
+        if (storageUuidObj == null || snapshotNameObj == null) {
+            log.info("{} UUID or snapshotName not provided by user: {} for serverId: {}", storageLabel, AuthUtils.getUsername(), serverId);
+            throw new MissingFormatArgumentException(storageLabel + " UUID and snapshotName must be provided.");
+        }
+
+        String snapshotName = snapshotNameObj.toString();
+        if (!snapshotName.matches(snapshotNameRegex)) {
+            log.info("Invalid snapshotName provided by user: {} for serverId: {} for job {}", AuthUtils.getUsername(), serverId, jobIdentifier);
+            throw new IllegalArgumentException("Snapshot name must be 3 to 60 characters (only a-z and 0-9 or ._-).");
+        }
+
+        final UnifiedStorageItemDto storageItem;
+        try {
+            storageItem = unifiedStorageService.getUnifiedStorageItem(storageUuidObj.toString(), storageType);
+        } catch (IllegalArgumentException e) {
+            log.info("{} UUID provided by user: {} for serverId: {} is invalid.", storageLabel, AuthUtils.getUsername(), serverId);
+            throw new IllegalArgumentException(storageLabel + " UUID is invalid.");
+        }
+
+        final String mountPath = mountPathExtractor.apply(storageItem);
+        if (mountPath == null || !mountPath.matches(mountPathRegex)) {
+            logTriedToCreateJob(jobIdentifier, null);
+            throw new AccessDeniedException("You are not allowed to create a job for this " + storageLabel + " share.");
+        }
+
+        if (!unifiedStorageService.canUserEditStorage(storageItem.getUuid(), storageType)) {
+            logTriedToCreateJob(jobIdentifier, null);
+            throw new AccessDeniedException("You are not allowed to create a job for this " + storageLabel + " share.");
+        }
+
+        logCreatedJob(jobIdentifier, serverId);
+        if (storageType == StorageType.NFS) {
+            jobService.storageDeleteSnapshotNfs(storageItem, snapshotName);
+        } else {
+            jobService.storageDeleteSnapshotCifs(storageItem, snapshotName);
         }
     }
 

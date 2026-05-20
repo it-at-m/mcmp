@@ -42,6 +42,9 @@ public final class ServernameUtils {
     private static final String INVALID_CUSTOM_NUMBER_MESSAGE = "Ungültige laufende Nummer! Erlaubter Bereich: 1-999";
     private static final String INVALID_DOMAIN_MESSAGE = "Ungültige Domain!";
     private static final String INVALID_DOMAIN_EMPTY_MESSAGE = "Die Domain darf nicht leer sein!";
+    private static final String INVALID_DNS_NAME_EMPTY_MESSAGE = "Der DNS-Name darf nicht leer sein!";
+    private static final String INVALID_DNS_NAME_LENGTH_MESSAGE = "Der DNS-Name muss zwischen 2 und 64 Zeichen lang sein!";
+    private static final String INVALID_DNS_NAME_FORMAT_MESSAGE = "Der DNS-Name darf nur Kleinbuchstaben, Zahlen und Bindestriche enthalten!";
 
     private ServernameUtils() {
         throw new UnsupportedOperationException("Utility class cannot be instantiated");
@@ -218,6 +221,31 @@ public final class ServernameUtils {
             throw new IllegalArgumentException(INVALID_DOMAIN_MESSAGE);
         }
         return normalized;
+    }
+
+    /**
+     * Normalizes and validates the provided DNS name.
+     *
+     * @param dnsName the DNS name to normalize and validate
+     * @return the normalized DNS name
+     * @throws IllegalArgumentException if the DNS name is invalid
+     */
+    public static String normalizeAndValidateDnsName(final String dnsName) throws IllegalArgumentException {
+        if (dnsName == null || dnsName.trim().isEmpty()) {
+            throw new IllegalArgumentException(INVALID_DNS_NAME_EMPTY_MESSAGE);
+        }
+
+        String normalizedDnsName = dnsName.trim().toLowerCase();
+
+        if (normalizedDnsName.length() < 2 || normalizedDnsName.length() > 64) {
+            throw new IllegalArgumentException(INVALID_DNS_NAME_LENGTH_MESSAGE);
+        }
+
+        if (!normalizedDnsName.matches("^[a-z0-9-]+$")) {
+            throw new IllegalArgumentException(INVALID_DNS_NAME_FORMAT_MESSAGE);
+        }
+
+        return normalizedDnsName;
     }
 
 }

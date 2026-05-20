@@ -141,19 +141,11 @@ public class InfobloxService {
      */
     public String calculateDnsEntry(final String dnsName, final Long applicationServiceId) throws InvalidInputException {
         // Validate input
-        if (dnsName == null || dnsName.trim().isEmpty()) {
-            throw new InvalidInputException("Der DNS-Name darf nicht leer sein!");
-        }
-
-        String normalizedDnsName = dnsName.trim().toLowerCase();
-
-        // Validate DNS name format (3-64 characters, lowercase letters, numbers, hyphens)
-        if (normalizedDnsName.length() < 3 || normalizedDnsName.length() > 64) {
-            throw new InvalidInputException("Der DNS-Name muss zwischen 3 und 64 Zeichen lang sein!");
-        }
-
-        if (!normalizedDnsName.matches("^[a-z0-9-]+$")) {
-            throw new InvalidInputException("Der DNS-Name darf nur Kleinbuchstaben, Zahlen und Bindestriche enthalten!");
+        String normalizedDnsName;
+        try {
+            normalizedDnsName = ServernameUtils.normalizeAndValidateDnsName(dnsName);
+        } catch (IllegalArgumentException e) {
+            throw new InvalidInputException(e.getMessage());
         }
 
         if (applicationServiceId == null) {

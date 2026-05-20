@@ -21,12 +21,6 @@ public class AwxConfigService {
         return awxConfigMapper.toDTOs(awxConfigRepository.findAll());
     }
 
-//    // get one awx config entry
-//    public List<AwxConfigDTO> getAwxConfigById(Long Id)
-//    {
-//        return awxConfigMapper.toDTOs(repository.findByAwxConfigId(Id));
-//    }
-
     public AwxConfigDTO getAwxDecrypted(final Long id) {
         final AwxConfig awxConfig = awxConfigRepository.findByIdDecrypted(id, encryptionProperties.getPassphrase());
         return awxConfigMapper.toDTODecryptedPassword(awxConfig);

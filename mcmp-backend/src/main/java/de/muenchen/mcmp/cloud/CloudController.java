@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
@@ -18,12 +19,6 @@ public class CloudController {
     public List<CloudDTO> getClouds() {
         return cloudService.getClouds();
     }
-
-//    @GetMapping("/{Id}")
-//    public List<CloudDTO> getCloudById(@PathVariable Long Id)
-//    {
-//        return cloudService.getCloudById(Id);
-//    }
 
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     @PostMapping

@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
@@ -18,12 +19,6 @@ public class AwxConfigController {
     public List<AwxConfigDTO> getAwxConfigs() {
         return awxConfigService.getAwxConfigs();
     }
-
-//    @GetMapping("/{Id}")
-//    public List<AwxConfigDTO> getAwxConfigById(@PathVariable Long Id)
-//    {
-//        return awxConfigService.getAwxConfigById(Id);
-//    }
 
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     @PostMapping

@@ -27,11 +27,4 @@ public class AppserviceController {
     public AppserviceDTO getAppservice(@PathVariable("id") final Long id) {
         return appserviceService.getVisibleAppservice(id);
     }
-
-   /*
-    @GetMapping("/all")
-    public List<AppserviceDTO> showAppservices() {
-
-        return appserviceService.getAppservices();
-    }*/
 }

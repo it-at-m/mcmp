@@ -1,10 +1,7 @@
 package de.muenchen.mcmp.network;
 
-import de.muenchen.mcmp.types.EnvironmentType;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -68,15 +65,4 @@ public class NetworkController {
             @RequestBody List<Long> appserviceIds) {
         networkService.assignAppservicesToNetworkGroup(networkGroupId, appserviceIds);
     }
-
-   /*
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<String> handleException(Exception exception)
-    {
-        //log.error("error is:", exception);
-        //exception.printStackTrace();//Log annotation
-        return ResponseEntity.badRequest().body("Error:" + exception.getMessage());
-    }*/
-
-
 }

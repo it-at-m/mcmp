@@ -341,7 +341,7 @@ public class JobController {
         String description = (descriptionObj == null) ? "" : descriptionObj.toString();
         if (duration < 1 || duration > 10) {
             log.warn("Invalid duration value provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
-            throw new IllegalArgumentException("Druation must be between 1 and 10 days.");
+            throw new IllegalArgumentException("Duration must be between 1 and 10 days.");
         }
 
         boolean withShutdown = true;
@@ -577,7 +577,7 @@ public class JobController {
             throw new IllegalArgumentException("New Size could not be smaller then the old size and not bigger then 2000 GB.");
         }
 
-        if (snapshotService.getSnapshotsByServerId(serverId).size() > 0){
+        if (!snapshotService.getSnapshotsByServerId(serverId).isEmpty()) {
             log.warn("Mountpoint can't be changed with snapshot for serverId: {} by user: {}", AuthUtils.getUsername(), serverId);
             throw new AccessDeniedException("Can't change size of mountpoint. Please remove the snapshot first and try it again.");
         }
@@ -670,12 +670,7 @@ public class JobController {
             log.info("DB Parameters not provided by user: {} to order a database server.", AuthUtils.getUsername());
             throw new MissingFormatArgumentException("DB Parameters must be provided for database servers.");
         } else if (dbParamsObj != null) {
-            try {
-                dbParams = (Map<String, Map<?, ?>>) dbParamsObj;
-            } catch (ClassCastException e) {
-                log.info("DB Parameters not provided by user: {} to order a database server in the right format.", AuthUtils.getUsername());
-                throw new IllegalArgumentException("DB Parameters is not provided in the right format.");
-            }
+            dbParams = requireStringMapOfMap(dbParamsObj, "DB Parameters");
         }
 
         int ram = Integer.parseInt(ramObj.toString());
@@ -796,7 +791,7 @@ public class JobController {
             throw new IllegalArgumentException("New Size could not be smaller then the old size and not bigger then 2000 GB.");
         }
 
-        if (snapshotService.getSnapshotsByServerId(serverId).size() > 0){
+        if (!snapshotService.getSnapshotsByServerId(serverId).isEmpty()) {
             log.warn("Partition can't be changed with snapshot for serverId: {} by user: {}", AuthUtils.getUsername(), serverId);
             throw new AccessDeniedException("Can't change size of partition. Please remove the snapshot first and try it again.");
         }
@@ -875,27 +870,9 @@ public class JobController {
             throw new MissingFormatArgumentException("Not all needed parameter are provided.");
         }
 
-        Map<?, ?> fqdnBuildingBlocks;
-        Map<?, ?> serverType;
-        List<Map<?, ?>> disks;
-        try {
-            fqdnBuildingBlocks = (Map<?, ?>) fqdnObj;
-            serverType = (Map<?, ?>) serverTypeObj;
-        } catch (ClassCastException e) {
-            log.info("FQDN, Server Type or Disks not provided by user: {} to order a server in the right format.", AuthUtils.getUsername());
-            throw new IllegalArgumentException("FQDN, Server Type or Disks is not provided in the right format.");
-        }
-        if (disksObj instanceof List<?>) {
-            try {
-                disks = (List<Map<?, ?>>) disksObj;
-            } catch (ClassCastException e) {
-                log.info("Disks not provided in the correct format by user: {}", AuthUtils.getUsername());
-                throw new IllegalArgumentException("Disks are not provided in the correct format.");
-            }
-        } else {
-            log.info("Disks not provided in the correct format by user: {}", AuthUtils.getUsername());
-            throw new IllegalArgumentException("Disks are not provided in the correct format.");
-        }
+        Map<?, ?> fqdnBuildingBlocks = requireMap(fqdnObj, "FQDN");
+        Map<?, ?> serverType = requireMap(serverTypeObj, "Server Type");
+        List<Map<?, ?>> disks = requireListOfMap(disksObj, "Disks");
 
         int ram = Integer.parseInt(ramObj.toString());
         int cpu = Integer.parseInt(cpuObj.toString());
@@ -925,12 +902,7 @@ public class JobController {
             log.info("DB Parameters not provided by user: {} to order a database server.", AuthUtils.getUsername());
             throw new MissingFormatArgumentException("DB Parameters must be provided for database servers.");
         } else if (dbParamsObj != null) {
-            try {
-                dbParams = (Map<String, Map<?, ?>>) dbParamsObj;
-            } catch (ClassCastException e) {
-                log.info("DB Parameters not provided by user: {} to order a database server in the right format.", AuthUtils.getUsername());
-                throw new IllegalArgumentException("DB Parameters is not provided in the right format.");
-            }
+            dbParams = requireStringMapOfMap(dbParamsObj, "DB Parameters");
         }
 
         long applicationServiceId = Integer.parseInt(applicationServiceIdObj.toString());
@@ -1057,24 +1029,34 @@ public class JobController {
         if (!awxExtraVars.containsKey("dns") || awxExtraVars.get("dns") == null) {
             throw new MissingFormatArgumentException("DNS entry must be provided.");
         }
-        String dns = (String) awxExtraVars.get("dns");
-        if (!dns.matches("^[a-z0-9-]+[a-z.]+$") || dns.split("\\.")[0].length() < 3 || dns.split("\\.")[0].length() > 64) {
-            throw new IllegalArgumentException("Invalid DNS entry.");
-        }
+        String dns = awxExtraVars.get("dns").toString();
+        validateDnsEntry(dns);
 
         if (!awxExtraVars.containsKey("listener")) {
             throw new MissingFormatArgumentException("Listener configuration must be provided.");
         }
-        List<Map<String, Object>> listenerList = (List<Map<String, Object>>) awxExtraVars.get("listener");
-        if (listenerList == null || listenerList.isEmpty()) {
+        List<Map<?, ?>> listenerList = requireListOfMap(awxExtraVars.get("listener"), "Listener configuration");
+        if (listenerList.isEmpty()) {
             throw new IllegalArgumentException("At least one listener is required.");
         }
-        Map<String, Object> listener = listenerList.getFirst();
-        int port = Integer.parseInt(listener.get("port").toString());
+        Map<?, ?> listener = listenerList.getFirst();
+        Object portObj = listener.get("port");
+        if (portObj == null) {
+            throw new IllegalArgumentException("Port must be provided.");
+        }
+        int port;
+        try {
+            port = Integer.parseInt(portObj.toString());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Port must be between 1 and 65535.");
+        }
         if (port < 1 || port > 65535) {
             throw new IllegalArgumentException("Port must be between 1 and 65535.");
         }
-        String listenerType = (String) listener.get("listener_type");
+        Object listenerTypeObj = listener.get("listener_type");
+        if (!(listenerTypeObj instanceof String listenerType)) {
+            throw new IllegalArgumentException("Listener type must be provided.");
+        }
         if (!List.of("http", "tcp", "fast-tcp").contains(listenerType)) {
             throw new IllegalArgumentException("Invalid listener type: " + listenerType);
         }
@@ -1082,20 +1064,21 @@ public class JobController {
         if (!awxExtraVars.containsKey("server_pools")) {
             throw new MissingFormatArgumentException("Server pools configuration must be provided.");
         }
-        List<Map<String, Object>> serverPools = (List<Map<String, Object>>) awxExtraVars.get("server_pools");
-        if (serverPools == null || serverPools.isEmpty()) {
+        List<Map<?, ?>> serverPools = requireListOfMap(awxExtraVars.get("server_pools"), "Server pools configuration");
+        if (serverPools.isEmpty()) {
             throw new IllegalArgumentException("At least one server pool is required.");
         }
-        Map<String, Object> serverPool = serverPools.getFirst();
-        List<Map<String, Object>> memberList = (List<Map<String, Object>>) serverPool.get("member");
-        if (memberList == null || memberList.isEmpty()) {
+        Map<?, ?> serverPool = serverPools.getFirst();
+        List<Map<?, ?>> memberList = requireListOfMap(serverPool.get("member"), "Server member");
+        if (memberList.isEmpty()) {
             throw new IllegalArgumentException("At least one server member is required.");
         }
-        for (Map<String, Object> member : memberList) {
-            if (!member.containsKey("ip") || member.get("ip") == null || member.get("ip").toString().isBlank()) {
+        for (Map<?, ?> member : memberList) {
+            Object ipObj = member.get("ip");
+            if (ipObj == null || ipObj.toString().isBlank()) {
                 throw new IllegalArgumentException("Member IP is required.");
             }
-            final String memberIp = member.get("ip").toString().trim();
+            final String memberIp = ipObj.toString().trim();
             final List<Server> matchingServers = serverService.findServersByIpAddress(memberIp);
             if (matchingServers.isEmpty()) {
                 throw new IllegalArgumentException("No server found for member IP: " + memberIp);
@@ -1107,8 +1090,8 @@ public class JobController {
                 }
             }
 
-            List<?> memberPorts = (List<?>) member.get("ports");
-            if (memberPorts == null || memberPorts.isEmpty()) {
+            List<?> memberPorts = requireList(member.get("ports"), "Member ports");
+            if (memberPorts.isEmpty()) {
                 throw new IllegalArgumentException("At least one member port is required.");
             }
             for (Object memberPortObj : memberPorts) {
@@ -1124,7 +1107,10 @@ public class JobController {
                 }
             }
         }
-        String lbMode = (String) serverPool.get("loadbalancing_mode");
+        Object lbModeObj = serverPool.get("loadbalancing_mode");
+        if (!(lbModeObj instanceof String lbMode)) {
+            throw new IllegalArgumentException("Invalid loadbalancing mode: " + lbModeObj);
+        }
         if (!List.of("round-robin", "least-connections-member").contains(lbMode)) {
             throw new IllegalArgumentException("Invalid loadbalancing mode: " + lbMode);
         }
@@ -1417,6 +1403,93 @@ public class JobController {
 
     private void logTriedToCreateJob(String jobIdentifier, Long serverId) {
         log.warn("User {} tried to create a job {} for serverId: {} without permission.", AuthUtils.getUsername(), jobIdentifier, serverId);
+    }
+
+    private Map<?, ?> requireMap(Object obj, String fieldLabel) {
+        if (!(obj instanceof Map<?, ?> map)) {
+            throw new IllegalArgumentException(fieldLabel + " must be provided in the correct format.");
+        }
+        return map;
+    }
+
+    private List<?> requireList(Object obj, String fieldLabel) {
+        if (!(obj instanceof List<?> list)) {
+            throw new IllegalArgumentException(fieldLabel + " must be provided in the correct format.");
+        }
+        return list;
+    }
+
+    private List<Map<?, ?>> requireListOfMap(Object obj, String fieldLabel) {
+        List<?> list = requireList(obj, fieldLabel);
+        List<Map<?, ?>> result = new ArrayList<>(list.size());
+        for (Object item : list) {
+            if (!(item instanceof Map<?, ?> map)) {
+                throw new IllegalArgumentException(fieldLabel + " must be provided in the correct format.");
+            }
+            result.add(map);
+        }
+        return result;
+    }
+
+    private Map<String, Map<?, ?>> requireStringMapOfMap(Object obj, String fieldLabel) {
+        Map<?, ?> raw = requireMap(obj, fieldLabel);
+        Map<String, Map<?, ?>> result = new HashMap<>();
+        for (Map.Entry<?, ?> entry : raw.entrySet()) {
+            if (!(entry.getKey() instanceof String key) || !(entry.getValue() instanceof Map<?, ?> value)) {
+                throw new IllegalArgumentException(fieldLabel + " must be provided in the correct format.");
+            }
+            result.put(key, value);
+        }
+        return result;
+    }
+
+    /**
+     * Validate a DNS entry in linear time without using complex regular expressions
+     * to avoid ReDoS issues. Enforces lowercase a-z, digits and hyphen, labels
+     * separated by dots, first label length 3..64 and overall length <= 255.
+     * Throws IllegalArgumentException on invalid input.
+     */
+    private void validateDnsEntry(String dns) {
+        if (dns == null) {
+            throw new IllegalArgumentException("Invalid DNS entry.");
+        }
+
+        // overall length bounds
+        if (dns.length() < 3 || dns.length() > 255) {
+            throw new IllegalArgumentException("Invalid DNS entry.");
+        }
+
+        // fast fail for obvious bad inputs
+        if (dns.charAt(0) == '-' || dns.charAt(dns.length() - 1) == '-') {
+            throw new IllegalArgumentException("Invalid DNS entry.");
+        }
+
+        String[] labels = dns.split("\\.");
+        if (labels.length < 2) {
+            throw new IllegalArgumentException("Invalid DNS entry.");
+        }
+
+        String first = labels[0];
+        if (first.length() < 3 || first.length() > 64) {
+            throw new IllegalArgumentException("Invalid DNS entry.");
+        }
+
+        for (String label : labels) {
+            if (label.isEmpty() || label.length() > 64) {
+                throw new IllegalArgumentException("Invalid DNS entry.");
+            }
+            // label must not start or end with hyphen
+            if (label.charAt(0) == '-' || label.charAt(label.length() - 1) == '-') {
+                throw new IllegalArgumentException("Invalid DNS entry.");
+            }
+            // only allow a-z, 0-9 and '-'
+            for (int i = 0; i < label.length(); i++) {
+                char c = label.charAt(i);
+                if (!((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-')) {
+                    throw new IllegalArgumentException("Invalid DNS entry.");
+                }
+            }
+        }
     }
 
 }

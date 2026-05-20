@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
@@ -18,12 +19,6 @@ public class SnowConfigController {
     public List<SnowConfigDTO> getSnowConfigs() {
         return snowConfigService.getSnowConfigs();
     }
-    
-//    @GetMapping("/{Id}")
-//    public List<SnowConfigDTO> getSnowConfigById(@PathVariable Long Id)
-//    {
-//        return snowConfigService.getSnowConfigById(Id);
-//    }
 
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     @PostMapping

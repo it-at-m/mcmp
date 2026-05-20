@@ -21,12 +21,6 @@ public class SnowConfigService {
         return snowConfigMapper.toDTOs(snowConfigRepository.findAll());
     }
 
-//    // get one snow config entry
-//    public List<SnowConfigDTO> getSnowConfigById(Long Id)
-//    {
-//        return snowConfigMapper.toDTOs(repository.findBySnowConfigId(Id));
-//    }
-
     // create snow entry
     public void createSnowConfigEntry(final SnowConfigDTO snowConfigDTO) {
         //repository.save(snowConfigMapper.toEntity(snowConfigDTO));

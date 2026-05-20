@@ -13,7 +13,7 @@
           @click="openDialog"
           aria-label="Snapshot erstellen"
         >
-          <v-icon>{{ mdiPlus }}</v-icon>
+          <v-icon>{{ isBatchOperation ? mdiTagPlus : mdiPlus }}</v-icon>
         </v-btn>
       </span>
     </template>
@@ -86,7 +86,7 @@
 <script setup lang="ts">
 import type Server from "@/types/Server.ts";
 
-import { mdiPencil, mdiPlus } from "@mdi/js";
+import { mdiPencil, mdiPlus, mdiTagPlus } from "@mdi/js";
 import { computed, inject, ref } from "vue";
 
 import jobService from "@/api/jobService";
@@ -119,7 +119,9 @@ const loading = ref(false);
 
 const serverPowerOnInDialog = computed(() => {
   if (props.isBatchOperation) {
-    return (props.selectedServers || []).some((s) => s?.powerState === "poweredOn");
+    return (props.selectedServers || []).some(
+      (s) => s?.powerState === "poweredOn"
+    );
   }
   return props.server?.powerState === "poweredOn";
 });
@@ -129,11 +131,14 @@ const isDisabled = computed(() => {
     if (!props.parentAllSelectedServersEligible) return true;
     const ids = props.selectedServerIds || [];
     return ids.length === 0;
-     // enabled when parent says eligible and at least one selected
+    // enabled when parent says eligible and at least one selected
   }
   // Einzelserver-Logik wie vorher
   if (!props.server) return true;
-  return (props.snapshotCount ?? 0) > 0 || (props.server.cloud?.cloudType !== "VCENTER");
+  return (
+    (props.snapshotCount ?? 0) > 0 ||
+    props.server.cloud?.cloudType !== "VCENTER"
+  );
 });
 
 function save() {
@@ -150,11 +155,16 @@ function save() {
           });
         });
       } else if (props.server) {
-        jobService.startJob(loading, "VMWARE_CREATE_SNAPSHOT", props.server.id, {
-          duration: days.value,
-          description: description.value,
-          withShutdown: withShutdown.value,
-        });
+        jobService.startJob(
+          loading,
+          "VMWARE_CREATE_SNAPSHOT",
+          props.server.id,
+          {
+            duration: days.value,
+            description: description.value,
+            withShutdown: withShutdown.value,
+          }
+        );
       }
 
       dialog.value = false;
@@ -202,11 +212,15 @@ function resetForm() {
 const tooltipText = computed(() => {
   // parent-driven disabled reason takes precedence
   if (props.isBatchOperation && !props.parentAllSelectedServersEligible) {
-    return props.parentDisabledTooltip || "Nicht berechtigt oder Server nicht verwaltet.";
+    return (
+      props.parentDisabledTooltip ||
+      "Nicht berechtigt oder Server nicht verwaltet."
+    );
   }
 
   if (props.isBatchOperation) {
-    if ((props.selectedServerIds || []).length === 0) return "Keine Server ausgewählt.";
+    if ((props.selectedServerIds || []).length === 0)
+      return "Keine Server ausgewählt.";
     // all selected are eligible per parent
     return `Snapshot für ${props.selectedServerIds?.length || 0} Server erstellen`;
   }

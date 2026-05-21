@@ -50,7 +50,7 @@
           <common-alert color="notice_red">
             <h4>Hinweis:</h4>
             Die Speicherparameter der DB werden erst in der darauffolgenden
-            Nacht angepasst.
+            Nacht angepasst. Hierfür ist ein neustart der DB notwendig.
           </common-alert>
         </v-col>
         <v-col

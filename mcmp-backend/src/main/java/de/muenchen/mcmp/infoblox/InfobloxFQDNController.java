@@ -6,6 +6,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import java.util.Collections;
+import java.util.Map;
 
 @RestController
 @AllArgsConstructor
@@ -26,8 +28,9 @@ public class InfobloxFQDNController {
         return infobloxService.calculateFqdn(prefix, application, serverType, appserviceId, customNumber, domain, null);
     }
 
-    @GetMapping("/getFreeDnsEntry")
-    public String getFreeDnsEntry(@RequestParam final String dnsName, @RequestParam final Long appserviceId) {
-        return infobloxService.calculateDnsEntry(dnsName, appserviceId);
+    @GetMapping(value = "/getFreeDnsEntry", produces = "application/json")
+    public Map<String, String> getFreeDnsEntry(@RequestParam final String dnsName, @RequestParam final Long appserviceId) {
+        final String dnsEntry = infobloxService.calculateDnsEntry(dnsName, appserviceId);
+        return Collections.singletonMap("dnsEntry", dnsEntry);
     }
 }

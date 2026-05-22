@@ -43,7 +43,9 @@ export default {
     )
       .then((response) => {
         defaultResponseHandler(response, false, undefined, true);
-        return response.text();
+        return response
+          .json()
+          .then((body) => (body && typeof body.dnsEntry === "string" ? body.dnsEntry : ""));
       })
       .finally(() => {
         loading.value = false;

@@ -5,7 +5,6 @@ export default class AppserviceList {
     public id: number,
     public name: string,
     public hasServers: boolean,
-    public enableVcenterc: boolean,
     public environment: EnvironmentType
   ) {}
 }

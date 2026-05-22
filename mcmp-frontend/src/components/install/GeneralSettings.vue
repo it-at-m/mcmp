@@ -36,24 +36,6 @@
       </template>
     </v-autocomplete>
 
-    <strong v-if="isVCenterCSelectionAllowed"
-      >In welches vCenter soll der Server?</strong
-    >
-    <v-radio-group
-      v-model="instlServerDetails.isVCenterC"
-      v-if="isVCenterCSelectionAllowed"
-      inline
-    >
-      <v-radio
-        :label="'vCenterC'"
-        :value="true"
-      />
-      <v-radio
-        :label="'vCenterK'"
-        :value="false"
-      />
-    </v-radio-group>
-
     <strong>Betriebssystem*</strong>
     <v-radio-group
       v-model="instlServerDetails.osType"
@@ -295,13 +277,6 @@ const offset = ref(0);
 const limit = 50;
 const hasMore = ref(true);
 const nonPostgresOption = ref<"lcm" | "newDb" | null>(null);
-
-let isVCenterCSelectionAllowed = computed(() => {
-  if (selectedAppService.value == null) {
-    return false;
-  }
-  return selectedAppService.value.enableVcenterc;
-});
 
 watch(selectedAppService, (newVal) => {
   if (newVal) {

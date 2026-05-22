@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
@@ -18,12 +19,6 @@ public class InfobloxConfigController {
     public List<InfobloxConfigDTO> getInfobloxConfigs() {
         return infobloxConfigService.getInfobloxConfigs();
     }
-
-//    @GetMapping("/{Id}")
-//    public List<InfobloxConfigDTO> getInfobloxConfigById(@PathVariable Long Id)
-//    {
-//        return infobloxConfigService.getInfobloxConfigById(Id);
-//    }
 
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     @PostMapping

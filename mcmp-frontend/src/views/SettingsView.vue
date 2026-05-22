@@ -39,16 +39,6 @@
             </v-tab>
 
             <v-tab
-              value="Deployment vCenter C"
-              v-if="isAdmin"
-            >
-              Deployment vCenter C
-              <template #prepend>
-                <v-icon size="x-large">{{ mdiServer }}</v-icon>
-              </template>
-            </v-tab>
-
-            <v-tab
               value="Price"
               v-if="isAdmin"
             >
@@ -133,13 +123,6 @@
           </v-tabs-window-item>
 
           <v-tabs-window-item
-            value="Deployment vCenter C"
-            v-if="isAdmin"
-          >
-            <v-centerc />
-          </v-tabs-window-item>
-
-          <v-tabs-window-item
             value="Price"
             v-if="isAdmin"
           >
@@ -191,8 +174,6 @@ import { mdiAccountCog, mdiChartBar, mdiCogOutline, mdiCurrencyEur, mdiHeartPuls
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 
-
-
 import Actions from "@/components/Settings/actions.vue";
 import AdminHistory from "@/components/Settings/AdminHistory.vue";
 import adminUsers from "@/components/Settings/adminUsers.vue";
@@ -202,9 +183,7 @@ import JobStatistics from "@/components/Settings/JobStatistics.vue";
 import NetworkGroup from "@/components/Settings/NetworkGroup.vue";
 import PatchnightStatus from "@/components/Settings/PatchnightStatus.vue";
 import Prices from "@/components/Settings/Prices.vue";
-import VCenterc from "@/components/Settings/vCenterc.vue";
 import { useUserStore } from "@/stores/user";
-
 
 const userStore = useUserStore();
 const router = useRouter();

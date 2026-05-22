@@ -1,6 +1,5 @@
 package de.muenchen.mcmp.appservice;
 
-import de.muenchen.mcmp.server.ServerListDTO;
 import de.muenchen.mcmp.server.ServerListExtendedDTO;
 
 import java.util.List;
@@ -19,7 +18,6 @@ public record AppserviceDTO(
         Long changeGroupId,
         String changeGroupName,
         String changeGroupSysId,
-        Boolean enableVcenterc,
         Boolean cswEnforced,
         List<ServerListExtendedDTO> servers
 ) {

@@ -50,7 +50,6 @@ export default class installServerDetails {
   constructor(
     // general
     public appservice: AppserviceList | null,
-    public isVCenterC: boolean,
     public osType: OsType | null,
     public osVersion: OsVersion | null,
     public categoryType: categoryType | null,

@@ -188,7 +188,7 @@ function generateDnsEntry() {
     const dnsName = dns.value.trim();
 
     // Validate format before calling backend
-    if (dnsName.length < 3 || dnsName.length > 64) {
+    if (dnsName.length < 2 || dnsName.length > 64) {
       expectedDnsEntry.value = "";
       return;
     }

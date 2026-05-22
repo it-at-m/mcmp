@@ -6,9 +6,6 @@ public interface AppserviceList {
     Long getId();
     String getName();
     Boolean getHasServers();
-
-    Boolean getEnableVcenterc();
-
     EnvironmentType getEnvironment();
 }
 

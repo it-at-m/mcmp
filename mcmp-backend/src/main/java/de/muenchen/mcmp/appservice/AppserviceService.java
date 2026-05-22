@@ -2,11 +2,8 @@ package de.muenchen.mcmp.appservice;
 
 import de.muenchen.mcmp.common.OffsetBasedPageRequest;
 import de.muenchen.mcmp.security.AuthUtils;
-import de.muenchen.mcmp.security.UserRoles;
-import de.muenchen.mcmp.server.ServerListDTO;
 import de.muenchen.mcmp.server.ServerListExtendedDTO;
 import de.muenchen.mcmp.server.ServerService;
-import lombok.AllArgsConstructor;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
@@ -45,14 +42,6 @@ public class AppserviceService {
         final Appservice appservice = getAppservice(id);
         final List<ServerListExtendedDTO> servers = serverService.findServersByAppserviceId(id);
         return appserviceMapper.toDtoWithServers(appservice, servers);
-    }
-
-    public AppserviceDTO updateAppserviceVcenterc(
-            final Long id, final Boolean enableVcenterc) {
-        Appservice appservice = repository.findById(id).orElseThrow(
-                () -> new IllegalArgumentException("Appservice with ID " + id + " does not exist."));
-        appservice.setEnableVcenterc(enableVcenterc);
-        return appserviceMapper.toDto(repository.save(appservice));
     }
 
     public Page<AppserviceListDTO> getVisibleAppservices(
@@ -98,7 +87,6 @@ public class AppserviceService {
                 .id(appserviceList.getId())
                 .name(appserviceList.getName())
                 .hasServers(appserviceList.getHasServers())
-                .enableVcenterc(appserviceList.getEnableVcenterc())
                 .environment(appserviceList.getEnvironment())
                 .build();
     }
@@ -107,7 +95,7 @@ public class AppserviceService {
         return repository.findAppservicesByServerId(serverId);
     }
 
-    public Appservice findByNumber (String number) {
+    public Appservice findByNumber(String number) {
         return repository.findByNumber(number);
     }
 }

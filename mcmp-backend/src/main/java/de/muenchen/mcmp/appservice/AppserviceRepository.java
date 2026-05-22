@@ -15,7 +15,6 @@ public interface AppserviceRepository extends JpaRepository<Appservice, Long> {
         a.id AS id,
         a.name AS name,
         a.environment AS environment,
-        a.enable_vcenterc AS enable_vcenterc,
         EXISTS (
             SELECT 1
             FROM cmp.server_assignment sa
@@ -145,5 +144,5 @@ public interface AppserviceRepository extends JpaRepository<Appservice, Long> {
 
     Appservice findBySysId(String sysId);
 
-    Appservice findByNumber (String number);
+    Appservice findByNumber(String number);
 }

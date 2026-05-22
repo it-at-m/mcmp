@@ -1003,6 +1003,14 @@ public class JobService {
         storageCreateSnapshotShare(cifsItem.getCifs_mount_path(), "STORAGE_CREATE_SNAPSHOT_CIFS", usage);
     }
 
+    public void storageDeleteSnapshotNfs(UnifiedStorageItemDto nfsItem, String snapshotName) {
+        storageDeleteSnapshotShare(nfsItem.getNfs_mount_path(), "STORAGE_DELETE_SNAPSHOT_NFS", snapshotName);
+    }
+
+    public void storageDeleteSnapshotCifs(UnifiedStorageItemDto cifsItem, String snapshotName) {
+        storageDeleteSnapshotShare(cifsItem.getCifs_mount_path(), "STORAGE_DELETE_SNAPSHOT_CIFS", snapshotName);
+    }
+
     private void storageModifyShare(String mountPath, String jobIdentifier, int newSize, int newSnapshotPercentage) {
         Map<String, Object> params = new HashMap<>();
         if (Objects.equals(jobIdentifier, JobController.STORAGE_MODIFY_NFS)) {
@@ -1024,6 +1032,18 @@ public class JobService {
             params.put("MCMPSTRG_UNCPATH", mountPath);
         }
         params.put("MCMPSTRG_USAGE", usage);
+
+        createJob(jobIdentifier, null, params, new HashMap<>());
+    }
+
+    private void storageDeleteSnapshotShare(String mountPath, String jobIdentifier, String snapshotName) {
+        Map<String, Object> params = new HashMap<>();
+        if (Objects.equals(jobIdentifier, "STORAGE_DELETE_SNAPSHOT_NFS")) {
+            params.put("MCMPSTRG_MOUNTPATH", mountPath);
+        } else {
+            params.put("MCMPSTRG_UNCPATH", mountPath);
+        }
+        params.put("MCMPSTRG_SNAPSHOTNAME", snapshotName);
 
         createJob(jobIdentifier, null, params, new HashMap<>());
     }

@@ -20,12 +20,6 @@ public class BaasConfigController {
         return baasConfigService.getBaasConfigs();
     }
 
-//    @GetMapping("/{Id}")
-//    public List<BaasConfigDTO> getBaasConfigById(@PathVariable Long Id)
-//    {
-//        return baasConfigService.getBaasConfigById(Id);
-//    }
-
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)

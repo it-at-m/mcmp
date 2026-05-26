@@ -59,13 +59,13 @@ public interface MountPointRepository extends JpaRepository<MountPoint, Long> {
      * including role-based access control and group membership verification.
      * </p>
      * <p>
-     * Use {@link #findByServerId(Long, String, boolean, boolean, boolean, boolean, boolean, boolean)}
+     * Use {@link #findByServerId}
      * for user-facing operations that require proper authorization.
      * </p>
      *
      * @param serverId the ID of the server whose mount points should be retrieved
      * @return a list of all mount points for the specified server, or an empty list if none exist
-     * @see #findByServerId(Long, String, boolean, boolean, boolean, boolean, boolean, boolean)
+     * @see #findByServerId
      */
     List<MountPoint> findAllByServerId(Long serverId);
 }

@@ -875,7 +875,6 @@ public class JobController {
         }
 
         Map<?, ?> fqdnBuildingBlocks = requireMap(fqdnObj, "FQDN");
-        Map<?, ?> serverType = requireMap(serverTypeObj, "Server Type");
         List<Map<?, ?>> disks = requireListOfMap(disksObj, "Disks");
 
         int ram = Integer.parseInt(ramObj.toString());
@@ -890,8 +889,13 @@ public class JobController {
             throw new IllegalArgumentException("OS Version is invalid.");
         }
 
+
         String categoryType = categoryTypeObj.toString();
         String nonPostgresReason = null;
+        Map<?, ?> serverTypeMap = null;
+        if (!categoryType.equals("Standard")) {
+            serverTypeMap = requireMap(serverTypeObj, "Server Type");
+        }
         if (categoryType.equals("DB")) {
             if (nonPostgresReasonObj == null) {
                 log.info("Non-Postgres reason not provided by user: {} to order a database server.", AuthUtils.getUsername());
@@ -919,7 +923,7 @@ public class JobController {
             throw new AccessDeniedException("You are not allowed to order a server for this combination of application service and network group.");
         }
 
-        jobService.windowsServer(fqdnBuildingBlocks, serverType, categoryType, ram, cpu,
+        jobService.windowsServer(fqdnBuildingBlocks, serverTypeMap, categoryType, ram, cpu,
                 disks, networkGroupId, applicationServiceId, osVersion, nonPostgresReason, dbParams, WINDOWS_SERVER);
 
     }

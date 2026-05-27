@@ -1024,6 +1024,34 @@ public class JobService {
         createJob(jobIdentifier, null, params, new HashMap<>());
     }
 
+    public void storageChangeSnapshotPolicyNfs(UnifiedStorageItemDto nfsItem, String newPolicy) {
+        storageChangeSnapshotPolicyShare(nfsItem.getNfs_mount_path(), "STORAGE_CHANGE_SNAPSHOT_POLICY_NFS", newPolicy);
+    }
+
+    public void storageChangeSnapshotPolicyCifs(UnifiedStorageItemDto cifsItem, String newPolicy) {
+        storageChangeSnapshotPolicyShare(cifsItem.getCifs_mount_path(), "STORAGE_CHANGE_SNAPSHOT_POLICY_CIFS", newPolicy);
+    }
+
+    public void storageChangeNfsExportPolicy(UnifiedStorageItemDto nfsItem, String fqdn, String permission) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("MCMPSTRG_MOUNTPATH", nfsItem.getNfs_mount_path());
+        params.put("MCMPSTRG_FQDN", fqdn);
+        params.put("MCMPSTRG_PERMISSION", permission);
+        createJob(JobController.STORAGE_CHANGE_NFS_EXPORT_POLICY, null, params, new HashMap<>());
+    }
+
+    private void storageChangeSnapshotPolicyShare(String mountPath, String jobIdentifier, String newPolicy) {
+        Map<String, Object> params = new HashMap<>();
+        if (Objects.equals(jobIdentifier, "STORAGE_CHANGE_SNAPSHOT_POLICY_NFS")) {
+            params.put("MCMPSTRG_MOUNTPATH", mountPath);
+        } else {
+            params.put("MCMPSTRG_UNCPATH", mountPath);
+        }
+        params.put("MCMPSTRG_NEW_SNAPSHOT_POLICY", newPolicy);
+
+        createJob(jobIdentifier, null, params, new HashMap<>());
+    }
+
     private void storageCreateSnapshotShare(String mountPath, String jobIdentifier, String usage) {
         Map<String, Object> params = new HashMap<>();
         if (Objects.equals(jobIdentifier, "STORAGE_CREATE_SNAPSHOT_NFS")) {

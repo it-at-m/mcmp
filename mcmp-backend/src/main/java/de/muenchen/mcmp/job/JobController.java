@@ -83,12 +83,15 @@ public class JobController {
 
     public static final String STORAGE_MODIFY_NFS = "STORAGE_MODIFY_NFS";
     public static final String STORAGE_MODIFY_CIFS = "STORAGE_MODIFY_CIFS";
+    public static final String STORAGE_CHANGE_NFS_EXPORT_POLICY = "STORAGE_CHANGE_NFS_EXPORT_POLICY";
     private static final String STORAGE_NFSV3_AND_NFSV3CLONE_REGEX = "^svm[pkc][0-9]{2}dcn.srv.muenchen.de:/(sn3|sn3c|wn3)_[pskcd]_[a-z0-9]{3,20}_[a-z0-9]{3,20}$";
     private static final String STORAGE_STANDARD_CIFS_AND_CIFSCLONE_REGEX = "^\\\\\\\\svm[pkc][0-9]{2}dcc\\.srv\\.muenchen\\.de\\\\(sc|scc|wc)_[pskcd]_[a-z0-9]{3,20}_[a-z0-9]{3,20}$";
     private static final String STORAGE_CREATE_SNAPSHOT_NFS = "STORAGE_CREATE_SNAPSHOT_NFS";
     private static final String STORAGE_CREATE_SNAPSHOT_CIFS = "STORAGE_CREATE_SNAPSHOT_CIFS";
     private static final String STORAGE_DELETE_SNAPSHOT_NFS = "STORAGE_DELETE_SNAPSHOT_NFS";
     private static final String STORAGE_DELETE_SNAPSHOT_CIFS = "STORAGE_DELETE_SNAPSHOT_CIFS";
+    private static final String STORAGE_CHANGE_SNAPSHOT_POLICY_NFS = "STORAGE_CHANGE_SNAPSHOT_POLICY_NFS";
+    private static final String STORAGE_CHANGE_SNAPSHOT_POLICY_CIFS = "STORAGE_CHANGE_SNAPSHOT_POLICY_CIFS";
 
     private final UserService userService;
 
@@ -1384,6 +1387,135 @@ public class JobController {
             jobService.storageDeleteSnapshotNfs(storageItem, snapshotName);
         } else {
             jobService.storageDeleteSnapshotCifs(storageItem, snapshotName);
+        }
+    }
+
+    @PostMapping("/create/" + STORAGE_CHANGE_SNAPSHOT_POLICY_NFS)
+    public void storageChangeSnapshotPolicyNfs(@RequestParam(name = "serverId") final Long serverId,
+                                          @RequestBody final Map<String, Object> awxExtraVars) {
+        handleStorageChangeSnapshotPolicyShare(
+                awxExtraVars,
+                serverId,
+                StorageType.NFS,
+                "NFS",
+                STORAGE_CHANGE_SNAPSHOT_POLICY_NFS,
+                STORAGE_NFSV3_AND_NFSV3CLONE_REGEX,
+                UnifiedStorageItemDto::getNfs_mount_path
+        );
+    }
+
+    @PostMapping("/create/" + STORAGE_CHANGE_SNAPSHOT_POLICY_CIFS)
+    public void storageChangeSnapshotPolicyCifs(@RequestParam(name = "serverId") final Long serverId,
+                                           @RequestBody final Map<String, Object> awxExtraVars) {
+        handleStorageChangeSnapshotPolicyShare(
+                awxExtraVars,
+                serverId,
+                StorageType.CIFS,
+                "CIFS",
+                STORAGE_CHANGE_SNAPSHOT_POLICY_CIFS,
+                STORAGE_STANDARD_CIFS_AND_CIFSCLONE_REGEX,
+                UnifiedStorageItemDto::getCifs_mount_path
+        );
+    }
+
+    @PostMapping("/create/" + STORAGE_CHANGE_NFS_EXPORT_POLICY)
+    public void storageChangeNfsExportPolicy(@RequestParam(name = "serverId") final Long serverId,
+                                                @RequestBody final Map<String, Object> awxExtraVars) {
+        Object storageUuidObj = awxExtraVars.get("uuid");
+        Object fqdnObj = awxExtraVars.get("fqdn");
+        Object permissionObj = awxExtraVars.get("permission");
+
+        if (storageUuidObj == null || fqdnObj == null || permissionObj == null) {
+            log.info("NFS UUID, fqdn or permission not provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
+            throw new MissingFormatArgumentException("NFS UUID, fqdn and permission must be provided.");
+        }
+
+        String fqdn = fqdnObj.toString();
+        String permission = permissionObj.toString();
+
+        if (fqdn.isBlank()) {
+            log.info("FQDN is blank provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
+            throw new IllegalArgumentException("FQDN must not be blank.");
+        }
+
+        if (!permission.equals("rw") && !permission.equals("ro")) {
+            throw new IllegalArgumentException("Permission must be either 'rw' or 'ro'.");
+        }
+
+        List<Server> matchingServers = serverService.findByFqdnIn(Collections.singletonList(fqdn));
+        if (matchingServers == null || matchingServers.isEmpty()) {
+            log.info("FQDN provided by user: {} for serverId: {} is not a valid server.", AuthUtils.getUsername(), serverId);
+            throw new IllegalArgumentException("FQDN does not correspond to a valid server.");
+        }
+
+        final UnifiedStorageItemDto storageItem;
+        try {
+            storageItem = unifiedStorageService.getUnifiedStorageItem(storageUuidObj.toString(), StorageType.NFS);
+        } catch (IllegalArgumentException e) {
+            log.info("NFS UUID provided by user: {} for serverId: {} is invalid.", AuthUtils.getUsername(), serverId);
+            throw new IllegalArgumentException("NFS UUID is invalid.");
+        }
+
+        final String mountPath = storageItem.getNfs_mount_path();
+        if (mountPath == null || !mountPath.matches(STORAGE_NFSV3_AND_NFSV3CLONE_REGEX)) {
+            logTriedToCreateJob(STORAGE_CHANGE_NFS_EXPORT_POLICY, null);
+            throw new AccessDeniedException("You are not allowed to create a job for this NFS share.");
+        }
+
+        if (!unifiedStorageService.canUserEditStorage(storageItem.getUuid(), StorageType.NFS)) {
+            logTriedToCreateJob(STORAGE_CHANGE_NFS_EXPORT_POLICY, null);
+            throw new AccessDeniedException("You are not allowed to create a job for this NFS share.");
+        }
+
+        logCreatedJob(STORAGE_CHANGE_NFS_EXPORT_POLICY, serverId);
+        jobService.storageChangeNfsExportPolicy(storageItem, fqdn, permission);
+    }
+
+    private void handleStorageChangeSnapshotPolicyShare(Map<String, Object> awxExtraVars,
+                                                   Long serverId,
+                                                   StorageType storageType,
+                                                   String storageLabel,
+                                                   String jobIdentifier,
+                                                   String mountPathRegex,
+                                                   java.util.function.Function<UnifiedStorageItemDto, String> mountPathExtractor) {
+        Object storageUuidObj = awxExtraVars.get("uuid");
+        Object newPolicyObj = awxExtraVars.get("newPolicy");
+
+        if (storageUuidObj == null || newPolicyObj == null) {
+            log.info("{} UUID or newPolicy not provided by user: {} for serverId: {}", storageLabel, AuthUtils.getUsername(), serverId);
+            throw new MissingFormatArgumentException(storageLabel + " UUID and newPolicy must be provided.");
+        }
+
+        String newPolicy = newPolicyObj.toString();
+        if (!newPolicy.equals("dcc-6h") && !newPolicy.equals("dcc-24h") && !newPolicy.equals("dcc-24h4d") && !newPolicy.equals("dcc-24h7d") && !newPolicy.equals("none")) {
+            log.info("Invalid newPolicy provided by user: {} for serverId: {} for job {}", AuthUtils.getUsername(), serverId, jobIdentifier);
+            throw new IllegalArgumentException("Snapshot policy must be a valid predefined value.");
+        }
+
+        final UnifiedStorageItemDto storageItem;
+        try {
+            storageItem = unifiedStorageService.getUnifiedStorageItem(storageUuidObj.toString(), storageType);
+        } catch (IllegalArgumentException e) {
+            log.info("{} UUID provided by user: {} for serverId: {} is invalid.", storageLabel, AuthUtils.getUsername(), serverId);
+            throw new IllegalArgumentException(storageLabel + " UUID is invalid.");
+        }
+
+        final String mountPath = mountPathExtractor.apply(storageItem);
+        if (mountPath == null || !mountPath.matches(mountPathRegex)) {
+            logTriedToCreateJob(jobIdentifier, null);
+            throw new AccessDeniedException("You are not allowed to create a job for this " + storageLabel + " share.");
+        }
+
+        if (!unifiedStorageService.canUserEditStorage(storageItem.getUuid(), storageType)) {
+            logTriedToCreateJob(jobIdentifier, null);
+            throw new AccessDeniedException("You are not allowed to create a job for this " + storageLabel + " share.");
+        }
+
+        logCreatedJob(jobIdentifier, serverId);
+        if (storageType == StorageType.NFS) {
+            jobService.storageChangeSnapshotPolicyNfs(storageItem, newPolicy);
+        } else {
+            jobService.storageChangeSnapshotPolicyCifs(storageItem, newPolicy);
         }
     }
 

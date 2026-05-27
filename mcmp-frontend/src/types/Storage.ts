@@ -62,4 +62,6 @@ export interface UnifiedStorageItem {
   spaceSnapshotReservePercent?: number;
   spaceSnapshotReserveSize?: number;
   spaceSnapshotUsed?: number;
+
+  snapshotPolicy?: string;
 }

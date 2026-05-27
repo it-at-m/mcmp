@@ -1,8 +1,8 @@
 <template>
   <v-container
+    v-if="testing"
     fluid
     class="split-container"
-    v-if="testing"
   >
     <v-banner
       class="ma-4"
@@ -21,20 +21,20 @@
         :style="{ width: leftPanelWidth + 'px' }"
       >
         <storage-list
-          @update:selected="onStorageSelected"
           :model-value="selectedStorage"
           :url-params-id="route.params.id"
+          @update:selected="onStorageSelected"
         />
       </div>
 
       <!-- Split Handle -->
       <div
         class="split-handle"
+        tabindex="0"
         @mousedown="startResize"
         @touchstart="startResize"
         @keyup.left.prevent="resizeLeft"
         @keyup.right.prevent="resizeRight"
-        tabindex="0"
       >
         <span class="split-handle-bar left"></span>
         <span class="split-handle-bar right"></span>
@@ -73,20 +73,20 @@
                     </template></v-tab
                   >
                   <v-tab
+                    v-if="berechtigungTabBoolean"
                     value="Berechtigungnen"
                     rounded="lg"
                     class="d-flex justify-center align-center"
-                    v-if="berechtigungTabBoolean"
                     >Berechtigungnen
                     <template #prepend>
                       <v-icon size="x-large">{{ mdiAccountCog }}</v-icon>
                     </template></v-tab
                   >
                   <v-tab
+                    v-if="backupTabBoolean"
                     value="Backup"
                     rounded="lg"
                     class="d-flex justify-center align-center"
-                    v-if="backupTabBoolean"
                   >
                     Backup
                     <template #prepend>
@@ -103,23 +103,23 @@
                 <v-tabs-window v-model="tab">
                   <v-tabs-window-item value="Allgemeines">
                     <storage-details-general
-                      :selectedStorageItem="selectedStorageDetail"
+                      :selected-storage-item="selectedStorageDetail"
                     />
                   </v-tabs-window-item>
                   <v-tabs-window-item
-                    value="Berechtigungnen"
                     v-if="berechtigungTabBoolean"
+                    value="Berechtigungnen"
                   >
                     <storage-details-permissions
-                      :selectedStorageItem="selectedStorageDetail"
+                      :selected-storage-item="selectedStorageDetail"
                     />
                   </v-tabs-window-item>
                   <v-tabs-window-item
-                    value="Backup"
                     v-if="backupTabBoolean"
+                    value="Backup"
                   >
                     <storage-details-backup
-                      :selectedStorageItem="selectedStorageDetail"
+                      :selected-storage-item="selectedStorageDetail"
                       :snapshots="snapshots"
                       :loading="loadingSnapshots"
                     />
@@ -225,7 +225,8 @@ async function syncSelectionFromRoute(
 
   if (
     selectedStorage.value[0]?.uuid === routeId &&
-    (!normalizedRouteType || selectedStorage.value[0]?.type === normalizedRouteType)
+    (!normalizedRouteType ||
+      selectedStorage.value[0]?.type === normalizedRouteType)
   ) {
     return;
   }
@@ -252,8 +253,7 @@ async function syncSelectionFromRoute(
     }
 
     loadTabData(tab.value, true);
-  } catch (e) {
-    console.error("Failed to resolve storage from route", e);
+  } catch {
     selectedStorage.value = [];
     selectedStorageDetail.value = null;
   }
@@ -412,8 +412,7 @@ watch(
           );
         // Load tab data for newly selected item
         loadTabData(tab.value);
-      } catch (e) {
-        console.error("Failed to load details", e);
+      } catch {
         selectedStorageDetail.value = null;
       }
     } else {

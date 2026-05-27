@@ -1,8 +1,14 @@
 <template>
   <common-card
-    title="Export-Policys"
     v-if="selectedStorageItem.type == 'NFS'"
+    title="Export-Policys"
   >
+    <template #toolbar-actions>
+      <storage-change-nfs-export-policy
+        :storage-uuid="selectedStorageItem.uuid"
+        :mount-path="selectedStorageItem.nfs_mount_path!"
+      />
+    </template>
     <v-row>
       <v-col cols="3">
         <h3>Server</h3>
@@ -35,8 +41,8 @@
     </div>
   </common-card>
   <common-card
-    title="Freigabeberechtigungen"
     v-else-if="selectedStorageItem.type == 'CIFS'"
+    title="Freigabeberechtigungen"
   >
     <v-row>
       <v-col cols="3">
@@ -67,6 +73,7 @@
 import type { UnifiedStorageItem } from "@/types/Storage";
 
 import CommonCard from "@/components/common/CommonCard.vue";
+import StorageChangeNfsExportPolicy from "@/components/Storage/StorageChangeNfsExportPolicy.vue";
 
 const props = defineProps<{
   selectedStorageItem: UnifiedStorageItem;

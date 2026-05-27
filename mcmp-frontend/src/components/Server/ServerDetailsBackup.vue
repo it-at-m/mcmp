@@ -75,7 +75,7 @@
                 aria-label="Backup erstellen"
                 class="mr-0"
               >
-                <v-icon>{{ mdiPencil }}</v-icon>
+                <v-icon>{{ mdiPlus }}</v-icon>
               </v-btn>
             </template>
           </v-tooltip>
@@ -175,7 +175,7 @@
 import type Backup from "@/types/Backup";
 import type Snapshot from "@/types/Snapshot";
 
-import { mdiFilterVariant, mdiPencil } from "@mdi/js";
+import { mdiFilterVariant, mdiPlus } from "@mdi/js";
 import { computed, ref } from "vue";
 
 import jobService from "@/api/jobService";

@@ -165,7 +165,6 @@ function generateServerName() {
           ) {
             serverType = serverType + "wi";
           } else {
-            console.error("OsVersion is not in linux or windows.");
             return;
           }
         }

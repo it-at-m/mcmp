@@ -219,7 +219,7 @@
                     <v-tooltip
                       v-if="!showTabText"
                       location="bottom"
-                      text="Backup/Snapshot"
+                      text="Datensicherung"
                     >
                       <template #activator="{ props }">
                         <v-icon
@@ -236,7 +236,7 @@
                         class="me-2"
                         >{{ mdiDatabase }}</v-icon
                       >
-                      <span>Backup/Snapshot</span>
+                      <span>Datensicherung</span>
                     </template>
                   </v-tab>
 

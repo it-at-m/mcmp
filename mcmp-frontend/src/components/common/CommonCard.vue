@@ -16,10 +16,12 @@
         <div v-if="$slots['prepend-title'] && $slots['prepend-title']().length" class="ml-4 d-flex align-center">
           <slot name="prepend-title" />
         </div>
-        <v-toolbar-title
-          class="text-h6"
-          :text="title"
-        ></v-toolbar-title>
+        <v-toolbar-title class="text-h6">
+          <div class="d-flex align-center">
+            {{ title }}
+            <slot name="append-title" />
+          </div>
+        </v-toolbar-title>
 
         <slot name="toolbar-actions" />
 

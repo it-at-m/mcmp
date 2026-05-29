@@ -2,7 +2,7 @@
   <CommonDialog
     v-model="dialog"
     :loading="loading"
-    title="Ansible User Berechtigungen"
+    title="Ansible User Aktionen"
     max-width="600"
     show-actions
     submitActivated

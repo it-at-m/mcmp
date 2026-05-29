@@ -61,6 +61,7 @@ public interface AppserviceRepository extends JpaRepository<Appservice, Long> {
         :search IS NULL
         OR :search = ''
         OR lower(a.name) LIKE ALL (CAST(:terms AS text[]))
+        OR lower(a.number) LIKE ALL (CAST(:terms AS text[]))
     )
     ORDER BY
         CASE WHEN :sortOrder = 'asc' THEN a.name END ASC,
@@ -91,6 +92,7 @@ public interface AppserviceRepository extends JpaRepository<Appservice, Long> {
             :search IS NULL
             OR :search = ''
             OR lower(a.name) LIKE ALL (CAST(:terms AS text[]))
+            OR lower(a.number) LIKE ALL (CAST(:terms AS text[]))
         )
     """, nativeQuery = true)
     Page<AppserviceList> findVisibleAppservices(@Param("username") String username,

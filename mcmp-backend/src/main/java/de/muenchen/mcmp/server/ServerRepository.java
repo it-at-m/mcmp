@@ -32,8 +32,21 @@ public interface ServerRepository extends JpaRepository<Server, Long> {
           s.server_kind,
           s.server_type,
           (
-              s.num_cpu_rightsizing <> 'ok'
-              OR s.memory_mb_rightsizing <> 'ok'
+              (
+                  s.num_cpu_rightsizing <> 'ok'
+                  AND (
+                      s.num_cpu_change_date IS NULL
+                      OR s.num_cpu_change_date < CURRENT_TIMESTAMP - INTERVAL '14 days'
+                  )
+              )
+              OR
+              (
+                  s.memory_mb_rightsizing <> 'ok'
+                  AND (
+                      s.memory_mb_change_date IS NULL
+                      OR s.memory_mb_change_date < CURRENT_TIMESTAMP - INTERVAL '14 days'
+                  )
+              )
               OR (s.patchnight_exitcode IS NOT NULL AND s.patchnight_exitcode <> 0)
           ) as hasWarnings
     FROM cmp.server s

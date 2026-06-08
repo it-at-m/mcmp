@@ -1,0 +1,18 @@
+[GENERAL]
+TimeoutSeconds = 60
+
+[LOGGING]
+Level = 'Info'
+
+[[DATACENTER]]
+URL                 = 'https://proxmox-datacenter-manager.example.local:8443/api2/json'
+InsecureSkipVerify  = false
+APITokenID          = 'root@pam!token-name'
+APITokenSecret      = 'token-secret'
+
+[[MCMP]]
+OAuthUrl = 'http://keycloak:8100/auth'
+OAuthRealm = 'local_realm'
+OAuthClientId = 'local'
+OAuthClientSecret = 'client_secret'
+ApiEndpoint = 'http://localhost:8083/clients/eai-backend-service/cloud/import'

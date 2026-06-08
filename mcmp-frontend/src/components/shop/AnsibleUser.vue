@@ -2,7 +2,7 @@
   <CommonDialog
     v-model="dialog"
     :loading="loading"
-    title="Ansible User"
+    title="Ansible User Aktionen"
     max-width="600"
     show-actions
     submitActivated
@@ -12,12 +12,23 @@
     showChangeWarning
     :checkForEnabledActions="['ANSIBLE_USER_ADD', 'ANSIBLE_USER_REMOVE']"
   >
+  <CommonAlert
+          color="info"
+          class="mb-6"
+          v-if="isAdd"
+        >
+          <div>
+        Neuen Ansible User erstellen und/oder bestehenden User auf weitere Server berechtigen.
+                <br>Infos unter <a href="https://go.muenchen.de/sp/KB0014700" target="_blank" rel="noopener" class="text-primary font-weight-bold text-decoration-none">KB0014700</a>
+          </div>
+        </CommonAlert>
+
     <template #activator="{ props }">
       <v-btn
         v-bind="props"
         flat
         @click="registerOpenDialog"
-        >Ansible User
+        >Ansible User Aktionen
       </v-btn>
     </template>
 
@@ -47,7 +58,7 @@
             rules.notEmptyRule('Ansible Account Name ist erforderlich'),
             rules.regexRule(
               /^svc-ans-[a-z0-9-]{1,12}$/,
-              'Der Name muss mit svc-ans- beginnen und darf max. 20 Zeichen umfassen'
+              'Der Name muss mit svc-ans- beginnen und darf insgesamt max. 20 Zeichen umfassen'
             ),
           ]"
           class="mb-2"

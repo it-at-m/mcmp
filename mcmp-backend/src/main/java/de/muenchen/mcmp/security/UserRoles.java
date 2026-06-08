@@ -21,6 +21,9 @@ public class UserRoles {
     private final boolean hasReadonlyRole;
     @Accessors(fluent = true)
     @Getter
+    private final boolean hasStorageRole;
+    @Accessors(fluent = true)
+    @Getter
     private final boolean hasWindowsRole;
     @Accessors(fluent = true)
     @Getter

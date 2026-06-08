@@ -1,6 +1,5 @@
 package de.muenchen.mcmp.storagegrid;
 
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -14,60 +13,42 @@ public interface StorageGridBucketRepository extends JpaRepository<StorageGridBu
 
     List<StorageGridBucket> findAllByStorageGridAccountIdIn(List<Long> accountIds);
 
-    @Query("SELECT b.id FROM StorageGridBucket b " +
-            "WHERE (:search IS NULL OR LOWER(b.name) LIKE :search) " +
-            "AND (" +
-            "   :isAdmin = TRUE OR :isReadonly = TRUE OR " +
-            "   EXISTS (SELECT 1 FROM b.storageGridAccount.appservices a JOIN a.changeGroup g JOIN g.users u WHERE u.username = :username)" +
-            ")")
-    List<Long> findAllIds(@Param("search") String search,
-                          @Param("username") String username,
-                          @Param("isAdmin") boolean isAdmin,
-                          @Param("isReadonly") boolean isReadonly,
-                          Pageable pageable);
-
-    @Query("SELECT b FROM StorageGridBucket b " +
-            "JOIN FETCH b.storageGridAccount a " +
-            "WHERE b.id IN :ids")
-    List<StorageGridBucket> findByIdsWithAccount(@Param("ids") List<Long> ids);
-
-    @Query("SELECT b FROM StorageGridBucket b " +
-            "JOIN FETCH b.storageGridAccount a")
-    List<StorageGridBucket> findAllWithAccount();
-
     @Query("SELECT COUNT(b) FROM StorageGridBucket b " +
             "WHERE (:search IS NULL OR LOWER(b.name) LIKE :search) " +
             "AND (" +
-            "   :isAdmin = TRUE OR :isReadonly = TRUE OR " +
+            "   :isAdmin = TRUE OR :isReadonly = TRUE OR :isStorage = TRUE OR " +
             "   EXISTS (SELECT 1 FROM b.storageGridAccount.appservices a JOIN a.changeGroup g JOIN g.users u WHERE u.username = :username)" +
             ")")
     long count(@Param("search") String search,
                @Param("username") String username,
                @Param("isAdmin") boolean isAdmin,
-               @Param("isReadonly") boolean isReadonly);
+               @Param("isReadonly") boolean isReadonly,
+               @Param("isStorage") boolean isStorage);
 
     @Query("SELECT b FROM StorageGridBucket b " +
             "JOIN FETCH b.storageGridAccount a " +
             "WHERE b.id = :id " +
             "AND (" +
-            "   :isAdmin = TRUE OR :isReadonly = TRUE OR " +
+            "   :isAdmin = TRUE OR :isReadonly = TRUE OR :isStorage = TRUE OR " +
             "   EXISTS (SELECT 1 FROM b.storageGridAccount.appservices a JOIN a.changeGroup g JOIN g.users u WHERE u.username = :username)" +
             ")")
     Optional<StorageGridBucket> findByIdWithPermissions(@Param("id") Long id,
                                                         @Param("username") String username,
                                                         @Param("isAdmin") boolean isAdmin,
-                                                        @Param("isReadonly") boolean isReadonly);
+                                                        @Param("isReadonly") boolean isReadonly,
+                                                        @Param("isStorage") boolean isStorage);
 
     @Query("SELECT b.id, b.name FROM StorageGridBucket b " +
             "WHERE (:search IS NULL OR LOWER(b.name) LIKE :search) " +
             "AND (" +
-            "   :isAdmin = TRUE OR :isReadonly = TRUE OR " +
+            "   :isAdmin = TRUE OR :isReadonly = TRUE OR :isStorage = TRUE OR " +
             "   EXISTS (SELECT 1 FROM b.storageGridAccount.appservices a JOIN a.changeGroup g JOIN g.users u WHERE u.username = :username)" +
             ")")
     List<Object[]> findBucketListItems(@Param("search") String search,
                                        @Param("username") String username,
                                        @Param("isAdmin") boolean isAdmin,
-                                       @Param("isReadonly") boolean isReadonly);
+                                       @Param("isReadonly") boolean isReadonly,
+                                       @Param("isStorage") boolean isStorage);
 
     @Query("SELECT b FROM StorageGridBucket b " +
             "LEFT JOIN FETCH b.storageGridAccount acc " +

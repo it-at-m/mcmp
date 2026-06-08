@@ -3,6 +3,18 @@
     title="Snapshots"
     v-show="selectedServer.cloud?.cloudType == 'VCENTER'"
   >
+  <template #append-title>
+      <info-tooltip class="ml-2">
+        <div class="pa-1">
+          <strong>Snapshots</strong>
+          <p class="text-caption mt-2 mb-1">
+            <strong>Verwendung:</strong> Kurzfristiger Sicherungspunkt direkt vor Änderungen (z.B. Updates oder Konfigurationsanpassungen).
+            <br>Kein eigenständiges Backup, da direkt von der VM bzw. der Serverinfrastruktur abhängig.<br>
+            <strong>Aufbewahrung:</strong> max 10 Tage, da die Performance des Servers beeinträchtigt werden kann.
+          </p>
+        </div>
+      </info-tooltip>
+    </template>
     <template #toolbar-actions>
       <AddSnapshot
         v-if="
@@ -54,6 +66,16 @@
     title="Backups"
     topMargin="0"
   >
+  <template #append-title>
+      <info-tooltip class="ml-2">
+        <div class="pa-1">
+          <strong>Reguläre Backups</strong>
+          <p class="text-caption mt-2 mb-1">
+            Komplette und unabhängige Kopie der Daten mit vom  Produktivsystem unabhängiger Aufbewahrung.
+          </p>
+        </div>
+      </info-tooltip>
+    </template>
     <template #toolbar-actions>
       <!-- Nur Oracle Backups zurzeit -->
       <v-menu
@@ -75,7 +97,7 @@
                 aria-label="Backup erstellen"
                 class="mr-0"
               >
-                <v-icon>{{ mdiPencil }}</v-icon>
+                <v-icon>{{ mdiPlus }}</v-icon>
               </v-btn>
             </template>
           </v-tooltip>
@@ -175,10 +197,11 @@
 import type Backup from "@/types/Backup";
 import type Snapshot from "@/types/Snapshot";
 
-import { mdiFilterVariant, mdiPencil } from "@mdi/js";
+import { mdiFilterVariant, mdiPlus } from "@mdi/js";
 import { computed, ref } from "vue";
 
 import jobService from "@/api/jobService";
+import InfoTooltip from "@/components/common/InfoTooltip.vue";
 import CommonCard from "@/components/common/CommonCard.vue";
 import AddSnapshot from "@/components/Server/AddSnapshot.vue";
 import AddBackup from "@/components/Server/Backup/AddBackup.vue";

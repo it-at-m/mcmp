@@ -10,28 +10,28 @@
           icon
           :disabled="isDisabled"
           variant="flat"
-          @click="openDialog"
           aria-label="Snapshot erstellen"
+          @click="openDialog"
         >
           <v-icon>{{ mdiPlus }}</v-icon>
         </v-btn>
       </span>
     </template>
   </v-tooltip>
-  <CommonDialog
+  <common-dialog
     :model-value="dialog"
     max-width="1100"
     :title="title"
     :icon="mdiPlus"
     show-actions
-    :submitActivated="validated"
-    @dialog-cancel="close()"
-    @dialog-confirm="save()"
-    showChangeWarning
-    :checkForEnabledActions="[
+    :submit-activated="validated"
+    show-change-warning
+    :check-for-enabled-actions="[
       'STORAGE_CREATE_SNAPSHOT_NFS',
       'STORAGE_CREATE_SNAPSHOT_CIFS',
     ]"
+    @dialog-cancel="close()"
+    @dialog-confirm="save()"
   >
     <v-form ref="form">
       <h4>Tage (fester Wert):</h4>
@@ -57,7 +57,7 @@
           useRules().maxLengthRule(20, 'Maximal 20 Zeichen.'),
         ]"
       ></v-text-field>
-      <CommonAlert
+      <common-alert
         color="notice_red"
         class="mt-3"
       >
@@ -66,9 +66,9 @@
         beteiligten Server nicht automatisch heruntergefahren. Sofern zur
         Sicherstellung der Datenkonsistenz ein herunterfahren der beteiligten
         Server notwendig ist, bitte dies separat manuell durchführen.
-      </CommonAlert>
+      </common-alert>
     </v-form>
-  </CommonDialog>
+  </common-dialog>
 </template>
 <script setup lang="ts">
 import type { UnifiedStorageItem } from "@/types/Storage.ts";
@@ -83,9 +83,7 @@ import { useRules } from "@/composables/rules.ts";
 const props = defineProps<{
   selectedStorageItem: UnifiedStorageItem;
 }>();
-const emits = defineEmits<{
-  (e: "save", description: string): void;
-}>();
+const emits = defineEmits<(e: "save", description: string) => void>();
 
 const form = ref<HTMLFormElement>();
 const dialog = ref(false);
@@ -117,7 +115,7 @@ function close() {
 }
 
 function save() {
-    if (validated) {
+    if (validated.value) {
       emits("save", description.value);
       close();
     }

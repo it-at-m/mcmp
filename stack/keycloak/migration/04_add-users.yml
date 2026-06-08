@@ -57,17 +57,17 @@ changes:
       name: ibs41
       password: "ibs41"
   - addUser:
-      name: ibs42
-      lastName: ibs42
+      name: ibs43
+      lastName: ibs43
       firstName: storage
       enabled: true
       emailVerified: true
-      email: ibs42@example.org
+      email: ibs43@example.org
       attributes:
-        department: ["ITM-IBS42"]
+        department: ["ITM-IBS43"]
   - updateUserPassword:
-      name: ibs42
-      password: "ibs42"
+      name: ibs43
+      password: "ibs43"
   - addUser:
       name: ibs45
       lastName: ibs45

@@ -18,11 +18,12 @@ public interface OntapVolumeServerMountRepository extends JpaRepository<OntapVol
             "LEFT JOIN FETCH v.ontapCifsShares " + // Fetch CIFS shares if needed
             "WHERE m.serverId = :serverId " +
             "AND (" +
-            "   :isAdmin = TRUE OR :isReadonly = TRUE OR " +
+            "   :isAdmin = TRUE OR :isReadonly = TRUE OR :isStorage = TRUE OR " +
             "   EXISTS (SELECT 1 FROM v.appservices a JOIN a.changeGroup g JOIN g.users u WHERE u.username = :username)" +
             ")")
     List<OntapVolumeServerMount> findAllByServerIdWithPermissions(@Param("serverId") Long serverId,
                                                                   @Param("username") String username,
                                                                   @Param("isAdmin") boolean isAdmin,
-                                                                  @Param("isReadonly") boolean isReadonly);
+                                                                  @Param("isReadonly") boolean isReadonly,
+                                                                  @Param("isStorage") boolean isStorage);
 }

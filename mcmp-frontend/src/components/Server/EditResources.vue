@@ -323,6 +323,7 @@ function changeToSchedule() {
 function setTimePatchnight() {
   if (schedulePatchnight.value) {
     rawDate.value = new Date(props.server.patchnightStartDate);
+    rawDate.value.setHours(14,0,0,0);
   } else {
     rawDate.value = new Date();
   }

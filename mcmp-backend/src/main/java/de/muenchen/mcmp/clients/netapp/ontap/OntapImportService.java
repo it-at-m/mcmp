@@ -425,7 +425,7 @@ public class OntapImportService {
 
         if (policyData.id() == null) return;
 
-        final String policyKey = policyData.id().toString();
+        final String policyKey = createExportPolicyKey(policyData.id());
 
         // Already processed?
         if (result.containsKey(policyKey)) return;
@@ -572,8 +572,7 @@ public class OntapImportService {
         // Assign Export Policy
         OntapExportPolicy exportPolicy = null;
         if (volumeData.exportPolicy() != null && volumeData.exportPolicy().id() != null) {
-            final String policyKey = volumeData.exportPolicy().id() + ":" + volumeData.exportPolicy().name();
-            exportPolicy = policyMap.get(policyKey);
+            exportPolicy = policyMap.get(createExportPolicyKey(volumeData.exportPolicy().id()));
         }
 
         // Aggregate assignment ONLY on the Volume side (inverse side, not owner)
@@ -703,8 +702,7 @@ public class OntapImportService {
             // Export Policy zuordnen
             OntapExportPolicy exportPolicy = null;
             if (qtreeData.exportPolicy() != null && qtreeData.exportPolicy().id() != null) {
-                final String policyKey = qtreeData.exportPolicy().id() + ":" + qtreeData.exportPolicy().name();
-                exportPolicy = policyMap.get(policyKey);
+                exportPolicy = policyMap.get(createExportPolicyKey(qtreeData.exportPolicy().id()));
             }
 
             if (isNew || hasQtreeChanges(qtree, qtreeData, exportPolicy)) {
@@ -827,6 +825,10 @@ public class OntapImportService {
             }
         }
         return policyMap;
+    }
+
+    private String createExportPolicyKey(final Long policyId) {
+        return policyId == null ? null : policyId.toString();
     }
 
     /**

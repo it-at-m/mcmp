@@ -5,11 +5,21 @@
     class="split-container"
   >
     <v-banner
-      class="ma-4"
+      v-if="showBanner"
       bg-color="red"
       rounded
     >
       Diese Ansicht ist nur in der Testumgebung verfügbar.
+      <template #actions>
+        <v-btn
+          icon
+          variant="elevated"
+          aria-label="Schließen"
+          @click="showBanner = false"
+        >
+          <v-icon >{{ mdiClose }}</v-icon>
+        </v-btn>
+      </template>
     </v-banner>
     <div
       class="split-view"
@@ -159,7 +169,7 @@ import type { UnifiedStorageItem } from "@/types/Storage";
 import type { UnifiedStorageItemList } from "@/types/UnifiedStorageItemList";
 import type { UnifiedStorageSnapshotItem } from "@/types/UnifiedStorageSnapshotItem";
 
-import { mdiAccountCog, mdiDatabase, mdiHome } from "@mdi/js";
+import { mdiAccountCog, mdiDatabase, mdiHome, mdiClose } from "@mdi/js";
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
@@ -183,6 +193,7 @@ const loadingDetails = ref(false);
 const loadingSnapshots = ref(false);
 const snapshots = ref<UnifiedStorageSnapshotItem[]>([]);
 const testing = ref<boolean>(false); // Only show view in test env
+const showBanner = ref(true); // Controls visibility of the test-environment banner
 const loadingTestEnv = ref(false);
 
 const route = useRoute();

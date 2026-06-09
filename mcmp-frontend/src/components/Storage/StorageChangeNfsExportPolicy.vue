@@ -1,7 +1,7 @@
 <template>
   <v-tooltip
     location="bottom"
-    text="Export-Policy ändern"
+    :text="activatorDisabled ? 'Editieren nicht möglich für IP-Adressen/Range' : tooltipText"
     :open-on-hover="true"
   >
     <template #activator="{ props: tooltipProps }">
@@ -9,10 +9,12 @@
         <v-btn
           icon
           variant="flat"
-          aria-label="Export-Policy ändern"
+          :aria-label="tooltipText"
+          :disabled="activatorDisabled"
+          :title="activatorDisabled ? 'Editieren nicht möglich für IP-Adressen/Range' : tooltipText"
           @click="openDialog"
         >
-          <v-icon>{{ mdiPencil }}</v-icon>
+          <v-icon>{{ activatorIcon }}</v-icon>
         </v-btn>
       </span>
     </template>
@@ -20,33 +22,34 @@
   <common-dialog
     v-model="dialog"
     :loading="loading"
-    title="Export-Policy ändern"
+    :title="dialogTitle"
     max-width="600"
     show-actions
-    :submit-activated="validated"
-    :icon="mdiPencil"
+    :submit-activated="canSubmit"
+    :icon="dialogIcon"
     show-change-warning
     :check-for-enabled-actions="['STORAGE_CHANGE_NFS_EXPORT_POLICY']"
     @dialog-cancel="close"
     @dialog-confirm="save"
   >
-    <v-form v-model="validated">
+    <v-form>
       <v-row class="mb-4">
         <v-col cols="12">
           <v-autocomplete
             v-model="selectedServer"
             v-model:search="searchText"
-            :items="serverList"
+            :items="availableServers"
             :loading="loadingServers"
-            label="Server auswählen"
+            :label="isEditMode ? 'Server' : 'Server auswählen'"
             variant="outlined"
             item-title="name"
             item-value="fqdn"
-            clearable
+            :clearable="!isEditMode"
+            :disabled="isEditMode"
             :rules="[
               rules.notEmptySelectRule('Ein Server muss ausgewählt werden'),
             ]"
-            @click="getServers"
+            @click="handleServerFieldClick"
           >
             <template #no-data
               ><a class="ml-2">Keine Server gefunden</a></template
@@ -79,15 +82,14 @@
 <script setup lang="ts">
 import type { ServerList } from "@/types/ServerList.ts";
 
-import { mdiPencil } from "@mdi/js";
-import { ref, watch } from "vue";
+import { mdiPencil, mdiPlus } from "@mdi/js";
+import { computed, ref, watch } from "vue";
 
 import jobService from "@/api/jobService.ts";
 import serverService from "@/api/serverService.ts";
 import CommonDialog from "@/components/common/CommonDialog.vue";
 import { useRules } from "@/composables/rules.ts";
 
-const validated = ref(false);
 const dialog = ref(false);
 const loading = ref(false);
 const loadingServers = ref(false);
@@ -95,7 +97,7 @@ const rules = useRules();
 const selectedServer = ref("");
 const selectedPermission = ref("");
 const searchText = ref("");
-const serverList = ref<ServerList[]>([]);
+const serverList = ref<Pick<ServerList, "name" | "fqdn">[]>([]);
 const requestedAlready = ref(false);
 
 const permissionOptions = [
@@ -103,10 +105,61 @@ const permissionOptions = [
   { label: "read-only (ro)", value: "ro" },
 ];
 
-const props = defineProps<{
+const props = withDefaults(
+  defineProps<{
   storageUuid: string;
   mountPath: string;
-}>();
+  mode?: "add" | "edit";
+  serverFqdn?: string;
+  permission?: string;
+}>(),
+  {
+    mode: "add",
+    serverFqdn: "",
+    permission: "",
+  }
+);
+
+const isEditMode = computed(() => props.mode === "edit");
+const tooltipText = computed(() =>
+  isEditMode.value ? "Berechtigung bearbeiten" : "Server hinzufügen"
+);
+const dialogTitle = computed(() =>
+  isEditMode.value ? "Berechtigung bearbeiten" : "Export-Policy ändern"
+);
+const activatorIcon = computed(() =>
+  isEditMode.value ? mdiPencil : mdiPlus
+);
+const dialogIcon = computed(() => (isEditMode.value ? mdiPencil : mdiPlus));
+const canSubmit = computed(() =>
+  Boolean(selectedServer.value && selectedPermission.value)
+);
+const availableServers = computed(() => {
+  if (!isEditMode.value) {
+    return serverList.value;
+  }
+  if (!selectedServer.value) {
+    return [];
+  }
+  return [{ name: selectedServer.value, fqdn: selectedServer.value }];
+});
+
+// Simple check if a value looks like an IPv4 address, CIDR or an IP range (e.g. 192.168.0.1-192.168.0.10)
+function isIpOrRange(value: string) {
+  if (!value) return false;
+  const v = value.trim();
+  // Matches:
+  //  - 192.168.0.1
+  //  - 192.168.0.1/24
+  //  - 192.168.0.1-192.168.0.10
+  const ipv4 = /^(?:\d{1,3}\.){3}\d{1,3}(?:\/(?:\d|[1-2]\d|3[0-2]))?$/;
+  const ipv4Range = /^(?:\d{1,3}\.){3}\d{1,3}\s*-\s*(?:\d{1,3}\.){3}\d{1,3}$/;
+  return ipv4.test(v) || ipv4Range.test(v);
+}
+
+const activatorDisabled = computed(() => {
+  return isEditMode.value && isIpOrRange(props.serverFqdn ?? "");
+});
 
 watch(selectedServer, () => {
   searchText.value = "";
@@ -114,7 +167,15 @@ watch(selectedServer, () => {
 
 
 function openDialog() {
-  validated.value = false;
+  // Prevent opening when in edit mode for IP addresses / ranges
+  if (activatorDisabled.value) {
+    return;
+  }
+
+  if (isEditMode.value) {
+    selectedServer.value = props.serverFqdn;
+    selectedPermission.value = normalizePermission(props.permission);
+  }
   dialog.value = true;
 }
 
@@ -131,7 +192,7 @@ function close() {
 }
 
 function save() {
-  if (validated.value && selectedServer.value && selectedPermission.value) {
+  if (canSubmit.value) {
       jobService
         .startJob(loading, "STORAGE_CHANGE_NFS_EXPORT_POLICY", -1, {
           uuid: props.storageUuid,
@@ -142,6 +203,22 @@ function save() {
           close();
         });
   }
+}
+
+function handleServerFieldClick() {
+  if (!isEditMode.value) {
+    getServers();
+  }
+}
+
+function normalizePermission(permission: string) {
+  if (permission === "read-write" || permission === "rw") {
+    return "rw";
+  }
+  if (permission === "read-only" || permission === "ro") {
+    return "ro";
+  }
+  return permission;
 }
 
 function getServers() {

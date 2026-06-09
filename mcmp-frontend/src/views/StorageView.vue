@@ -9,18 +9,22 @@
       bg-color="red"
       rounded
     >
-      Diese Ansicht ist nur in der Testumgebung verfügbar.
+      <h2>Diese Ansicht ist nur in der Testumgebung verfügbar.</h2>
       <template #actions>
-        <v-btn
-          icon
-          variant="elevated"
-          aria-label="Schließen"
-          @click="showBanner = false"
-        >
-          <v-icon >{{ mdiClose }}</v-icon>
-        </v-btn>
+        <div class="d-flex align-center" style="height:100%">
+          <v-btn
+            icon
+            variant="elevated"
+            aria-label="Schließen"
+            class="mb-7"
+            @click="showBanner = false"
+          >
+            <v-icon>{{ mdiClose }}</v-icon>
+          </v-btn>
+        </div>
       </template>
     </v-banner>
+
     <div
       class="split-view"
       :class="{ resizing: isResizing }"

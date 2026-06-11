@@ -568,7 +568,7 @@
       >
         <p v-if="props.selectedServer.snowInstanceSysId">
           <a
-            :href="`https://it-services.muenchen.de/now/cmdb/record/${props.selectedServer.snowInstanceSysClass}/${props.selectedServer.snowInstanceSysId}/`"
+            :href="`https://it-services.muenchen.de/now/sgw/record/${props.selectedServer.snowInstanceSysClass}/${props.selectedServer.snowInstanceSysId}/`"
             target="_blank"
             rel="noopener noreferrer"
             aria-label="VMware Instanz in ServiceNow öffnen"
@@ -584,7 +584,7 @@
       >
         <p v-if="props.selectedServer.snowServerSysId">
           <a
-            :href="`https://it-services.muenchen.de/now/cmdb/record/${props.selectedServer.snowServerSysClass}/${props.selectedServer.snowServerSysId}/`"
+            :href="`https://it-services.muenchen.de/now/sgw/record/${props.selectedServer.snowServerSysClass}/${props.selectedServer.snowServerSysId}/`"
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Server Instanz in ServiceNow öffnen"
@@ -655,7 +655,7 @@
               class="mb-1"
             >
               <a
-                :href="`https://it-services.muenchen.de/now/cmdb/record/cmdb_ci_service/${appservice.sysId}/sub/unifiedmap/params/root-node/${appservice.sysId}/`"
+                :href="`https://it-services.muenchen.de/now/sgw/record/cmdb_ci_service/${appservice.sysId}/sub/unifiedmap/params/root-node/${appservice.sysId}/`"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Appservice MAP in ServiceNow öffnen"
@@ -672,7 +672,7 @@
           "
         >
           <a
-            :href="`https://it-services.muenchen.de/now/cmdb/record/cmdb_ci_service/${firstAppservice?.sysId}/sub/unifiedmap/params/root-node/${firstAppservice?.sysId}/`"
+            :href="`https://it-services.muenchen.de/now/sgw/record/cmdb_ci_service/${firstAppservice?.sysId}/sub/unifiedmap/params/root-node/${firstAppservice?.sysId}/`"
             target="_blank"
             rel="noopener noreferrer"
           >

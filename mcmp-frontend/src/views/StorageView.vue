@@ -11,17 +11,15 @@
     >
       <h2>Diese Ansicht ist nur in der Testumgebung verfügbar.</h2>
       <template #actions>
-        <div class="d-flex align-center" style="height:100%">
           <v-btn
             icon
-            variant="elevated"
+            variant="outlined"
             aria-label="Schließen"
             class="mb-7"
             @click="showBanner = false"
           >
             <v-icon>{{ mdiClose }}</v-icon>
           </v-btn>
-        </div>
       </template>
     </v-banner>
 

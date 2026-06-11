@@ -96,9 +96,20 @@ function getChartOption(data: { value: number; name: string }[]) {
         return `${params.marker}${params.name} ${formatter.formatBytesSmart(params.value)} (${params.percent}%)`;
       },
     },
+    title: {
+      text: "Legende",
+      left: "left",
+      top: "left",
+      textStyle: {
+        color: textColor,
+        fontSize: 14,
+        fontWeight: "normal",
+      },
+    },
     legend: {
       orient: "vertical",
       left: "left",
+      top: 35,
       textStyle: { color: textColor },
     },
     series: [

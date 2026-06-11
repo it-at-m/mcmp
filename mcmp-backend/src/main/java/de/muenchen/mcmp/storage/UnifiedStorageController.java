@@ -19,8 +19,9 @@ public class UnifiedStorageController {
     @GetMapping("/unified")
     public Page<UnifiedStorageItemListDto> getUnifiedStorage(
             @RequestParam(required = false) String search,
+            @RequestParam(required = false) List<String> types,
             Pageable pageable) {
-        return unifiedStorageService.getUnifiedStorage(search, pageable);
+        return unifiedStorageService.getUnifiedStorage(search, types, pageable);
     }
 
     @GetMapping("/unified/{type}/{uuid}")

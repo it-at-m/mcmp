@@ -70,9 +70,9 @@
               :key="appservice.id"
               class="mb-1"
             >
-              <RouterLink :to="`/appservice/${appservice.id}`">
+              <router-link :to="`/appservice/${appservice.id}`">
                 {{ appservice.name }}
-              </RouterLink>
+              </router-link>
             </li>
           </ul>
         </div>
@@ -82,65 +82,93 @@
             props.selectedStorageItem.appservices.length === 1
           "
         >
-          <RouterLink :to="`/appservice/${firstAppservice?.id}`">
+          <router-link :to="`/appservice/${firstAppservice?.id}`">
             {{ firstAppservice?.name }}
-          </RouterLink>
+          </router-link>
         </div>
         <p v-else>-</p>
       </v-col>
     </v-row>
     <v-row>
       <v-col cols="3">
-        <h3>WORM</h3>
+        <h3>
+          WORM<info-tooltip>
+            <div class="pa-1">
+              <strong>Write Once Read Many</strong>
+              <p class="text-caption mt-2 mb-1">
+                Schützt Daten vor Änderungen und Löschung. Dateien können einmal geschrieben, danach nur noch gelesen werden. Der Zugriff ist zeitlich begrenzt.
+              </p>
+            </div>
+          </info-tooltip>
+        </h3>
       </v-col>
       <v-col
-        cols="3"
         v-if="selectedStorageItem.type != 'QTREE'"
+        cols="3"
       >
-        <h3>Clone</h3>
+        <h3>
+          Clone<info-tooltip>
+            <div class="pa-1">
+              <strong>FlexClone</strong>
+              <p class="text-caption mt-2 mb-1">
+                Eine effiziente Kopie eines Volumes oder Snapshots, die Speicherplatz spart durch Copy-on-Write. Änderungen beeinflussen nicht das Original.
+              </p>
+            </div>
+          </info-tooltip>
+        </h3>
       </v-col>
-      <v-col cols="6" />
+      <v-col cols="3">
+        <h3>
+          Typ<info-tooltip>
+            <div class="pa-1">
+              <strong>Speichertyp</strong>
+              <p class="text-caption mt-2 mb-1">
+                <strong>NFS:</strong> Network File System für Unix/Linux-Systeme<br>
+                <strong>CIFS:</strong> Common Internet File System für Windows-Systeme<br>
+                <strong>QTREE:</strong> <span class="text-error">Nicht mehr verfügbar zur Bestellung (veraltet)</span><br>
+                <strong>S3:</strong> Object Storage mit Amazon S3-kompatiblem Interface
+              </p>
+            </div>
+          </info-tooltip>
+        </h3>
+      </v-col>
     </v-row>
     <div v-if="selectedStorageItem.protocol != 'S3'">
       <v-row>
         <v-col cols="3">
           <p>
             {{ formatter.formatBooleanToJaNein(selectedStorageItem.isWorm) }}
-            <v-icon
-              :color="selectedStorageItem.isWorm ? '_green' : '_red'"
-              size="small"
-            >
-              {{ selectedStorageItem.isWorm ? mdiCheckCircle : mdiCloseCircle }}
-            </v-icon>
           </p>
         </v-col>
         <v-col
-          cols="3"
           v-if="selectedStorageItem.type != 'QTREE'"
+          cols="3"
         >
           <p>
             {{
               formatter.formatBooleanToJaNein(selectedStorageItem.isFlexClone)
             }}
+          </p>
+        </v-col>
+        <v-col cols="3">
+          <p>
+            {{ selectedStorageItem.type }}
             <v-icon
-              :color="selectedStorageItem.isFlexClone ? '_green' : '_red'"
+              v-if="selectedStorageItem.type === 'QTREE'"
+              color="warning"
               size="small"
+              class="ml-2"
             >
-              {{
-                selectedStorageItem.isFlexClone
-                  ? mdiCheckCircle
-                  : mdiCloseCircle
-              }}
+              {{ mdiAlert }}
             </v-icon>
           </p>
         </v-col>
-        <v-col cols="6" />
       </v-row>
     </div>
   </common-card>
   <common-card
-    title="Worm"
     v-if="props.selectedStorageItem.isWorm"
+    title="WORM"
   >
     <v-row>
       <v-col cols="2">
@@ -188,8 +216,8 @@
     </v-row>
   </common-card>
   <common-card
-    title="Clone"
     v-if="props.selectedStorageItem.isFlexClone"
+    title="Clone"
   >
     <v-row>
       <v-col cols="3">
@@ -214,10 +242,13 @@
       <v-col cols="6" />
     </v-row>
   </common-card>
-  <common-card title="Ressourcen">
+  <common-card
+    title="Ressourcen"
+    top-margin="0"
+  >
     <template #toolbar-actions>
-      <StorageChangeShare
-        :selectedStorageItem="selectedStorageItem"
+      <storage-change-share
+        :selected-storage-item="selectedStorageItem"
         @save="startChangeShareJob"
       />
     </template>
@@ -226,12 +257,12 @@
         <h3>Gesamtgröße</h3>
       </v-col>
       <v-col
-        cols="3"
         v-if="
           (selectedStorageItem.type == 'NFS' ||
             selectedStorageItem.type == 'CIFS') &&
           !selectedStorageItem.isWorm
         "
+        cols="3"
       >
         <h3>Snapshotanteil</h3>
       </v-col>
@@ -243,12 +274,12 @@
         </p>
       </v-col>
       <v-col
-        cols="3"
         v-if="
           (selectedStorageItem.type == 'NFS' ||
             selectedStorageItem.type == 'CIFS') &&
           !selectedStorageItem.isWorm
         "
+        cols="3"
       >
         <p>
           {{
@@ -263,20 +294,20 @@
     <v-row>
       <!-- vue echarts pie chart -->
       <v-col cols="12">
-        <StorageCharts :selectedStorageItem="selectedStorageItem" />
+        <storage-charts :selected-storage-item="selectedStorageItem" />
       </v-col>
     </v-row>
   </common-card>
   <common-card
     title="CMDB"
-    topMargin="0"
+    top-margin="0"
   >
   </common-card>
 </template>
 <script setup lang="ts">
 import type { UnifiedStorageItem } from "@/types/Storage";
 
-import { mdiCheckCircle, mdiCloseCircle } from "@mdi/js";
+import { mdiCheckCircle, mdiCloseCircle, mdiAlert } from "@mdi/js";
 import { computed, ref } from "vue";
 
 import jobService from "@/api/jobService.ts";
@@ -294,9 +325,7 @@ const firstAppservice = computed(
   () => props.selectedStorageItem.appservices?.[0] ?? null
 );
 
-const emit = defineEmits<{
-  (e: "changed"): void;
-}>();
+const emit = defineEmits<(e: "changed") => void>();
 
 const formatter = useFormatter();
 const loading = ref(false);

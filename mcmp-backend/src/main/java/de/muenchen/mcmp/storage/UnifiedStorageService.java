@@ -210,7 +210,7 @@ public class UnifiedStorageService {
     }
 
     @Transactional(readOnly = true)
-    public Page<UnifiedStorageItemListDto> getUnifiedStorage(String search, Pageable pageable) {
+    public Page<UnifiedStorageItemListDto> getUnifiedStorage(String search, List<String> types, Pageable pageable) {
         final UserRoles userRoles = AuthUtils.getCurrentUserRoles();
         String username = userRoles.getUsername();
         boolean isAdmin = userRoles.hasAdminRole();
@@ -218,6 +218,23 @@ public class UnifiedStorageService {
         boolean isStorage = userRoles.hasStorageRole();
 
         String searchTerm = (search != null && !search.trim().isEmpty()) ? "%" + search.trim().toLowerCase() + "%" : null;
+
+        final Set<StorageType> requestedTypes;
+        if (types != null && !types.isEmpty()) {
+            Set<StorageType> tmp = new HashSet<>();
+            for (String t : types) {
+                if (t == null) continue;
+                try {
+                    tmp.add(StorageType.valueOf(t.trim().toUpperCase()));
+                } catch (IllegalArgumentException ex) {
+                    // ignore unknown types
+                    log.debug("Unknown storage type in filter ignored: {}", t);
+                }
+            }
+            requestedTypes = tmp.isEmpty() ? null : Collections.unmodifiableSet(tmp);
+        } else {
+            requestedTypes = null;
+        }
 
         List<UnifiedStorageItemListDto> allItems = new ArrayList<>();
 
@@ -300,10 +317,16 @@ public class UnifiedStorageService {
                     .build());
         }
 
+        if (requestedTypes != null) {
+            allItems = allItems.stream()
+                    .filter(dto -> dto.getType() != null && requestedTypes.contains(dto.getType()))
+                    .collect(Collectors.toList());
+        }
+
         // 5. Global Sorting
         Sort sort = pageable.getSort();
         if (sort.isSorted()) {
-            sort.stream().forEach(order -> {
+            for (Sort.Order order : sort) {
                 Comparator<UnifiedStorageItemListDto> comparator = null;
 
                 // Determine comparator based on property
@@ -324,7 +347,7 @@ public class UnifiedStorageService {
                     // Assuming mostly single column sort from UI.)
                     allItems.sort(comparator);
                 }
-            });
+            }
         } else {
             // Default sort by name ascending if no sort specified
             allItems.sort(Comparator.comparing(UnifiedStorageItemListDto::getName, String.CASE_INSENSITIVE_ORDER));
@@ -342,6 +365,11 @@ public class UnifiedStorageService {
         }
 
         return new PageImpl<>(pagedItems, pageable, allItems.size());
+    }
+
+    @Transactional(readOnly = true)
+    public Page<UnifiedStorageItemListDto> getUnifiedStorage(String search, Pageable pageable) {
+        return getUnifiedStorage(search, null, pageable);
     }
 
     @Transactional(readOnly = true)

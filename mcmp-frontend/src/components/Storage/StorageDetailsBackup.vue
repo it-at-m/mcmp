@@ -14,11 +14,18 @@
       />
     </template>
     <v-row>
-      <v-col cols="1">
-        <h3>Snapshotpolicy:</h3>
+      <v-col cols="4">
+        <h3>Snapshotpolicy</h3>
       </v-col>
-      <v-col cols="11">
-        <h3 class="text-secondary">{{ getPolicyTitle(selectedStorageItem.snapshotPolicy) }}</h3>
+    </v-row>
+    <v-row>
+      <v-col
+        cols="4"
+        class="pt-0"
+      >
+        <p>
+          {{ getPolicyTitle(selectedStorageItem.snapshotPolicy) }}
+        </p>
       </v-col>
     </v-row>
     <v-row>

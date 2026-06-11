@@ -147,4 +147,36 @@ public interface AppserviceRepository extends JpaRepository<Appservice, Long> {
     Appservice findBySysId(String sysId);
 
     Appservice findByNumber(String number);
+
+    @Query(value = """
+        SELECT EXISTS (
+            SELECT 1
+            FROM cmp.appservice a
+            LEFT JOIN cmp."group" g ON a.change_group_id = g.id
+            LEFT JOIN cmp.group_membership gm ON g.id = gm.group_id
+            LEFT JOIN cmp."user" u ON gm.user_id = u.id
+            WHERE a.id = :appserviceId
+              AND (
+                :isAdmin
+                OR :hasLinuxRole
+                OR :hasWindowsRole
+                OR :hasOracleRole
+                OR :hasNonOracleRole
+                OR :hasSecurityRole
+                OR :hasOperatorRole
+                OR :hasNetworkRole
+                OR u.username = :username
+              )
+        )
+        """, nativeQuery = true)
+    Boolean canUserEditAppservice(@Param("username") String username,
+                                  @Param("isAdmin") boolean isAdmin,
+                                  @Param("hasLinuxRole") boolean hasLinuxRole,
+                                  @Param("hasWindowsRole") boolean hasWindowsRole,
+                                  @Param("hasOracleRole") boolean hasOracleRole,
+                                  @Param("hasNonOracleRole") boolean hasNonOracleRole,
+                                  @Param("hasSecurityRole") boolean hasSecurityRole,
+                                  @Param("hasOperatorRole") boolean hasOperatorRole,
+                                  @Param("hasNetworkRole") boolean hasNetworkRole,
+                                  @Param("appserviceId") Long appserviceId);
 }

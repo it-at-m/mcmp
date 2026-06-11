@@ -606,7 +606,7 @@ public class JobController {
 
         linuxRecord linuxRecord = getAndCheckLinuxRhelVars(awxExtraVars);
         Object middlewareUserObj = awxExtraVars.get("middleware_user");
-
+        checkServerInstallCanUserEditAppservice(linuxRecord.applicationServiceId());
 
         // RHEL 10 specific middleware user check
         if (middlewareUserObj == null) {
@@ -635,6 +635,7 @@ public class JobController {
         }
 
         linuxRecord linuxRecord = getAndCheckLinuxRhelVars(awxExtraVars);
+        checkServerInstallCanUserEditAppservice(linuxRecord.applicationServiceId());
 
         logCreatedJob(LINUX_RHEL9_SERVER, serverId);
         jobService.linuxRhelServer(linuxRecord.fqdnBuildingBlocks(), linuxRecord.categoryType(), linuxRecord.serverTypeMap(), linuxRecord.ram(), linuxRecord.cpu(), linuxRecord.networkGroupId(), linuxRecord.applicationServiceId(), linuxRecord.dbParams(), linuxRecord.nonPostgresReason(), false, LINUX_RHEL9_SERVER);
@@ -917,9 +918,7 @@ public class JobController {
         }
 
         long applicationServiceId = Integer.parseInt(applicationServiceIdObj.toString());
-        if (appserviceService.getVisibleAppservice(applicationServiceId) == null){
-            throw new AccessDeniedException("You are not allowed to order a server for this application service.");
-        }
+        checkServerInstallCanUserEditAppservice(applicationServiceId);
 
         long networkGroupId = Integer.parseInt(networkGroupIdObj.toString());
         if (!networkService.isAllowedNetworkGroupForAppservice(networkGroupId, applicationServiceId, categoryTypeObj.toString().equals("DB"))) {
@@ -1632,4 +1631,9 @@ public class JobController {
         }
     }
 
+    private void checkServerInstallCanUserEditAppservice(final Long appserviceId) {
+        if (!appserviceService.canUserEditAppservice(appserviceId)) {
+            throw new AccessDeniedException("You are not allowed to create a Server for this Application Serivce.");
+        }
+    }
 }

@@ -6,14 +6,14 @@
         <h3>Betriebssystem</h3>
       </v-col>
       <v-col
-        cols="3"
         v-if="props.selectedServer.powerState === 'poweredOn'"
+        cols="3"
       >
         <h3>Letzter Reboot</h3>
       </v-col>
       <v-col
-        cols="3"
         v-if="props.selectedServer.powerState === 'poweredOff'"
+        cols="3"
       >
         <h3>Abschaltgrund</h3>
       </v-col>
@@ -98,9 +98,9 @@
               :key="appservice.id"
               class="mb-1"
             >
-              <RouterLink :to="`/appservice/${appservice.id}`">
+              <router-link :to="`/appservice/${appservice.id}`">
                 {{ appservice.name }}
-              </RouterLink>
+              </router-link>
             </li>
           </ul>
         </div>
@@ -110,9 +110,9 @@
             props.selectedServer.appservices.length === 1
           "
         >
-          <RouterLink :to="`/appservice/${firstAppservice?.id}`">
+          <router-link :to="`/appservice/${firstAppservice?.id}`">
             {{ firstAppservice?.name }}
-          </RouterLink>
+          </router-link>
         </div>
         <p v-else>-</p>
       </v-col>
@@ -120,18 +120,18 @@
   </common-card>
   <common-card
     title="Ressourcen"
-    topMargin="0"
+    top-margin="0"
   >
     <template #toolbar-actions>
       <edit-resources
+        v-if="
+          selectedServer.canEdit && selectedServer.cloud?.cloudType == 'VCENTER'
+        "
         :server="props.selectedServer"
         :rightsize="false"
         @save="
           (cpus, ram, scheduleTime, schedulePatchnight) =>
             change_cpu_ram(cpus, ram, scheduleTime, schedulePatchnight)
-        "
-        v-if="
-          selectedServer.canEdit && selectedServer.cloud?.cloudType == 'VCENTER'
         "
       />
     </template>
@@ -153,9 +153,9 @@
                 : 'Keine Empfehlung möglich'
             "
           >
-            <template #activator="{ props }">
+            <template #activator="{ props: statusProps }">
               <v-icon
-                v-bind="props"
+                v-bind="statusProps"
                 :icon="
                   isCpuInCooldown &&
                   selectedServer.numCpuRecommended &&
@@ -183,9 +183,9 @@
             location="bottom"
             :text="'Empfehlung: ' + selectedServer.numCpuRecommended + ' CPUs'"
           >
-            <template #activator="{ props }">
+            <template #activator="{ props: statusProps }">
               <v-icon
-                v-bind="props"
+                v-bind="statusProps"
                 :icon="mdiAlertCircle"
                 color="orange"
                 size="small"
@@ -213,9 +213,9 @@
                 : 'Keine Empfehlung möglich'
             "
           >
-            <template #activator="{ props }">
+            <template #activator="{ props: statusProps }">
               <v-icon
-                v-bind="props"
+                v-bind="statusProps"
                 :icon="
                   isMemoryInCooldown &&
                   selectedServer.memoryMbRecommended &&
@@ -247,9 +247,9 @@
               ' GB'
             "
           >
-            <template #activator="{ props }">
+            <template #activator="{ props: statusProps }">
               <v-icon
-                v-bind="props"
+                v-bind="statusProps"
                 :icon="mdiAlertCircle"
                 color="orange"
                 size="small"
@@ -260,8 +260,8 @@
         </h3>
       </v-col>
       <v-col
-        cols="3"
         v-if="props.selectedServer.serverType === 'VM_VCENTER'"
+        cols="3"
       >
         <h3>Festplattengröße</h3>
       </v-col>
@@ -294,9 +294,9 @@
         <p v-else>Checkmk RAM-Metriken nicht verfügbar</p>
       </v-col>
       <v-col
+        v-if="props.selectedServer.serverType === 'VM_VCENTER'"
         cols="3"
         class="pt-0"
-        v-if="props.selectedServer.serverType === 'VM_VCENTER'"
       >
         <p>
           {{
@@ -371,15 +371,15 @@
         class="pt-0 d-flex align-center"
       >
         <edit-resources
+          v-if="
+            selectedServer.canEdit &&
+            selectedServer.cloud?.cloudType == 'VCENTER'
+          "
           :server="props.selectedServer"
           :rightsize="true"
           @save="
             (cpus, ram, scheduleTime, schedulePatchnight) =>
               change_cpu_ram(cpus, ram, scheduleTime, schedulePatchnight)
-          "
-          v-if="
-            selectedServer.canEdit &&
-            selectedServer.cloud?.cloudType == 'VCENTER'
           "
         />
         <h4>&nbsp;{{ EMPFEHLUNG }}&nbsp;</h4>
@@ -401,15 +401,15 @@
         class="pt-0 d-flex align-center"
       >
         <edit-resources
+          v-if="
+            selectedServer.canEdit &&
+            selectedServer.cloud?.cloudType == 'VCENTER'
+          "
           :server="props.selectedServer"
           :rightsize="true"
           @save="
             (cpus, ram, scheduleTime, schedulePatchnight) =>
               change_cpu_ram(cpus, ram, scheduleTime, schedulePatchnight)
-          "
-          v-if="
-            selectedServer.canEdit &&
-            selectedServer.cloud?.cloudType == 'VCENTER'
           "
         />
         <h4>&nbsp;{{ EMPFEHLUNG }}&nbsp;</h4>
@@ -420,12 +420,12 @@
   </common-card>
   <common-card
     title="CMDB"
-    topMargin="0"
+    top-margin="0"
   >
     <v-row>
       <v-col
-        cols="3"
         v-if="selectedServer.cloud?.cloudType == 'VCENTER'"
+        cols="3"
       >
         <h3>
           VMware Instanz<info-tooltip>
@@ -562,9 +562,9 @@
     </v-row>
     <v-row>
       <v-col
+        v-if="selectedServer.cloud?.cloudType == 'VCENTER'"
         cols="3"
         class="pt-0 links"
-        v-if="selectedServer.cloud?.cloudType == 'VCENTER'"
       >
         <p v-if="props.selectedServer.snowInstanceSysId">
           <a

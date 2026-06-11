@@ -341,13 +341,13 @@ public class JobService {
             if (schedulePatchnight) {
                 tag = "schedule";
                 final String date = DateTimeFormatter.ofPattern("dd.MM.yyyy").withZone(zone).format(scheduleTime);
-                guiVars.put("scheduled_time", "Tatsächliche Durchführung der Anpassung in der Patchnight am " + date);
+                guiVars.put("scheduled_time", "Durchführung der Anpassung in der Patchnight am " + date);
             } else {
                 final String dateTime = DateTimeFormatter.ofPattern("dd.MM.yyyy 'um' HH:mm 'Uhr'").withZone(zone).format(scheduleTime);
                 guiVars.put("scheduled_time", "Geplante Durchführungszeit: " + dateTime);
             }
         }
-        createJob(change_cpu_ram_identifier, server, params, guiVars, schedulePatchnight ? null : scheduleTime, tag, null);
+        createJob(change_cpu_ram_identifier, server, params, guiVars, scheduleTime, tag, null);
     }
 
     public void vmwareCreateSnapshot(final Long serverId, final Integer duration, final String description, final boolean withShutdown, final String create_snapshot_identifier) {

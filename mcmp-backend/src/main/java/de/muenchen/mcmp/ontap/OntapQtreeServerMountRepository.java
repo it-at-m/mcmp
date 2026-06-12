@@ -18,12 +18,13 @@ public interface OntapQtreeServerMountRepository extends JpaRepository<OntapQtre
             "LEFT JOIN FETCH q.appservices " +
             "WHERE m.serverId = :serverId " +
             "AND (" +
-            "   :isAdmin = TRUE OR :isReadonly = TRUE OR :isStorage = TRUE OR " +
+            "   :isAdmin = TRUE OR :isReadonly = TRUE OR :isStorage = TRUE OR :isOperator = TRUE OR " +
             "   EXISTS (SELECT 1 FROM q.appservices a JOIN a.changeGroup g JOIN g.users u WHERE u.username = :username)" +
             ")")
     List<OntapQtreeServerMount> findAllByServerIdWithPermissions(@Param("serverId") Long serverId,
                                                                  @Param("username") String username,
                                                                  @Param("isAdmin") boolean isAdmin,
                                                                  @Param("isReadonly") boolean isReadonly,
-                                                                 @Param("isStorage") boolean isStorage);
+                                                                 @Param("isStorage") boolean isStorage,
+                                                                 @Param("isOperator") boolean isOperator);
 }

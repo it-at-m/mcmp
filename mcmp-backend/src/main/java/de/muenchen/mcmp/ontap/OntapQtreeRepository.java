@@ -21,14 +21,15 @@ public interface OntapQtreeRepository extends JpaRepository<OntapQtree, Long> {
             "WHERE q.id = :id " +
             "AND v.ontapCifsShares IS EMPTY " +
             "AND (" +
-            "   :isAdmin = TRUE OR :isReadonly = TRUE OR :isStorage = TRUE OR " +
+            "   :isAdmin = TRUE OR :isReadonly = TRUE OR :isStorage = TRUE OR :isOperator = TRUE OR " +
             "   EXISTS (SELECT 1 FROM q.appservices a JOIN a.changeGroup g JOIN g.users u WHERE u.username = :username)" +
             ")")
     Optional<OntapQtree> findByIdWithPermissions(@Param("id") Long id,
                                                  @Param("username") String username,
                                                  @Param("isAdmin") boolean isAdmin,
                                                  @Param("isReadonly") boolean isReadonly,
-                                                 @Param("isStorage") boolean isStorage);
+                                                 @Param("isStorage") boolean isStorage,
+                                                 @Param("isOperator") boolean isOperator);
 
     @Query("SELECT q.id, q.name, s.name FROM OntapQtree q " +
             "JOIN q.volume v " +
@@ -37,14 +38,15 @@ public interface OntapQtreeRepository extends JpaRepository<OntapQtree, Long> {
             "AND v.ontapCifsShares IS EMPTY " +
             "AND (:search IS NULL OR LOWER(q.name) LIKE :search) " +
             "AND (" +
-            "   :isAdmin = TRUE OR :isReadonly = TRUE OR :isStorage = TRUE OR " +
+            "   :isAdmin = TRUE OR :isReadonly = TRUE OR :isStorage = TRUE OR :isOperator = TRUE OR " +
             "   EXISTS (SELECT 1 FROM q.appservices a JOIN a.changeGroup g JOIN g.users u WHERE u.username = :username)" +
             ")")
     List<Object[]> findNfsQtreeListItems(@Param("search") String search,
                                          @Param("username") String username,
                                          @Param("isAdmin") boolean isAdmin,
                                          @Param("isReadonly") boolean isReadonly,
-                                         @Param("isStorage") boolean isStorage);
+                                         @Param("isStorage") boolean isStorage,
+                                         @Param("isOperator") boolean isOperator);
 
     @Query("SELECT q FROM OntapQtree q " +
             "LEFT JOIN FETCH q.appservices a " +

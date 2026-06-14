@@ -2,7 +2,7 @@
   <div class="storage-list-container">
     <scrollable-list-table
       ref="tableRef"
-      :items="items"
+      :items="tableItems"
       :total-items="totalItems"
       :loading="loading"
       :headers="headers"
@@ -10,25 +10,117 @@
       :items-per-page="itemsPerPage"
       :has-more="hasMore"
       :selected-id="selectedId"
-      item-key="uuid"
       search-label="Storage suchen..."
       @update:sort-by="updateSortBy"
       @update:search="onSearchUpdate"
-      @rowClick="onRowClick"
-      @loadMore="onLoadMore"
+      @row-click="onRowClick"
+      @load-more="onLoadMore"
     >
-      <template #[`item.protocol`]="{ item }">
-        <v-tooltip>
-          <template #activator="{ props }">
-            <v-icon
-              v-bind="props"
-              size="x-large"
-              :color="switchColor(item.protocol)"
+      <template #[`header.type`]="{ column, toggleSort }">
+        <div
+          class="header-container"
+          @click="toggleSort(column)"
+        >
+          <span>{{ typeHeaderLabel }}</span>
+          <v-icon
+            v-if="currentSort.key === 'type'"
+            size="small"
+            class="v-data-table-header__sort-icon"
+          >
+            {{ currentSort.order === 'asc' ? mdiArrowUp : mdiArrowDown }}
+          </v-icon>
+          <v-badge
+            :model-value="selectedTypeFilters.length !== 0"
+            dot
+          >
+            <div
+              class="filter-buttons"
+              @click.stop
             >
-              {{ switchType(item.protocol) }}
+              <v-menu :close-on-content-click="false">
+                <template #activator="{ props: filterActivatorProps }">
+                  <v-btn
+                    v-bind="filterActivatorProps"
+                    icon
+                    size="x-small"
+                    variant="text"
+                    :title="typeFilterTitle"
+                  >
+                    <v-icon>{{ mdiFilterVariant }}</v-icon>
+                  </v-btn>
+                </template>
+                <v-list
+                  density="compact"
+                  style="border-width: thin"
+                >
+                  <v-list-subheader>{{ typeFilterSubheader }}</v-list-subheader>
+                  <v-list-item
+                    density="compact"
+                    class="py-0"
+                  >
+                    <v-checkbox
+                      v-model="selectedTypeFilters"
+                      label="NFS"
+                      value="nfs"
+                      hide-details
+                      density="compact"
+                    />
+                  </v-list-item>
+                  <v-list-item
+                    density="compact"
+                    class="py-0"
+                  >
+                    <v-checkbox
+                      v-model="selectedTypeFilters"
+                      label="CIFS"
+                      value="cifs"
+                      hide-details
+                      density="compact"
+                    />
+                  </v-list-item>
+                  <v-list-item
+                    density="compact"
+                    class="py-0"
+                  >
+                    <v-checkbox
+                      v-model="selectedTypeFilters"
+                      label="QTREE"
+                      value="qtree"
+                      hide-details
+                      density="compact"
+                    />
+                  </v-list-item>
+                  <v-list-item
+                    density="compact"
+                    class="py-0"
+                  >
+                    <v-checkbox
+                      v-model="selectedTypeFilters"
+                      label="S3"
+                      value="s3"
+                      hide-details
+                      density="compact"
+                    />
+                  </v-list-item>
+                </v-list>
+              </v-menu>
+            </div>
+          </v-badge>
+        </div>
+      </template>
+
+      <template #[`item.type`]="{ item }">
+        <v-tooltip>
+          <template #activator="{ props: tooltipProps }">
+            <v-icon
+              v-bind="tooltipProps"
+              size="x-large"
+              :color="switchColor(item.type)"
+            >
+              {{ switchType(item.type) }}
             </v-icon>
           </template>
-          {{ item.protocol }}
+          {{ item.type }}
         </v-tooltip>
       </template>
     </scrollable-list-table>
@@ -37,24 +129,38 @@
 
 <script setup lang="ts">
 import type { UnifiedStorageItemList } from "@/types/UnifiedStorageItemList";
+import type { DataTableHeader } from "vuetify";
 
 import {
+  mdiArrowDown,
+  mdiArrowUp,
   mdiBucketOutline,
+  mdiFilterVariant,
   mdiFolderNetworkOutline,
   mdiFolderOutline,
   mdiHarddisk,
 } from "@mdi/js";
-import { computed, nextTick, onMounted, ref, watch } from "vue"; // Removed onUnmounted as observer is in ScrollableListTable
+import { computed, nextTick, onMounted, ref, watch } from "vue";
 
 import storageService from "@/api/storageService";
 import ScrollableListTable from "@/components/common/ScrollableListTable.vue";
+
+interface SortByEntry {
+  key: string;
+  order: "asc" | "desc";
+}
+
+type TableItem = UnifiedStorageItemList & { id: string };
 
 const props = defineProps<{
   modelValue?: UnifiedStorageItemList[];
   urlParamsId?: string | string[];
 }>();
 
-const emit = defineEmits(["update:modelValue", "update:selected"]);
+const emit = defineEmits<{
+  (e: "update:modelValue", selected: UnifiedStorageItemList[]): void;
+  (e: "update:selected", selected: UnifiedStorageItemList | null): void;
+}>();
 
 const search = ref("");
 const loading = ref(false);
@@ -62,25 +168,54 @@ const items = ref<UnifiedStorageItemList[]>([]);
 const totalItems = ref(0);
 const itemsPerPage = ref(20);
 const currentPage = ref(1);
-const sortBy = ref<any[]>([{ key: "name", order: "asc" }]);
+const sortBy = ref<SortByEntry[]>([{ key: "name", order: "asc" }]);
 const selected = ref<UnifiedStorageItemList[]>([]);
 const hasMore = ref(true);
+const selectedTypeFilters = ref<string[]>([]);
+const typeHeaderLabel = "Typ";
+const typeFilterSubheader = "Typ";
+const typeFilterTitle = "Typ-Filter anzeigen";
 
 const selectedId = computed(() =>
   selected.value.length > 0 ? selected.value[0]?.uuid : null
 );
 
-// Keyboard Navigation Refs
-const tableRef = ref<any>(null);
+const tableRef = ref<{ triggerObserveScroll: () => void } | null>(null);
 
-const headers = [
-  { title: "Typ", key: "protocol", sortable: true },
+const headers = ref<DataTableHeader[]>([
+  { title: typeHeaderLabel, key: "type", sortable: true },
   { title: "Name", key: "name", sortable: true },
-];
+]);
+
+const currentSort = computed<SortByEntry>(() => sortBy.value[0] ?? { key: "name", order: "asc" });
+
+const tableItems = computed<TableItem[]>(() =>
+  items.value.map((item) => ({
+    ...item,
+    id: item.uuid,
+  }))
+);
+
+const normalizedUrlParamId = computed(() =>
+  typeof props.urlParamsId === "string" ? props.urlParamsId : undefined
+);
+
+function normalizeType(type: string) {
+  return (type ?? "").trim().toUpperCase();
+}
+
+// When the type filter changes we request the backend with the selected types
+watch(selectedTypeFilters, async () => {
+  currentPage.value = 1;
+  await loadItems(1);
+  await nextTick();
+  tableRef.value?.triggerObserveScroll();
+});
 
 function switchType(type: string) {
-  switch (type) {
+  switch (normalizeType(type)) {
     case "NFS":
+    case "QTREE":
       return mdiFolderNetworkOutline;
     case "CIFS":
       return mdiFolderOutline;
@@ -92,8 +227,9 @@ function switchType(type: string) {
 }
 
 function switchColor(type: string) {
-  switch (type) {
+  switch (normalizeType(type)) {
     case "NFS":
+    case "QTREE":
       return "#ee0000";
     case "CIFS":
       return "#0078d4";
@@ -104,10 +240,6 @@ function switchColor(type: string) {
   }
 }
 
-const normalizedUrlParamId = computed(() =>
-  typeof props.urlParamsId === "string" ? props.urlParamsId : undefined
-);
-
 function selectItem(item: UnifiedStorageItemList) {
   selected.value = [item];
   emit("update:selected", item);
@@ -117,20 +249,25 @@ function selectItem(item: UnifiedStorageItemList) {
 const loadItems = async (page = 1) => {
   loading.value = true;
   try {
-    const sortKey = sortBy.value.length ? sortBy.value[0].key : "name";
-    const sortOrder = sortBy.value.length ? sortBy.value[0].order : "asc";
+    const sortKey = currentSort.value.key;
+    const sortOrder = currentSort.value.order;
 
     const sanitizedSearch = (search.value || "")
       .replace(/[^a-zA-Z0-9 ._-]/g, "")
       .trim();
 
+    const typesParam = selectedTypeFilters.value.length
+      ? selectedTypeFilters.value.map((t) => t.toUpperCase())
+      : undefined;
+
     const response = await storageService.getUnifiedStorage(
       loading,
-      page - 1, // API is 0-based? Previous code used page-1.
+      page - 1,
       itemsPerPage.value,
       sortKey,
       sortOrder,
-      sanitizedSearch
+      sanitizedSearch,
+      typesParam
     );
 
     if (page === 1) {
@@ -143,7 +280,6 @@ const loadItems = async (page = 1) => {
 
     if (selected.value.length === 0 && items.value.length > 0) {
       if (page === 1 && !normalizedUrlParamId.value) {
-        // Only select first on initial load when no route-id is provided
         const item = items.value[0];
         if (item) {
           selectItem(item);
@@ -155,19 +291,18 @@ const loadItems = async (page = 1) => {
       emit("update:modelValue", []);
     }
   } catch (e) {
-    console.error("Failed to load storage items", e);
+    console.debug("Failed to load storage items", e);
   } finally {
     loading.value = false;
   }
 };
 
-const updateSortBy = (newSortBy: any[]) => {
+const updateSortBy = (newSortBy: SortByEntry[]) => {
   sortBy.value = newSortBy;
   currentPage.value = 1;
   loadItems(1);
   nextTick(() => {
-    // Trigger scroll observer reset if needed
-    if (tableRef.value) tableRef.value.triggerObserveScroll();
+    tableRef.value?.triggerObserveScroll();
   });
 };
 
@@ -175,13 +310,10 @@ const onSearchUpdate = (val: string) => {
   search.value = val;
 };
 
-const onRowClick = (item: UnifiedStorageItemList) => {
-  // Changed signature to match emitted item
+const onRowClick = (item: TableItem) => {
   if (!item) return;
   selectItem(item);
 };
-
-// Removed manual focus logic
 
 const onLoadMore = async () => {
   if (!loading.value && hasMore.value) {
@@ -190,13 +322,14 @@ const onLoadMore = async () => {
   }
 };
 
-// Search Watcher
 watch(search, async () => {
   currentPage.value = 1;
   await loadItems(1);
   await nextTick();
-  if (tableRef.value) tableRef.value.triggerObserveScroll();
+  tableRef.value?.triggerObserveScroll();
 });
+
+// watch for selectedTypeFilters is defined above to reload from backend
 
 watch(
   () => props.modelValue,
@@ -224,16 +357,30 @@ watch(
 onMounted(async () => {
   await loadItems(1);
   await nextTick();
-  if (tableRef.value) tableRef.value.triggerObserveScroll();
+  tableRef.value?.triggerObserveScroll();
 });
-
-// Removed manual IntersectionObserver code and Keyboard Listeners
 </script>
 
 <style scoped>
 .storage-list-container {
-  height: 100%; /* Fill container */
+  height: 100%;
   display: flex;
   flex-direction: column;
+}
+
+.header-container {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.header-container .filter-buttons {
+  margin-left: auto;
+}
+
+.filter-buttons {
+  display: flex;
+  gap: 4px;
 }
 </style>

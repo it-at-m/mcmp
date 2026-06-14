@@ -104,7 +104,7 @@
               <p>
                 <a
                   v-if="props.selectedAppservice?.sysId"
-                  :href="`https://it-services.muenchen.de/now/cmdb/record/sys_user_group/${props.selectedAppservice.changeGroupSysId}/`"
+                  :href="`https://it-services.muenchen.de/now/sgw/record/sys_user_group/${props.selectedAppservice.changeGroupSysId}/`"
                   target="_blank"
                   rel="noopener noreferrer"
                 >

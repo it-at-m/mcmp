@@ -29,14 +29,15 @@ public interface OntapVolumeRepository extends JpaRepository<OntapVolume, Long> 
             "LEFT JOIN FETCH v.ontapCifsShares " +
             "WHERE v.volumeUuid = :uuid " +
             "AND (" +
-            "   :isAdmin = TRUE OR :isReadonly = TRUE OR :isStorage = TRUE OR " +
+            "   :isAdmin = TRUE OR :isReadonly = TRUE OR :isStorage = TRUE OR :isOperator = TRUE OR " +
             "   EXISTS (SELECT 1 FROM v.appservices a JOIN a.changeGroup g JOIN g.users u WHERE u.username = :username)" +
             ")")
     Optional<OntapVolume> findByVolumeUuidWithPermissions(@Param("uuid") UUID uuid,
                                                           @Param("username") String username,
                                                           @Param("isAdmin") boolean isAdmin,
                                                           @Param("isReadonly") boolean isReadonly,
-                                                          @Param("isStorage") boolean isStorage);
+                                                          @Param("isStorage") boolean isStorage,
+                                                          @Param("isOperator") boolean isOperator);
 
     @Query("SELECT v.volumeUuid, v.name, s.name FROM OntapVolume v " +
             "JOIN v.svm s " +
@@ -45,21 +46,22 @@ public interface OntapVolumeRepository extends JpaRepository<OntapVolume, Long> 
             "AND v.ontapQtrees IS EMPTY " +
             "AND (:search IS NULL OR LOWER(v.name) LIKE :search) " +
             "AND (" +
-            "   :isAdmin = TRUE OR :isReadonly = TRUE OR :isStorage = TRUE OR " +
+            "   :isAdmin = TRUE OR :isReadonly = TRUE OR :isStorage = TRUE OR :isOperator = TRUE OR " +
             "   EXISTS (SELECT 1 FROM v.appservices a JOIN a.changeGroup g JOIN g.users u WHERE u.username = :username)" +
             ")")
     List<Object[]> findNfsVolumeListItems(@Param("search") String search,
                                           @Param("username") String username,
                                           @Param("isAdmin") boolean isAdmin,
                                           @Param("isReadonly") boolean isReadonly,
-                                          @Param("isStorage") boolean isStorage);
+                                          @Param("isStorage") boolean isStorage,
+                                          @Param("isOperator") boolean isOperator);
 
     @Query("SELECT v.volumeUuid, v.name, s.name FROM OntapVolume v " +
             "JOIN v.svm s " +
             "JOIN v.ontapCifsShares cs " +
             "WHERE (:search IS NULL OR (LOWER(v.name) LIKE :search OR LOWER(cs.name) LIKE :search)) " +
             "AND (" +
-            "   :isAdmin = TRUE OR :isReadonly = TRUE OR :isStorage = TRUE OR " +
+            "   :isAdmin = TRUE OR :isReadonly = TRUE OR :isStorage = TRUE OR :isOperator = TRUE OR " +
             "   EXISTS (SELECT 1 FROM v.appservices a JOIN a.changeGroup g JOIN g.users u WHERE u.username = :username)" +
             ") " +
             "GROUP BY v.id, v.volumeUuid, v.name, s.name")
@@ -67,7 +69,8 @@ public interface OntapVolumeRepository extends JpaRepository<OntapVolume, Long> 
                                            @Param("username") String username,
                                            @Param("isAdmin") boolean isAdmin,
                                            @Param("isReadonly") boolean isReadonly,
-                                           @Param("isStorage") boolean isStorage);
+                                           @Param("isStorage") boolean isStorage,
+                                           @Param("isOperator") boolean isOperator);
 
     @Query("SELECT DISTINCT v FROM OntapVolume v " +
             "LEFT JOIN FETCH v.appservices " +

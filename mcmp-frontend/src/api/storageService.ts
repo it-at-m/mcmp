@@ -1,5 +1,6 @@
 import type { UnifiedStorageItem } from "@/types/Storage";
 import type { UnifiedStorageItemList } from "@/types/UnifiedStorageItemList";
+import type { Page } from "@/types/Page";
 import type { UnifiedStorageMountItem } from "@/types/UnifiedStorageMountItem.ts";
 import type { UnifiedStorageSnapshotItem } from "@/types/UnifiedStorageSnapshotItem.ts";
 import type { Ref } from "vue";
@@ -14,8 +15,9 @@ export default {
     size: number,
     sortBy: string,
     sortOrder: string,
-    search?: string
-  ): Promise<{ content: UnifiedStorageItemList[]; page: any }> {
+    search?: string,
+    types?: string[]
+  ): Promise<Page<UnifiedStorageItemList>> {
     const params = new URLSearchParams({
       page: page.toString(),
       size: size.toString(),
@@ -24,6 +26,10 @@ export default {
 
     if (search) {
       params.append("search", search);
+    }
+
+    if (types && types.length > 0) {
+      params.append("types", types.join(","));
     }
 
     return apiFetch(

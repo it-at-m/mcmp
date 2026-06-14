@@ -37,9 +37,10 @@ public class UnifiedStorageService {
         boolean isAdmin = userRoles.hasAdminRole();
         boolean isReadonly = userRoles.hasReadonlyRole();
         boolean isStorage = userRoles.hasStorageRole();
+        boolean isOperator = userRoles.hasOperatorRole();
 
         if (type == StorageType.NFS || type == StorageType.CIFS) {
-            OntapVolume volume = ontapVolumeRepository.findByVolumeUuidWithPermissions(UUID.fromString(uuid), username, isAdmin, isReadonly, isStorage)
+            OntapVolume volume = ontapVolumeRepository.findByVolumeUuidWithPermissions(UUID.fromString(uuid), username, isAdmin, isReadonly, isStorage, isOperator)
                     .orElseThrow(() -> new EntityNotFoundException("Volume not found or access denied"));
 
             String protocol = determineProtocolFromSvm(volume.getSvm());
@@ -105,7 +106,7 @@ public class UnifiedStorageService {
             return builder.build();
 
         } else if (type == StorageType.QTREE) {
-             OntapQtree qtree = ontapQtreeRepository.findByIdWithPermissions(Long.parseLong(uuid), username, isAdmin, isReadonly, isStorage)
+             OntapQtree qtree = ontapQtreeRepository.findByIdWithPermissions(Long.parseLong(uuid), username, isAdmin, isReadonly, isStorage, isOperator)
                     .orElseThrow(() -> new EntityNotFoundException("Qtree not found or access denied"));
 
              String protocol = determineProtocolFromSvm(qtree.getVolume().getSvm());
@@ -137,7 +138,7 @@ public class UnifiedStorageService {
                             .nfs_security_style(qtree.getSecurityStyle())
                             .build();
         } else if (type == StorageType.S3) {
-             StorageGridBucket bucket = storageGridBucketRepository.findByIdWithPermissions(Long.parseLong(uuid), username, isAdmin, isReadonly, isStorage)
+             StorageGridBucket bucket = storageGridBucketRepository.findByIdWithPermissions(Long.parseLong(uuid), username, isAdmin, isReadonly, isStorage, isOperator)
                     .orElseThrow(() -> new EntityNotFoundException("Bucket not found or access denied"));
 
              Long quota = null;
@@ -172,21 +173,22 @@ public class UnifiedStorageService {
         boolean isAdmin = userRoles.hasAdminRole();
         boolean isReadonly = userRoles.hasReadonlyRole();
         boolean isStorage = userRoles.hasStorageRole();
+        boolean isOperator = userRoles.hasOperatorRole();
 
         if (type == StorageType.NFS || type == StorageType.CIFS) {
-            OntapVolume volume = ontapVolumeRepository.findByVolumeUuidWithPermissions(UUID.fromString(uuid), username, isAdmin, isReadonly, isStorage)
+            OntapVolume volume = ontapVolumeRepository.findByVolumeUuidWithPermissions(UUID.fromString(uuid), username, isAdmin, isReadonly, isStorage, isOperator)
                     .orElseThrow(() -> new EntityNotFoundException("Volume not found or access denied"));
 
             return mapSnapshotsToDto(volume.getOntapSnapshots());
 
         } else if (type == StorageType.QTREE) {
-            OntapQtree qtree = ontapQtreeRepository.findByIdWithPermissions(Long.parseLong(uuid), username, isAdmin, isReadonly, isStorage)
+            OntapQtree qtree = ontapQtreeRepository.findByIdWithPermissions(Long.parseLong(uuid), username, isAdmin, isReadonly, isStorage, isOperator)
                     .orElseThrow(() -> new EntityNotFoundException("Qtree not found or access denied"));
 
             return mapSnapshotsToDto(qtree.getVolume().getOntapSnapshots());
 
         } else if (type == StorageType.S3) {
-            storageGridBucketRepository.findByIdWithPermissions(Long.parseLong(uuid), username, isAdmin, isReadonly, isStorage)
+            storageGridBucketRepository.findByIdWithPermissions(Long.parseLong(uuid), username, isAdmin, isReadonly, isStorage, isOperator)
                     .orElseThrow(() -> new EntityNotFoundException("Bucket not found or access denied"));
 
             return Collections.emptyList();
@@ -210,19 +212,37 @@ public class UnifiedStorageService {
     }
 
     @Transactional(readOnly = true)
-    public Page<UnifiedStorageItemListDto> getUnifiedStorage(String search, Pageable pageable) {
+    public Page<UnifiedStorageItemListDto> getUnifiedStorage(String search, List<String> types, Pageable pageable) {
         final UserRoles userRoles = AuthUtils.getCurrentUserRoles();
         String username = userRoles.getUsername();
         boolean isAdmin = userRoles.hasAdminRole();
         boolean isReadonly = userRoles.hasReadonlyRole();
         boolean isStorage = userRoles.hasStorageRole();
+        boolean isOperator = userRoles.hasOperatorRole();
 
         String searchTerm = (search != null && !search.trim().isEmpty()) ? "%" + search.trim().toLowerCase() + "%" : null;
+
+        final Set<StorageType> requestedTypes;
+        if (types != null && !types.isEmpty()) {
+            Set<StorageType> tmp = new HashSet<>();
+            for (String t : types) {
+                if (t == null) continue;
+                try {
+                    tmp.add(StorageType.valueOf(t.trim().toUpperCase()));
+                } catch (IllegalArgumentException ex) {
+                    // ignore unknown types
+                    log.debug("Unknown storage type in filter ignored: {}", t);
+                }
+            }
+            requestedTypes = tmp.isEmpty() ? null : Collections.unmodifiableSet(tmp);
+        } else {
+            requestedTypes = null;
+        }
 
         List<UnifiedStorageItemListDto> allItems = new ArrayList<>();
 
         // 1. Fetch NFS Volumes
-        List<Object[]> nfsItems = ontapVolumeRepository.findNfsVolumeListItems(searchTerm, username, isAdmin, isReadonly, isStorage);
+        List<Object[]> nfsItems = ontapVolumeRepository.findNfsVolumeListItems(searchTerm, username, isAdmin, isReadonly, isStorage, isOperator);
         List<UUID> nfsVolumeUuids = nfsItems.stream().map(row -> (UUID) row[0]).toList();
         Map<String, String> nfsAppserviceNames = loadVolumeAppserviceNames(nfsVolumeUuids);
 
@@ -243,7 +263,7 @@ public class UnifiedStorageService {
         }
 
         // 2. Fetch CIFS Volumes
-        List<Object[]> cifsItems = ontapVolumeRepository.findCifsVolumeListItems(searchTerm, username, isAdmin, isReadonly, isStorage);
+        List<Object[]> cifsItems = ontapVolumeRepository.findCifsVolumeListItems(searchTerm, username, isAdmin, isReadonly, isStorage, isOperator);
         List<UUID> cifsVolumeUuids = cifsItems.stream().map(row -> (UUID) row[0]).toList();
         Map<String, String> cifsAppserviceNames = loadVolumeAppserviceNames(cifsVolumeUuids);
 
@@ -264,7 +284,7 @@ public class UnifiedStorageService {
         }
 
         // 3. Fetch NFS Qtrees
-        List<Object[]> qtreeItems = ontapQtreeRepository.findNfsQtreeListItems(searchTerm, username, isAdmin, isReadonly, isStorage);
+        List<Object[]> qtreeItems = ontapQtreeRepository.findNfsQtreeListItems(searchTerm, username, isAdmin, isReadonly, isStorage, isOperator);
         List<Long> qtreeIds = qtreeItems.stream().map(row -> (Long) row[0]).toList();
         Map<String, String> qtreeAppserviceNames = loadQtreeAppserviceNames(qtreeIds);
 
@@ -285,7 +305,7 @@ public class UnifiedStorageService {
         }
 
         // 4. Fetch S3 Buckets
-        List<Object[]> bucketItems = storageGridBucketRepository.findBucketListItems(searchTerm, username, isAdmin, isReadonly, isStorage);
+        List<Object[]> bucketItems = storageGridBucketRepository.findBucketListItems(searchTerm, username, isAdmin, isReadonly, isStorage, isOperator);
         List<Long> bucketIds = bucketItems.stream().map(row -> (Long) row[0]).toList();
         Map<String, String> bucketAppserviceNames = loadBucketAppserviceNames(bucketIds);
 
@@ -300,10 +320,16 @@ public class UnifiedStorageService {
                     .build());
         }
 
+        if (requestedTypes != null) {
+            allItems = allItems.stream()
+                    .filter(dto -> dto.getType() != null && requestedTypes.contains(dto.getType()))
+                    .collect(Collectors.toList());
+        }
+
         // 5. Global Sorting
         Sort sort = pageable.getSort();
         if (sort.isSorted()) {
-            sort.stream().forEach(order -> {
+            for (Sort.Order order : sort) {
                 Comparator<UnifiedStorageItemListDto> comparator = null;
 
                 // Determine comparator based on property
@@ -324,7 +350,7 @@ public class UnifiedStorageService {
                     // Assuming mostly single column sort from UI.)
                     allItems.sort(comparator);
                 }
-            });
+            }
         } else {
             // Default sort by name ascending if no sort specified
             allItems.sort(Comparator.comparing(UnifiedStorageItemListDto::getName, String.CASE_INSENSITIVE_ORDER));
@@ -351,11 +377,12 @@ public class UnifiedStorageService {
         boolean isAdmin = userRoles.hasAdminRole();
         boolean isReadonly = userRoles.hasReadonlyRole();
         boolean isStorage = userRoles.hasStorageRole();
+        boolean isOperator = userRoles.hasOperatorRole();
 
         List<UnifiedStorageMountItemDto> result = new ArrayList<>();
 
         // 1. Fetch Volume Mounts
-        List<OntapVolumeServerMount> volumeMounts = ontapVolumeServerMountRepository.findAllByServerIdWithPermissions(serverId, username, isAdmin, isReadonly, isStorage);
+        List<OntapVolumeServerMount> volumeMounts = ontapVolumeServerMountRepository.findAllByServerIdWithPermissions(serverId, username, isAdmin, isReadonly, isStorage, isOperator);
         for (OntapVolumeServerMount mount : volumeMounts) {
             OntapVolume volume = mount.getOntapVolume();
             String protocol = determineProtocolFromSvm(volume.getSvm());
@@ -393,7 +420,7 @@ public class UnifiedStorageService {
         }
 
         // 2. Fetch Qtree Mounts
-        List<OntapQtreeServerMount> qtreeMounts = ontapQtreeServerMountRepository.findAllByServerIdWithPermissions(serverId, username, isAdmin, isReadonly, isStorage);
+        List<OntapQtreeServerMount> qtreeMounts = ontapQtreeServerMountRepository.findAllByServerIdWithPermissions(serverId, username, isAdmin, isReadonly, isStorage, isOperator);
         for (OntapQtreeServerMount mount : qtreeMounts) {
             OntapQtree qtree = mount.getOntapQtree();
             String protocol = determineProtocolFromSvm(qtree.getVolume().getSvm());

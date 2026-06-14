@@ -98,4 +98,18 @@ public class AppserviceService {
     public Appservice findByNumber(String number) {
         return repository.findByNumber(number);
     }
+
+    public boolean canUserEditAppservice(final Long appserviceId) {
+        return repository.canUserEditAppservice(
+                AuthUtils.getUsername(),
+                AuthUtils.getCurrentUserRoles().hasAdminRole(),
+                AuthUtils.getCurrentUserRoles().hasLinuxRole(),
+                AuthUtils.getCurrentUserRoles().hasWindowsRole(),
+                AuthUtils.getCurrentUserRoles().hasOracleRole(),
+                AuthUtils.getCurrentUserRoles().hasNonOracleRole(),
+                AuthUtils.getCurrentUserRoles().hasSecurityRole(),
+                AuthUtils.getCurrentUserRoles().hasOperatorRole(),
+                AuthUtils.getCurrentUserRoles().hasNetworkRole(),
+                appserviceId);
+    }
 }

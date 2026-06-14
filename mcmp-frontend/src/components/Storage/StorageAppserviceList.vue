@@ -13,8 +13,8 @@
       search-label="Anwendungsservice suchen..."
       @update:sort-by="updateSortBy"
       @update:search="onSearchUpdate"
-      @rowClick="onRowClick"
-      @loadMore="onLoadMore"
+      @row-click="onRowClick"
+      @load-more="onLoadMore"
     />
   </div>
 </template>
@@ -84,8 +84,6 @@ const loadAppservices = async (reset = false) => {
     }
 
     hasMore.value = newItems.length === itemsPerPage.value;
-  } catch (e) {
-    console.error("Failed to load appservices", e);
   } finally {
     loading.value = false;
   }

@@ -10,25 +10,38 @@
       />
     </template>
     <v-row>
-      <v-col cols="3">
+      <v-col cols="4">
         <h3>Server</h3>
       </v-col>
-      <v-col cols="3" />
-      <v-col cols="3">
+      <v-col cols="4">
         <h3>Berechtigungen</h3>
       </v-col>
+      <v-col cols="4" />
     </v-row>
     <div
       v-for="(rule, idx) in selectedStorageItem.nfs_export_policy!
         .ontapExportPolicyRules"
+      :key="`nfs-export-rule-${idx}-${rule.clients.join(',')}`"
     >
       <v-row class="ma-1">
-        <v-col cols="3">
+        <v-col cols="4">
           {{ rule.clients.join(", ") }}
         </v-col>
-        <v-col cols="3" />
-        <v-col cols="3">
-          {{ rule.rwRules == "never" ? "read-only" : "read-write" }}
+        <v-col cols="4">
+          {{ getPermissionLabel(rule.rwRules) }}
+        </v-col>
+        <v-col
+          cols="4"
+          class="d-flex justify-end"
+        >
+          <storage-change-nfs-export-policy
+            v-if="rule.clients.length > 0"
+            :storage-uuid="selectedStorageItem.uuid"
+            :mount-path="selectedStorageItem.nfs_mount_path!"
+            mode="edit"
+            :server-fqdn="rule.clients[0]"
+            :permission="getPermissionValue(rule.rwRules)"
+          />
         </v-col>
       </v-row>
       <v-divider
@@ -53,7 +66,10 @@
         <h3>Berechtigungen</h3>
       </v-col>
     </v-row>
-    <div v-for="(acllist, idx) in selectedStorageItem.cifs_share_acl_list">
+    <div
+      v-for="(acllist, idx) in selectedStorageItem.cifs_share_acl_list"
+      :key="`cifs-acl-${idx}-${acllist.userOrGroup}`"
+    >
       <v-row class="ma-1">
         <v-col cols="3">
           {{ acllist.userOrGroup }}
@@ -75,7 +91,15 @@ import type { UnifiedStorageItem } from "@/types/Storage";
 import CommonCard from "@/components/common/CommonCard.vue";
 import StorageChangeNfsExportPolicy from "@/components/Storage/StorageChangeNfsExportPolicy.vue";
 
-const props = defineProps<{
+defineProps<{
   selectedStorageItem: UnifiedStorageItem;
 }>();
+
+function getPermissionValue(rwRules: string) {
+  return rwRules === "never" ? "ro" : "rw";
+}
+
+function getPermissionLabel(rwRules: string) {
+  return getPermissionValue(rwRules) === "ro" ? "read-only" : "read-write";
+}
 </script>

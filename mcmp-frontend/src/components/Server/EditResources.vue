@@ -15,14 +15,14 @@
     @dialog-cancel="close"
     @dialog-confirm="save"
   >
-    <template #activator="{ props }">
+    <template #activator="{ props: iconProps }">
       <v-tooltip
         :text="rightsize ? 'Empfehlung umsetzen' : 'Ressourcen bearbeiten'"
         location="bottom"
       >
         <template #activator="{ props: tooltipProps }">
           <v-btn
-            v-bind="{ ...props, ...tooltipProps }"
+            v-bind="{ ...iconProps, ...tooltipProps }"
             icon
             variant="flat"
             :aria-label="
@@ -323,6 +323,7 @@ function changeToSchedule() {
 function setTimePatchnight() {
   if (schedulePatchnight.value) {
     rawDate.value = new Date(props.server.patchnightStartDate);
+    rawDate.value.setHours(14, 0, 0, 0);
   } else {
     rawDate.value = new Date();
   }

@@ -6,14 +6,14 @@
         <h3>Betriebssystem</h3>
       </v-col>
       <v-col
-        cols="3"
         v-if="props.selectedServer.powerState === 'poweredOn'"
+        cols="3"
       >
         <h3>Letzter Reboot</h3>
       </v-col>
       <v-col
-        cols="3"
         v-if="props.selectedServer.powerState === 'poweredOff'"
+        cols="3"
       >
         <h3>Abschaltgrund</h3>
       </v-col>
@@ -98,9 +98,9 @@
               :key="appservice.id"
               class="mb-1"
             >
-              <RouterLink :to="`/appservice/${appservice.id}`">
+              <router-link :to="`/appservice/${appservice.id}`">
                 {{ appservice.name }}
-              </RouterLink>
+              </router-link>
             </li>
           </ul>
         </div>
@@ -110,9 +110,9 @@
             props.selectedServer.appservices.length === 1
           "
         >
-          <RouterLink :to="`/appservice/${firstAppservice?.id}`">
+          <router-link :to="`/appservice/${firstAppservice?.id}`">
             {{ firstAppservice?.name }}
-          </RouterLink>
+          </router-link>
         </div>
         <p v-else>-</p>
       </v-col>
@@ -120,127 +120,192 @@
   </common-card>
   <common-card
     title="Ressourcen"
-    topMargin="0"
+    top-margin="0"
   >
     <template #toolbar-actions>
       <edit-resources
+        v-if="
+          selectedServer.canEdit && selectedServer.cloud?.cloudType == 'VCENTER'
+        "
         :server="props.selectedServer"
         :rightsize="false"
         @save="
           (cpus, ram, scheduleTime, schedulePatchnight) =>
             change_cpu_ram(cpus, ram, scheduleTime, schedulePatchnight)
         "
-        v-if="
-          selectedServer.canEdit && selectedServer.cloud?.cloudType == 'VCENTER'
-        "
       />
     </template>
     <v-row>
       <v-col cols="3">
-          <h3>
-            <v-tooltip v-if="!selectedServer.numCpuRecommended ||
-                              selectedServer.numCpuRecommended == 0 ||
-                              isCpuInCooldown"
-                                    location="bottom"
-                                    :text="isCpuInCooldown && selectedServer.numCpuRecommended && selectedServer.numCpuRecommended != 0
-                            ? `Empfehlung pausiert – Neue Empfehlung verfügbar ab ${cpuCooldownUntil}`
-                            : 'Keine Empfehlung möglich'">
-              <template #activator="{ props }">
-                <v-icon
-                    v-bind="props"
-                    :icon="isCpuInCooldown && selectedServer.numCpuRecommended && selectedServer.numCpuRecommended != 0
-                            ? mdiPauseCircle
-                            : mdiHelpCircle"
-                    color="grey"
-                    size="small"
-                />
-              </template>
-            </v-tooltip>
-            <v-icon
-              v-else-if="
-                selectedServer.numCpuRecommended === selectedServer.numCpu
-              "
-              :icon="mdiCheckCircle"
-              color="_green"
-              size="small"
-            />
-            <v-tooltip
-              v-else-if="
-                selectedServer.numCpuRecommended != selectedServer.numCpu
-              "
-              location="bottom"
-              :text="
-                'Empfehlung: ' + selectedServer.numCpuRecommended + ' CPUs'
-              "
-            >
-              <template #activator="{ props }">
-                <v-icon
-                  v-bind="props"
-                  :icon="mdiAlertCircle"
-                  color="orange"
-                  size="small"
-                />
-              </template>
-            </v-tooltip>
+        <h3>
+          <v-tooltip
+            v-if="
+              !selectedServer.numCpuRecommended ||
+              selectedServer.numCpuRecommended == 0 ||
+              isCpuInCooldown
+            "
+            location="bottom"
+            :text="
+              isCpuInCooldown &&
+              selectedServer.numCpuRecommended &&
+              selectedServer.numCpuRecommended != 0
+                ? `Empfehlung pausiert – Neue Empfehlung verfügbar ab ${cpuCooldownUntil}`
+                : 'Keine Empfehlung möglich'
+            "
+          >
+            <template #activator="{ props: statusProps }">
+              <v-icon
+                v-bind="statusProps"
+                :icon="
+                  isCpuInCooldown &&
+                  selectedServer.numCpuRecommended &&
+                  selectedServer.numCpuRecommended != 0
+                    ? mdiPauseCircle
+                    : mdiHelpCircle
+                "
+                color="grey"
+                size="small"
+              />
+            </template>
+          </v-tooltip>
+          <v-icon
+            v-else-if="
+              selectedServer.numCpuRecommended === selectedServer.numCpu
+            "
+            :icon="mdiCheckCircle"
+            color="_green"
+            size="small"
+          />
+          <v-tooltip
+            v-else-if="
+              selectedServer.numCpuRecommended != selectedServer.numCpu
+            "
+            location="bottom"
+            :text="'Empfehlung: ' + selectedServer.numCpuRecommended + ' CPUs'"
+          >
+            <template #activator="{ props: statusProps }">
+              <v-icon
+                v-bind="statusProps"
+                :icon="mdiAlertCircle"
+                color="orange"
+                size="small"
+              />
+            </template>
+          </v-tooltip>
 
-            CPU<info-tooltip text="Central Processing Unit" />
-          </h3>
+          CPU<info-tooltip text="Central Processing Unit" />
+        </h3>
       </v-col>
       <v-col cols="3">
-          <h3>
-            <v-tooltip v-if="!selectedServer.memoryMbRecommended ||
-                              selectedServer.memoryMbRecommended == 0 ||
-                              isMemoryInCooldown"
-                                    location="bottom"
-                                    :text="isMemoryInCooldown && selectedServer.memoryMbRecommended && selectedServer.memoryMbRecommended != 0
-                            ? `Empfehlung pausiert – Neue Empfehlung verfügbar ab ${memoryCooldownUntil}`
-                            : 'Keine Empfehlung möglich'">
-              <template #activator="{ props }">
-                <v-icon v-bind="props"
-                        :icon="isMemoryInCooldown && selectedServer.memoryMbRecommended && selectedServer.memoryMbRecommended != 0
-                            ? mdiPauseCircle
-                            : mdiHelpCircle"
-                        color="grey"
-                        size="small"/>
-              </template>
-            </v-tooltip>
-            <v-icon
-              v-else-if="
-                selectedServer.memoryMbRecommended === selectedServer.memoryMb
-              "
-              :icon="mdiCheckCircle"
-              color="_green"
-              size="small"
-            />
-            <v-tooltip
-              v-else-if="
-                selectedServer.memoryMbRecommended != selectedServer.memoryMb
-              "
-              location="bottom"
-              :text="
-                'Empfehlung: ' +
-                formatter.formatMBtoGB(selectedServer.memoryMbRecommended) +
-                ' GB'
-              "
-            >
-              <template #activator="{ props }">
-                <v-icon
-                  v-bind="props"
-                  :icon="mdiAlertCircle"
-                  color="orange"
-                  size="small"
-                />
-              </template>
-            </v-tooltip>
-            Arbeitsspeicher
-          </h3>
+        <h3>
+          <v-tooltip
+            v-if="
+              !selectedServer.memoryMbRecommended ||
+              selectedServer.memoryMbRecommended == 0 ||
+              isMemoryInCooldown
+            "
+            location="bottom"
+            :text="
+              isMemoryInCooldown &&
+              selectedServer.memoryMbRecommended &&
+              selectedServer.memoryMbRecommended != 0
+                ? `Empfehlung pausiert – Neue Empfehlung verfügbar ab ${memoryCooldownUntil}`
+                : 'Keine Empfehlung möglich'
+            "
+          >
+            <template #activator="{ props: statusProps }">
+              <v-icon
+                v-bind="statusProps"
+                :icon="
+                  isMemoryInCooldown &&
+                  selectedServer.memoryMbRecommended &&
+                  selectedServer.memoryMbRecommended != 0
+                    ? mdiPauseCircle
+                    : mdiHelpCircle
+                "
+                color="grey"
+                size="small"
+              />
+            </template>
+          </v-tooltip>
+          <v-icon
+            v-else-if="
+              selectedServer.memoryMbRecommended === selectedServer.memoryMb
+            "
+            :icon="mdiCheckCircle"
+            color="_green"
+            size="small"
+          />
+          <v-tooltip
+            v-else-if="
+              selectedServer.memoryMbRecommended != selectedServer.memoryMb
+            "
+            location="bottom"
+            :text="
+              'Empfehlung: ' +
+              formatter.formatMBtoGB(selectedServer.memoryMbRecommended) +
+              ' GB'
+            "
+          >
+            <template #activator="{ props: statusProps }">
+              <v-icon
+                v-bind="statusProps"
+                :icon="mdiAlertCircle"
+                color="orange"
+                size="small"
+              />
+            </template>
+          </v-tooltip>
+          Arbeitsspeicher
+        </h3>
       </v-col>
       <v-col
-        cols="3"
         v-if="props.selectedServer.serverType === 'VM_VCENTER'"
+        cols="3"
       >
         <h3>Festplattengröße</h3>
       </v-col>
+    </v-row>
+    <v-row>
+      <v-col
+        cols="3"
+        class="pt-0"
+      >
+        <linear-progress-with-colors
+          v-if="props.selectedServer.cpuUtil != null"
+          :value="props.selectedServer.cpuUtil ?? 0"
+          :show-percentage="true"
+          :title="`CPU Auslastung bei ${props.selectedServer.cpuUtil ?? 0}%`"
+          :tooltip-text="'Quelle: Checkmk, Abfrageintervall: 1x pro Minute'"
+        />
+        <p v-else>Checkmk CPU-Metriken nicht verfügbar</p>
+      </v-col>
+      <v-col
+        cols="3"
+        class="pt-0"
+      >
+        <linear-progress-with-colors
+          v-if="props.selectedServer.memUsedPercent != null"
+          :value="props.selectedServer.memUsedPercent ?? 0"
+          :show-percentage="true"
+          :title="`Arbeitsspeicher Auslastung bei ${props.selectedServer.memUsedPercent ?? 0}%`"
+          :tooltip-text="'Quelle: Checkmk, Abfrageintervall: 1x pro Minute'"
+        />
+        <p v-else>Checkmk RAM-Metriken nicht verfügbar</p>
+      </v-col>
+      <v-col
+        v-if="props.selectedServer.serverType === 'VM_VCENTER'"
+        cols="3"
+        class="pt-0"
+      >
+        <p>
+          {{
+            formatter.formatBtoGB(props.selectedServer.vdisksCapacityInBytes)
+          }}
+          GB
+        </p>
+      </v-col>
+      <v-col cols="3"> </v-col>
     </v-row>
     <v-row>
       <v-col
@@ -293,18 +358,6 @@
           {{ formatter.formatMBtoGB(props.selectedServer.memoryMb) }} GB
         </p>
       </v-col>
-      <v-col
-        cols="3"
-        class="pt-0"
-        v-if="props.selectedServer.serverType === 'VM_VCENTER'"
-      >
-        <p>
-          {{
-            formatter.formatBtoGB(props.selectedServer.vdisksCapacityInBytes)
-          }}
-          GB
-        </p>
-      </v-col>
     </v-row>
     <v-row>
       <v-col
@@ -318,15 +371,15 @@
         class="pt-0 d-flex align-center"
       >
         <edit-resources
+          v-if="
+            selectedServer.canEdit &&
+            selectedServer.cloud?.cloudType == 'VCENTER'
+          "
           :server="props.selectedServer"
           :rightsize="true"
           @save="
             (cpus, ram, scheduleTime, schedulePatchnight) =>
               change_cpu_ram(cpus, ram, scheduleTime, schedulePatchnight)
-          "
-          v-if="
-            selectedServer.canEdit &&
-            selectedServer.cloud?.cloudType == 'VCENTER'
           "
         />
         <h4>&nbsp;{{ EMPFEHLUNG }}&nbsp;</h4>
@@ -348,15 +401,15 @@
         class="pt-0 d-flex align-center"
       >
         <edit-resources
+          v-if="
+            selectedServer.canEdit &&
+            selectedServer.cloud?.cloudType == 'VCENTER'
+          "
           :server="props.selectedServer"
           :rightsize="true"
           @save="
             (cpus, ram, scheduleTime, schedulePatchnight) =>
               change_cpu_ram(cpus, ram, scheduleTime, schedulePatchnight)
-          "
-          v-if="
-            selectedServer.canEdit &&
-            selectedServer.cloud?.cloudType == 'VCENTER'
           "
         />
         <h4>&nbsp;{{ EMPFEHLUNG }}&nbsp;</h4>
@@ -364,39 +417,15 @@
         GB
       </v-col>
     </v-row>
-    <v-row>
-      <v-col cols="3">
-        <linear-progress-with-colors
-          v-if="props.selectedServer.cpuUtil != null"
-          :value="props.selectedServer.cpuUtil ?? 0"
-          :show-percentage="true"
-          :title="`CPU Auslastung bei ${props.selectedServer.cpuUtil ?? 0}%`"
-          :tooltip-text="'Quelle: Checkmk, Abfrageintervall: 1x pro Minute'"
-        />
-        <p v-else>Checkmk CPU-Metriken nicht verfügbar</p>
-      </v-col>
-      <v-col cols="3">
-        <linear-progress-with-colors
-          v-if="props.selectedServer.memUsedPercent != null"
-          :value="props.selectedServer.memUsedPercent ?? 0"
-          :show-percentage="true"
-          :title="`Arbeitsspeicher Auslastung bei ${props.selectedServer.memUsedPercent ?? 0}%`"
-          :tooltip-text="'Quelle: Checkmk, Abfrageintervall: 1x pro Minute'"
-        />
-        <p v-else>Checkmk RAM-Metriken nicht verfügbar</p>
-      </v-col>
-      <v-col cols="3"> </v-col>
-      <v-col cols="3"> </v-col>
-    </v-row>
   </common-card>
   <common-card
     title="CMDB"
-    topMargin="0"
+    top-margin="0"
   >
     <v-row>
       <v-col
-        cols="3"
         v-if="selectedServer.cloud?.cloudType == 'VCENTER'"
+        cols="3"
       >
         <h3>
           VMware Instanz<info-tooltip>
@@ -533,13 +562,13 @@
     </v-row>
     <v-row>
       <v-col
+        v-if="selectedServer.cloud?.cloudType == 'VCENTER'"
         cols="3"
         class="pt-0 links"
-        v-if="selectedServer.cloud?.cloudType == 'VCENTER'"
       >
         <p v-if="props.selectedServer.snowInstanceSysId">
           <a
-            :href="`https://it-services.muenchen.de/now/cmdb/record/${props.selectedServer.snowInstanceSysClass}/${props.selectedServer.snowInstanceSysId}/`"
+            :href="`https://it-services.muenchen.de/now/sgw/record/${props.selectedServer.snowInstanceSysClass}/${props.selectedServer.snowInstanceSysId}/`"
             target="_blank"
             rel="noopener noreferrer"
             aria-label="VMware Instanz in ServiceNow öffnen"
@@ -555,7 +584,7 @@
       >
         <p v-if="props.selectedServer.snowServerSysId">
           <a
-            :href="`https://it-services.muenchen.de/now/cmdb/record/${props.selectedServer.snowServerSysClass}/${props.selectedServer.snowServerSysId}/`"
+            :href="`https://it-services.muenchen.de/now/sgw/record/${props.selectedServer.snowServerSysClass}/${props.selectedServer.snowServerSysId}/`"
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Server Instanz in ServiceNow öffnen"
@@ -626,7 +655,7 @@
               class="mb-1"
             >
               <a
-                :href="`https://it-services.muenchen.de/now/cmdb/record/cmdb_ci_service/${appservice.sysId}/sub/unifiedmap/params/root-node/${appservice.sysId}/`"
+                :href="`https://it-services.muenchen.de/now/sgw/record/cmdb_ci_service/${appservice.sysId}/sub/unifiedmap/params/root-node/${appservice.sysId}/`"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Appservice MAP in ServiceNow öffnen"
@@ -643,7 +672,7 @@
           "
         >
           <a
-            :href="`https://it-services.muenchen.de/now/cmdb/record/cmdb_ci_service/${firstAppservice?.sysId}/sub/unifiedmap/params/root-node/${firstAppservice?.sysId}/`"
+            :href="`https://it-services.muenchen.de/now/sgw/record/cmdb_ci_service/${firstAppservice?.sysId}/sub/unifiedmap/params/root-node/${firstAppservice?.sysId}/`"
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -659,7 +688,12 @@
 <script setup lang="ts">
 import type Price from "@/types/Price";
 
-import {mdiAlertCircle, mdiCheckCircle, mdiHelpCircle, mdiPauseCircle} from "@mdi/js";
+import {
+  mdiAlertCircle,
+  mdiCheckCircle,
+  mdiHelpCircle,
+  mdiPauseCircle,
+} from "@mdi/js";
 import { computed, onMounted, ref } from "vue";
 
 import jobService from "@/api/jobService.ts";
@@ -740,45 +774,44 @@ function change_cpu_ram(
 }
 
 const isCpuInCooldown = computed(() => {
-  if (!props.selectedServer.numCpuChangeDate) return false
+  if (!props.selectedServer.numCpuChangeDate) return false;
 
-  const changeDate = new Date(props.selectedServer.numCpuChangeDate)
-  const cooldownUntil = new Date(changeDate)
-  cooldownUntil.setDate(cooldownUntil.getDate() + 7)
+  const changeDate = new Date(props.selectedServer.numCpuChangeDate);
+  const cooldownUntil = new Date(changeDate);
+  cooldownUntil.setDate(cooldownUntil.getDate() + 7);
 
-  return new Date() < cooldownUntil
-})
+  return new Date() < cooldownUntil;
+});
 
 const cpuCooldownUntil = computed(() => {
-  if (!props.selectedServer.numCpuChangeDate) return ''
+  if (!props.selectedServer.numCpuChangeDate) return "";
 
-  const changeDate = new Date(props.selectedServer.numCpuChangeDate)
-  const cooldownUntil = new Date(changeDate)
-  cooldownUntil.setDate(cooldownUntil.getDate() + 7)
+  const changeDate = new Date(props.selectedServer.numCpuChangeDate);
+  const cooldownUntil = new Date(changeDate);
+  cooldownUntil.setDate(cooldownUntil.getDate() + 7);
 
-  return cooldownUntil.toLocaleDateString('de-DE')
-})
-
+  return cooldownUntil.toLocaleDateString("de-DE");
+});
 
 const isMemoryInCooldown = computed(() => {
-if (!props.selectedServer.memoryMbChangeDate) return false
+  if (!props.selectedServer.memoryMbChangeDate) return false;
 
-const changeDate = new Date(props.selectedServer.memoryMbChangeDate)
-const endsAt = new Date(changeDate)
-endsAt.setDate(endsAt.getDate() + 7)
+  const changeDate = new Date(props.selectedServer.memoryMbChangeDate);
+  const endsAt = new Date(changeDate);
+  endsAt.setDate(endsAt.getDate() + 7);
 
-return new Date() < endsAt
-})
+  return new Date() < endsAt;
+});
 
 const memoryCooldownUntil = computed(() => {
-if (!props.selectedServer.memoryMbChangeDate) return ''
+  if (!props.selectedServer.memoryMbChangeDate) return "";
 
-const changeDate = new Date(props.selectedServer.memoryMbChangeDate)
-const endsAt = new Date(changeDate)
-endsAt.setDate(endsAt.getDate() + 7)
+  const changeDate = new Date(props.selectedServer.memoryMbChangeDate);
+  const endsAt = new Date(changeDate);
+  endsAt.setDate(endsAt.getDate() + 7);
 
-return endsAt.toLocaleDateString('de-DE')
-})
+  return endsAt.toLocaleDateString("de-DE");
+});
 </script>
 
 <!--suppress CssUnresolvedCustomProperty -->

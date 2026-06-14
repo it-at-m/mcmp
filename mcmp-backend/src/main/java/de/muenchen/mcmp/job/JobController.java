@@ -1633,7 +1633,7 @@ public class JobController {
 
     private void checkServerInstallCanUserEditAppservice(final Long appserviceId) {
         if (!appserviceService.canUserEditAppservice(appserviceId)) {
-            throw new AccessDeniedException("You are not allowed to create a Server for this Application Serivce.");
+            throw new AccessDeniedException("You are not allowed to create a Server for this Application Service.");
         }
     }
 }

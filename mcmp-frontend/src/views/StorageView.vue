@@ -215,7 +215,12 @@ const backupTabBoolean = computed(() => {
   );
 });
 
-const onStorageSelected = (item: UnifiedStorageItemList) => {
+const onStorageSelected = (item: UnifiedStorageItemList | null) => {
+  if (!item) {
+    selectedStorage.value = [];
+    selectedStorageDetail.value = null;
+    return;
+  }
   selectedStorage.value = [item];
 
   const targetPath = `/storage/${item.type}/${item.uuid}`;

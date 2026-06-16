@@ -82,6 +82,7 @@ public interface ServerRepository extends JpaRepository<Server, Long> {
             AND (:oracle = FALSE OR s.role_oracle)
             AND (:nonOracle = FALSE OR s.role_non_oracle)
             AND (:unmanaged = FALSE OR s.managed = FALSE)
+            AND (:noAppservice = FALSE OR NOT EXISTS (SELECT 1 FROM cmp.server_assignment sa_none WHERE sa_none.server_id = s.id))
         )
         ORDER BY
             CASE WHEN :sortOrder = 'desc' THEN s.name END DESC,
@@ -122,6 +123,7 @@ public interface ServerRepository extends JpaRepository<Server, Long> {
             AND (:oracle = FALSE OR s.role_oracle)
             AND (:nonOracle = FALSE OR s.role_non_oracle)
             AND (:unmanaged = FALSE OR s.managed = FALSE)
+            AND (:noAppservice = FALSE OR NOT EXISTS (SELECT 1 FROM cmp.server_assignment sa_none WHERE sa_none.server_id = s.id))
     )
     """, nativeQuery = true)
     Page<ServerList> findVisibleServers(@Param("username") String username,
@@ -144,6 +146,7 @@ public interface ServerRepository extends JpaRepository<Server, Long> {
                                         @Param("oracle") boolean oracle,
                                         @Param("nonOracle") boolean nonOracle,
                                         @Param("unmanaged") boolean unmanaged,
+                                        @Param("noAppservice") boolean noAppservice,
                                         @Param("sortBy") String sortBy,
                                         @Param("sortOrder") String sortOrder,
                                         Pageable pageable);

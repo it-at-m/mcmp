@@ -166,6 +166,14 @@
                         hide-details
                         density="compact"
                     /></v-list-item>
+                    <v-list-item density="compact" class="py-0">
+                      <v-radio
+                        label="Ohne Anwendungsservice"
+                        value="no-appservice"
+                        hide-details
+                        density="compact"
+                      />
+                    </v-list-item>
                   </v-radio-group>
                 </v-list>
               </v-menu>

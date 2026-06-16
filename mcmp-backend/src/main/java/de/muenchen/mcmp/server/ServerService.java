@@ -40,6 +40,7 @@ public class ServerService {
         final Pageable pageable = (limit == -1) ? Pageable.unpaged() : new OffsetBasedPageRequest(offset, limit);
         final UserRoles userRoles = AuthUtils.getCurrentUserRoles();
         final OsFilter osFilter = new OsFilter(os);
+        final boolean noAppservice = "no-appservice".equals(os);
         String cleanedSearch = null;
         if (search != null) {
             cleanedSearch = search.trim()
@@ -68,6 +69,7 @@ public class ServerService {
                 osFilter.isOracle(),
                 osFilter.isNonOracle(),
                 osFilter.isUnmanaged(),
+                noAppservice,
                 sortBy,
                 sortOrder,
                 pageable

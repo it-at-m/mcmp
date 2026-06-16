@@ -583,4 +583,10 @@ public interface ServerRepository extends JpaRepository<Server, Long> {
 
     @Query("SELECT new de.muenchen.mcmp.server.ServerAutocompleteDTO(s.id, s.name) FROM Server s WHERE LOWER(s.name) LIKE LOWER(CONCAT('%', :query, '%')) ORDER BY s.name")
     List<ServerAutocompleteDTO> findForAutocomplete(@Param("query") String query);
+
+    @Query("SELECT new de.muenchen.mcmp.server.ServerDbDTO(s.fqdn, s.powerState) " +
+            "FROM Server s " +
+            "WHERE s.roleOracle = true " +
+            "ORDER BY s.fqdn")
+    List<ServerDbDTO> findAllOracleServers();
 }

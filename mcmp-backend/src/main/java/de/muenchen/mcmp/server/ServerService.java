@@ -313,4 +313,8 @@ public class ServerService {
         }
         return serverRepository.findForAutocomplete(query);
     }
+
+    public List<ServerDbDTO> findAllOracleServers() {
+        return repository.findAllOracleServers();
+    }
 }

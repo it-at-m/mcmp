@@ -1,24 +1,6 @@
 <template>
   <v-app v-if="isUserAuthorized">
     <the-snackbar />
-    <v-system-bar
-      v-if="
-        (appStore.isReadOnly || (appStore.isLocked && isAdmin)) &&
-        appStore.maintenanceMessage
-      "
-      color="warning"
-      class="justify-center"
-      style="color: rgba(0, 0, 0, 0.87) !important"
-    >
-      <v-icon
-        :icon="mdiAlert"
-        class="mr-2"
-        size="large"
-      />
-      <span class="text-h6 font-weight-bold">{{
-        appStore.maintenanceMessage
-      }}</span>
-    </v-system-bar>
     <v-app-bar
       v-if="!showLockPage"
       color="backgroundLight"
@@ -113,6 +95,7 @@
           >
             <template #activator="{ props }">
               <v-btn
+                v-if="btn.if"
                 v-bind="props"
                 icon
                 size="large"
@@ -121,7 +104,6 @@
                 class="mr-2"
                 :title="btn.title"
                 @click="btn.click"
-                v-if="btn.if"
               >
                 <v-badge
                   v-if="btn.title === 'History' && notificaton > 0"
@@ -135,11 +117,27 @@
               </v-btn>
             </template>
           </v-tooltip>
-          <UserMenu />
+          <user-menu />
         </v-col>
       </v-row>
     </v-app-bar>
     <v-main class="main">
+      <v-alert
+        v-if="
+          (appStore.isReadOnly ||
+            appStore.isInfo ||
+            (appStore.isLocked && isAdmin)) &&
+          appStore.maintenanceMessage
+        "
+        color="warning"
+        variant="flat"
+        rounded="0"
+        class="d-flex justify-center align-center py-2 text-center"
+        style="color: rgba(0, 0, 0, 0.87) !important"
+      >
+        <!-- eslint-disable-next-line vue/no-v-html -->
+        <span class="text-h6 font-weight-bold" v-html="appStore.maintenanceMessage"></span>
+      </v-alert>
       <v-container
         fluid
         class="main-container"
@@ -157,22 +155,22 @@
                   class="mb-2"
                   >{{ mdiLockAlert }}</v-icon
                 >
-                <br />
-                Wartungsmodus
+                <br />Wartungsmodus
               </v-card-title>
               <v-card-text class="text-body-1">
-                {{
-                  appStore.maintenanceMessage ||
-                  "Die Anwendung befindet sich aktuell im Wartungsmodus."
-                }}
+                <!--
+                  The maintenance message is converted from Markdown to HTML and sanitized on the backend.
+                  Using v-html is necessary here to render the formatted content (e.g., bold text, links).
+                -->
+                <!-- eslint-disable-next-line vue/no-v-html -->
+                <div v-html="appStore.maintenanceMessage || 'Die Anwendung befindet sich aktuell im Wartungsmodus.'"></div>
               </v-card-text>
               <v-card-actions class="justify-center">
                 <v-btn
                   color="primary"
                   @click="loadMaintenanceData"
+                  >Erneut prüfen</v-btn
                 >
-                  Erneut prüfen
-                </v-btn>
               </v-card-actions>
             </v-card>
           </v-container>
@@ -184,7 +182,7 @@
           <v-fade-transition mode="out-in">
             <component
               :is="Component"
-              @getNotification="getNotificaton"
+              @get-notification="getNotificaton"
             />
           </v-fade-transition>
         </router-view>
@@ -193,7 +191,7 @@
   </v-app>
   <v-app v-else-if="userLoaded && !isUserAuthorized">
     <v-main>
-      <UnauthorizedView />
+      <unauthorized-view />
     </v-main>
   </v-app>
   <v-app v-else>
@@ -214,12 +212,10 @@
 import type { AppVersion } from "@/types/AppVersion.ts";
 
 import {
-  mdiAlert,
   mdiAlphaABox,
   mdiHarddisk,
   mdiHelpCircleOutline,
   mdiHistory,
-  mdiLan,
   mdiLockAlert,
   mdiMessageTextOutline,
   mdiMoonWaningCrescent,

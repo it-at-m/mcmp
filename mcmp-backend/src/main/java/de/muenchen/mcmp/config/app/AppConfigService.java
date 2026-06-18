@@ -1,6 +1,7 @@
 package de.muenchen.mcmp.config.app;
 
 import de.muenchen.mcmp.common.NotFoundException; // Assuming this exists in the project
+import de.muenchen.mcmp.markdown.MarkdownService;
 import de.muenchen.mcmp.security.AuthUtils;
 import de.muenchen.mcmp.types.SystemMode;
 import lombok.AllArgsConstructor;
@@ -19,9 +20,11 @@ public class AppConfigService {
 
     public static final String CONFIG_KEY_SYSTEM_MODE = "SYSTEM_MODE";
     public static final String CONFIG_KEY_MAINTENANCE_MESSAGE = "MAINTENANCE_MESSAGE";
+    public static final String CONFIG_KEY_MAINTENANCE_MESSAGE_MARKDOWN = "MAINTENANCE_MESSAGE_MARKDOWN";
 
     private final AppConfigRepository appConfigRepository;
     private final AppConfigCacheService appConfigCacheService;
+    private final MarkdownService markdownService;
 
     /**
      * Retrieves both system mode and maintenance message in a single database call.
@@ -35,13 +38,14 @@ public class AppConfigService {
                 .collect(Collectors.toMap(AppConfig::getConfigKey, AppConfig::getConfigValue));
 
         final String modeStr = configMap.get(CONFIG_KEY_SYSTEM_MODE);
-        final String message = configMap.getOrDefault(CONFIG_KEY_MAINTENANCE_MESSAGE, "");
+        final String htmlMessage = configMap.getOrDefault(CONFIG_KEY_MAINTENANCE_MESSAGE, "");
+        final String markdownMessage = configMap.getOrDefault(CONFIG_KEY_MAINTENANCE_MESSAGE_MARKDOWN, "");
 
         if (modeStr == null) {
             throw new NotFoundException("System configuration not found");
         }
 
-        return new SystemStatusDTO(SystemMode.valueOf(modeStr), message);
+        return new SystemStatusDTO(SystemMode.valueOf(modeStr), htmlMessage, markdownMessage);
     }
 
     /**
@@ -53,15 +57,23 @@ public class AppConfigService {
         if (status.systemMode() == null) {
             throw new IllegalArgumentException("System mode must not be null");
         }
-        if (status.maintenanceMessage() == null || status.maintenanceMessage().isBlank()) {
+        // Use markdown from DTO if provided, otherwise fallback to message field
+        final String markdown = (status.maintenanceMessageMarkdown() != null && !status.maintenanceMessageMarkdown().isBlank())
+                ? status.maintenanceMessageMarkdown().trim()
+                : status.maintenanceMessage().trim();
+
+        if (markdown.isBlank()) {
             throw new IllegalArgumentException("Maintenance message must not be empty");
         }
 
+        final String html = markdownService.convertToHtml(markdown);
+
         updateConfig(CONFIG_KEY_SYSTEM_MODE, status.systemMode().name());
-        updateConfig(CONFIG_KEY_MAINTENANCE_MESSAGE, status.maintenanceMessage().trim());
+        updateConfig(CONFIG_KEY_MAINTENANCE_MESSAGE, html);
+        updateConfig(CONFIG_KEY_MAINTENANCE_MESSAGE_MARKDOWN, markdown);
 
         appConfigCacheService.refreshCache();
-        log.info("System status updated: Mode={}, Message updated", status.systemMode());
+        log.info("System status updated: Mode={}, Markdown and HTML messages updated", status.systemMode());
     }
 
     // Helper method to retrieve a config entry
@@ -73,7 +85,12 @@ public class AppConfigService {
     // Helper method to update a config entry
     private void updateConfig(final String key, final String value) {
         final String username = AuthUtils.getUsername();
-        final AppConfig config = getConfig(key);
+        final AppConfig config = appConfigRepository.findByConfigKey(key)
+                .orElseGet(() -> {
+                    AppConfig newConfig = new AppConfig();
+                    newConfig.setConfigKey(key);
+                    return newConfig;
+                });
         config.setConfigValue(value);
         config.setUpdatedBy(username);
         config.setUpdatedAt(new Date());

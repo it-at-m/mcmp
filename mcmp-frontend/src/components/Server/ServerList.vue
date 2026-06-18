@@ -30,7 +30,7 @@
             {{ sortBy[0].order === "asc" ? mdiArrowUp : mdiArrowDown }}
           </v-icon>
           <v-badge
-            :model-value="statusFilter.length !== 0 || osFilter !== ''"
+            :model-value="statusFilter.length !== 0 || osFilter !== ''|| favoritesFilter"
             dot
           >
             <div
@@ -77,6 +77,13 @@
                       hide-details
                       density="compact"
                     />
+                    <v-checkbox
+                       v-model="favoritesFilter"
+                       label="Favoriten"
+                       density="compact"
+                       hide-details
+                       color="primary"
+                     />
                   </v-list-item>
                   <v-divider class="my-2" />
                   <v-list-subheader>Betriebssystem</v-list-subheader>
@@ -183,65 +190,73 @@
       </template>
 
       <template #[`item.name`]="{ item }">
-        <div class="server-name-cell">
-          <v-tooltip
-            :text="
-              item.powerState === 'poweredOn'
-                ? 'Eingeschaltet!'
-                : item.powerState === 'poweredOff'
-                  ? 'Ausgeschaltet!'
-                  : 'Suspended'
-            "
-          >
-            <template #activator="{ props }">
-              <div class="power-state-icon-inline">
-                <v-icon
-                  :color="
-                    item.powerState === 'poweredOn'
-                      ? 'btn_green'
-                      : item.powerState === 'poweredOff'
-                        ? 'btn_red'
-                        : 'accent'
-                  "
-                  size="25"
-                  v-bind="props"
+      <div class="server-name-cell">
+                <v-btn
+                  icon
+                  variant="text"
+                  density="compact"
+                  :color="item.isFavorite ? 'warning' : 'grey-lighten-1'"
+                  class="mr-1"
+                  @click.stop="toggleFavorite(item)"
                 >
-                  {{
-                    item.powerState === "poweredOn"
-                      ? mdiPlayCircle
-                      : item.powerState === "poweredOff"
-                        ? mdiStopCircle
-                        : mdiPauseCircle
-                  }}
-                </v-icon>
+                  <v-icon>{{ item.isFavorite ? mdiStar : mdiStarOutline }}</v-icon>
+                </v-btn>
+                <v-tooltip
+                  :text="
+                    item.powerState === 'poweredOn'
+                      ? 'Eingeschaltet!'
+                      : item.powerState === 'poweredOff'
+                        ? 'Ausgeschaltet!'
+                        : 'Suspended'
+                  "
+                >
+                  <template #activator="{ props }">
+                    <div class="power-state-icon-inline">
+                      <v-icon
+                        :color="
+                          item.powerState === 'poweredOn'
+                            ? 'btn_green'
+                            : item.powerState === 'poweredOff'
+                              ? 'btn_red'
+                              : 'accent'
+                        "
+                        size="25"
+                        v-bind="props"
+                      >
+                        {{
+                          item.powerState === "poweredOn"
+                            ? mdiPlayCircle
+                            : item.powerState === "poweredOff"
+                              ? mdiStopCircle
+                              : mdiPauseCircle
+                        }}
+                      </v-icon>
+                    </div>
+                  </template>
+                </v-tooltip>
+                <os-cell
+                  :osFullName="item.os || ''"
+                  size="small"
+                  class="os-icon-inline"
+                />
+                <span class="server-name-text">{{ item.name.split(".")[0] }}</span>
+                <v-tooltip
+                  v-if="item.hasWarnings"
+                  location="top"
+                  text="Handlung erforderlich"
+                >
+                  <template #activator="{ props: tooltipProps }">
+                    <v-icon
+                      v-bind="tooltipProps"
+                      :icon="mdiAlert"
+                      color="orange"
+                      size="20"
+                      class="ml-1"
+                    />
+                  </template>
+                </v-tooltip>
               </div>
             </template>
-          </v-tooltip>
-          <os-cell
-            :osFullName="item.os || ''"
-            size="small"
-            class="os-icon-inline"
-          />
-          <span class="server-name-text">{{ item.name.split(".")[0] }}</span>
-          <v-tooltip
-            v-if="
-              item.hasWarnings
-            "
-            location="top"
-            text="Handlung erforderlich"
-          >
-            <template #activator="{ props: tooltipProps }">
-              <v-icon
-                v-bind="tooltipProps"
-                :icon="mdiAlert"
-                color="orange"
-                size="20"
-                class="ml-1"
-              />
-            </template>
-          </v-tooltip>
-        </div>
-      </template>
 
       <template #no-data>
         <v-row />
@@ -288,6 +303,8 @@ import {
   mdiPauseCircle,
   mdiPlayCircle,
   mdiStopCircle,
+  mdiStar,
+  mdiStarOutline,
 } from "@mdi/js";
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 
@@ -296,6 +313,7 @@ import ScrollableListTable from "@/components/common/ScrollableListTable.vue";
 import OsCell from "@/components/Server/OsCell.vue";
 import { useUserStore } from "@/stores/user.ts";
 
+const favoritesFilter = ref(false);
 const loadingServer = ref(false);
 const servers = ref<ServerList[]>([]);
 const totalServers = ref(0);
@@ -337,9 +355,25 @@ const isAdmin = computed(
 
 const filteredServers = computed(() => servers.value);
 
-watch([statusFilter, osFilter], async () => {
+async function toggleFavorite(server: any) {
+  const originalState = server.isFavorite;
+  server.isFavorite = !server.isFavorite;
+
+  try {
+    if (originalState) {
+      await serverService.removeServerFromFavorites(server.id);
+    } else {
+      await serverService.addServerToFavorites(server.id);
+    }
+  } catch (error) {
+    server.isFavorite = originalState;
+    console.error("Fehler beim Aktualisieren des Favoriten-Status:", error);
+  }
+}
+
+watch([statusFilter, osFilter, favoritesFilter], async () => {
   currentPage.value = 1;
-  await loadServers(1, statusFilter.value, osFilter.value);
+  await loadServers(1, statusFilter.value, osFilter.value, favoritesFilter.value);
   await nextTick();
   tableRef.value?.triggerObserveScroll();
 });
@@ -359,7 +393,7 @@ watch(
 function updateSortBy(newSortBy: { key: string; order: "asc" | "desc" }[]) {
   sortBy.value = newSortBy;
   currentPage.value = 1;
-  loadServers(1, statusFilter.value, osFilter.value);
+  loadServers(1, statusFilter.value, osFilter.value, favoritesFilter.value);
   nextTick(() => tableRef.value?.triggerObserveScroll());
 }
 
@@ -369,10 +403,10 @@ function onSearchUpdate(val: string) {
 
 async function onLoadMore() {
   currentPage.value++;
-  await loadServers(currentPage.value, statusFilter.value, osFilter.value);
+  await loadServers(currentPage.value, statusFilter.value, osFilter.value, favoritesFilter.value);
 }
 
-async function loadServers(page = 1, status: string[] = [], os = "") {
+async function loadServers(page = 1, status: string[] = [], os = "", favorites = false) {
   loadingServer.value = true;
   const offset = (page - 1) * itemsPerPage.value;
   const currentSort = sortBy.value[0] ?? { key: "name", order: "asc" };
@@ -388,7 +422,8 @@ async function loadServers(page = 1, status: string[] = [], os = "") {
       currentSort.order,
       search.value,
       status,
-      os
+      os,
+      favorites
     );
     if (page === 1) {
       servers.value = res.content;
@@ -412,7 +447,7 @@ async function loadServers(page = 1, status: string[] = [], os = "") {
       servers.value.length > 0 &&
       !hasUrlId &&
       !hasUrlAppId &&
-      !selectedRow.value // ← NEU: kein Auto-Select wenn schon eine Zeile selektiert ist
+      !selectedRow.value
     ) {
       emit("update:selected", [servers.value[0]]);
     } else if (totalServers.value === 0) {
@@ -432,7 +467,7 @@ watch(search, () => {
   if (searchTimeout) clearTimeout(searchTimeout);
   searchTimeout = setTimeout(async () => {
     currentPage.value = 1;
-    await loadServers(1, statusFilter.value, osFilter.value);
+    await loadServers(1, statusFilter.value, osFilter.value, favoritesFilter.value);
     await nextTick();
     tableRef.value?.triggerObserveScroll();
   }, 300);
@@ -466,7 +501,6 @@ function updateServerPowerState(serverId: number, newPowerState: string) {
 defineExpose({ updateServerPowerState });
 </script>
 
-<!--suppress CssUnresolvedCustomProperty -->
 <style scoped>
 .server-list-container {
   height: 100%;

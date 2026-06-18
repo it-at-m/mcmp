@@ -7,7 +7,6 @@ import de.muenchen.mcmp.job.ActiveGreenItJob;
 import de.muenchen.mcmp.job.JobRepository;
 import de.muenchen.mcmp.security.AuthUtils;
 import de.muenchen.mcmp.security.UserRoles;
-import de.muenchen.mcmp.types.SystemMode;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,7 +35,7 @@ public class ServerService {
 
     public Page<ServerListDTO> getVisibleServers(final int offset, final int limit,
                                                  final String sortBy, final String sortOrder, final String search,
-                                                 final List<String> status, final String os) {
+                                                 final List<String> status, final String os, final boolean favorites) {
         final Pageable pageable = (limit == -1) ? Pageable.unpaged() : new OffsetBasedPageRequest(offset, limit);
         final UserRoles userRoles = AuthUtils.getCurrentUserRoles();
         final OsFilter osFilter = new OsFilter(os);
@@ -70,10 +69,25 @@ public class ServerService {
                 osFilter.isNonOracle(),
                 osFilter.isUnmanaged(),
                 noAppservice,
+                favorites,
                 sortBy,
                 sortOrder,
                 pageable
         ).map(this::mapProjectionToDTO);
+    }
+
+    @Transactional
+    public void addServerToFavorites(final Long serverId) {
+        final String username = AuthUtils.getCurrentUserRoles().getUsername();
+        log.debug("Adding server {} to favorites for user {}", serverId, username);
+        repository.addServerToFavorites(serverId, username);
+    }
+
+    @Transactional
+    public void removeServerFromFavorites(final Long serverId) {
+        final String username = AuthUtils.getCurrentUserRoles().getUsername();
+        log.debug("Removing server {} from favorites for user {}", serverId, username);
+        repository.removeServerFromFavorites(serverId, username);
     }
 
     public List<ServerListExtendedDTO> findServersByAppserviceId(final Long appserviceId) {
@@ -121,6 +135,7 @@ public class ServerService {
                 .serverKind(serverList.getServerKind())
                 .serverType(serverList.getServerType())
                 .hasWarnings(Boolean.TRUE.equals(serverList.getHasWarnings()))
+                .isFavorite(Boolean.TRUE.equals(serverList.getIsFavorite()))
                 .build();
     }
 

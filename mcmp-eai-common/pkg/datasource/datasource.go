@@ -3,8 +3,10 @@ package datasource
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
+	"sync"
 
 	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/logging"
 )
@@ -67,18 +69,35 @@ func (s *JsonFileSource[T]) ProcessData(ctx context.Context, data T) error {
 
 	// 3. Send data to MCMP APIs
 	if len(s.McmpClients) > 0 {
+		var wg sync.WaitGroup
+		errCh := make(chan error, len(s.McmpClients))
 		for i, client := range s.McmpClients {
 			endpoint := ""
 			if i < len(s.ApiEndpoints) {
 				endpoint = s.ApiEndpoints[i]
 			}
-			if client != nil && endpoint != "" {
-				if err := client.SendJSON(ctx, endpoint, jsonData); err != nil {
-					s.Logger.Error("failed to send data to MCMP API", "hostname", s.Hostname, "endpoint", endpoint, "error", err)
-					return fmt.Errorf("failed to send data to MCMP %d: %w", i, err)
-				}
-				s.Logger.Info("Data sent to MCMP API", "endpoint", endpoint, "hostname", s.Hostname)
+			if client == nil || endpoint == "" {
+				continue
 			}
+			wg.Add(1)
+			go func(c JSONSender, ep string, idx int) {
+				defer wg.Done()
+				if err := c.SendJSON(ctx, ep, jsonData); err != nil {
+					s.Logger.Error("failed to send data to MCMP API", "hostname", s.Hostname, "endpoint", ep, "error", err)
+					errCh <- fmt.Errorf("failed to send data to MCMP[%d] %s: %w", idx, ep, err)
+					return
+				}
+				s.Logger.Info("Data sent to MCMP API", "endpoint", ep, "hostname", s.Hostname)
+			}(client, endpoint, i)
+		}
+		wg.Wait()
+		close(errCh)
+		var allErrs error
+		for err := range errCh {
+			allErrs = errors.Join(allErrs, err)
+		}
+		if allErrs != nil {
+			return allErrs
 		}
 	} else if s.McmpClient != nil && s.ApiEndpoint != "" {
 		if err := s.McmpClient.SendJSON(ctx, s.ApiEndpoint, jsonData); err != nil {

@@ -28,15 +28,15 @@ public class OntapExportPolicyRule extends AbstractEntity {
     @Column(name = "index")
     private Long index;
 
-    @Column(name = "clients", columnDefinition = "TEXT[]")
+    @Column(name = "clients")
     private List<String> clients;
 
-    @Column(name = "protocols", columnDefinition = "TEXT[]")
+    @Column(name = "protocols")
     private List<String> protocols;
 
-    @Column(name = "rw_rules", columnDefinition = "TEXT[]")
+    @Column(name = "rw_rules")
     private List<String> rwRules;
 
-    @Column(name = "ro_rules", columnDefinition = "TEXT[]")
+    @Column(name = "ro_rules")
     private List<String> roRules;
 }

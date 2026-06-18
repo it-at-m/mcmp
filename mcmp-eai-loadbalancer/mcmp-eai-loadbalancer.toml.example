@@ -1,0 +1,43 @@
+# =============================================================================
+# Logging Configuration
+# =============================================================================
+[LOGGING]
+Level      = "INFO"
+Output     = "file"
+Format     = "plain"
+Filename   = "/var/log/mcmp-eai-loadbalancer/mcmp-eai-loadbalancer.log"
+MaxSize    = 10
+MaxBackups = 7
+MaxAge     = 30
+Compress   = true
+
+# =============================================================================
+# Load-Balancer Management API
+# Single API that returns the full BIG-IP configuration for all load balancers.
+# =============================================================================
+[LOADBALANCER]
+APIURL    = "https://bigip-mgmt.example.com/api/v1/config"
+Username  = "<your-username>"
+Password  = "<your-password>"
+Enabled   = true
+VerifyTLS = true
+
+# =============================================================================
+# MCMP API Configuration
+# Use [[MCMP]] (double brackets) to define one or more target MCMP instances.
+# Data is sent to all configured endpoints simultaneously.
+# =============================================================================
+[[MCMP]]
+OAuthUrl          = "https://keycloak.example.com/auth"
+OAuthRealm        = "mcmp"
+OAuthClientId     = "<your-client-id>"
+OAuthClientSecret = "<your-client-secret>"
+ApiEndpoint       = "https://mcmp-api.example.com/clients/loadbalancer/import"
+
+# Second target (optional)
+[[MCMP]]
+OAuthUrl          = "https://keycloak-dr.example.com/auth"
+OAuthRealm        = "mcmp"
+OAuthClientId     = "<your-client-id>"
+OAuthClientSecret = "<your-client-secret>"
+ApiEndpoint       = "https://mcmp-api-dr.example.com/clients/loadbalancer/import"

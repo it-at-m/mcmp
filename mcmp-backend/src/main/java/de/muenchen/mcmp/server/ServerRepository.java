@@ -589,4 +589,12 @@ public interface ServerRepository extends JpaRepository<Server, Long> {
             "WHERE s.roleOracle = true " +
             "ORDER BY s.fqdn")
     List<ServerDbDTO> findAllOracleServers();
+
+    @Query("SELECT s.id AS id, s.guestToolsIpAddress AS guestToolsIpAddress FROM Server s WHERE s.guestToolsIpAddress IN :ipAddresses")
+    List<ServerIpProjection> findIdsByGuestToolsIpAddressIn(@Param("ipAddresses") Collection<String> ipAddresses);
+
+    interface ServerIpProjection {
+        Long getId();
+        String getGuestToolsIpAddress();
+    }
 }

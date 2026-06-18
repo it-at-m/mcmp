@@ -313,7 +313,7 @@ import ScrollableListTable from "@/components/common/ScrollableListTable.vue";
 import OsCell from "@/components/Server/OsCell.vue";
 import { useUserStore } from "@/stores/user.ts";
 
-const favoritesFilter = ref(false);
+const favoritesFilter = ref(localStorage.getItem("mcmp_favorites_filter") === "true");
 const loadingServer = ref(false);
 const servers = ref<ServerList[]>([]);
 const totalServers = ref(0);
@@ -327,8 +327,8 @@ const tableRef = ref<{
   triggerObserveScroll: () => void;
   resetSelection: () => void;
 } | null>(null);
-const statusFilter = ref<string[]>([]);
-const osFilter = ref<string>("");
+const statusFilter = ref<string[]>(JSON.parse(localStorage.getItem("mcmp_status_filter") || "[]"));
+const osFilter = ref<string>(localStorage.getItem("mcmp_os_filter") || "");
 const noServersFaqLink = "https://go.muenchen.de/sp/KB0023236";
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
 const userStore = useUserStore();
@@ -376,6 +376,17 @@ watch([statusFilter, osFilter, favoritesFilter], async () => {
   await loadServers(1, statusFilter.value, osFilter.value, favoritesFilter.value);
   await nextTick();
   tableRef.value?.triggerObserveScroll();
+});
+
+watch(favoritesFilter, (newValue) => {
+  localStorage.setItem("mcmp_favorites_filter", String(newValue));
+});
+
+watch(statusFilter, (newVal) => {
+  localStorage.setItem("mcmp_status_filter", JSON.stringify(newVal));
+});
+watch(osFilter, (newVal) => {
+  localStorage.setItem("mcmp_os_filter", newVal);
 });
 
 watch(
@@ -481,7 +492,7 @@ onMounted(async () => {
     selectedRow.value = id.toString();
     emit("update:selected", [{ id: parseInt(id) } as ServerList]);
   }
-  await loadServers(1, [], "");
+  await loadServers(1, statusFilter.value, osFilter.value, favoritesFilter.value);
 });
 
 onUnmounted(() => {

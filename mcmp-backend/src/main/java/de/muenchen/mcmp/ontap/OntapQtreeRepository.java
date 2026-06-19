@@ -36,7 +36,7 @@ public interface OntapQtreeRepository extends JpaRepository<OntapQtree, Long> {
             "JOIN v.svm s " +
             "WHERE LOWER(s.name) LIKE '%dcn' " +
             "AND v.ontapCifsShares IS EMPTY " +
-            "AND (:search IS NULL OR LOWER(q.name) LIKE :search) " +
+            "AND (:search IS NULL OR LOWER(q.name) LIKE :search OR LOWER(s.name) LIKE :search OR LOWER(CONCAT(s.name, ':', v.mountPathNfs, '/', q.name)) LIKE :search) " +
             "AND (" +
             "   :isAdmin = TRUE OR :isReadonly = TRUE OR :isStorage = TRUE OR :isOperator = TRUE OR " +
             "   EXISTS (SELECT 1 FROM q.appservices a JOIN a.changeGroup g JOIN g.users u WHERE u.username = :username)" +

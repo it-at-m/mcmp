@@ -96,7 +96,10 @@
             <div class="pa-1">
               <strong>Write Once Read Many</strong>
               <p class="text-caption mt-2 mb-1">
-                Schützt Daten vor Änderungen und Löschung. Dateien können einmal geschrieben, danach nur noch gelesen werden. Der Zugriff ist zeitlich begrenzt.
+                Schützt eine erstellte und committete Datei vor Änderungen und
+                Löschung. Der Schutz ist zeitlich befristet. Das Lesen der
+                geschützten Datei, sowie das Erstellen und committen weitere
+                Dateien ist beliebig möglich.
               </p>
             </div>
           </info-tooltip>
@@ -109,9 +112,11 @@
         <h3>
           Clone<info-tooltip>
             <div class="pa-1">
-              <strong>FlexClone</strong>
+              <strong>Clone</strong>
               <p class="text-caption mt-2 mb-1">
-                Eine effiziente Kopie eines Volumes oder Snapshots, die Speicherplatz spart durch Copy-on-Write. Änderungen beeinflussen nicht das Original.
+                Eine effiziente Kopie eines Speicherbereichs, die Speicherplatz
+                spart durch Copy-on-Write. Änderungen beeinflussen nicht das
+                Original.
               </p>
             </div>
           </info-tooltip>
@@ -123,10 +128,16 @@
             <div class="pa-1">
               <strong>Speichertyp</strong>
               <p class="text-caption mt-2 mb-1">
-                <strong>NFS:</strong> Network File System für Unix/Linux-Systeme<br>
-                <strong>CIFS:</strong> Common Internet File System für Windows-Systeme<br>
-                <strong>QTREE:</strong> <span class="text-error">Nicht mehr verfügbar zur Bestellung (veraltet)</span><br>
-                <strong>S3:</strong> Object Storage mit Amazon S3-kompatiblem Interface
+                <strong>NFS:</strong> Network File System für
+                Unix/Linux-Systeme<br />
+                <strong>CIFS:</strong> Common Internet File System für
+                Windows-Systeme<br />
+                <strong>QTREE:</strong>
+                <span class="text-error"
+                  >Nicht mehr verfügbar zur Bestellung (veraltet)</span
+                ><br />
+                <strong>S3:</strong> Object Storage mit Amazon S3-kompatiblem
+                Interface
               </p>
             </div>
           </info-tooltip>
@@ -307,7 +318,7 @@
 <script setup lang="ts">
 import type { UnifiedStorageItem } from "@/types/Storage";
 
-import { mdiCheckCircle, mdiCloseCircle, mdiAlert } from "@mdi/js";
+import { mdiAlert } from "@mdi/js";
 import { computed, ref } from "vue";
 
 import jobService from "@/api/jobService.ts";

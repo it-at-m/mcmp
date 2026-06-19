@@ -11,15 +11,15 @@
     >
       <h2>Diese Ansicht ist nur in der Testumgebung verfügbar.</h2>
       <template #actions>
-          <v-btn
-            icon
-            variant="outlined"
-            aria-label="Schließen"
-            class="mb-7"
-            @click="showBanner = false"
-          >
-            <v-icon>{{ mdiClose }}</v-icon>
-          </v-btn>
+        <v-btn
+          icon
+          variant="outlined"
+          aria-label="Schließen"
+          class="mb-7"
+          @click="showBanner = false"
+        >
+          <v-icon>{{ mdiClose }}</v-icon>
+        </v-btn>
       </template>
     </v-banner>
 
@@ -100,7 +100,7 @@
                     rounded="lg"
                     class="d-flex justify-center align-center"
                   >
-                    Backup
+                    Data Protection
                     <template #prepend>
                       <v-icon size="x-large">{{ mdiDatabase }}</v-icon>
                     </template>
@@ -171,7 +171,7 @@ import type { UnifiedStorageItem } from "@/types/Storage";
 import type { UnifiedStorageItemList } from "@/types/UnifiedStorageItemList";
 import type { UnifiedStorageSnapshotItem } from "@/types/UnifiedStorageSnapshotItem";
 
-import { mdiAccountCog, mdiDatabase, mdiHome, mdiClose } from "@mdi/js";
+import { mdiAccountCog, mdiClose, mdiDatabase, mdiHome } from "@mdi/js";
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 

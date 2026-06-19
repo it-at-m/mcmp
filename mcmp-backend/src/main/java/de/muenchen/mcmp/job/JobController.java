@@ -1104,6 +1104,9 @@ public class JobController {
             if (memberPorts.isEmpty()) {
                 throw new IllegalArgumentException("At least one member port is required.");
             }
+            if (memberPorts.size() > 10) {
+                throw new IllegalArgumentException("A member may have at most 10 ports.");
+            }
             for (Object memberPortObj : memberPorts) {
                 int memberPort;
                 try {
@@ -1123,6 +1126,40 @@ public class JobController {
         }
         if (!List.of("round-robin", "least-connections-member").contains(lbMode)) {
             throw new IllegalArgumentException("Invalid loadbalancing mode: " + lbMode);
+        }
+
+        List<?> monitors = serverPool.get("monitors") instanceof List<?> m ? m : List.of();
+        if (monitors.isEmpty()) {
+            throw new IllegalArgumentException("At least one monitor is required.");
+        }
+        boolean serversideTls = Boolean.TRUE.equals(listener.get("serverside_tls"));
+        java.util.regex.Pattern monitorPathPattern = java.util.regex.Pattern.compile("^/(?!/)[^?#\\s]*(?:\\?[^#\\s]*)?(?:#\\S*)?$");
+        for (Object monitorObj : monitors) {
+            if (monitorObj instanceof Map<?, ?> monitor) {
+                String monitorType = monitor.get("type") != null ? monitor.get("type").toString() : "";
+                if (!List.of("http", "https").contains(monitorType)) {
+                    throw new IllegalArgumentException("Invalid monitor type: " + monitorType);
+                }
+                if (serversideTls && "http".equals(monitorType)) {
+                    throw new IllegalArgumentException("Monitor type 'http' is not allowed when server pool protocol is 'https'.");
+                }
+                if (!serversideTls && "https".equals(monitorType)) {
+                    throw new IllegalArgumentException("Monitor type 'https' is not allowed when server pool protocol is 'http'.");
+                }
+                Object path = monitor.get("path");
+                if (path == null || path.toString().isBlank()) {
+                    throw new IllegalArgumentException("Monitor path is required.");
+                }
+                if (!monitorPathPattern.matcher(path.toString()).matches()) {
+                    throw new IllegalArgumentException("Monitor path is invalid: " + path);
+                }
+                Object method = monitor.get("method");
+                if (!List.of("GET", "HEAD", "OPTIONS").contains(method != null ? method.toString() : "")) {
+                    throw new IllegalArgumentException("Invalid monitor method: " + method);
+                }
+            } else if (!(monitorObj instanceof String s && "tcp".equals(s))) {
+                throw new IllegalArgumentException("Invalid monitor entry: " + monitorObj);
+            }
         }
 
         logCreatedJob(LOADBALANCER_F5, serverId);

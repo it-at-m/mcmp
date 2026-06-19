@@ -13,7 +13,7 @@
   >
     <template #activator="{ props }">
       <v-tooltip
-        :text="editable ? 'Share bearbeiten' : 'Nicht bearbeitbar'"
+        :text="editable ? 'Ressourcen bearbeiten' : 'Nicht bearbeitbar'"
         location="bottom"
       >
         <template #activator="{ props: tooltipProps }">
@@ -22,7 +22,7 @@
             icon
             variant="flat"
             :disabled="!editable"
-            aria-label="Share bearbeiten"
+            aria-label="Ressourcen bearbeiten"
           >
             <v-icon>{{ mdiPencil }}</v-icon>
           </v-btn>

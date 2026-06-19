@@ -6,7 +6,7 @@
           selectedStorageItem.type == 'CIFS') &&
         !selectedStorageItem.isWorm
       "
-      style="height: 300px"
+      style="width: 100%; height: clamp(250px, 40vh, 400px)"
       :option="nfsCifsChartOption"
       autoresize
     />
@@ -17,19 +17,21 @@
           selectedStorageItem.type == 'CIFS') &&
           selectedStorageItem.isWorm)
       "
-      style="height: 300px"
+      style="width: 100%; height: clamp(250px, 40vh, 400px)"
       :option="qtreeChartOption"
       autoresize
     />
     <v-chart
       v-else-if="selectedStorageItem.type == 'S3'"
-      style="height: 300px"
+      style="width: 100%; height: clamp(250px, 40vh, 400px)"
       :option="s3ChartOption"
       autoresize
     />
   </v-container>
 </template>
 <script setup lang="ts">
+import type { UnifiedStorageItem } from "@/types/Storage.ts";
+
 import { PieChart } from "echarts/charts";
 import {
   LegendComponent,
@@ -38,10 +40,10 @@ import {
 } from "echarts/components";
 import { use } from "echarts/core";
 import { CanvasRenderer } from "echarts/renderers";
-import VChart from "vue-echarts";
-import type { UnifiedStorageItem } from "@/types/Storage.ts";
-import { useTheme } from "vuetify/framework";
 import { computed } from "vue";
+import VChart from "vue-echarts";
+import { useTheme } from "vuetify/framework";
+
 import { useFormatter } from "@/composables/formatter.ts";
 
 use([
@@ -75,7 +77,11 @@ const previewSizeBytes = computed(() => {
 });
 
 const snapshotReservePercent = computed(() => {
-  return props.previewSnapshotReservePercent ?? props.selectedStorageItem.spaceSnapshotReservePercent ?? 0;
+  return (
+    props.previewSnapshotReservePercent ??
+    props.selectedStorageItem.spaceSnapshotReservePercent ??
+    0
+  );
 });
 
 const snapshotReserveBytes = computed(() => {
@@ -96,27 +102,19 @@ function getChartOption(data: { value: number; name: string }[]) {
         return `${params.marker}${params.name} ${formatter.formatBytesSmart(params.value)} (${params.percent}%)`;
       },
     },
-    title: {
-      text: "Legende",
-      left: "left",
-      top: "left",
-      textStyle: {
-        color: textColor,
-        fontSize: 14,
-        fontWeight: "normal",
-      },
-    },
     legend: {
-      orient: "vertical",
-      left: "left",
-      top: 35,
+      orient: "horizontal",
+      bottom: 0,
+      left: "center",
       textStyle: { color: textColor },
+      selectedMode: false,
     },
     series: [
       {
         name: "Ressourcen",
         type: "pie",
-        radius: "80%",
+        radius: "65%",
+        center: ["50%", "45%"],
         label: {
           color: textColor,
         },
@@ -134,9 +132,25 @@ function getChartOption(data: { value: number; name: string }[]) {
 }
 
 const nfsCifsChartOption = computed(() => {
-  const snapshotUsed = clampToPositive(props.selectedStorageItem.spaceSnapshotUsed);
   const logicalUsedByAfs = clampToPositive(
     props.selectedStorageItem.spaceLogicalUsedByAfs
+  );
+
+  if (snapshotReservePercent.value === 0) {
+    return getChartOption([
+      {
+        value: logicalUsedByAfs,
+        name: "Aktives Dateisystem: regulär belegt",
+      },
+      {
+        value: Math.max(previewSizeBytes.value - logicalUsedByAfs, 0),
+        name: "Aktives Dateisystem: frei",
+      },
+    ]);
+  }
+
+  const snapshotUsed = clampToPositive(
+    props.selectedStorageItem.spaceSnapshotUsed
   );
   const reserveSize = snapshotReserveBytes.value;
   const snapshotOverflowIntoAfs = Math.max(snapshotUsed - reserveSize, 0);
@@ -198,5 +212,4 @@ const s3ChartOption = computed(() => {
     },
   ]);
 });
-
 </script>

@@ -91,7 +91,7 @@
     </v-row>
     <v-row>
       <v-col cols="3">
-        <h3>
+        <h3 v-if="selectedStorageItem.protocol != 'S3'">
           WORM<info-tooltip>
             <div class="pa-1">
               <strong>Write Once Read Many</strong>
@@ -105,11 +105,8 @@
           </info-tooltip>
         </h3>
       </v-col>
-      <v-col
-        v-if="selectedStorageItem.type != 'QTREE'"
-        cols="3"
-      >
-        <h3>
+      <v-col cols="3">
+        <h3 v-if="selectedStorageItem.protocol != 'S3'">
           Clone<info-tooltip>
             <div class="pa-1">
               <strong>Clone</strong>
@@ -144,42 +141,38 @@
         </h3>
       </v-col>
     </v-row>
-    <div v-if="selectedStorageItem.protocol != 'S3'">
-      <v-row>
-        <v-col cols="3">
-          <p>
-            {{ formatter.formatBooleanToJaNein(selectedStorageItem.isWorm) }}
-          </p>
-        </v-col>
-        <v-col
-          v-if="selectedStorageItem.type != 'QTREE'"
-          cols="3"
-        >
-          <p>
-            {{
-              formatter.formatBooleanToJaNein(selectedStorageItem.isFlexClone)
-            }}
-          </p>
-        </v-col>
-        <v-col cols="3">
-          <p>
-            {{ selectedStorageItem.type }}
-            <v-icon
-              v-if="selectedStorageItem.type === 'QTREE'"
-              color="warning"
-              size="small"
-              class="ml-2"
-            >
-              {{ mdiAlert }}
-            </v-icon>
-          </p>
-        </v-col>
-      </v-row>
-    </div>
+    <v-row>
+      <v-col cols="3">
+        <p v-if="selectedStorageItem.protocol != 'S3'">
+          {{ formatter.formatBooleanToJaNein(selectedStorageItem.isWorm) }}
+        </p>
+      </v-col>
+      <v-col
+        cols="3"
+      >
+        <p v-if="selectedStorageItem.protocol != 'S3'">
+          {{ formatter.formatBooleanToJaNein(selectedStorageItem.isFlexClone) }}
+        </p>
+      </v-col>
+      <v-col cols="3">
+        <p>
+          {{ selectedStorageItem.type }}
+          <v-icon
+            v-if="selectedStorageItem.type === 'QTREE'"
+            color="warning"
+            size="small"
+            class="ml-2"
+          >
+            {{ mdiAlert }}
+          </v-icon>
+        </p>
+      </v-col>
+    </v-row>
   </common-card>
   <common-card
     v-if="props.selectedStorageItem.isWorm"
     title="WORM"
+    top-margin="0"
   >
     <v-row>
       <v-col cols="2">
@@ -229,6 +222,7 @@
   <common-card
     v-if="props.selectedStorageItem.isFlexClone"
     title="Clone"
+    top-margin="0"
   >
     <v-row>
       <v-col cols="3">

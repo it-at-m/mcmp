@@ -77,11 +77,13 @@ public interface OntapVolumeRepository extends JpaRepository<OntapVolume, Long> 
             "WHERE v.volumeUuid IN :uuids")
     List<OntapVolume> findByVolumeUuidsWithAppservices(@Param("uuids") List<UUID> uuids);
 
-    @Query("SELECT CASE WHEN COUNT(v) > 0 THEN TRUE ELSE FALSE END " +
-            "FROM OntapVolume v " +
+    @Query("SELECT CASE WHEN :isAdmin = TRUE OR :isStorage = TRUE OR EXISTS (" +
+            "SELECT 1 FROM OntapVolume v " +
             "JOIN v.appservices a " +
             "JOIN a.changeGroup g " +
             "JOIN g.users u " +
-            "WHERE v.volumeUuid = :uuid AND u.username = :username")
-    Boolean canUserEditVolume(@Param("uuid") UUID uuid, @Param("username") String username);
+            "WHERE v.volumeUuid = :uuid AND u.username = :username" +
+            ") THEN TRUE ELSE FALSE END")
+    Boolean canUserEditVolume(@Param("uuid") UUID uuid, @Param("username") String username,
+                              @Param("isAdmin") boolean isAdmin, @Param("isStorage") boolean isStorage);
 }

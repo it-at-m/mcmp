@@ -34,6 +34,7 @@ public interface SnapshotRepository extends JpaRepository<Snapshot, Long> {
                         AND u.username = :username
                     )
                 )
+                ORDER BY ss.create_time ASC
             """, nativeQuery = true)
     List<Snapshot> findByServerId(@Param("serverId") Long serverId,
                                   @Param("username") String username,

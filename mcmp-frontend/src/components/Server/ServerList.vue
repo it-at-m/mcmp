@@ -30,7 +30,9 @@
             {{ sortBy[0].order === "asc" ? mdiArrowUp : mdiArrowDown }}
           </v-icon>
           <v-badge
-            :model-value="statusFilter.length !== 0 || osFilter !== ''|| favoritesFilter"
+            :model-value="
+              statusFilter.length !== 0 || osFilter !== '' || favoritesFilter
+            "
             dot
           >
             <div
@@ -78,12 +80,12 @@
                       density="compact"
                     />
                     <v-checkbox
-                       v-model="favoritesFilter"
-                       label="Favoriten"
-                       density="compact"
-                       hide-details
-                       color="primary"
-                     />
+                      v-model="favoritesFilter"
+                      label="Favoriten"
+                      density="compact"
+                      hide-details
+                      color="primary"
+                    />
                   </v-list-item>
                   <v-divider class="my-2" />
                   <v-list-subheader>Betriebssystem</v-list-subheader>
@@ -173,7 +175,10 @@
                         hide-details
                         density="compact"
                     /></v-list-item>
-                    <v-list-item density="compact" class="py-0">
+                    <v-list-item
+                      density="compact"
+                      class="py-0"
+                    >
                       <v-radio
                         label="Ohne Anwendungsservice"
                         value="no-appservice"
@@ -190,73 +195,73 @@
       </template>
 
       <template #[`item.name`]="{ item }">
-      <div class="server-name-cell">
-                <v-btn
-                  icon
-                  variant="text"
-                  density="compact"
-                  :color="item.isFavorite ? 'warning' : 'grey-lighten-1'"
-                  class="mr-1"
-                  @click.stop="toggleFavorite(item)"
-                >
-                  <v-icon>{{ item.isFavorite ? mdiStar : mdiStarOutline }}</v-icon>
-                </v-btn>
-                <v-tooltip
-                  :text="
+        <div class="server-name-cell">
+          <v-btn
+            icon
+            variant="text"
+            density="compact"
+            :color="item.isFavorite ? 'warning' : 'grey-lighten-1'"
+            class="mr-1"
+            @click.stop="toggleFavorite(item)"
+          >
+            <v-icon>{{ item.isFavorite ? mdiStar : mdiStarOutline }}</v-icon>
+          </v-btn>
+          <v-tooltip
+            :text="
+              item.powerState === 'poweredOn'
+                ? 'Eingeschaltet!'
+                : item.powerState === 'poweredOff'
+                  ? 'Ausgeschaltet!'
+                  : 'Suspended'
+            "
+          >
+            <template #activator="{ props }">
+              <div class="power-state-icon-inline">
+                <v-icon
+                  :color="
                     item.powerState === 'poweredOn'
-                      ? 'Eingeschaltet!'
+                      ? 'btn_green'
                       : item.powerState === 'poweredOff'
-                        ? 'Ausgeschaltet!'
-                        : 'Suspended'
+                        ? 'btn_red'
+                        : 'accent'
                   "
+                  size="25"
+                  v-bind="props"
                 >
-                  <template #activator="{ props }">
-                    <div class="power-state-icon-inline">
-                      <v-icon
-                        :color="
-                          item.powerState === 'poweredOn'
-                            ? 'btn_green'
-                            : item.powerState === 'poweredOff'
-                              ? 'btn_red'
-                              : 'accent'
-                        "
-                        size="25"
-                        v-bind="props"
-                      >
-                        {{
-                          item.powerState === "poweredOn"
-                            ? mdiPlayCircle
-                            : item.powerState === "poweredOff"
-                              ? mdiStopCircle
-                              : mdiPauseCircle
-                        }}
-                      </v-icon>
-                    </div>
-                  </template>
-                </v-tooltip>
-                <os-cell
-                  :osFullName="item.os || ''"
-                  size="small"
-                  class="os-icon-inline"
-                />
-                <span class="server-name-text">{{ item.name.split(".")[0] }}</span>
-                <v-tooltip
-                  v-if="item.hasWarnings"
-                  location="top"
-                  text="Handlung erforderlich"
-                >
-                  <template #activator="{ props: tooltipProps }">
-                    <v-icon
-                      v-bind="tooltipProps"
-                      :icon="mdiAlert"
-                      color="orange"
-                      size="20"
-                      class="ml-1"
-                    />
-                  </template>
-                </v-tooltip>
+                  {{
+                    item.powerState === "poweredOn"
+                      ? mdiPlayCircle
+                      : item.powerState === "poweredOff"
+                        ? mdiStopCircle
+                        : mdiPauseCircle
+                  }}
+                </v-icon>
               </div>
             </template>
+          </v-tooltip>
+          <os-cell
+            :osFullName="item.os || ''"
+            size="small"
+            class="os-icon-inline"
+          />
+          <span class="server-name-text">{{ item.name.split(".")[0] }}</span>
+          <v-tooltip
+            v-if="item.hasWarnings"
+            location="top"
+            text="Handlung erforderlich"
+          >
+            <template #activator="{ props: tooltipProps }">
+              <v-icon
+                v-bind="tooltipProps"
+                :icon="mdiAlert"
+                color="orange"
+                size="20"
+                class="ml-1"
+              />
+            </template>
+          </v-tooltip>
+        </div>
+      </template>
 
       <template #no-data>
         <v-row />
@@ -302,9 +307,9 @@ import {
   mdiFilterVariant,
   mdiPauseCircle,
   mdiPlayCircle,
-  mdiStopCircle,
   mdiStar,
   mdiStarOutline,
+  mdiStopCircle,
 } from "@mdi/js";
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 
@@ -313,7 +318,9 @@ import ScrollableListTable from "@/components/common/ScrollableListTable.vue";
 import OsCell from "@/components/Server/OsCell.vue";
 import { useUserStore } from "@/stores/user.ts";
 
-const favoritesFilter = ref(localStorage.getItem("mcmp_favorites_filter") === "true");
+const favoritesFilter = ref(
+  localStorage.getItem("mcmp_favorites_filter") === "true"
+);
 const loadingServer = ref(false);
 const servers = ref<ServerList[]>([]);
 const totalServers = ref(0);
@@ -327,7 +334,9 @@ const tableRef = ref<{
   triggerObserveScroll: () => void;
   resetSelection: () => void;
 } | null>(null);
-const statusFilter = ref<string[]>(JSON.parse(localStorage.getItem("mcmp_status_filter") || "[]"));
+const statusFilter = ref<string[]>(
+  JSON.parse(localStorage.getItem("mcmp_status_filter") || "[]")
+);
 const osFilter = ref<string>(localStorage.getItem("mcmp_os_filter") || "");
 const noServersFaqLink = "https://go.muenchen.de/sp/KB0023236";
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -355,9 +364,37 @@ const isAdmin = computed(
 
 const filteredServers = computed(() => servers.value);
 
+function sortServersByFavorite() {
+  const order = sortBy.value[0]?.order === "desc" ? -1 : 1;
+  servers.value = [...servers.value].sort((a, b) => {
+    const favDiff = (b.isFavorite ? 1 : 0) - (a.isFavorite ? 1 : 0);
+    if (favDiff !== 0) return favDiff;
+    return order * a.name.localeCompare(b.name);
+  });
+}
+
+function removeIfBeyondLoadedRange(server: any) {
+  if (!hasMore.value) return;
+  const order = sortBy.value[0]?.order === "desc" ? -1 : 1;
+  const nonFavorites = servers.value.filter(
+    (s) => !s.isFavorite && s.id !== server.id
+  );
+  if (nonFavorites.length === 0) return;
+  const lastName = nonFavorites[nonFavorites.length - 1].name;
+  const beyondRange = order * server.name.localeCompare(lastName) > 0;
+  if (beyondRange) {
+    servers.value = servers.value.filter((s) => s.id !== server.id);
+  }
+}
+
 async function toggleFavorite(server: any) {
   const originalState = server.isFavorite;
   server.isFavorite = !server.isFavorite;
+
+  if (originalState) {
+    removeIfBeyondLoadedRange(server);
+  }
+  sortServersByFavorite();
 
   try {
     if (originalState) {
@@ -367,13 +404,22 @@ async function toggleFavorite(server: any) {
     }
   } catch (error) {
     server.isFavorite = originalState;
+    if (!servers.value.find((s) => s.id === server.id)) {
+      servers.value = [...servers.value, server];
+    }
+    sortServersByFavorite();
     console.error("Fehler beim Aktualisieren des Favoriten-Status:", error);
   }
 }
 
 watch([statusFilter, osFilter, favoritesFilter], async () => {
   currentPage.value = 1;
-  await loadServers(1, statusFilter.value, osFilter.value, favoritesFilter.value);
+  await loadServers(
+    1,
+    statusFilter.value,
+    osFilter.value,
+    favoritesFilter.value
+  );
   await nextTick();
   tableRef.value?.triggerObserveScroll();
 });
@@ -414,10 +460,20 @@ function onSearchUpdate(val: string) {
 
 async function onLoadMore() {
   currentPage.value++;
-  await loadServers(currentPage.value, statusFilter.value, osFilter.value, favoritesFilter.value);
+  await loadServers(
+    currentPage.value,
+    statusFilter.value,
+    osFilter.value,
+    favoritesFilter.value
+  );
 }
 
-async function loadServers(page = 1, status: string[] = [], os = "", favorites = false) {
+async function loadServers(
+  page = 1,
+  status: string[] = [],
+  os = "",
+  favorites = false
+) {
   loadingServer.value = true;
   const offset = (page - 1) * itemsPerPage.value;
   const currentSort = sortBy.value[0] ?? { key: "name", order: "asc" };
@@ -478,7 +534,12 @@ watch(search, () => {
   if (searchTimeout) clearTimeout(searchTimeout);
   searchTimeout = setTimeout(async () => {
     currentPage.value = 1;
-    await loadServers(1, statusFilter.value, osFilter.value, favoritesFilter.value);
+    await loadServers(
+      1,
+      statusFilter.value,
+      osFilter.value,
+      favoritesFilter.value
+    );
     await nextTick();
     tableRef.value?.triggerObserveScroll();
   }, 300);
@@ -492,7 +553,12 @@ onMounted(async () => {
     selectedRow.value = id.toString();
     emit("update:selected", [{ id: parseInt(id) } as ServerList]);
   }
-  await loadServers(1, statusFilter.value, osFilter.value, favoritesFilter.value);
+  await loadServers(
+    1,
+    statusFilter.value,
+    osFilter.value,
+    favoritesFilter.value
+  );
 });
 
 onUnmounted(() => {
@@ -529,6 +595,7 @@ defineExpose({ updateServerPowerState });
 
 .power-state-icon-inline {
   display: flex;
+  /* noinspection CssUnresolvedCustomProperty */
   background-color: rgb(var(--v-theme-bg_icon));
   align-items: center;
   justify-content: center;
@@ -584,6 +651,7 @@ defineExpose({ updateServerPowerState });
 .links a:visited,
 .links a:hover,
 .links a:active {
+  /* noinspection CssUnresolvedCustomProperty */
   color: rgb(var(--v-theme-link));
   text-decoration: none;
 }

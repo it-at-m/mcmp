@@ -94,6 +94,11 @@ public interface ServerRepository extends JpaRepository<Server, Long> {
               WHERE ufs.server_id = s.id AND u_fav.username = :username
             ))
         ORDER BY
+            CASE WHEN EXISTS (
+                SELECT 1 FROM cmp.user_favorite_server ufs
+                JOIN cmp.user u_fav ON ufs.user_id = u_fav.id
+                WHERE ufs.server_id = s.id AND u_fav.username = :username
+            ) THEN 0 ELSE 1 END ASC,
             CASE WHEN :sortOrder = 'desc' THEN s.name END DESC,
             CASE WHEN :sortOrder = 'asc' THEN s.name END ASC
     """,

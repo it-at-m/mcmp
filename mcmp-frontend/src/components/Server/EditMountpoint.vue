@@ -104,24 +104,31 @@
             ]"
             @update:model-value="
               newCapacityGB = mountPoint?.capacityInBytes
-                ? formatter.formatBtoGB(mountPoint.capacityInBytes)
+                ? Math.max(
+                    1,
+                    Number(formatter.formatBtoGB(mountPoint.capacityInBytes))
+                  )
                 : 0
             "
           />
         </v-col>
         <v-col
-          cols="12"
           v-if="mountPoint != null"
+          cols="12"
         >
           <h4>Aktueller Füllstand (bei neuer Göße):</h4>
-          <LinearProgressWithColors
+          <linear-progress-with-colors
             :value="
-              ((newCapacityGB -
-                (formatter.calculateBtoGB(mountPoint?.freeSpaceInBytes) +
-                  (newCapacityGB -
-                    formatter.calculateBtoGB(mountPoint?.capacityInBytes)))) *
-                100) /
-              newCapacityGB
+              newCapacityGB > 0
+                ? ((newCapacityGB -
+                    (formatter.calculateBtoGB(mountPoint?.freeSpaceInBytes) +
+                      (newCapacityGB -
+                        formatter.calculateBtoGB(
+                          mountPoint?.capacityInBytes
+                        )))) *
+                    100) /
+                  newCapacityGB
+                : 0
             "
             :show-percentage="true"
           />

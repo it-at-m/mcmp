@@ -69,7 +69,8 @@ public class JobController {
     private static final String WINDOWS_MAINTENANCE_MODE = "WINDOWS_MAINTENANCE_MODE";
     private static final String WINDOWS_MAINTENANCE_MODE_END = "WINDOWS_MAINTENANCE_MODE_END";
     private static final String WINDOWS_TEMP_ADMIN = "WINDOWS_TEMP_ADMIN";
-    private static final String WINDOWS_SERVER = "WINDOWS_SERVER";
+    public static final String WINDOWS_SERVER_2025 = "WINDOWS_SERVER_2025";
+    public static final String WINDOWS_SERVER_2022 = "WINDOWS_SERVER_2022";
 
     private static final String DB_ORACLE_CREATE_BACKUP = "DB_ORACLE_CREATE_BACKUP";
 
@@ -850,9 +851,12 @@ public class JobController {
         jobService.windowsMaintenaceModeEnd(serverId, WINDOWS_MAINTENANCE_MODE_END);
     }
 
-    @PostMapping("/create/" + WINDOWS_SERVER)
-    public void windowsServer(@RequestParam(name = "serverId") final Long serverId,
-                              @RequestBody final Map<String, Object> awxExtraVars) {
+    // ==========================================
+// WINDOWS SERVER 2025
+// ==========================================
+    @PostMapping("/create/" + WINDOWS_SERVER_2025)
+    public void windowsServer2025(@RequestParam(name = "serverId") final Long serverId,
+                                  @RequestBody final Map<String, Object> awxExtraVars) {
         // Validate awxExtraVars
         Object fqdnObj = awxExtraVars.get("fqdn");
         Object categoryTypeObj = awxExtraVars.get("categoryType");
@@ -887,12 +891,13 @@ public class JobController {
             log.warn("Invalid CPU or RAM provided by user: {} for new Windows Server Install", AuthUtils.getUsername());
             throw new IllegalArgumentException("CPU must be between 2 and 8, RAM must be between 4 and 64 GB.");
         }
-        String osVersion = osVersionObj.toString();
-        if (!osVersion.equals("Windows Server 2025") && !osVersion.equals("Windows Server 2022")) {
-            log.warn("Invalid OS Version provided by user: {} for new Windows Server Install", AuthUtils.getUsername());
-            throw new IllegalArgumentException("OS Version is invalid.");
-        }
 
+        String osVersion = osVersionObj.toString();
+        // Prüft, ob die Version zu Windows 2025 passt (als String oder Enum-Wert)
+        if (!osVersion.equals("Windows Server 2025") && !osVersion.equals("WIN2025")) {
+            log.warn("Invalid OS Version provided by user: {} for new Windows Server 2025 Install", AuthUtils.getUsername());
+            throw new IllegalArgumentException("OS Version is invalid for this endpoint.");
+        }
 
         String categoryType = categoryTypeObj.toString();
         String nonPostgresReason = null;
@@ -925,9 +930,93 @@ public class JobController {
             throw new AccessDeniedException("You are not allowed to order a server for this combination of application service and network group.");
         }
 
+        // Übergabe der spezifischen WINDOWS_SERVER_2025 Konstante an den Service
         jobService.windowsServer(fqdnBuildingBlocks, serverTypeMap, categoryType, ram, cpu,
-                disks, networkGroupId, applicationServiceId, osVersion, nonPostgresReason, dbParams, WINDOWS_SERVER);
+                disks, networkGroupId, applicationServiceId, osVersion, nonPostgresReason, dbParams, WINDOWS_SERVER_2025);
+    }
 
+    // ==========================================
+// WINDOWS SERVER 2022
+// ==========================================
+    @PostMapping("/create/" + WINDOWS_SERVER_2022)
+    public void windowsServer2022(@RequestParam(name = "serverId") final Long serverId,
+                                  @RequestBody final Map<String, Object> awxExtraVars) {
+        // Validate awxExtraVars
+        Object fqdnObj = awxExtraVars.get("fqdn");
+        Object categoryTypeObj = awxExtraVars.get("categoryType");
+        Object serverTypeObj = awxExtraVars.get("serverType");
+        Object ramObj = awxExtraVars.get("ram");
+        Object cpuObj = awxExtraVars.get("cpu");
+        Object disksObj = awxExtraVars.get("disks");
+        Object networkGroupIdObj = awxExtraVars.get("network_group_id");
+        Object applicationServiceIdObj = awxExtraVars.get("application_service_id");
+        Object osVersionObj = awxExtraVars.get("osVersion");
+        Object nonPostgresReasonObj = awxExtraVars.get("non_postgres_reason");
+        Object dbParamsObj = awxExtraVars.get("db_params");
+
+        if (fqdnObj == null
+                || categoryTypeObj == null
+                || ramObj == null
+                || cpuObj == null
+                || disksObj == null
+                || networkGroupIdObj == null
+                || applicationServiceIdObj == null
+                || osVersionObj == null) {
+            log.info("Not all needed parameter provided by user: {} to order a server.", AuthUtils.getUsername());
+            throw new MissingFormatArgumentException("Not all needed parameter are provided.");
+        }
+
+        Map<?, ?> fqdnBuildingBlocks = requireMap(fqdnObj, "FQDN");
+        List<Map<?, ?>> disks = requireListOfMap(disksObj, "Disks");
+
+        int ram = Integer.parseInt(ramObj.toString());
+        int cpu = Integer.parseInt(cpuObj.toString());
+        if (cpu < 2 || cpu > 8 || ram < 4 || ram > 64) {
+            log.warn("Invalid CPU or RAM provided by user: {} for new Windows Server Install", AuthUtils.getUsername());
+            throw new IllegalArgumentException("CPU must be between 2 and 8, RAM must be between 4 and 64 GB.");
+        }
+
+        String osVersion = osVersionObj.toString();
+        // Prüft, ob die Version zu Windows 2022 passt (als String oder Enum-Wert)
+        if (!osVersion.equals("Windows Server 2022") && !osVersion.equals("WIN2022")) {
+            log.warn("Invalid OS Version provided by user: {} for new Windows Server 2022 Install", AuthUtils.getUsername());
+            throw new IllegalArgumentException("OS Version is invalid for this endpoint.");
+        }
+
+        String categoryType = categoryTypeObj.toString();
+        String nonPostgresReason = null;
+        Map<?, ?> serverTypeMap = null;
+        if (!categoryType.equals("Standard")) {
+            serverTypeMap = requireMap(serverTypeObj, "Server Type");
+        }
+        if (categoryType.equals("DB")) {
+            if (nonPostgresReasonObj == null) {
+                log.info("Non-Postgres reason not provided by user: {} to order a database server.", AuthUtils.getUsername());
+                throw new MissingFormatArgumentException("Non-Postgres reason must be provided for non-Postgres database servers.");
+            } else {
+                nonPostgresReason = nonPostgresReasonObj.toString();
+                checkNonPostgresReason(nonPostgresReason);
+            }
+        }
+        Map<String, Map<?, ?>> dbParams = null;
+        if ((categoryType.equals("DB") || categoryType.equals("Mixed")) && dbParamsObj == null) {
+            log.info("DB Parameters not provided by user: {} to order a database server.", AuthUtils.getUsername());
+            throw new MissingFormatArgumentException("DB Parameters must be provided for database servers.");
+        } else if (dbParamsObj != null) {
+            dbParams = requireStringMapOfMap(dbParamsObj, "DB Parameters");
+        }
+
+        long applicationServiceId = Integer.parseInt(applicationServiceIdObj.toString());
+        checkServerInstallCanUserEditAppservice(applicationServiceId);
+
+        long networkGroupId = Integer.parseInt(networkGroupIdObj.toString());
+        if (!networkService.isAllowedNetworkGroupForAppservice(networkGroupId, applicationServiceId, categoryTypeObj.toString().equals("DB"))) {
+            throw new AccessDeniedException("You are not allowed to order a server for this combination of application service and network group.");
+        }
+
+        // Übergabe der spezifischen WINDOWS_SERVER_2022 Konstante an den Service
+        jobService.windowsServer(fqdnBuildingBlocks, serverTypeMap, categoryType, ram, cpu,
+                disks, networkGroupId, applicationServiceId, osVersion, nonPostgresReason, dbParams, WINDOWS_SERVER_2022);
     }
 
     // -----------------------------------------------------------------------------------------------------------------

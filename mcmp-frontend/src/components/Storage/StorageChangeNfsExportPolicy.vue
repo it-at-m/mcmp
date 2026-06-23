@@ -83,7 +83,7 @@
 import type { ServerList } from "@/types/ServerList.ts";
 
 import { mdiPencil, mdiPlus } from "@mdi/js";
-import { computed, ref, watch } from "vue";
+import { computed, ref } from "vue";
 
 import jobService from "@/api/jobService.ts";
 import serverService from "@/api/serverService.ts";
@@ -161,11 +161,6 @@ const activatorDisabled = computed(() => {
   return isEditMode.value && isIpOrRange(props.serverFqdn ?? "");
 });
 
-watch(selectedServer, () => {
-  searchText.value = "";
-});
-
-
 function openDialog() {
   // Prevent opening when in edit mode for IP addresses / ranges
   if (activatorDisabled.value) {
@@ -228,7 +223,7 @@ function getServers() {
   requestedAlready.value = true;
   loadingServers.value = true;
   serverService
-    .getVisibleServers(loadingServers, 0, -1, "name", "asc", "", [], "")
+    .getVisibleServers(loadingServers, 0, -1, "name", "asc", "", [], "", false)
     .then((response) => {
       serverList.value = response.content;
     })

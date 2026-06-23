@@ -967,7 +967,7 @@ public class JobController {
         }
 
         Map<?, ?> fqdnBuildingBlocks = requireMap(fqdnObj, "FQDN");
-        List<Map<?, ?>> disks = requireListOfMap(disksObj, "Disks");
+        List<Map<String, Object>> disks = requireListOfMap(disksObj, "Disks");
 
         int ram = Integer.parseInt(ramObj.toString());
         int cpu = Integer.parseInt(cpuObj.toString());

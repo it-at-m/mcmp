@@ -86,10 +86,10 @@
                   >
                   <v-tab
                     v-if="berechtigungTabBoolean"
-                    value="Berechtigungnen"
+                    value="Berechtigungen"
                     rounded="lg"
                     class="d-flex justify-center align-center"
-                    >Berechtigungnen
+                    >Berechtigungen
                     <template #prepend>
                       <v-icon size="x-large">{{ mdiAccountCog }}</v-icon>
                     </template></v-tab
@@ -120,7 +120,7 @@
                   </v-tabs-window-item>
                   <v-tabs-window-item
                     v-if="berechtigungTabBoolean"
-                    value="Berechtigungnen"
+                    value="Berechtigungen"
                   >
                     <storage-details-permissions
                       :selected-storage-item="selectedStorageDetail"

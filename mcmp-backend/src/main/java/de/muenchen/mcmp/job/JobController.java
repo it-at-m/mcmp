@@ -879,7 +879,7 @@ public class JobController {
         }
 
         Map<?, ?> fqdnBuildingBlocks = requireMap(fqdnObj, "FQDN");
-        List<Map<?, ?>> disks = requireListOfMap(disksObj, "Disks");
+        List<Map<String, Object>> disks = requireListOfMap(disksObj, "Disks");
 
         int ram = Integer.parseInt(ramObj.toString());
         int cpu = Integer.parseInt(cpuObj.toString());
@@ -1045,11 +1045,11 @@ public class JobController {
         if (!awxExtraVars.containsKey("listener")) {
             throw new MissingFormatArgumentException("Listener configuration must be provided.");
         }
-        List<Map<?, ?>> listenerList = requireListOfMap(awxExtraVars.get("listener"), "Listener configuration");
+        List<Map<String, Object>> listenerList = requireListOfMap(awxExtraVars.get("listener"), "Listener configuration");
         if (listenerList.isEmpty()) {
             throw new IllegalArgumentException("At least one listener is required.");
         }
-        Map<?, ?> listener = listenerList.getFirst();
+        Map<String, Object> listener = listenerList.getFirst();
         Object portObj = listener.get("port");
         if (portObj == null) {
             throw new IllegalArgumentException("Port must be provided.");
@@ -1063,6 +1063,7 @@ public class JobController {
         if (port < 1 || port > 65535) {
             throw new IllegalArgumentException("Port must be between 1 and 65535.");
         }
+        listener.put("port", port);
         Object listenerTypeObj = listener.get("listener_type");
         if (!(listenerTypeObj instanceof String listenerType)) {
             throw new IllegalArgumentException("Listener type must be provided.");
@@ -1074,16 +1075,16 @@ public class JobController {
         if (!awxExtraVars.containsKey("server_pools")) {
             throw new MissingFormatArgumentException("Server pools configuration must be provided.");
         }
-        List<Map<?, ?>> serverPools = requireListOfMap(awxExtraVars.get("server_pools"), "Server pools configuration");
+        List<Map<String, Object>> serverPools = requireListOfMap(awxExtraVars.get("server_pools"), "Server pools configuration");
         if (serverPools.isEmpty()) {
             throw new IllegalArgumentException("At least one server pool is required.");
         }
-        Map<?, ?> serverPool = serverPools.getFirst();
-        List<Map<?, ?>> memberList = requireListOfMap(serverPool.get("member"), "Server member");
+        Map<String, Object> serverPool = serverPools.getFirst();
+        List<Map<String, Object>> memberList = requireListOfMap(serverPool.get("member"), "Server member");
         if (memberList.isEmpty()) {
             throw new IllegalArgumentException("At least one server member is required.");
         }
-        for (Map<?, ?> member : memberList) {
+        for (Map<String, Object> member : memberList) {
             Object ipObj = member.get("ip");
             if (ipObj == null || ipObj.toString().isBlank()) {
                 throw new IllegalArgumentException("Member IP is required.");
@@ -1595,14 +1596,14 @@ public class JobController {
         return list;
     }
 
-    private List<Map<?, ?>> requireListOfMap(Object obj, String fieldLabel) {
+    private List<Map<String, Object>> requireListOfMap(Object obj, String fieldLabel) {
         List<?> list = requireList(obj, fieldLabel);
-        List<Map<?, ?>> result = new ArrayList<>(list.size());
+        List<Map<String, Object>> result = new ArrayList<>(list.size());
         for (Object item : list) {
             if (!(item instanceof Map<?, ?> map)) {
                 throw new IllegalArgumentException(fieldLabel + " must be provided in the correct format.");
             }
-            result.add(map);
+            result.add((Map<String, Object>) map);
         }
         return result;
     }

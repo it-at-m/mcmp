@@ -642,8 +642,11 @@ public class UserInfoAuthoritiesService {
 
                 final String xRealIp = request.getHeader(HEADER_X_REAL_IP);
                 if (xRealIp != null && !xRealIp.isEmpty()) {
-                    log.debug("Extracted IP from X-Real-IP header: {}", xRealIp);
-                    return xRealIp;
+                    if (isValidIpv4(xRealIp) || isValidIpv6(xRealIp)) {
+                        log.debug("Extracted IP from X-Real-IP header: {}", xRealIp);
+                        return xRealIp;
+                    }
+                    log.warn("Invalid IP format in X-Real-IP header: {}", xRealIp.replaceAll("[\r\n]", "_"));
                 }
                 return request.getRemoteAddr();
             }

@@ -1,5 +1,6 @@
 package de.muenchen.mcmp.infoblox;
 
+import de.muenchen.mcmp.utils.LogUtils;
 import lombok.extern.slf4j.Slf4j;
 
 import java.text.DecimalFormat;
@@ -68,10 +69,10 @@ public final class ServernameUtils {
      * @throws IllegalArgumentException if the prefix is invalid after normalization
      */
     public static String normalizeAndValidatePrefix(final String prefix, final String serverType) throws IllegalArgumentException {
-        log.debug("Normalizing and validating prefix: '{}' for serverType: '{}'", prefix, serverType);
+        log.debug("Normalizing and validating prefix: '{}' for serverType: '{}'", LogUtils.sanitize(prefix), LogUtils.sanitize(serverType));
         final String normalized = normalize(prefix);
         validatePrefix(normalized, serverType);
-        log.debug("Successfully validated prefix: '{}' -> '{}'", prefix, normalized);
+        log.debug("Successfully validated prefix: '{}' -> '{}'", LogUtils.sanitize(prefix), LogUtils.sanitize(normalized));
         return normalized;
     }
 
@@ -102,13 +103,13 @@ public final class ServernameUtils {
         }
 
         if (!VALID_PREFIXES.contains(normalizedPrefix)) {
-            log.debug("Invalid prefix '{}' not in valid prefixes: {}", normalizedPrefix, VALID_PREFIXES);
+            log.debug("Invalid prefix '{}' not in valid prefixes: {}", LogUtils.sanitize(normalizedPrefix), VALID_PREFIXES);
             throw new IllegalArgumentException(INVALID_PREFIX_MESSAGE);
         }
 
         // Oracle databases cannot have prefixes
         if ("db".equalsIgnoreCase(serverType)) {
-            log.debug("Oracle database detected with prefix '{}' - not allowed", normalizedPrefix);
+            log.debug("Oracle database detected with prefix '{}' - not allowed", LogUtils.sanitize(normalizedPrefix));
             throw new IllegalArgumentException(INVALID_PREFIX_BY_ORACLEDB_MESSAGE);
         }
     }

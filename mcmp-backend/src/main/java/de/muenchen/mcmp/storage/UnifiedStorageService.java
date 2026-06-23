@@ -6,6 +6,7 @@ import de.muenchen.mcmp.security.AuthUtils;
 import de.muenchen.mcmp.security.UserRoles;
 import de.muenchen.mcmp.storagegrid.StorageGridBucket;
 import de.muenchen.mcmp.storagegrid.StorageGridBucketRepository;
+import de.muenchen.mcmp.utils.LogUtils;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -231,7 +232,7 @@ public class UnifiedStorageService {
                     tmp.add(StorageType.valueOf(t.trim().toUpperCase()));
                 } catch (IllegalArgumentException ex) {
                     // ignore unknown types
-                    log.debug("Unknown storage type in filter ignored: {}", t);
+                    log.debug("Unknown storage type in filter ignored: {}", LogUtils.sanitize(t));
                 }
             }
             requestedTypes = tmp.isEmpty() ? null : Collections.unmodifiableSet(tmp);

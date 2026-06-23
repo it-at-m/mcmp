@@ -31,7 +31,7 @@ public interface OntapQtreeRepository extends JpaRepository<OntapQtree, Long> {
                                                  @Param("isStorage") boolean isStorage,
                                                  @Param("isOperator") boolean isOperator);
 
-    @Query("SELECT q.id, q.name, s.name FROM OntapQtree q " +
+    @Query("SELECT q.id, q.name, s.name, q.path FROM OntapQtree q " +
             "JOIN q.volume v " +
             "JOIN v.svm s " +
             "WHERE LOWER(s.name) LIKE '%dcn' " +

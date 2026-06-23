@@ -299,6 +299,7 @@ public class UnifiedStorageService {
             allItems.add(UnifiedStorageItemListDto.builder()
                     .uuid(idStr)
                     .name((String) row[1])
+                    .path(row[3] != null ? ((String) row[3]).replaceFirst("^/", "") : null)
                     .type(StorageType.QTREE)
                     .protocol(protocol)
                     .appserviceNames(qtreeAppserviceNames.get(idStr))
@@ -335,7 +336,7 @@ public class UnifiedStorageService {
 
                 // Determine comparator based on property
                 if ("name".equalsIgnoreCase(order.getProperty())) {
-                    comparator = Comparator.comparing(UnifiedStorageItemListDto::getName, String.CASE_INSENSITIVE_ORDER);
+                    comparator = Comparator.comparing(dto -> effectiveName(dto), String.CASE_INSENSITIVE_ORDER);
                 } else if ("type".equalsIgnoreCase(order.getProperty())) {
                     comparator = Comparator.comparing(dto -> dto.getType().toString());
                 } else if ("protocol".equalsIgnoreCase(order.getProperty())) {
@@ -353,8 +354,7 @@ public class UnifiedStorageService {
                 }
             }
         } else {
-            // Default sort by name ascending if no sort specified
-            allItems.sort(Comparator.comparing(UnifiedStorageItemListDto::getName, String.CASE_INSENSITIVE_ORDER));
+            allItems.sort(Comparator.comparing(dto -> effectiveName(dto), String.CASE_INSENSITIVE_ORDER));
         }
 
         // 6. Pagination in Memory
@@ -491,6 +491,10 @@ public class UnifiedStorageService {
             return null;
         }
         return client.replaceFirst("(\\d{3})n", "$1");
+    }
+
+    private String effectiveName(UnifiedStorageItemListDto dto) {
+        return StorageType.QTREE == dto.getType() && dto.getPath() != null ? dto.getPath() : dto.getName();
     }
 
     private boolean isWorm(String snaplockType) {

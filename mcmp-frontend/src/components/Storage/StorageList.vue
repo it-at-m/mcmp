@@ -109,6 +109,10 @@
         </div>
       </template>
 
+      <template #[`item.name`]="{ item }">
+        {{ item.type?.toUpperCase() === 'QTREE' && item.path ? item.path : item.name }}
+      </template>
+
       <template #[`item.type`]="{ item }">
         <v-tooltip>
           <template #activator="{ props: tooltipProps }">

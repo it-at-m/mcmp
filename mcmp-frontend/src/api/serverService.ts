@@ -21,7 +21,8 @@ export default {
     sortOrder: string,
     search: string,
     status: string[],
-    os: string
+    os: string,
+    favorites: boolean
   ): Promise<Page<ServerList>> {
     const params = new URLSearchParams({
       offset: offset.toString(),
@@ -30,6 +31,7 @@ export default {
       sortOrder: sortOrder,
       status: status.join(","),
       os: os,
+      favorites: favorites.toString()
     });
 
     const trimmedSearch = search?.trim();
@@ -112,4 +114,20 @@ export default {
       {}
     );
   },
+
+addServerToFavorites(serverId: number): Promise<void> {
+    return apiFetch(
+      `${getApiBase()}${SERVER_BASE}/${serverId}/favorite`,
+      { method: "PUT" },
+      {} // Leeres Objekt verhindert Lade-Ringe auf allen Zeilen
+    );
+  },
+
+  removeServerFromFavorites(serverId: number): Promise<void> {
+    return apiFetch(
+      `${getApiBase()}${SERVER_BASE}/${serverId}/favorite`,
+      { method: "DELETE" },
+      {} // Leeres Objekt verhindert Lade-Ringe auf allen Zeilen
+    );
+  }
 };

@@ -19,13 +19,13 @@
       <v-col cols="4" />
     </v-row>
     <div
-      v-for="(rule, idx) in selectedStorageItem.nfs_export_policy!
-        .ontapExportPolicyRules"
-      :key="`nfs-export-rule-${idx}-${rule.clients.join(',')}`"
+      v-for="(rule, idx) in selectedStorageItem.nfs_export_policy
+        ?.ontapExportPolicyRules || []"
+      :key="`nfs-export-rule-${idx}-${rule.clients?.join(',')}`"
     >
       <v-row class="ma-1">
         <v-col cols="4">
-          {{ rule.clients.join(", ") }}
+          {{ rule.clients?.join(", ") }}
         </v-col>
         <v-col cols="4">
           {{ getPermissionLabel(rule.rwRules) }}
@@ -35,7 +35,7 @@
           class="d-flex justify-end"
         >
           <storage-change-nfs-export-policy
-            v-if="rule.clients.length > 0"
+            v-if="rule.clients && rule.clients.length > 0"
             :storage-uuid="selectedStorageItem.uuid"
             :mount-path="selectedStorageItem.nfs_mount_path!"
             mode="edit"
@@ -46,8 +46,8 @@
       </v-row>
       <v-divider
         v-if="
-          selectedStorageItem.nfs_export_policy!.ontapExportPolicyRules!
-            .length >
+          (selectedStorageItem.nfs_export_policy?.ontapExportPolicyRules
+            ?.length || 0) >
           idx + 1
         "
       />
@@ -67,7 +67,7 @@
       </v-col>
     </v-row>
     <div
-      v-for="(acllist, idx) in selectedStorageItem.cifs_share_acl_list"
+      v-for="(acllist, idx) in selectedStorageItem.cifs_share_acl_list || []"
       :key="`cifs-acl-${idx}-${acllist.userOrGroup}`"
     >
       <v-row class="ma-1">
@@ -80,7 +80,7 @@
         </v-col>
       </v-row>
       <v-divider
-        v-if="selectedStorageItem.cifs_share_acl_list!.length > idx + 1"
+        v-if="(selectedStorageItem.cifs_share_acl_list?.length || 0) > idx + 1"
       />
     </div>
   </common-card>
@@ -95,11 +95,16 @@ defineProps<{
   selectedStorageItem: UnifiedStorageItem;
 }>();
 
-function getPermissionValue(rwRules: string) {
-  return rwRules === "never" ? "ro" : "rw";
+function getPermissionValue(rwRules: string | string[] | null | undefined) {
+  const values = Array.isArray(rwRules)
+    ? rwRules.map((v) => v.toLowerCase())
+    : typeof rwRules === "string"
+      ? [rwRules.toLowerCase()]
+      : [];
+  return values.includes("never") ? "ro" : "rw";
 }
 
-function getPermissionLabel(rwRules: string) {
+function getPermissionLabel(rwRules: string | string[] | null | undefined) {
   return getPermissionValue(rwRules) === "ro" ? "read-only" : "read-write";
 }
 </script>

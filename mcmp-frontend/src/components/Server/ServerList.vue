@@ -30,7 +30,9 @@
             {{ sortBy[0].order === "asc" ? mdiArrowUp : mdiArrowDown }}
           </v-icon>
           <v-badge
-            :model-value="statusFilter.length !== 0 || osFilter !== ''"
+            :model-value="
+              statusFilter.length !== 0 || osFilter !== '' || favoritesFilter
+            "
             dot
           >
             <div
@@ -76,6 +78,13 @@
                       value="poweredOff"
                       hide-details
                       density="compact"
+                    />
+                    <v-checkbox
+                      v-model="favoritesFilter"
+                      label="Favoriten"
+                      density="compact"
+                      hide-details
+                      color="primary"
                     />
                   </v-list-item>
                   <v-divider class="my-2" />
@@ -166,6 +175,17 @@
                         hide-details
                         density="compact"
                     /></v-list-item>
+                    <v-list-item
+                      density="compact"
+                      class="py-0"
+                    >
+                      <v-radio
+                        label="Ohne Anwendungsservice"
+                        value="no-appservice"
+                        hide-details
+                        density="compact"
+                      />
+                    </v-list-item>
                   </v-radio-group>
                 </v-list>
               </v-menu>
@@ -176,6 +196,16 @@
 
       <template #[`item.name`]="{ item }">
         <div class="server-name-cell">
+          <v-btn
+            icon
+            variant="text"
+            density="compact"
+            :color="item.isFavorite ? 'warning' : 'grey-lighten-1'"
+            class="mr-1"
+            @click.stop="toggleFavorite(item)"
+          >
+            <v-icon>{{ item.isFavorite ? mdiStar : mdiStarOutline }}</v-icon>
+          </v-btn>
           <v-tooltip
             :text="
               item.powerState === 'poweredOn'
@@ -216,9 +246,7 @@
           />
           <span class="server-name-text">{{ item.name.split(".")[0] }}</span>
           <v-tooltip
-            v-if="
-              item.hasWarnings
-            "
+            v-if="item.hasWarnings"
             location="top"
             text="Handlung erforderlich"
           >
@@ -279,6 +307,8 @@ import {
   mdiFilterVariant,
   mdiPauseCircle,
   mdiPlayCircle,
+  mdiStar,
+  mdiStarOutline,
   mdiStopCircle,
 } from "@mdi/js";
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
@@ -288,6 +318,9 @@ import ScrollableListTable from "@/components/common/ScrollableListTable.vue";
 import OsCell from "@/components/Server/OsCell.vue";
 import { useUserStore } from "@/stores/user.ts";
 
+const favoritesFilter = ref(
+  localStorage.getItem("mcmp_favorites_filter") === "true"
+);
 const loadingServer = ref(false);
 const servers = ref<ServerList[]>([]);
 const totalServers = ref(0);
@@ -301,8 +334,10 @@ const tableRef = ref<{
   triggerObserveScroll: () => void;
   resetSelection: () => void;
 } | null>(null);
-const statusFilter = ref<string[]>([]);
-const osFilter = ref<string>("");
+const statusFilter = ref<string[]>(
+  JSON.parse(localStorage.getItem("mcmp_status_filter") || "[]")
+);
+const osFilter = ref<string>(localStorage.getItem("mcmp_os_filter") || "");
 const noServersFaqLink = "https://go.muenchen.de/sp/KB0023236";
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
 const userStore = useUserStore();
@@ -329,11 +364,75 @@ const isAdmin = computed(
 
 const filteredServers = computed(() => servers.value);
 
-watch([statusFilter, osFilter], async () => {
+function sortServersByFavorite() {
+  const order = sortBy.value[0]?.order === "desc" ? -1 : 1;
+  servers.value = [...servers.value].sort((a, b) => {
+    const favDiff = (b.isFavorite ? 1 : 0) - (a.isFavorite ? 1 : 0);
+    if (favDiff !== 0) return favDiff;
+    return order * a.name.localeCompare(b.name);
+  });
+}
+
+function removeIfBeyondLoadedRange(server: any) {
+  if (!hasMore.value) return;
+  const order = sortBy.value[0]?.order === "desc" ? -1 : 1;
+  const nonFavorites = servers.value.filter(
+    (s) => !s.isFavorite && s.id !== server.id
+  );
+  if (nonFavorites.length === 0) return;
+  const lastName = nonFavorites[nonFavorites.length - 1].name;
+  const beyondRange = order * server.name.localeCompare(lastName) > 0;
+  if (beyondRange) {
+    servers.value = servers.value.filter((s) => s.id !== server.id);
+  }
+}
+
+async function toggleFavorite(server: any) {
+  const originalState = server.isFavorite;
+  server.isFavorite = !server.isFavorite;
+
+  if (originalState) {
+    removeIfBeyondLoadedRange(server);
+  }
+  sortServersByFavorite();
+
+  try {
+    if (originalState) {
+      await serverService.removeServerFromFavorites(server.id);
+    } else {
+      await serverService.addServerToFavorites(server.id);
+    }
+  } catch (error) {
+    server.isFavorite = originalState;
+    if (!servers.value.find((s) => s.id === server.id)) {
+      servers.value = [...servers.value, server];
+    }
+    sortServersByFavorite();
+    console.error("Fehler beim Aktualisieren des Favoriten-Status:", error);
+  }
+}
+
+watch([statusFilter, osFilter, favoritesFilter], async () => {
   currentPage.value = 1;
-  await loadServers(1, statusFilter.value, osFilter.value);
+  await loadServers(
+    1,
+    statusFilter.value,
+    osFilter.value,
+    favoritesFilter.value
+  );
   await nextTick();
   tableRef.value?.triggerObserveScroll();
+});
+
+watch(favoritesFilter, (newValue) => {
+  localStorage.setItem("mcmp_favorites_filter", String(newValue));
+});
+
+watch(statusFilter, (newVal) => {
+  localStorage.setItem("mcmp_status_filter", JSON.stringify(newVal));
+});
+watch(osFilter, (newVal) => {
+  localStorage.setItem("mcmp_os_filter", newVal);
 });
 
 watch(
@@ -351,7 +450,7 @@ watch(
 function updateSortBy(newSortBy: { key: string; order: "asc" | "desc" }[]) {
   sortBy.value = newSortBy;
   currentPage.value = 1;
-  loadServers(1, statusFilter.value, osFilter.value);
+  loadServers(1, statusFilter.value, osFilter.value, favoritesFilter.value);
   nextTick(() => tableRef.value?.triggerObserveScroll());
 }
 
@@ -361,10 +460,20 @@ function onSearchUpdate(val: string) {
 
 async function onLoadMore() {
   currentPage.value++;
-  await loadServers(currentPage.value, statusFilter.value, osFilter.value);
+  await loadServers(
+    currentPage.value,
+    statusFilter.value,
+    osFilter.value,
+    favoritesFilter.value
+  );
 }
 
-async function loadServers(page = 1, status: string[] = [], os = "") {
+async function loadServers(
+  page = 1,
+  status: string[] = [],
+  os = "",
+  favorites = false
+) {
   loadingServer.value = true;
   const offset = (page - 1) * itemsPerPage.value;
   const currentSort = sortBy.value[0] ?? { key: "name", order: "asc" };
@@ -380,7 +489,8 @@ async function loadServers(page = 1, status: string[] = [], os = "") {
       currentSort.order,
       search.value,
       status,
-      os
+      os,
+      favorites
     );
     if (page === 1) {
       servers.value = res.content;
@@ -404,7 +514,7 @@ async function loadServers(page = 1, status: string[] = [], os = "") {
       servers.value.length > 0 &&
       !hasUrlId &&
       !hasUrlAppId &&
-      !selectedRow.value // ← NEU: kein Auto-Select wenn schon eine Zeile selektiert ist
+      !selectedRow.value
     ) {
       emit("update:selected", [servers.value[0]]);
     } else if (totalServers.value === 0) {
@@ -424,7 +534,12 @@ watch(search, () => {
   if (searchTimeout) clearTimeout(searchTimeout);
   searchTimeout = setTimeout(async () => {
     currentPage.value = 1;
-    await loadServers(1, statusFilter.value, osFilter.value);
+    await loadServers(
+      1,
+      statusFilter.value,
+      osFilter.value,
+      favoritesFilter.value
+    );
     await nextTick();
     tableRef.value?.triggerObserveScroll();
   }, 300);
@@ -438,7 +553,12 @@ onMounted(async () => {
     selectedRow.value = id.toString();
     emit("update:selected", [{ id: parseInt(id) } as ServerList]);
   }
-  await loadServers(1, [], "");
+  await loadServers(
+    1,
+    statusFilter.value,
+    osFilter.value,
+    favoritesFilter.value
+  );
 });
 
 onUnmounted(() => {
@@ -458,7 +578,6 @@ function updateServerPowerState(serverId: number, newPowerState: string) {
 defineExpose({ updateServerPowerState });
 </script>
 
-<!--suppress CssUnresolvedCustomProperty -->
 <style scoped>
 .server-list-container {
   height: 100%;
@@ -476,6 +595,7 @@ defineExpose({ updateServerPowerState });
 
 .power-state-icon-inline {
   display: flex;
+  /* noinspection CssUnresolvedCustomProperty */
   background-color: rgb(var(--v-theme-bg_icon));
   align-items: center;
   justify-content: center;
@@ -531,6 +651,7 @@ defineExpose({ updateServerPowerState });
 .links a:visited,
 .links a:hover,
 .links a:active {
+  /* noinspection CssUnresolvedCustomProperty */
   color: rgb(var(--v-theme-link));
   text-decoration: none;
 }

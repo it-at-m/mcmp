@@ -11,5 +11,6 @@ public interface ServerList {
     ServerKind getServerKind();
     ServerType getServerType();
     Boolean getHasWarnings();
+    Boolean getIsFavorite();
 }
 

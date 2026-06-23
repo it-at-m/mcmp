@@ -253,7 +253,7 @@ const loadItems = async (page = 1) => {
     const sortOrder = currentSort.value.order;
 
     const sanitizedSearch = (search.value || "")
-      .replace(/[^a-zA-Z0-9 ._-]/g, "")
+      .replace(/[^a-zA-Z0-9 ._:\/-]/g, "")
       .trim();
 
     const typesParam = selectedTypeFilters.value.length

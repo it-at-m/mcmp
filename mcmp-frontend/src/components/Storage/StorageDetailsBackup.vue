@@ -33,6 +33,7 @@
       :items="snapshots"
       :headers="headers"
       :loading="loading || backupLoading"
+      :sort-by="[{ key: 'createTime', order: 'asc' }]"
       density="compact"
     >
       <template #[`item.createTime`]="{ item }">

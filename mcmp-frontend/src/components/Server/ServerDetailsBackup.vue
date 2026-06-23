@@ -33,6 +33,7 @@
       :headers="snapshotHeaders"
       :items="snapshots"
       :items-per-page="-1"
+      :sort-by="[{ key: 'createTime', order: 'asc' }]"
       class="elevation-1"
       hide-default-footer
       disable-sort

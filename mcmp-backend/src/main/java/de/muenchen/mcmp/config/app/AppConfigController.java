@@ -32,7 +32,8 @@ public class AppConfigController {
     public ResponseEntity<SystemStatusDTO> getSystemStatus() {
         return ResponseEntity.ok(new SystemStatusDTO(
                 appConfigCacheService.getSystemMode(),
-                appConfigCacheService.getMaintenanceMessage()
+                appConfigCacheService.getMaintenanceMessage(),
+                appConfigCacheService.getMaintenanceMessageMarkdown()
         ));
     }
 

@@ -1,0 +1,141 @@
+version: "2"
+run:
+  timeout: 5m
+  modules-download-mode: readonly
+output:
+  formats:
+    text:
+      path: stdout
+linters:
+  default: none
+  enable:
+    - asciicheck
+    - bodyclose
+    - canonicalheader
+    - contextcheck
+    - copyloopvar
+    - cyclop
+    - durationcheck
+    - dupword
+    - exptostd
+    - err113
+    - errcheck
+    - errchkjson
+    - errname
+    - errorlint
+    - exhaustive
+    - fatcontext
+    - gocheckcompilerdirectives
+    - goconst
+    - gocritic
+    - gosec
+    - govet
+    - ineffassign
+    - intrange
+    - loggercheck
+    - makezero
+    - mirror
+    - misspell
+    - nakedret
+    - nilerr
+    - nilnil
+    - noctx
+    - nolintlint
+    - perfsprint
+    - prealloc
+    - reassign
+    - recvcheck
+    - revive
+    - sloglint
+    - staticcheck
+    - testifylint
+    - unparam
+    - unused
+    - usestdlibvars
+    - usetesting
+    - wrapcheck
+  settings:
+    cyclop:
+      max-complexity: 15
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+    exhaustive:
+      default-signifies-exhaustive: true
+    goconst:
+      min-len: 3
+      min-occurrences: 3
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - performance
+        - style
+      disabled-checks:
+        - hugeParam
+        - rangeValCopy
+    govet:
+      enable-all: true
+    revive:
+      rules:
+        - name: exported
+          severity: warning
+    wrapcheck:
+      ignore-sigs:
+        - fmt.Errorf(
+        - errors.New(
+        - errors.Unwrap(
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - cyclop
+          - errcheck
+          - exhaustive
+          - wrapcheck
+        path: _test\.go
+      - linters:
+          - gosec
+        text: 'G101:'
+      - linters:
+          - gocritic
+        path: _test\.go
+        text: (unnamedResult|exitAfterDefer)
+    paths:
+      - third_party
+      - builtin
+      - examples
+      - third_party$
+      - builtin$
+      - examples$
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - gofumpt
+    - goimports
+  settings:
+    gci:
+      custom-order: true
+      sections:
+        - standard
+        - default
+        - prefix(mcmp)
+    gofumpt:
+      extra-rules: true
+  exclusions:
+    generated: lax
+    paths:
+      - third_party
+      - builtin
+      - examples
+      - third_party$
+      - builtin$
+      - examples$

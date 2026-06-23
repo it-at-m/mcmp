@@ -48,7 +48,12 @@ public interface ServerRepository extends JpaRepository<Server, Long> {
                   )
               )
               OR (s.patchnight_exitcode IS NOT NULL AND s.patchnight_exitcode <> 0)
-          ) as hasWarnings
+          ) as hasWarnings,
+        EXISTS (
+                      SELECT 1 FROM cmp.user_favorite_server ufs
+                      JOIN cmp.user u_fav ON ufs.user_id = u_fav.id
+                      WHERE ufs.server_id = s.id AND u_fav.username = :username
+                  ) as "isFavorite"
     FROM cmp.server s
     WHERE (
         EXISTS (
@@ -82,8 +87,18 @@ public interface ServerRepository extends JpaRepository<Server, Long> {
             AND (:oracle = FALSE OR s.role_oracle)
             AND (:nonOracle = FALSE OR s.role_non_oracle)
             AND (:unmanaged = FALSE OR s.managed = FALSE)
-        )
+            AND (:noAppservice = FALSE OR NOT EXISTS (SELECT 1 FROM cmp.server_assignment sa_none WHERE sa_none.server_id = s.id))
+        )AND (:favorites = FALSE OR EXISTS (
+              SELECT 1 FROM cmp.user_favorite_server ufs
+              JOIN cmp.user u_fav ON ufs.user_id = u_fav.id
+              WHERE ufs.server_id = s.id AND u_fav.username = :username
+            ))
         ORDER BY
+            CASE WHEN EXISTS (
+                SELECT 1 FROM cmp.user_favorite_server ufs
+                JOIN cmp.user u_fav ON ufs.user_id = u_fav.id
+                WHERE ufs.server_id = s.id AND u_fav.username = :username
+            ) THEN 0 ELSE 1 END ASC,
             CASE WHEN :sortOrder = 'desc' THEN s.name END DESC,
             CASE WHEN :sortOrder = 'asc' THEN s.name END ASC
     """,
@@ -122,7 +137,12 @@ public interface ServerRepository extends JpaRepository<Server, Long> {
             AND (:oracle = FALSE OR s.role_oracle)
             AND (:nonOracle = FALSE OR s.role_non_oracle)
             AND (:unmanaged = FALSE OR s.managed = FALSE)
-    )
+            AND (:noAppservice = FALSE OR NOT EXISTS (SELECT 1 FROM cmp.server_assignment sa_none WHERE sa_none.server_id = s.id))
+    )AND (:favorites = FALSE OR EXISTS (
+                             SELECT 1 FROM cmp.user_favorite_server ufs
+                             JOIN cmp.user u_fav ON ufs.user_id = u_fav.id
+                             WHERE ufs.server_id = s.id AND u_fav.username = :username
+                         ))
     """, nativeQuery = true)
     Page<ServerList> findVisibleServers(@Param("username") String username,
                                         @Param("isAdmin") boolean isAdmin,
@@ -144,9 +164,26 @@ public interface ServerRepository extends JpaRepository<Server, Long> {
                                         @Param("oracle") boolean oracle,
                                         @Param("nonOracle") boolean nonOracle,
                                         @Param("unmanaged") boolean unmanaged,
+                                        @Param("noAppservice") boolean noAppservice,
+                                        @Param("favorites") boolean favorites,
                                         @Param("sortBy") String sortBy,
                                         @Param("sortOrder") String sortOrder,
                                         Pageable pageable);
+    @Modifying
+    @Query(value = """
+        INSERT INTO cmp.user_favorite_server (user_id, server_id)
+        SELECT u.id, :serverId FROM cmp.user u WHERE u.username = :username
+        ON CONFLICT DO NOTHING
+    """, nativeQuery = true)
+    void addServerToFavorites(@Param("serverId") Long serverId, @Param("username") String username);
+
+    @Modifying
+    @Query(value = """
+        DELETE FROM cmp.user_favorite_server ufs
+        WHERE ufs.server_id = :serverId
+          AND ufs.user_id = (SELECT u.id FROM cmp.user u WHERE u.username = :username)
+    """, nativeQuery = true)
+    void removeServerFromFavorites(@Param("serverId") Long serverId, @Param("username") String username);
 
     @Query(value = """
     WITH user_in_group AS (
@@ -580,4 +617,18 @@ public interface ServerRepository extends JpaRepository<Server, Long> {
 
     @Query("SELECT new de.muenchen.mcmp.server.ServerAutocompleteDTO(s.id, s.name) FROM Server s WHERE LOWER(s.name) LIKE LOWER(CONCAT('%', :query, '%')) ORDER BY s.name")
     List<ServerAutocompleteDTO> findForAutocomplete(@Param("query") String query);
+
+    @Query("SELECT new de.muenchen.mcmp.server.ServerDbDTO(s.fqdn, s.powerState) " +
+            "FROM Server s " +
+            "WHERE s.roleOracle = true " +
+            "ORDER BY s.fqdn")
+    List<ServerDbDTO> findAllOracleServers();
+
+    @Query("SELECT s.id AS id, s.guestToolsIpAddress AS guestToolsIpAddress FROM Server s WHERE s.guestToolsIpAddress IN :ipAddresses")
+    List<ServerIpProjection> findIdsByGuestToolsIpAddressIn(@Param("ipAddresses") Collection<String> ipAddresses);
+
+    interface ServerIpProjection {
+        Long getId();
+        String getGuestToolsIpAddress();
+    }
 }

@@ -187,7 +187,7 @@ deploy-test:mcmp:
   stage: deploy-test
   tags:
     - openshift-test-capk
-  image: quay.io/ansible/awx-ee:24.6.1
+  image: quay.io/ansible/awx-ee
   needs:
     - job: unit-test
       optional: true
@@ -212,7 +212,7 @@ deploy-prod:mcmp:
   stage: deploy-prod
   tags:
     - openshift-test-capk
-  image: quay.io/ansible/awx-ee:24.6.1
+  image: quay.io/ansible/awx-ee
   needs:
     - job: unit-test
       optional: true

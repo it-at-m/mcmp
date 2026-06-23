@@ -19,15 +19,26 @@ public class ServerController {
                                                  @RequestParam(name = "limit") final int limit,
                                                  @RequestParam(name = "sortBy") final String sortBy,
                                                  @RequestParam(name = "sortOrder") final String sortOrder,
-                                                @RequestParam(name = "search", required = false) final String search,
-                                                @RequestParam(name = "status", required = false) final List<String> status,
-                                                @RequestParam(name = "os", required = false) final String os) {
-        return serverService.getVisibleServers(offset, limit, sortBy, sortOrder, search, status, os);
+                                                 @RequestParam(name = "search", required = false) final String search,
+                                                 @RequestParam(name = "status", required = false) final List<String> status,
+                                                 @RequestParam(name = "os", required = false) final String os,
+                                                 @RequestParam(name = "favorites", required = false, defaultValue = "false") final boolean favorites) {
+        return serverService.getVisibleServers(offset, limit, sortBy, sortOrder, search, status, os, favorites);
     }
 
     @GetMapping("/{serverId}")
     public ServerFullDTO getServerById(@PathVariable("serverId") final Long serverId) {
         return serverService.getServerById(serverId);
+    }
+
+    @PutMapping("/{serverId}/favorite")
+    public void addServerToFavorites(@PathVariable("serverId") final Long serverId) {
+        serverService.addServerToFavorites(serverId);
+    }
+
+    @DeleteMapping("/{serverId}/favorite")
+    public void removeServerFromFavorites(@PathVariable("serverId") final Long serverId) {
+        serverService.removeServerFromFavorites(serverId);
     }
 
     @GetMapping("/appservice/{appserviceId}")

@@ -12,7 +12,7 @@
           aria-label="Snapshot Policy ändern"
           @click="openDialog"
         >
-          <v-icon>{{ mdiClockOutline }}</v-icon>
+          <v-icon>{{ mdiClockEditOutline }}</v-icon>
         </v-btn>
       </span>
     </template>
@@ -21,7 +21,7 @@
     :model-value="dialog"
     max-width="1100"
     :title="title"
-    :icon="mdiClockOutline"
+    :icon="mdiClockEditOutline"
     show-actions
     :submit-activated="validated"
     show-change-warning
@@ -38,7 +38,8 @@
         class="mb-3"
       >
         <h4>Achtung:</h4>
-        Bestehende per Policy erstellte Snapshots, die nicht zur neuen Snapshotpolicy passen werden gelöscht.
+        Bestehende per Policy erstellte Snapshots, die nicht zur neuen
+        Snapshotpolicy passen werden gelöscht.
       </common-alert>
       <h4>Neue Snapshot Policy:</h4>
       <v-select
@@ -47,7 +48,9 @@
         item-title="title"
         item-value="value"
         label="Wähle eine neue Policy"
-        :rules="[useRules().notEmptyRule('Eine Policy muss ausgewählt werden.')]"
+        :rules="[
+          useRules().notEmptyRule('Eine Policy muss ausgewählt werden.'),
+        ]"
       ></v-select>
     </v-form>
   </common-dialog>
@@ -55,7 +58,7 @@
 <script setup lang="ts">
 import type { UnifiedStorageItem } from "@/types/Storage";
 
-import { mdiClockOutline } from "@mdi/js";
+import { mdiClockEditOutline } from "@mdi/js";
 import { computed, ref } from "vue";
 
 import CommonAlert from "@/components/common/CommonAlert.vue";
@@ -71,12 +74,10 @@ const emits = defineEmits<(e: "save", newPolicy: string) => void>();
 const dialog = ref(false);
 const validated = ref(false);
 
-
-
 const selectedPolicy = ref<string | null>(null);
 
 const title = computed(() => {
-  return `Snapshot Policy für ${props.selectedStorageItem.type === 'NFS' ? props.selectedStorageItem.nfs_mount_path : props.selectedStorageItem.cifs_mount_path} ändern`;
+  return `Snapshot Policy für ${props.selectedStorageItem.type === "NFS" ? props.selectedStorageItem.nfs_mount_path : props.selectedStorageItem.cifs_mount_path} ändern`;
 });
 
 function openDialog() {

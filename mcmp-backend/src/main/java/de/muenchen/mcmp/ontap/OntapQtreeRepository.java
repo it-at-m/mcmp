@@ -36,7 +36,7 @@ public interface OntapQtreeRepository extends JpaRepository<OntapQtree, Long> {
             "JOIN v.svm s " +
             "WHERE LOWER(s.name) LIKE '%dcn' " +
             "AND v.ontapCifsShares IS EMPTY " +
-            "AND (:search IS NULL OR LOWER(q.name) LIKE :search) " +
+            "AND (:search IS NULL OR LOWER(q.name) LIKE :search OR LOWER(s.name) LIKE :search OR LOWER(CONCAT(s.name, ':', v.mountPathNfs, '/', q.name)) LIKE :search) " +
             "AND (" +
             "   :isAdmin = TRUE OR :isReadonly = TRUE OR :isStorage = TRUE OR :isOperator = TRUE OR " +
             "   EXISTS (SELECT 1 FROM q.appservices a JOIN a.changeGroup g JOIN g.users u WHERE u.username = :username)" +
@@ -53,12 +53,14 @@ public interface OntapQtreeRepository extends JpaRepository<OntapQtree, Long> {
             "WHERE q.id IN :ids")
     List<OntapQtree> findByIdsWithAppservices(@Param("ids") List<Long> ids);
 
-    @Query("SELECT CASE WHEN COUNT(q) > 0 THEN TRUE ELSE FALSE END " +
-            "FROM OntapQtree q " +
+    @Query("SELECT CASE WHEN :isAdmin = TRUE OR :isStorage = TRUE OR EXISTS (" +
+            "SELECT 1 FROM OntapQtree q " +
             "JOIN q.volume v " +
             "JOIN q.appservices a " +
             "JOIN a.changeGroup g " +
             "JOIN g.users u " +
-            "WHERE q.id = :id AND v.ontapCifsShares IS EMPTY AND u.username = :username")
-    Boolean canUserEditQtree(@Param("id") Long id, @Param("username") String username);
+            "WHERE q.id = :id AND v.ontapCifsShares IS EMPTY AND u.username = :username" +
+            ") THEN TRUE ELSE FALSE END")
+    Boolean canUserEditQtree(@Param("id") Long id, @Param("username") String username,
+                             @Param("isAdmin") boolean isAdmin, @Param("isStorage") boolean isStorage);
 }

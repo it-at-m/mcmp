@@ -16,14 +16,15 @@ public interface StorageGridBucketRepository extends JpaRepository<StorageGridBu
     @Query("SELECT COUNT(b) FROM StorageGridBucket b " +
             "WHERE (:search IS NULL OR LOWER(b.name) LIKE :search) " +
             "AND (" +
-            "   :isAdmin = TRUE OR :isReadonly = TRUE OR :isStorage = TRUE OR " +
+            "   :isAdmin = TRUE OR :isReadonly = TRUE OR :isStorage = TRUE OR :isOperator = TRUE OR " +
             "   EXISTS (SELECT 1 FROM b.storageGridAccount.appservices a JOIN a.changeGroup g JOIN g.users u WHERE u.username = :username)" +
             ")")
     long count(@Param("search") String search,
                @Param("username") String username,
                @Param("isAdmin") boolean isAdmin,
                @Param("isReadonly") boolean isReadonly,
-               @Param("isStorage") boolean isStorage);
+               @Param("isStorage") boolean isStorage,
+               @Param("isOperator") boolean isOperator);
 
     @Query("SELECT b FROM StorageGridBucket b " +
             "JOIN FETCH b.storageGridAccount a " +
@@ -58,12 +59,14 @@ public interface StorageGridBucketRepository extends JpaRepository<StorageGridBu
             "WHERE b.id IN :ids")
     List<StorageGridBucket> findByIdsWithAppservices(@Param("ids") List<Long> ids);
 
-    @Query("SELECT CASE WHEN COUNT(b) > 0 THEN TRUE ELSE FALSE END " +
-            "FROM StorageGridBucket b " +
+    @Query("SELECT CASE WHEN :isAdmin = TRUE OR :isStorage = TRUE OR EXISTS (" +
+            "SELECT 1 FROM StorageGridBucket b " +
             "JOIN b.storageGridAccount acc " +
             "JOIN acc.appservices a " +
             "JOIN a.changeGroup g " +
             "JOIN g.users u " +
-            "WHERE b.id = :id AND u.username = :username")
-    Boolean canUserEditBucket(@Param("id") Long id, @Param("username") String username);
+            "WHERE b.id = :id AND u.username = :username" +
+            ") THEN TRUE ELSE FALSE END")
+    Boolean canUserEditBucket(@Param("id") Long id, @Param("username") String username,
+                              @Param("isAdmin") boolean isAdmin, @Param("isStorage") boolean isStorage);
 }

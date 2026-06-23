@@ -91,27 +91,29 @@
     </v-row>
     <v-row>
       <v-col cols="3">
-        <h3>
+        <h3 v-if="selectedStorageItem.protocol != 'S3'">
           WORM<info-tooltip>
             <div class="pa-1">
               <strong>Write Once Read Many</strong>
               <p class="text-caption mt-2 mb-1">
-                Schützt Daten vor Änderungen und Löschung. Dateien können einmal geschrieben, danach nur noch gelesen werden. Der Zugriff ist zeitlich begrenzt.
+                Schützt eine erstellte und committete Datei vor Änderungen und
+                Löschung. Der Schutz ist zeitlich befristet. Das Lesen der
+                geschützten Datei, sowie das Erstellen und committen weitere
+                Dateien ist beliebig möglich.
               </p>
             </div>
           </info-tooltip>
         </h3>
       </v-col>
-      <v-col
-        v-if="selectedStorageItem.type != 'QTREE'"
-        cols="3"
-      >
-        <h3>
+      <v-col cols="3">
+        <h3 v-if="selectedStorageItem.protocol != 'S3'">
           Clone<info-tooltip>
             <div class="pa-1">
-              <strong>FlexClone</strong>
+              <strong>Clone</strong>
               <p class="text-caption mt-2 mb-1">
-                Eine effiziente Kopie eines Volumes oder Snapshots, die Speicherplatz spart durch Copy-on-Write. Änderungen beeinflussen nicht das Original.
+                Eine effiziente Kopie eines Speicherbereichs, die Speicherplatz
+                spart durch Copy-on-Write. Änderungen beeinflussen nicht das
+                Original.
               </p>
             </div>
           </info-tooltip>
@@ -123,52 +125,54 @@
             <div class="pa-1">
               <strong>Speichertyp</strong>
               <p class="text-caption mt-2 mb-1">
-                <strong>NFS:</strong> Network File System für Unix/Linux-Systeme<br>
-                <strong>CIFS:</strong> Common Internet File System für Windows-Systeme<br>
-                <strong>QTREE:</strong> <span class="text-error">Nicht mehr verfügbar zur Bestellung (veraltet)</span><br>
-                <strong>S3:</strong> Object Storage mit Amazon S3-kompatiblem Interface
+                <strong>NFS:</strong> Network File System für
+                Unix/Linux-Systeme<br />
+                <strong>CIFS:</strong> Common Internet File System für
+                Windows-Systeme<br />
+                <strong>QTREE:</strong>
+                <span class="text-error"
+                  >Nicht mehr verfügbar zur Bestellung (veraltet)</span
+                ><br />
+                <strong>S3:</strong> Object Storage mit Amazon S3-kompatiblem
+                Interface
               </p>
             </div>
           </info-tooltip>
         </h3>
       </v-col>
     </v-row>
-    <div v-if="selectedStorageItem.protocol != 'S3'">
-      <v-row>
-        <v-col cols="3">
-          <p>
-            {{ formatter.formatBooleanToJaNein(selectedStorageItem.isWorm) }}
-          </p>
-        </v-col>
-        <v-col
-          v-if="selectedStorageItem.type != 'QTREE'"
-          cols="3"
-        >
-          <p>
-            {{
-              formatter.formatBooleanToJaNein(selectedStorageItem.isFlexClone)
-            }}
-          </p>
-        </v-col>
-        <v-col cols="3">
-          <p>
-            {{ selectedStorageItem.type }}
-            <v-icon
-              v-if="selectedStorageItem.type === 'QTREE'"
-              color="warning"
-              size="small"
-              class="ml-2"
-            >
-              {{ mdiAlert }}
-            </v-icon>
-          </p>
-        </v-col>
-      </v-row>
-    </div>
+    <v-row>
+      <v-col cols="3">
+        <p v-if="selectedStorageItem.protocol != 'S3'">
+          {{ formatter.formatBooleanToJaNein(selectedStorageItem.isWorm) }}
+        </p>
+      </v-col>
+      <v-col
+        cols="3"
+      >
+        <p v-if="selectedStorageItem.protocol != 'S3'">
+          {{ formatter.formatBooleanToJaNein(selectedStorageItem.isFlexClone) }}
+        </p>
+      </v-col>
+      <v-col cols="3">
+        <p>
+          {{ selectedStorageItem.type }}
+          <v-icon
+            v-if="selectedStorageItem.type === 'QTREE'"
+            color="warning"
+            size="small"
+            class="ml-2"
+          >
+            {{ mdiAlert }}
+          </v-icon>
+        </p>
+      </v-col>
+    </v-row>
   </common-card>
   <common-card
     v-if="props.selectedStorageItem.isWorm"
     title="WORM"
+    top-margin="0"
   >
     <v-row>
       <v-col cols="2">
@@ -218,6 +222,7 @@
   <common-card
     v-if="props.selectedStorageItem.isFlexClone"
     title="Clone"
+    top-margin="0"
   >
     <v-row>
       <v-col cols="3">
@@ -307,7 +312,7 @@
 <script setup lang="ts">
 import type { UnifiedStorageItem } from "@/types/Storage";
 
-import { mdiCheckCircle, mdiCloseCircle, mdiAlert } from "@mdi/js";
+import { mdiAlert } from "@mdi/js";
 import { computed, ref } from "vue";
 
 import jobService from "@/api/jobService.ts";
@@ -329,6 +334,7 @@ const emit = defineEmits<(e: "changed") => void>();
 
 const formatter = useFormatter();
 const loading = ref(false);
+
 
 function startChangeShareJob(payload: {
   sizeGb: number;

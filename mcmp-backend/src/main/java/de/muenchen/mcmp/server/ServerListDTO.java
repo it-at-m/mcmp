@@ -13,6 +13,7 @@ public record ServerListDTO(
         String os,
         ServerKind serverKind,
         ServerType serverType,
-        boolean hasWarnings
+        boolean hasWarnings,
+        boolean isFavorite
 ) {
 }

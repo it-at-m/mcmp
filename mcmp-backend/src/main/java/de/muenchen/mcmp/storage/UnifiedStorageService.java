@@ -585,21 +585,23 @@ public class UnifiedStorageService {
     public boolean canUserEditStorage(String uuid, StorageType storageType) {
         final UserRoles userRoles = AuthUtils.getCurrentUserRoles();
         String username = userRoles.getUsername();
+        boolean isAdmin = userRoles.hasAdminRole();
+        boolean isStorage = userRoles.hasStorageRole();
 
         try {
             if (storageType == StorageType.NFS || storageType == StorageType.CIFS) {
                 return Boolean.TRUE.equals(
-                        ontapVolumeRepository.canUserEditVolume(UUID.fromString(uuid), username));
+                        ontapVolumeRepository.canUserEditVolume(UUID.fromString(uuid), username, isAdmin, isStorage));
             }
 
             if (storageType == StorageType.QTREE) {
                 return Boolean.TRUE.equals(
-                        ontapQtreeRepository.canUserEditQtree(Long.parseLong(uuid), username));
+                        ontapQtreeRepository.canUserEditQtree(Long.parseLong(uuid), username, isAdmin, isStorage));
             }
 
             if (storageType == StorageType.S3) {
                 return Boolean.TRUE.equals(
-                        storageGridBucketRepository.canUserEditBucket(Long.parseLong(uuid), username));
+                        storageGridBucketRepository.canUserEditBucket(Long.parseLong(uuid), username, isAdmin, isStorage));
             }
 
             return false;

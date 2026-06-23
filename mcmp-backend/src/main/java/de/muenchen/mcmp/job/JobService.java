@@ -650,7 +650,7 @@ public class JobService {
         createJob(win_maintenace_mode_end_identifier, server, params, new HashMap<>());
     }
 
-    public void windowsServer(final Map<?, ?> fqdnBuildingBlocks, final Map<?, ?> serverTypeMap, final String categoryType, final int ram, final int cpu, final List<Map<?, ?>> disks, final Long networkGroupId, final Long applicationServiceId, final String osVersion, String nonPostgresReason, final Map<String, Map<?, ?>> dbParams, final String order_windows_server_identifier) {
+    public void windowsServer(final Map<?, ?> fqdnBuildingBlocks, final Map<?, ?> serverTypeMap, final String categoryType, final int ram, final int cpu, final List<Map<String, Object>> disks, final Long networkGroupId, final Long applicationServiceId, final String osVersion, String nonPostgresReason, final Map<String, Map<?, ?>> dbParams, final String order_windows_server_identifier) {
         Appservice appservice = getAppserviceOrThrow(applicationServiceId);
         NetworkGroup networkGroup = getNetworkGroupOrThrow(networkGroupId);
         boolean nonOss = false;
@@ -733,8 +733,8 @@ public class JobService {
             params.put("disk_size_0", disks.getFirst().get("size"));
         } else if (categoryType.equals("DB")) {
             params.put("disk_size_0", 100);
-            for (int i = 1; i < disks.size(); i++) {
-                params.put("disk_size_" + i, disks.get(i).get("size"));
+            for (int i = 0; i < disks.size(); i++) {
+                params.put("disk_size_" + (i + 1), disks.get(i).get("size"));
             }
         }
 

@@ -84,7 +84,14 @@ public class LoadBalancerImportService {
         log.debug("Upserted {} virtual servers", toSave.size());
     }
 
-    private void applyVirtualServer(final LbVirtualServer entity, final String name, final LoadBalancerDTO.VirtualServerDTO vs) {
+    private List<String> extractDomains(final String name) {
+        final String lastSegment = name.contains("/") ? name.substring(name.lastIndexOf('/') + 1) : name;
+        final String candidate = lastSegment.contains("_") ? lastSegment.substring(0, lastSegment.indexOf('_')) : lastSegment;
+        return candidate.contains(".") ? List.of(candidate) : List.of();
+    }
+
+    private void applyVirtualServer(final LbVirtualServer entity, final String name,
+                                    final LoadBalancerDTO.VirtualServerDTO vs) {
         entity.setName(name);
         entity.setListen(vs.listen());
         entity.setForward(vs.forward());
@@ -92,6 +99,7 @@ public class LoadBalancerImportService {
         entity.setPersistence(vs.persistence());
         entity.setRedirect80(vs.redirect80());
         entity.setAddresses(vs.addresses());
+        entity.setDomains(extractDomains(name));
         entity.setIrules(vs.irules());
 
         if (vs.waf() != null) {

@@ -136,7 +136,10 @@
         style="color: rgba(0, 0, 0, 0.87) !important"
       >
         <!-- eslint-disable-next-line vue/no-v-html -->
-        <span class="text-h6 font-weight-bold" v-html="appStore.maintenanceMessage"></span>
+        <span
+          class="text-h6 font-weight-bold"
+          v-html="appStore.maintenanceMessage"
+        ></span>
       </v-alert>
       <v-container
         fluid
@@ -163,7 +166,12 @@
                   Using v-html is necessary here to render the formatted content (e.g., bold text, links).
                 -->
                 <!-- eslint-disable-next-line vue/no-v-html -->
-                <div v-html="appStore.maintenanceMessage || 'Die Anwendung befindet sich aktuell im Wartungsmodus.'"></div>
+                <div
+                  v-html="
+                    appStore.maintenanceMessage ||
+                    'Die Anwendung befindet sich aktuell im Wartungsmodus.'
+                  "
+                ></div>
               </v-card-text>
               <v-card-actions class="justify-center">
                 <v-btn
@@ -220,6 +228,7 @@ import {
   mdiMessageTextOutline,
   mdiMoonWaningCrescent,
   mdiServer,
+  mdiSitemap,
   mdiTools,
   mdiWhiteBalanceSunny,
 } from "@mdi/js";
@@ -416,6 +425,7 @@ const buttonsCenter = [
     path: "/appservice",
   },
   { text: "Storage", icon: mdiHarddisk, path: "/storage" },
+  { text: "Loadbalancer", icon: mdiSitemap, path: "/loadbalancer" },
 ];
 
 function isCenterNavActive(path: string): boolean {

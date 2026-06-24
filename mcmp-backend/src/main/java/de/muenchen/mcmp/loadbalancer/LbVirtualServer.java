@@ -54,6 +54,10 @@ public class LbVirtualServer extends AbstractEntity {
     private List<String> addresses;
 
     @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "domains", columnDefinition = "jsonb")
+    private List<String> domains;
+
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "irules", columnDefinition = "jsonb")
     private Map<String, String> irules;
 

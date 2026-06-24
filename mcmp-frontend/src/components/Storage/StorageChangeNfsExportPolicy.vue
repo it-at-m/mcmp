@@ -1,4 +1,5 @@
 <template>
+  <template v-if="isAllowedMountPath">
   <v-tooltip
     location="bottom"
     :text="activatorDisabled ? 'Editieren nicht möglich für IP-Adressen/Range' : tooltipText"
@@ -77,6 +78,7 @@
       </v-row>
     </v-form>
   </common-dialog>
+  </template>
 </template>
 
 <script setup lang="ts">
@@ -119,6 +121,10 @@ const props = withDefaults(
     permission: "",
   }
 );
+
+// Standard NFSv3-Share, NFSv3-Clone, NFSv3-WORM — only these support export policy changes
+const ALLOWED_MOUNT_PATH = /^svm[pkc]\d{2}dcn\.srv\.muenchen\.de:\/(sn3c?|wn3)_[pskcd]_[a-z0-9]{3,20}_[a-z0-9]{3,20}$/;
+const isAllowedMountPath = computed(() => ALLOWED_MOUNT_PATH.test(props.mountPath ?? ""));
 
 const isEditMode = computed(() => props.mode === "edit");
 const tooltipText = computed(() =>

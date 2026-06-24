@@ -50,7 +50,7 @@ const items = ref<LoadbalancerListItem[]>([]);
 const totalItems = ref(0);
 const itemsPerPage = ref(25);
 const currentPage = ref(1);
-const sortBy = ref<SortByEntry[]>([{ key: "name", order: "asc" }]);
+const sortBy = ref<SortByEntry[]>([{ key: "domain", order: "asc" }]);
 const selected = ref<LoadbalancerListItem[]>([]);
 const hasMore = ref(true);
 const search = ref("");
@@ -59,11 +59,11 @@ let searchTimeout: ReturnType<typeof setTimeout> | null = null;
 const tableRef = ref<{ triggerObserveScroll: () => void } | null>(null);
 
 const headers = ref<DataTableHeader[]>([
-  { title: "Domain", key: "domain", align: "start", sortable: false },
+  { title: "Domain", key: "domain", align: "start", sortable: true },
 ]);
 
 const currentSort = computed<SortByEntry>(
-  () => sortBy.value[0] ?? { key: "name", order: "asc" }
+  () => sortBy.value[0] ?? { key: "domain", order: "asc" }
 );
 
 const selectedId = computed(() =>

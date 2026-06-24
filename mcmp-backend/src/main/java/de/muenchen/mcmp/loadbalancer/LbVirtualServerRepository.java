@@ -9,7 +9,7 @@ import org.springframework.data.repository.query.Param;
 public interface LbVirtualServerRepository extends JpaRepository<LbVirtualServer, Long> {
 
     @Query(value = """
-    SELECT id, name, listen, port, appserviceName
+    SELECT id, name, listen, port, appserviceName, firstDomain
     FROM (
         SELECT DISTINCT
             lvs.id          AS id,
@@ -23,7 +23,8 @@ public interface LbVirtualServerRepository extends JpaRepository<LbVirtualServer
                 WHERE lbha2.lb_virtual_server_id = lvs.id
                 ORDER BY a.name
                 LIMIT 1
-            ) AS appserviceName
+            ) AS appserviceName,
+            lvs.domains->>0 AS firstDomain
         FROM cmp.lb_virtual_server lvs
         WHERE (
             :isAdmin
@@ -45,8 +46,10 @@ public interface LbVirtualServerRepository extends JpaRepository<LbVirtualServer
         AND (:search IS NULL OR :search = '' OR lvs.name ILIKE CONCAT('%', :search, '%'))
     ) AS filtered
     ORDER BY
-        CASE WHEN :sortOrder = 'desc' THEN name END DESC,
-        CASE WHEN :sortOrder = 'asc'  THEN name END ASC
+        CASE WHEN :sortOrder = 'desc' AND :sortBy = 'domain' THEN firstDomain END DESC NULLS LAST,
+        CASE WHEN :sortOrder = 'asc'  AND :sortBy = 'domain' THEN firstDomain END ASC NULLS LAST,
+        CASE WHEN :sortOrder = 'desc' AND :sortBy = 'name' THEN name END DESC,
+        CASE WHEN :sortOrder = 'asc'  AND :sortBy = 'name' THEN name END ASC
     """,
             countQuery = """
     SELECT COUNT(DISTINCT lvs.id)

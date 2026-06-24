@@ -147,9 +147,7 @@
           {{ formatter.formatBooleanToJaNein(selectedStorageItem.isWorm) }}
         </p>
       </v-col>
-      <v-col
-        cols="3"
-      >
+      <v-col cols="3">
         <p v-if="selectedStorageItem.protocol != 'S3'">
           {{ formatter.formatBooleanToJaNein(selectedStorageItem.isFlexClone) }}
         </p>
@@ -157,14 +155,6 @@
       <v-col cols="3">
         <p>
           {{ selectedStorageItem.type }}
-          <v-icon
-            v-if="selectedStorageItem.type === 'QTREE'"
-            color="warning"
-            size="small"
-            class="ml-2"
-          >
-            {{ mdiAlert }}
-          </v-icon>
         </p>
       </v-col>
     </v-row>
@@ -334,7 +324,6 @@ const emit = defineEmits<(e: "changed") => void>();
 
 const formatter = useFormatter();
 const loading = ref(false);
-
 
 function startChangeShareJob(payload: {
   sizeGb: number;

@@ -72,6 +72,9 @@
               if (isNaN(numValue)) {
                 return 'Ungültige Zahl';
               }
+              if (!Number.isInteger(numValue)) {
+                return 'Nur ganze Zahlen erlaubt';
+              }
               if (numValue < sliderMinValue) {
                 return `Muss mindestens ${sliderMinValue} ${useMbSlider ? 'MB' : 'GB'} sein`;
               }
@@ -108,6 +111,9 @@
               const numValue = Number(value);
               if (isNaN(numValue)) {
                 return 'Ungültige Zahl';
+              }
+              if (!Number.isInteger(numValue)) {
+                return 'Nur ganze Zahlen erlaubt';
               }
               if (numValue < snapshotReserveMinPercent) {
                 return `Muss mindestens ${snapshotReserveMinPercent}% sein`;

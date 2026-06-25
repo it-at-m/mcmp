@@ -22,6 +22,7 @@ public class LoadbalancerService {
 
     private final LbVirtualServerRepository repository;
     private final LbPoolRepository poolRepository;
+    private final LbPoolMemberRepository poolMemberRepository;
 
     public Page<LbVirtualServerListDTO> getVisibleLoadbalancers(
             final int offset, final int limit,
@@ -106,6 +107,18 @@ public class LoadbalancerService {
                         .collect(Collectors.toSet()))
                 .pools(poolDTOs)
                 .build();
+    }
+
+    public List<LbServerMembershipDTO> getPoolMembershipsByServerId(final Long serverId) {
+        return poolMemberRepository.findMembershipsByServerId(serverId).stream()
+                .map(p -> LbServerMembershipDTO.builder()
+                        .vsId(p.getVsId())
+                        .vsDomain(p.getVsDomain())
+                        .poolName(p.getPoolName())
+                        .memberIp(p.getMemberIp())
+                        .memberPort(p.getMemberPort())
+                        .build())
+                .collect(Collectors.toList());
     }
 
     private String extractDomain(final String name) {

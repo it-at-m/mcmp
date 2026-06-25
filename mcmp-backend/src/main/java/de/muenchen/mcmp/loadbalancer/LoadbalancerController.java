@@ -4,6 +4,8 @@ import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @AllArgsConstructor
 @RequestMapping("/loadbalancer")
@@ -24,5 +26,10 @@ public class LoadbalancerController {
     @GetMapping("/{id}")
     public UnifiedLoadbalancer getLoadbalancerById(@PathVariable("id") final Long id) {
         return service.getLoadbalancerById(id);
+    }
+
+    @GetMapping("/server/{serverId}")
+    public List<LbServerMembershipDTO> getPoolMembershipsByServerId(@PathVariable("serverId") final Long serverId) {
+        return service.getPoolMembershipsByServerId(serverId);
     }
 }

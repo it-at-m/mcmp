@@ -233,7 +233,23 @@
     </template>
     <v-row>
       <v-col cols="3">
-        <h3>Gesamtgröße</h3>
+        <h3>
+          Gesamtgröße<info-tooltip v-if="selectedStorageItem.protocol === 'S3'">
+            <div class="pa-1">
+              <strong>Tenant-Gesamtgröße</strong>
+              <p class="text-caption mt-2 mb-1">
+                Diese Größe ist nicht die Größe dieses einzelnen Buckets, sondern
+                die Gesamtkapazität des gesamten S3-Tenants da es zurzeit keine Daten über die einzelnen Bucket größen gibt..
+              </p>
+            </div>
+          </info-tooltip>
+        </h3>
+      </v-col>
+      <v-col
+        v-if="selectedStorageItem.protocol === 'S3'"
+        cols="3"
+      >
+        <h3>Tenant</h3>
       </v-col>
       <v-col
         v-if="
@@ -251,6 +267,12 @@
         <p>
           {{ formatter.formatBytesSmart(selectedStorageItem.size) }}
         </p>
+      </v-col>
+      <v-col
+        v-if="selectedStorageItem.protocol === 'S3'"
+        cols="3"
+      >
+        <p>{{ getS3Tenant(selectedStorageItem.name) }}</p>
       </v-col>
       <v-col
         v-if="
@@ -353,6 +375,12 @@ function getDiskClass(): string {
     return "-";
   }
 }
+function getS3Tenant(name: string | undefined): string {
+  if (!name) return "-";
+  const parts = name.split("-");
+  return parts.length >= 2 ? (parts[1] ?? "-") : "-";
+}
+
 function formatStorageCategory(category: string | undefined): string {
   if (!category) return "-";
   return category

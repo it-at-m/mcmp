@@ -16,21 +16,20 @@
       @row-click="onRowClick"
       @load-more="onLoadMore"
     >
-      <template #[`header.type`]="{ column, toggleSort }">
+      <template #[`header.storageCategory`]="{ column, toggleSort }">
         <div
           class="header-container"
           @click="toggleSort(column)"
         >
-          <span>{{ typeHeaderLabel }}</span>
           <v-icon
-            v-if="currentSort.key === 'type'"
+            v-if="currentSort.key === 'storageCategory'"
             size="small"
             class="v-data-table-header__sort-icon"
           >
             {{ currentSort.order === 'asc' ? mdiArrowUp : mdiArrowDown }}
           </v-icon>
           <v-badge
-            :model-value="selectedTypeFilters.length !== 0"
+            :model-value="selectedCategoryFilters.length !== 0"
             dot
           >
             <div
@@ -44,7 +43,7 @@
                     icon
                     size="x-small"
                     variant="text"
-                    :title="typeFilterTitle"
+                    title="Kategorie-Filter anzeigen"
                   >
                     <v-icon>{{ mdiFilterVariant }}</v-icon>
                   </v-btn>
@@ -53,51 +52,17 @@
                   density="compact"
                   style="border-width: thin"
                 >
-                  <v-list-subheader>{{ typeFilterSubheader }}</v-list-subheader>
+                  <v-list-subheader>Kategorie</v-list-subheader>
                   <v-list-item
+                    v-for="cat in allCategories"
+                    :key="cat.value"
                     density="compact"
                     class="py-0"
                   >
                     <v-checkbox
-                      v-model="selectedTypeFilters"
-                      label="NFS"
-                      value="nfs"
-                      hide-details
-                      density="compact"
-                    />
-                  </v-list-item>
-                  <v-list-item
-                    density="compact"
-                    class="py-0"
-                  >
-                    <v-checkbox
-                      v-model="selectedTypeFilters"
-                      label="CIFS"
-                      value="cifs"
-                      hide-details
-                      density="compact"
-                    />
-                  </v-list-item>
-                  <v-list-item
-                    density="compact"
-                    class="py-0"
-                  >
-                    <v-checkbox
-                      v-model="selectedTypeFilters"
-                      label="QTREE"
-                      value="qtree"
-                      hide-details
-                      density="compact"
-                    />
-                  </v-list-item>
-                  <v-list-item
-                    density="compact"
-                    class="py-0"
-                  >
-                    <v-checkbox
-                      v-model="selectedTypeFilters"
-                      label="S3"
-                      value="s3"
+                      v-model="selectedCategoryFilters"
+                      :label="cat.label"
+                      :value="cat.value"
                       hide-details
                       density="compact"
                     />
@@ -113,7 +78,7 @@
         {{ item.type?.toUpperCase() === 'QTREE' && item.path ? item.path : item.name }}
       </template>
 
-      <template #[`item.type`]="{ item }">
+      <template #[`item.storageCategory`]="{ item }">
         <v-tooltip>
           <template #activator="{ props: tooltipProps }">
             <v-icon
@@ -124,7 +89,7 @@
               {{ switchType(item.type) }}
             </v-icon>
           </template>
-          {{ item.type }}
+          {{ formatStorageCategory(item.storageCategory) }}
         </v-tooltip>
       </template>
     </scrollable-list-table>
@@ -175,10 +140,20 @@ const currentPage = ref(1);
 const sortBy = ref<SortByEntry[]>([{ key: "name", order: "asc" }]);
 const selected = ref<UnifiedStorageItemList[]>([]);
 const hasMore = ref(true);
-const selectedTypeFilters = ref<string[]>([]);
-const typeHeaderLabel = "Typ";
-const typeFilterSubheader = "Typ";
-const typeFilterTitle = "Typ-Filter anzeigen";
+const selectedCategoryFilters = ref<string[]>([]);
+
+const allCategories = [
+  { value: "NFS_STANDARD_SHARE", label: "NFS Standard Share" },
+  { value: "NFS_CLONE",          label: "NFS Clone" },
+  { value: "NFS_WORM",           label: "NFS WORM" },
+  { value: "NFS_SHARED",         label: "NFS Shared" },
+  { value: "ORACLE_VOLUME",      label: "Oracle Volume" },
+  { value: "CIFS_STANDARD_SHARE",label: "CIFS Standard Share" },
+  { value: "CIFS_CLONE",         label: "CIFS Clone" },
+  { value: "CIFS_WORM",          label: "CIFS WORM" },
+  { value: "S3_SERVICE_BUCKET",  label: "S3 Service Bucket" },
+  { value: "ORACLE_FRA_QTREE",   label: "Oracle FRA Qtree" },
+];
 
 const selectedId = computed(() =>
   selected.value.length > 0 ? selected.value[0]?.uuid : null
@@ -187,7 +162,7 @@ const selectedId = computed(() =>
 const tableRef = ref<{ triggerObserveScroll: () => void } | null>(null);
 
 const headers = ref<DataTableHeader[]>([
-  { title: typeHeaderLabel, key: "type", sortable: true },
+  { title: "Typ", key: "storageCategory", sortable: false, width: "52px" },
   { title: "Name", key: "name", sortable: true },
 ]);
 
@@ -208,13 +183,24 @@ function normalizeType(type: string) {
   return (type ?? "").trim().toUpperCase();
 }
 
-// When the type filter changes we request the backend with the selected types
-watch(selectedTypeFilters, async () => {
+watch(selectedCategoryFilters, async () => {
   currentPage.value = 1;
   await loadItems(1);
   await nextTick();
   tableRef.value?.triggerObserveScroll();
 });
+
+function formatStorageCategory(category: string | undefined): string {
+  if (!category) return "-";
+  return category
+    .split("_")
+    .map((word) =>
+      word.length <= 4
+        ? word.toUpperCase()
+        : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+    )
+    .join(" ");
+}
 
 function switchType(type: string) {
   switch (normalizeType(type)) {
@@ -257,11 +243,11 @@ const loadItems = async (page = 1) => {
     const sortOrder = currentSort.value.order;
 
     const sanitizedSearch = (search.value || "")
-      .replace(/[^a-zA-Z0-9 ._:\/-]/g, "")
+      .replace(/[^a-zA-Z0-9 ._:/-]/g, "")
       .trim();
 
-    const typesParam = selectedTypeFilters.value.length
-      ? selectedTypeFilters.value.map((t) => t.toUpperCase())
+    const categoriesParam = selectedCategoryFilters.value.length
+      ? selectedCategoryFilters.value
       : undefined;
 
     const response = await storageService.getUnifiedStorage(
@@ -271,7 +257,7 @@ const loadItems = async (page = 1) => {
       sortKey,
       sortOrder,
       sanitizedSearch,
-      typesParam
+      categoriesParam
     );
 
     if (page === 1) {
@@ -375,8 +361,9 @@ onMounted(async () => {
 .header-container {
   display: flex;
   align-items: center;
-  gap: 4px;
+  justify-content: left;
   width: 100%;
+  margin-left: 0;
 }
 
 .header-container .filter-buttons {
@@ -386,5 +373,18 @@ onMounted(async () => {
 .filter-buttons {
   display: flex;
   gap: 4px;
+}
+
+:deep(td:first-child),
+:deep(th:first-child) {
+  width: 52px !important;
+  min-width: 52px !important;
+  max-width: 52px !important;
+  padding-left: 8px !important;
+  padding-right: 4px !important;
+}
+
+:deep(th:first-child) {
+  padding-left: 6px !important;
 }
 </style>

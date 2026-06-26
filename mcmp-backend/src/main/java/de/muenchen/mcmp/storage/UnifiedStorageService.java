@@ -216,7 +216,7 @@ public class UnifiedStorageService {
     }
 
     @Transactional(readOnly = true)
-    public Page<UnifiedStorageItemListDto> getUnifiedStorage(String search, List<String> types, Pageable pageable) {
+    public Page<UnifiedStorageItemListDto> getUnifiedStorage(String search, List<String> categories, Pageable pageable) {
         final UserRoles userRoles = AuthUtils.getCurrentUserRoles();
         String username = userRoles.getUsername();
         boolean isAdmin = userRoles.hasAdminRole();
@@ -226,21 +226,20 @@ public class UnifiedStorageService {
 
         String searchTerm = (search != null && !search.trim().isEmpty()) ? "%" + search.trim().toLowerCase() + "%" : null;
 
-        final Set<StorageType> requestedTypes;
-        if (types != null && !types.isEmpty()) {
-            Set<StorageType> tmp = new HashSet<>();
-            for (String t : types) {
-                if (t == null) continue;
+        final Set<StorageCategory> requestedCategories;
+        if (categories != null && !categories.isEmpty()) {
+            Set<StorageCategory> tmp = new HashSet<>();
+            for (String c : categories) {
+                if (c == null) continue;
                 try {
-                    tmp.add(StorageType.valueOf(t.trim().toUpperCase()));
+                    tmp.add(StorageCategory.valueOf(c.trim().toUpperCase()));
                 } catch (IllegalArgumentException ex) {
-                    // ignore unknown types
-                    log.debug("Unknown storage type in filter ignored: {}", LogUtils.sanitize(t));
+                    log.debug("Unknown storage category in filter ignored: {}", LogUtils.sanitize(c));
                 }
             }
-            requestedTypes = tmp.isEmpty() ? null : Collections.unmodifiableSet(tmp);
+            requestedCategories = tmp.isEmpty() ? null : Collections.unmodifiableSet(tmp);
         } else {
-            requestedTypes = null;
+            requestedCategories = null;
         }
 
         List<UnifiedStorageItemListDto> allItems = new ArrayList<>();
@@ -329,9 +328,9 @@ public class UnifiedStorageService {
                     .build());
         }
 
-        if (requestedTypes != null) {
+        if (requestedCategories != null) {
             allItems = allItems.stream()
-                    .filter(dto -> dto.getType() != null && requestedTypes.contains(dto.getType()))
+                    .filter(dto -> dto.getStorageCategory() != null && requestedCategories.contains(dto.getStorageCategory()))
                     .collect(Collectors.toList());
         }
 

@@ -123,25 +123,15 @@ function getPolicyTitle(policyValue: string | undefined): string {
   return policy ? policy.title : policyValue;
 }
 
-const NFS_SNAPSHOT_REGEX =
-  /^svm[pkc][0-9]{2}dcn\.srv\.muenchen\.de:\/(sn3|sn3c|wn3)_[pskcd]_[a-z0-9]{3,20}_[a-z0-9]{3,20}$/;
-const CIFS_SNAPSHOT_REGEX =
-  /^\\\\svm[pkc][0-9]{2}dcc\.srv\.muenchen\.de\\(sc|scc|wc)_[pskcd]_[a-z0-9]{3,20}_[a-z0-9]{3,20}$/;
-
 const canManageSnapshots = computed(() => {
-  if (props.selectedStorageItem.type === "NFS") {
-    return NFS_SNAPSHOT_REGEX.test(
-      props.selectedStorageItem.nfs_mount_path ?? ""
-    );
-  }
-
-  if (props.selectedStorageItem.type === "CIFS") {
-    return CIFS_SNAPSHOT_REGEX.test(
-      props.selectedStorageItem.cifs_mount_path ?? ""
-    );
-  }
-
-  return false;
+  return (
+    props.selectedStorageItem.storageCategory == "NFS_STANDARD_SHARE" ||
+    props.selectedStorageItem.storageCategory == "NFS_CLONE" ||
+    props.selectedStorageItem.storageCategory == "NFS_WORM" ||
+    props.selectedStorageItem.storageCategory == "CIFS_STANDARD_SHARE" ||
+    props.selectedStorageItem.storageCategory == "CIFS_CLONE" ||
+    props.selectedStorageItem.storageCategory == "CIFS_WORM"
+  );
 });
 
 function createSnapshot(description: string) {

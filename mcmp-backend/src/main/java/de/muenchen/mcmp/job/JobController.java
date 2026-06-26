@@ -13,6 +13,7 @@ import de.muenchen.mcmp.server.Server;
 import de.muenchen.mcmp.server.ServerFullDTO;
 import de.muenchen.mcmp.server.ServerService;
 import de.muenchen.mcmp.snapshot.SnapshotService;
+import de.muenchen.mcmp.storage.StorageCategory;
 import de.muenchen.mcmp.storage.StorageType;
 import de.muenchen.mcmp.storage.UnifiedStorageItemDto;
 import de.muenchen.mcmp.storage.UnifiedStorageService;
@@ -85,8 +86,6 @@ public class JobController {
     public static final String STORAGE_MODIFY_NFS = "STORAGE_MODIFY_NFS";
     public static final String STORAGE_MODIFY_CIFS = "STORAGE_MODIFY_CIFS";
     public static final String STORAGE_CHANGE_NFS_EXPORT_POLICY = "STORAGE_CHANGE_NFS_EXPORT_POLICY";
-    private static final String STORAGE_NFSV3_AND_NFSV3CLONE_REGEX = "^svm[pkc][0-9]{2}dcn.srv.muenchen.de:/(sn3|sn3c|wn3)_[pskcd]_[a-z0-9]{3,20}_[a-z0-9]{3,20}$";
-    private static final String STORAGE_STANDARD_CIFS_AND_CIFSCLONE_REGEX = "^\\\\\\\\svm[pkc][0-9]{2}dcc\\.srv\\.muenchen\\.de\\\\(sc|scc|wc)_[pskcd]_[a-z0-9]{3,20}_[a-z0-9]{3,20}$";
     private static final String STORAGE_CREATE_SNAPSHOT_NFS = "STORAGE_CREATE_SNAPSHOT_NFS";
     private static final String STORAGE_CREATE_SNAPSHOT_CIFS = "STORAGE_CREATE_SNAPSHOT_CIFS";
     private static final String STORAGE_DELETE_SNAPSHOT_NFS = "STORAGE_DELETE_SNAPSHOT_NFS";
@@ -1270,9 +1269,7 @@ public class JobController {
                 serverId,
                 StorageType.NFS,
                 "NFS",
-                STORAGE_MODIFY_NFS,
-                STORAGE_NFSV3_AND_NFSV3CLONE_REGEX,
-                UnifiedStorageItemDto::getNfs_mount_path
+                STORAGE_MODIFY_NFS
         );
     }
 
@@ -1284,9 +1281,7 @@ public class JobController {
                 serverId,
                 StorageType.CIFS,
                 "CIFS",
-                STORAGE_MODIFY_CIFS,
-                STORAGE_STANDARD_CIFS_AND_CIFSCLONE_REGEX,
-                UnifiedStorageItemDto::getCifs_mount_path
+                STORAGE_MODIFY_CIFS
         );
     }
 
@@ -1294,9 +1289,7 @@ public class JobController {
                                           Long serverId,
                                           StorageType storageType,
                                           String storageLabel,
-                                          String jobIdentifier,
-                                          String mountPathRegex,
-                                          java.util.function.Function<UnifiedStorageItemDto, String> mountPathExtractor) {
+                                          String jobIdentifier) {
         Object storageUuidObj = awxExtraVars.get("uuid");
         Object newSizeObj = awxExtraVars.get("new_size");
         Object newSnapshotPercentObj = awxExtraVars.get("new_snapshot_percent");
@@ -1325,8 +1318,7 @@ public class JobController {
             throw new IllegalArgumentException("The new size and new snapshot percentage must be whole numbers.");
         }
 
-        final String mountPath = mountPathExtractor.apply(storageItem);
-        if (mountPath == null || !mountPath.matches(mountPathRegex)) {
+        if (!isEditableStorageCategoryNfsCifs(storageType, storageItem.getStorageCategory())) {
             logTriedToCreateJob(jobIdentifier, null);
             throw new AccessDeniedException("You are not allowed to create a job for this " + storageLabel + " share.");
         }
@@ -1371,9 +1363,7 @@ public class JobController {
                 serverId,
                 StorageType.NFS,
                 "NFS",
-                STORAGE_CREATE_SNAPSHOT_NFS,
-                STORAGE_NFSV3_AND_NFSV3CLONE_REGEX,
-                UnifiedStorageItemDto::getNfs_mount_path
+                STORAGE_CREATE_SNAPSHOT_NFS
         );
     }
 
@@ -1385,9 +1375,7 @@ public class JobController {
                 serverId,
                 StorageType.CIFS,
                 "CIFS",
-                STORAGE_CREATE_SNAPSHOT_CIFS,
-                STORAGE_STANDARD_CIFS_AND_CIFSCLONE_REGEX,
-                UnifiedStorageItemDto::getCifs_mount_path
+                STORAGE_CREATE_SNAPSHOT_CIFS
         );
     }
 
@@ -1395,9 +1383,7 @@ public class JobController {
                                                   Long serverId,
                                                   StorageType storageType,
                                                   String storageLabel,
-                                                  String jobIdentifier,
-                                                  String mountPathRegex,
-                                                  java.util.function.Function<UnifiedStorageItemDto, String> mountPathExtractor) {
+                                                  String jobIdentifier) {
         Object storageUuidObj = awxExtraVars.get("uuid");
         Object descriptionObj = awxExtraVars.get("description");
 
@@ -1420,8 +1406,7 @@ public class JobController {
             throw new IllegalArgumentException(storageLabel + " UUID is invalid.");
         }
 
-        final String mountPath = mountPathExtractor.apply(storageItem);
-        if (mountPath == null || !mountPath.matches(mountPathRegex)) {
+        if (!isEditableStorageCategoryNfsCifs(storageType, storageItem.getStorageCategory())) {
             logTriedToCreateJob(jobIdentifier, null);
             throw new AccessDeniedException("You are not allowed to create a job for this " + storageLabel + " share.");
         }
@@ -1447,9 +1432,7 @@ public class JobController {
                 serverId,
                 StorageType.NFS,
                 "NFS",
-                STORAGE_DELETE_SNAPSHOT_NFS,
-                STORAGE_NFSV3_AND_NFSV3CLONE_REGEX,
-                UnifiedStorageItemDto::getNfs_mount_path
+                STORAGE_DELETE_SNAPSHOT_NFS
         );
     }
 
@@ -1461,9 +1444,7 @@ public class JobController {
                 serverId,
                 StorageType.CIFS,
                 "CIFS",
-                STORAGE_DELETE_SNAPSHOT_CIFS,
-                STORAGE_STANDARD_CIFS_AND_CIFSCLONE_REGEX,
-                UnifiedStorageItemDto::getCifs_mount_path
+                STORAGE_DELETE_SNAPSHOT_CIFS
         );
     }
 
@@ -1471,9 +1452,7 @@ public class JobController {
                                                    Long serverId,
                                                    StorageType storageType,
                                                    String storageLabel,
-                                                   String jobIdentifier,
-                                                   String mountPathRegex,
-                                                   java.util.function.Function<UnifiedStorageItemDto, String> mountPathExtractor) {
+                                                   String jobIdentifier) {
         final String snapshotNameRegex = "^[a-z0-9_.-]{3,60}$";
         Object storageUuidObj = awxExtraVars.get("uuid");
         Object snapshotNameObj = awxExtraVars.get("snapshotName");
@@ -1497,8 +1476,7 @@ public class JobController {
             throw new IllegalArgumentException(storageLabel + " UUID is invalid.");
         }
 
-        final String mountPath = mountPathExtractor.apply(storageItem);
-        if (mountPath == null || !mountPath.matches(mountPathRegex)) {
+        if (!isEditableStorageCategoryNfsCifs(storageType, storageItem.getStorageCategory())) {
             logTriedToCreateJob(jobIdentifier, null);
             throw new AccessDeniedException("You are not allowed to create a job for this " + storageLabel + " share.");
         }
@@ -1524,9 +1502,7 @@ public class JobController {
                 serverId,
                 StorageType.NFS,
                 "NFS",
-                STORAGE_CHANGE_SNAPSHOT_POLICY_NFS,
-                STORAGE_NFSV3_AND_NFSV3CLONE_REGEX,
-                UnifiedStorageItemDto::getNfs_mount_path
+                STORAGE_CHANGE_SNAPSHOT_POLICY_NFS
         );
     }
 
@@ -1538,9 +1514,7 @@ public class JobController {
                 serverId,
                 StorageType.CIFS,
                 "CIFS",
-                STORAGE_CHANGE_SNAPSHOT_POLICY_CIFS,
-                STORAGE_STANDARD_CIFS_AND_CIFSCLONE_REGEX,
-                UnifiedStorageItemDto::getCifs_mount_path
+                STORAGE_CHANGE_SNAPSHOT_POLICY_CIFS
         );
     }
 
@@ -1582,8 +1556,7 @@ public class JobController {
             throw new IllegalArgumentException("NFS UUID is invalid.");
         }
 
-        final String mountPath = storageItem.getNfs_mount_path();
-        if (mountPath == null || !mountPath.matches(STORAGE_NFSV3_AND_NFSV3CLONE_REGEX)) {
+        if (!isEditableStorageCategoryNfsCifs(StorageType.NFS, storageItem.getStorageCategory())) {
             logTriedToCreateJob(STORAGE_CHANGE_NFS_EXPORT_POLICY, null);
             throw new AccessDeniedException("You are not allowed to create a job for this NFS share.");
         }
@@ -1601,9 +1574,7 @@ public class JobController {
                                                    Long serverId,
                                                    StorageType storageType,
                                                    String storageLabel,
-                                                   String jobIdentifier,
-                                                   String mountPathRegex,
-                                                   java.util.function.Function<UnifiedStorageItemDto, String> mountPathExtractor) {
+                                                   String jobIdentifier) {
         Object storageUuidObj = awxExtraVars.get("uuid");
         Object newPolicyObj = awxExtraVars.get("newPolicy");
 
@@ -1626,8 +1597,7 @@ public class JobController {
             throw new IllegalArgumentException(storageLabel + " UUID is invalid.");
         }
 
-        final String mountPath = mountPathExtractor.apply(storageItem);
-        if (mountPath == null || !mountPath.matches(mountPathRegex)) {
+        if (!isEditableStorageCategoryNfsCifs(storageType, storageItem.getStorageCategory())) {
             logTriedToCreateJob(jobIdentifier, null);
             throw new AccessDeniedException("You are not allowed to create a job for this " + storageLabel + " share.");
         }
@@ -1669,6 +1639,20 @@ public class JobController {
 
     private void logTriedToCreateJob(String jobIdentifier, Long serverId) {
         log.warn("User {} tried to create a job {} for serverId: {} without permission.", AuthUtils.getUsername(), jobIdentifier, serverId);
+    }
+
+    private boolean isEditableStorageCategoryNfsCifs(StorageType storageType, StorageCategory category) {
+        if (storageType == StorageType.NFS) {
+            return category == StorageCategory.NFS_STANDARD_SHARE
+                    || category == StorageCategory.NFS_CLONE
+                    || category == StorageCategory.NFS_WORM;
+        }
+        if (storageType == StorageType.CIFS) {
+            return category == StorageCategory.CIFS_STANDARD_SHARE
+                    || category == StorageCategory.CIFS_CLONE
+                    || category == StorageCategory.CIFS_WORM;
+        }
+        return false;
     }
 
     private Map<?, ?> requireMap(Object obj, String fieldLabel) {

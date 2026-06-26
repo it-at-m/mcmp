@@ -121,23 +121,7 @@
       </v-col>
       <v-col cols="3">
         <h3>
-          Typ<info-tooltip>
-            <div class="pa-1">
-              <strong>Speichertyp</strong>
-              <p class="text-caption mt-2 mb-1">
-                <strong>NFS:</strong> Network File System für
-                Unix/Linux-Systeme<br />
-                <strong>CIFS:</strong> Common Internet File System für
-                Windows-Systeme<br />
-                <strong>QTREE:</strong>
-                <span class="text-error"
-                  >Nicht mehr verfügbar zur Bestellung (veraltet)</span
-                ><br />
-                <strong>S3:</strong> Object Storage mit Amazon S3-kompatiblem
-                Interface
-              </p>
-            </div>
-          </info-tooltip>
+          Typ
         </h3>
       </v-col>
     </v-row>
@@ -154,7 +138,7 @@
       </v-col>
       <v-col cols="3">
         <p>
-          {{ selectedStorageItem.type }}
+          {{ formatStorageCategory(selectedStorageItem.storageCategory) }}
         </p>
       </v-col>
     </v-row>
@@ -302,7 +286,6 @@
 <script setup lang="ts">
 import type { UnifiedStorageItem } from "@/types/Storage";
 
-import { mdiAlert } from "@mdi/js";
 import { computed, ref } from "vue";
 
 import jobService from "@/api/jobService.ts";
@@ -370,6 +353,18 @@ function getDiskClass(): string {
     return "-";
   }
 }
+function formatStorageCategory(category: string | undefined): string {
+  if (!category) return "-";
+  return category
+    .split("_")
+    .map((word) =>
+      word.length <= 4
+        ? word.toUpperCase()
+        : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+    )
+    .join(" ");
+}
+
 function turnToDate(isoString: string | undefined): string {
   // Zeitangeben vom ISO8601 in normales Format umwandeln: PT0S - PT65535S fuer Sekunden, PT0M - PT60M fuer Minuten, PT0H - PT24H fuer Stunden, P0D - P36500D fuer Tage, P0M - P1200M fuer Monate oder P0Y - P100Y für Jahre; max = maximal; min = minimal; none = keine
   if (!isoString) {

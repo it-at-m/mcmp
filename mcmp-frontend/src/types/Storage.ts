@@ -64,4 +64,5 @@ export interface UnifiedStorageItem {
   spaceSnapshotUsed?: number;
 
   snapshotPolicy?: string;
+  storageCategory?: string;
 }

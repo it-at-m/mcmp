@@ -15,6 +15,7 @@ public class UnifiedStorageItemDto {
     private String uuid;
     private String name;
     private StorageType type;
+    private StorageCategory storageCategory;
     private Long size;
     private Long used;
     private String protocol;

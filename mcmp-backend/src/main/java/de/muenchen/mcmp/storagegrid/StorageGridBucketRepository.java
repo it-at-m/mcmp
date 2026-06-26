@@ -40,8 +40,9 @@ public interface StorageGridBucketRepository extends JpaRepository<StorageGridBu
                                                         @Param("isStorage") boolean isStorage,
                                                         @Param("isOperator") boolean isOperator);
 
-    @Query("SELECT b.id, b.name FROM StorageGridBucket b " +
-            "WHERE (:search IS NULL OR LOWER(b.name) LIKE :search) " +
+    @Query("SELECT b.id, b.name, b.storageCategory FROM StorageGridBucket b " +
+            "WHERE b.storageCategory IS NOT NULL " +
+            "AND (:search IS NULL OR LOWER(b.name) LIKE :search) " +
             "AND (" +
             "   :isAdmin = TRUE OR :isReadonly = TRUE OR :isStorage = TRUE OR :isOperator = TRUE OR " +
             "   EXISTS (SELECT 1 FROM b.storageGridAccount.appservices a JOIN a.changeGroup g JOIN g.users u WHERE u.username = :username)" +

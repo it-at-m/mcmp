@@ -3,6 +3,7 @@ export interface UnifiedStorageItemList {
   name: string;
   path?: string;
   type: string;
+  storageCategory?: string;
   protocol: string;
   appserviceNames?: string;
 }

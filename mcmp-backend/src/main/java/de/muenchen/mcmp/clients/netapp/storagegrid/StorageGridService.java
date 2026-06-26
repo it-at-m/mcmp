@@ -6,6 +6,7 @@ import de.muenchen.mcmp.storagegrid.StorageGridAccount;
 import de.muenchen.mcmp.storagegrid.StorageGridAccountRepository;
 import de.muenchen.mcmp.storagegrid.StorageGridBucket;
 import de.muenchen.mcmp.storagegrid.StorageGridBucketRepository;
+import de.muenchen.mcmp.storage.StorageCategoryClassifier;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -219,6 +220,14 @@ public class StorageGridService {
             bucket.setQuotaObjectBytes(bucketData.quotaObjectBytes());
             bucket.setRegion(bucketData.region());
             bucketsToSave.add(bucket);
+        }
+
+        final de.muenchen.mcmp.storage.StorageCategory bucketCategory = StorageCategoryClassifier.classifyS3(bucketData.name());
+        if (!java.util.Objects.equals(bucket.getStorageCategory(), bucketCategory)) {
+            bucket.setStorageCategory(bucketCategory);
+            if (!bucketsToSave.contains(bucket)) {
+                bucketsToSave.add(bucket);
+            }
         }
 
         context.importedBucketKeys.add(bucketKey);

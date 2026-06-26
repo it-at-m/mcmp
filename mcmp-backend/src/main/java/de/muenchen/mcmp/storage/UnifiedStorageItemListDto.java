@@ -10,6 +10,7 @@ public class UnifiedStorageItemListDto {
     private String name;
     private String path;
     private StorageType type;
+    private StorageCategory storageCategory;
     private String protocol;
     private String appserviceNames;
 }

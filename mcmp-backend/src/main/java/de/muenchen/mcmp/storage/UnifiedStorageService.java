@@ -52,7 +52,8 @@ public class UnifiedStorageService {
             UnifiedStorageItemDto.UnifiedStorageItemDtoBuilder builder = UnifiedStorageItemDto.builder()
                     .uuid(volume.getVolumeUuid().toString())
                     .name(volume.getName())
-                    .type(type) // Use requested type or infer? Both valid. Let's use requested.
+                    .type(type)
+                    .storageCategory(volume.getStorageCategory())
                     .protocol(protocol)
                     .appservices(volume.getAppservices().stream()
                             .map(a -> new de.muenchen.mcmp.appservice.AppserviceNameAndSysIdDTO(a.getId(), a.getName(), a.getSysId()))
@@ -119,6 +120,7 @@ public class UnifiedStorageService {
                             .uuid(String.valueOf(qtree.getId()))
                             .name(qtree.getName())
                             .type(StorageType.QTREE)
+                            .storageCategory(qtree.getStorageCategory())
                             .protocol(protocol)
                             .appservices(qtree.getAppservices().stream()
                                     .map(a -> new de.muenchen.mcmp.appservice.AppserviceNameAndSysIdDTO(a.getId(), a.getName(), a.getSysId()))
@@ -151,6 +153,7 @@ public class UnifiedStorageService {
                             .uuid(String.valueOf(bucket.getId()))
                             .name(bucket.getName())
                             .type(StorageType.S3)
+                            .storageCategory(bucket.getStorageCategory())
                             .protocol("S3")
                             .appservices(bucket.getStorageGridAccount() != null ?
                                     bucket.getStorageGridAccount().getAppservices().stream()
@@ -258,6 +261,7 @@ public class UnifiedStorageService {
                     .uuid(uuidStr)
                     .name((String) row[1])
                     .type(StorageType.NFS)
+                    .storageCategory(row[3] != null ? StorageCategory.valueOf(row[3].toString()) : null)
                     .protocol(protocol)
                     .appserviceNames(nfsAppserviceNames.get(uuidStr))
                     .build());
@@ -279,6 +283,7 @@ public class UnifiedStorageService {
                     .uuid(uuidStr)
                     .name((String) row[1])
                     .type(StorageType.CIFS)
+                    .storageCategory(row[3] != null ? StorageCategory.valueOf(row[3].toString()) : null)
                     .protocol(protocol)
                     .appserviceNames(cifsAppserviceNames.get(uuidStr))
                     .build());
@@ -301,6 +306,7 @@ public class UnifiedStorageService {
                     .name((String) row[1])
                     .path(row[3] != null ? ((String) row[3]).replaceFirst("^/", "") : null)
                     .type(StorageType.QTREE)
+                    .storageCategory(row[4] != null ? StorageCategory.valueOf(row[4].toString()) : null)
                     .protocol(protocol)
                     .appserviceNames(qtreeAppserviceNames.get(idStr))
                     .build());
@@ -317,6 +323,7 @@ public class UnifiedStorageService {
                     .uuid(idStr)
                     .name((String) row[1])
                     .type(StorageType.S3)
+                    .storageCategory(row[2] != null ? StorageCategory.valueOf(row[2].toString()) : null)
                     .protocol("S3")
                     .appserviceNames(bucketAppserviceNames.get(idStr))
                     .build());
@@ -336,7 +343,7 @@ public class UnifiedStorageService {
 
                 // Determine comparator based on property
                 if ("name".equalsIgnoreCase(order.getProperty())) {
-                    comparator = Comparator.comparing(dto -> effectiveName(dto), String.CASE_INSENSITIVE_ORDER);
+                    comparator = Comparator.comparing(this::effectiveName, String.CASE_INSENSITIVE_ORDER);
                 } else if ("type".equalsIgnoreCase(order.getProperty())) {
                     comparator = Comparator.comparing(dto -> dto.getType().toString());
                 } else if ("protocol".equalsIgnoreCase(order.getProperty())) {
@@ -354,7 +361,7 @@ public class UnifiedStorageService {
                 }
             }
         } else {
-            allItems.sort(Comparator.comparing(dto -> effectiveName(dto), String.CASE_INSENSITIVE_ORDER));
+            allItems.sort(Comparator.comparing(this::effectiveName, String.CASE_INSENSITIVE_ORDER));
         }
 
         // 6. Pagination in Memory

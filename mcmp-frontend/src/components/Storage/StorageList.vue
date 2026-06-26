@@ -16,26 +16,13 @@
       @row-click="onRowClick"
       @load-more="onLoadMore"
     >
-      <template #[`header.storageCategory`]="{ column, toggleSort }">
-        <div
-          class="header-container"
-          @click="toggleSort(column)"
-        >
-          <v-icon
-            v-if="currentSort.key === 'storageCategory'"
-            size="small"
-            class="v-data-table-header__sort-icon"
-          >
-            {{ currentSort.order === 'asc' ? mdiArrowUp : mdiArrowDown }}
-          </v-icon>
+      <template #[`header.storageCategory`]>
+        <div class="header-container">
           <v-badge
             :model-value="selectedCategoryFilters.length !== 0"
             dot
           >
-            <div
-              class="filter-buttons"
-              @click.stop
-            >
+            <div class="filter-buttons">
               <v-menu :close-on-content-click="false">
                 <template #activator="{ props: filterActivatorProps }">
                   <v-btn
@@ -52,7 +39,7 @@
                   density="compact"
                   style="border-width: thin"
                 >
-                  <v-list-subheader>Kategorie</v-list-subheader>
+                  <v-list-subheader>Typ</v-list-subheader>
                   <v-list-item
                     v-for="cat in allCategories"
                     :key="cat.value"
@@ -101,8 +88,6 @@ import type { UnifiedStorageItemList } from "@/types/UnifiedStorageItemList";
 import type { DataTableHeader } from "vuetify";
 
 import {
-  mdiArrowDown,
-  mdiArrowUp,
   mdiBucketOutline,
   mdiFilterVariant,
   mdiFolderNetworkOutline,

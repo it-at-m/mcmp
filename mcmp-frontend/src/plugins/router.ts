@@ -53,6 +53,11 @@ const manualRoutes = [
     component: LoadbalancerView,
   },
   {
+    path: "/loadbalancer/:id",
+    name: "LoadbalancerDetail",
+    component: LoadbalancerView,
+  },
+  {
     path: "/help",
     name: "Hilfe",
     component: HilfeView,

@@ -2,6 +2,7 @@ package de.muenchen.mcmp.ontap;
 
 import de.muenchen.mcmp.appservice.Appservice;
 import de.muenchen.mcmp.common.AbstractEntity;
+import de.muenchen.mcmp.storage.StorageCategory;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
@@ -73,4 +74,8 @@ public class OntapQtree extends AbstractEntity {
 
     @OneToMany(mappedBy = "qtree")
     private Set<OntapCifsShare> ontapCifsShares = new LinkedHashSet<>();
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "storage_category")
+    private StorageCategory storageCategory;
 }

@@ -1,5 +1,5 @@
 <template>
-  <CommonCard title="vNics">
+  <common-card title="vNics">
     <v-data-table
       :loading="loading"
       :headers="headers"
@@ -35,21 +35,40 @@
       <template #item.ips="{ item }">
         {{ formatIps(item.toolsIpAddress) }}
       </template>
-      <!--
-            <template #item.edit="{ item }">
-              <v-btn
-                text
-                @click="editNic(item)"
-              >
-                <v-icon size="x-large">{{ mdiCircleEditOutline }}</v-icon>
-              </v-btn>
-            </template>
-            -->
     </v-data-table>
-  </CommonCard>
+  </common-card>
+  <common-card
+    title="Loadbalancer Mitgliedschaften"
+    :loading="loadingLbMemberships"
+    top-margin="0"
+  >
+    <v-data-table
+      :loading="loadingLbMemberships"
+      :headers="lbHeaders"
+      :items="lbMemberships"
+      :items-per-page="-1"
+      class="elevation-1"
+      hide-default-footer
+      disable-sort
+    >
+      <template #item.vsDomain="{ item }">
+        <div class="links">
+          <router-link :to="`/loadbalancer/${item.vsId}`">{{
+            item.vsDomain
+          }}</router-link>
+        </div>
+      </template>
+      <template #no-data>
+        <span class="text-medium-emphasis"
+          >Kein Loadbalancer Pool-Mitglied</span
+        >
+      </template>
+    </v-data-table>
+  </common-card>
 </template>
 
 <script setup lang="ts">
+import type { LbServerMembership } from "@/types/LbServerMembership";
 import type Nic from "@/types/Nic";
 
 import { mdiCheckCircle, mdiCloseCircle } from "@mdi/js";
@@ -59,7 +78,16 @@ import CommonCard from "@/components/common/CommonCard.vue";
 const props = defineProps<{
   nics: Nic[];
   loading: boolean;
+  lbMemberships: LbServerMembership[];
+  loadingLbMemberships: boolean;
 }>();
+
+const lbHeaders = [
+  { title: "Domain", key: "vsDomain" },
+  { title: "Pool", key: "poolName" },
+  { title: "IP", key: "memberIp" },
+  { title: "Port", key: "memberPort" },
+];
 
 const headers = [
   { title: "Verbunden", key: "connected" },
@@ -69,7 +97,6 @@ const headers = [
   { title: "Portgruppe", key: "portGroup" },
   { title: "VLAN", key: "vlan" },
   { title: "IPs", key: "ips" },
-  // { title: "Bearbeiten", key: "edit", sortable: false },
 ];
 
 function formatIps(ip: string) {
@@ -77,8 +104,14 @@ function formatIps(ip: string) {
   return ip;
 }
 
-function editNic(nic: Nic) {
-  // Dummy API request
-  alert(`Edit NIC: ${nic.device}`);
-}
 </script>
+<style scoped>
+.links a,
+.links a:visited,
+.links a:hover,
+.links a:active {
+  /* noinspection CssUnresolvedCustomProperty */
+  color: rgb(var(--v-theme-link));
+  text-decoration: none;
+}
+</style>

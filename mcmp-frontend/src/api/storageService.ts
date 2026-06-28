@@ -16,7 +16,7 @@ export default {
     sortBy: string,
     sortOrder: string,
     search?: string,
-    types?: string[]
+    categories?: string[]
   ): Promise<Page<UnifiedStorageItemList>> {
     const params = new URLSearchParams({
       page: page.toString(),
@@ -28,8 +28,8 @@ export default {
       params.append("search", search);
     }
 
-    if (types && types.length > 0) {
-      params.append("types", types.join(","));
+    if (categories && categories.length > 0) {
+      params.append("categories", categories.join(","));
     }
 
     return apiFetch(

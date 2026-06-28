@@ -12,7 +12,7 @@
         class="left-panel"
         :style="{ width: leftPanelWidth + 'px' }"
       >
-        <ServerList
+        <server-list
           ref="serverListRef"
           :un-activate-server-row="unActivateServerListRow"
           :selected="selectedServer"
@@ -25,11 +25,11 @@
       <!-- Split Handle -->
       <div
         class="split-handle"
+        tabindex="0"
         @mousedown="startResize"
         @touchstart="startResize"
         @keyup.left.prevent="resizeLeft"
         @keyup.right.prevent="resizeRight"
-        tabindex="0"
       >
         <span class="split-handle-bar left"></span>
         <span class="split-handle-bar right"></span>
@@ -40,7 +40,7 @@
         <div v-if="notFound">
           <v-row class="pa-4">
             <v-col cols="12">
-              <CommonAlert
+              <common-alert
                 type="warning"
                 prominent
               >
@@ -55,7 +55,7 @@
                     (ID: {{ notFoundId }})</span
                   >
                 </div>
-              </CommonAlert>
+              </common-alert>
             </v-col>
           </v-row>
         </div>
@@ -102,17 +102,17 @@
         >
           <div class="right-panel-sticky">
             <v-row>
-              <SelectedServerActionsAndStatus
-                :selectedServer="selectedServerItem"
-                :loading-server-details="loadingDetails"
-                @change="getSelectedServer"
-                @navigate-to-history="navigateToHistory"
-                @navigate-to-patchnight="navigateToPatchnight"
+              <selected-server-actions-and-status
                 v-if="
                   selectedServerItem &&
                   selectedServerItem.id &&
                   !loadingDetails
                 "
+                :selected-server="selectedServerItem"
+                :loading-server-details="loadingDetails"
+                @change="getSelectedServer"
+                @navigate-to-history="navigateToHistory"
+                @navigate-to-patchnight="navigateToPatchnight"
               />
             </v-row>
             <v-row>
@@ -325,8 +325,8 @@
               <v-col v-if="selectedServer.length > 0">
                 <v-tabs-window v-model="tab">
                   <v-tabs-window-item value="Allgemeines">
-                    <ServerDetailsAllgemein
-                      :selectedServer="selectedServerItem"
+                    <server-details-allgemein
+                      :selected-server="selectedServerItem"
                       @changed="
                         () =>
                           getSelectedServerFromServerListComponent(
@@ -337,8 +337,8 @@
                   </v-tabs-window-item>
 
                   <v-tabs-window-item value="Patchnight">
-                    <ServerDetailsPatchnight
-                      :selectedServer="selectedServerItem"
+                    <server-details-patchnight
+                      :selected-server="selectedServerItem"
                       @changed="
                         () =>
                           getSelectedServerFromServerListComponent(
@@ -349,11 +349,11 @@
                   </v-tabs-window-item>
 
                   <v-tabs-window-item value="Festplatten">
-                    <ServerDetailsFestplatten
-                      :selectedServer="selectedServerItem"
+                    <server-details-festplatten
+                      :selected-server="selectedServerItem"
                       :disks="disks"
-                      :mountPoints="mountPoints"
-                      :shareMountPoints="shareMountPoints"
+                      :mount-points="mountPoints"
+                      :share-mount-points="shareMountPoints"
                       :loading="[
                         loadingDisks,
                         loadingMountPoints,
@@ -364,8 +364,8 @@
                   </v-tabs-window-item>
 
                   <v-tabs-window-item value="Backup">
-                    <ServerDetailsBackup
-                      :selectedServer="selectedServerItem"
+                    <server-details-backup
+                      :selected-server="selectedServerItem"
                       :snapshots="snapshots"
                       :backups="backups"
                       :loading="[loadingSnapshots, loadingBackups]"
@@ -379,14 +379,16 @@
                   </v-tabs-window-item>
 
                   <v-tabs-window-item value="Netzwerk">
-                    <ServerDetailsNetzwerk
+                    <server-details-netzwerk
                       :nics="nics"
                       :loading="loadingNics"
+                      :lb-memberships="lbMemberships"
+                      :loading-lb-memberships="loadingLbMemberships"
                     />
                   </v-tabs-window-item>
 
                   <v-tabs-window-item value="History">
-                    <ServerDetailsHistory
+                    <server-details-history
                       :history="history"
                       :loading="loadingHistory"
                       :page="currentPage"
@@ -399,7 +401,7 @@
                   </v-tabs-window-item>
 
                   <v-tabs-window-item value="Expert">
-                    <ServerDetailsExpert :selectedServer="selectedServerItem" />
+                    <server-details-expert :selected-server="selectedServerItem" />
                   </v-tabs-window-item>
                 </v-tabs-window>
               </v-col>
@@ -417,6 +419,7 @@ import type Disk from "@/types/Disk";
 import type JobList from "@/types/JobList";
 import type MountPoint from "@/types/MountPoint";
 import type Nic from "@/types/Nic";
+import type { LbServerMembership } from "@/types/LbServerMembership";
 import type Snapshot from "@/types/Snapshot";
 import type { UnifiedStorageMountItem } from "@/types/UnifiedStorageMountItem.ts";
 
@@ -438,6 +441,7 @@ import diskService from "@/api/diskService";
 import jobService from "@/api/jobService";
 import mountPointService from "@/api/mountPointService";
 import nicService from "@/api/nicService";
+import loadbalancerService from "@/api/loadbalancerService";
 import serverService from "@/api/serverService";
 import snapshotService from "@/api/snapshotService";
 import StorageService from "@/api/storageService.ts";
@@ -474,6 +478,8 @@ const snapshots = ref<Snapshot[]>([]);
 const loadingSnapshots = ref(true);
 const nics = ref<Nic[]>([]);
 const loadingNics = ref(true);
+const lbMemberships = ref<LbServerMembership[]>([]);
+const loadingLbMemberships = ref(true);
 const backups = ref<Backup[]>([]);
 const loadingBackups = ref(true);
 const history = ref<import("@/types/Page").Page<JobList> | null>(null);
@@ -497,9 +503,7 @@ const currentItemsPerPage = ref(10);
 const currentSortBy = ref<string | null>(null);
 const currentSortDesc = ref(false);
 
-const emit = defineEmits<{
-  (e: "getNotification"): void;
-}>();
+const emit = defineEmits<(e: "getNotification") => void>();
 
 provide("registerOpenDialog", registerOpenDialog);
 provide("unregisterOpenDialog", unregisterOpenDialog);
@@ -655,6 +659,7 @@ function loadTabData(tabName: string, silent = false) {
     fetchBackups(silent);
   } else if (tabName === "Netzwerk") {
     fetchNics(silent);
+    fetchLbMemberships(silent);
   } else if (tabName === "History") {
     fetchHistory(silent);
   }
@@ -732,6 +737,21 @@ function fetchNics(silent = false) {
       });
   } else {
     nics.value = [];
+    return Promise.resolve();
+  }
+}
+
+function fetchLbMemberships(silent = false) {
+  const serverId = selectedServerItem.value?.id;
+  if (serverId) {
+    const loadingRef = silent ? ref(false) : loadingLbMemberships;
+    return loadbalancerService
+      .getPoolMembershipsByServerId(loadingRef, serverId)
+      .then((res) => {
+        lbMemberships.value = res;
+      });
+  } else {
+    lbMemberships.value = [];
     return Promise.resolve();
   }
 }

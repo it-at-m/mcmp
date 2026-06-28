@@ -5,13 +5,13 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.14</version>
+        <version>3.5.15</version>
         <relativePath/>
     </parent>
 
     <groupId>de.muenchen.mcmp</groupId>
     <artifactId>mcmp-backend</artifactId>
-    <version>1.0.31</version>
+    <version>1.0.32</version>
 
     <name>mcmp-backend</name>
     <description>This is the backend project for the MCMP</description>

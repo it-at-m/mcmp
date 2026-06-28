@@ -2,6 +2,7 @@ package de.muenchen.mcmp.ontap;
 
 import de.muenchen.mcmp.appservice.Appservice;
 import de.muenchen.mcmp.common.AbstractEntity;
+import de.muenchen.mcmp.storage.StorageCategory;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
@@ -119,6 +120,10 @@ public class OntapVolume extends AbstractEntity {
 
     @Column(name = "snaplock_type")
     private String snaplockType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "storage_category")
+    private StorageCategory storageCategory;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "export_policy_id")

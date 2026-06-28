@@ -31,11 +31,12 @@ public interface OntapQtreeRepository extends JpaRepository<OntapQtree, Long> {
                                                  @Param("isStorage") boolean isStorage,
                                                  @Param("isOperator") boolean isOperator);
 
-    @Query("SELECT q.id, q.name, s.name FROM OntapQtree q " +
+    @Query("SELECT q.id, q.name, s.name, q.path, q.storageCategory FROM OntapQtree q " +
             "JOIN q.volume v " +
             "JOIN v.svm s " +
             "WHERE LOWER(s.name) LIKE '%dcn' " +
             "AND v.ontapCifsShares IS EMPTY " +
+            "AND q.storageCategory IS NOT NULL " +
             "AND (:search IS NULL OR LOWER(q.name) LIKE :search OR LOWER(s.name) LIKE :search OR LOWER(CONCAT(s.name, ':', v.mountPathNfs, '/', q.name)) LIKE :search) " +
             "AND (" +
             "   :isAdmin = TRUE OR :isReadonly = TRUE OR :isStorage = TRUE OR :isOperator = TRUE OR " +

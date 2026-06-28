@@ -624,12 +624,13 @@ public class UserInfoAuthoritiesService {
             if (attributes != null) {
                 HttpServletRequest request = attributes.getRequest();
 
+                // RFC 7239 'Forwarded' header
                 final String authorization = request.getHeader(HEADER_FORWARDED);
 
                 if (authorization != null && !authorization.isEmpty()) {
                     final String forwardedIp = extractIpFromAuthorizationHeader(authorization);
-                    if (forwardedIp != null) {
-                        log.debug("Extracted IP from Authorization header: {}", forwardedIp);
+                    if (forwardedIp != null && (isValidIpv4(forwardedIp) || isValidIpv6(forwardedIp))) {
+                        log.debug("Extracted IP from Forwarded header: {}", forwardedIp);
                         return forwardedIp;
                     }
                 }
@@ -642,8 +643,11 @@ public class UserInfoAuthoritiesService {
 
                 final String xRealIp = request.getHeader(HEADER_X_REAL_IP);
                 if (xRealIp != null && !xRealIp.isEmpty()) {
-                    log.debug("Extracted IP from X-Real-IP header: {}", xRealIp);
-                    return xRealIp;
+                    if (isValidIpv4(xRealIp) || isValidIpv6(xRealIp)) {
+                        log.debug("Extracted IP from X-Real-IP header: {}", xRealIp);
+                        return xRealIp;
+                    }
+                    log.warn("Invalid IP format in X-Real-IP header: {}", xRealIp.replaceAll("[\r\n]", "_"));
                 }
                 return request.getRemoteAddr();
             }
@@ -663,53 +667,51 @@ public class UserInfoAuthoritiesService {
      * @return the extracted IP address or null if not found
      */
     protected String extractIpFromAuthorizationHeader(String authorizationHeader) {
+        if (authorizationHeader == null || authorizationHeader.isBlank()) {
+            return null;
+        }
         try {
-            final int forIndex = authorizationHeader.indexOf("for=");
-            if (forIndex == -1) {
-                return null;
-            }
+            // The header consists of parameter-value pairs separated by semicolons
+            String[] parts = authorizationHeader.split(";");
+            for (String part : parts) {
+                part = part.trim();
+                if (part.toLowerCase(Locale.ROOT).startsWith("for=")) {
+                    String forPart = part.substring(4).trim();
 
-            // Cut everything before and including "for="
-            String forPart = authorizationHeader.substring(forIndex + 4);
+                    // Remove surrounding quotes
+                    forPart = forPart.replaceAll("^\"|\"$", "").trim();
 
-            // If there are more parameters after "for", cut at the next semicolon
-            int semicolonIndex = forPart.indexOf(";");
-            if (semicolonIndex != -1) {
-                forPart = forPart.substring(0, semicolonIndex);
-            }
+                    // Handle IPv6 in square brackets [2001:db8:cafe::17]:4711
+                    if (forPart.startsWith("[")) {
+                        int closingBracket = forPart.indexOf(']');
+                        if (closingBracket != -1) {
+                            String ip = forPart.substring(1, closingBracket).trim();
+                            if (isValidIpv6(ip)) {
+                                return ip;
+                            }
+                        }
+                    } else {
+                        // Handle IPv4 or bare IPv6 and strip port if present
+                        int colonIndex = forPart.lastIndexOf(':');
+                        // If there's exactly one colon and it's not followed by hex-only chars, it's likely a port (IPv4:port)
+                        // If it's an IPv6 without brackets, it shouldn't have a port per RFC 7239,
+                        // but we handle standard cases here.
+                        String ipCandidate = forPart;
+                        if (colonIndex != -1 && !forPart.contains("]")) {
+                            // Check if it looks like IPv4 with port or just IPv6
+                            if (isValidIpv4(forPart.substring(0, colonIndex))) {
+                                ipCandidate = forPart.substring(0, colonIndex);
+                            }
+                        }
 
-            // Remove surrounding quotes
-            forPart = forPart.replaceAll("^\"|\"$", "").trim();
-
-            // Case 1: IPv6 in square brackets, e.g. [::1]:59542
-            if (forPart.startsWith("[") && forPart.contains("]")) {
-                int closingBracket = forPart.indexOf(']');
-                String ipCandidate = forPart.substring(1, closingBracket); // without [ ]
-                ipCandidate = ipCandidate.trim();
-
-                if (isValidIpv6(ipCandidate)) {
-                    return ipCandidate;
+                        if (isValidIpv4(ipCandidate) || isValidIpv6(ipCandidate)) {
+                            return ipCandidate;
+                        }
+                    }
                 }
-                log.debug("Extracted value from Authorization header is not a valid IPv6: {}", ipCandidate);
-                return null;
             }
-
-            // Case 2: IPv4 or bare IPv6 without brackets + optional port
-            int colonIndex = forPart.indexOf(":");
-            if (colonIndex != -1) {
-                // Remove port part
-                forPart = forPart.substring(0, colonIndex);
-            }
-
-            forPart = forPart.trim();
-
-            if (isValidIpv4(forPart) || isValidIpv6(forPart)) {
-                return forPart;
-            }
-
-            log.debug("Extracted value from Authorization header is not a valid IP: {}", forPart);
         } catch (Exception e) {
-            log.debug("Failed to extract IP from Authorization header: {}", e.getMessage());
+            log.debug("Failed to extract IP from Forwarded header: {}", e.getMessage());
         }
         return null;
     }

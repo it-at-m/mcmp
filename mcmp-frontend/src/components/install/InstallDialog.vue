@@ -9,7 +9,8 @@
     :checkForEnabledActions="[
       'LINUX_RHEL9_SERVER',
       'LINUX_RHEL10_SERVER',
-      'WINDOWS_SERVER',
+      'WINDOWS_SERVER_2025',
+      'WINDOWS_SERVER_2022',
     ]"
   >
     <template #activator="{ props }">
@@ -377,11 +378,10 @@ function order() {
       return;
     }
   }
+  instlServerDetails.value.serverName!.prefix = instlServerDetails.value.serverName!.prefix || "";
   instlServerDetails.value.serverName!.serverType = serverType;
-  if (!instlServerDetails.value.serverName!.prefix) {
-    instlServerDetails.value.serverName!.prefix = "";
-  }
 
+  // 1. RHEL 10
   if (
     instlServerDetails.value.osType == OsType.Linux &&
     instlServerDetails.value.osVersion == OsVersion.RHEL10
@@ -403,7 +403,9 @@ function order() {
       middleware_user: instlServerDetails.value.middlewareUser,
       ...schedule,
     });
-  } else if (
+  }
+  // 2. RHEL 9
+  else if (
     instlServerDetails.value.osType == OsType.Linux &&
     instlServerDetails.value.osVersion == OsVersion.RHEL9
   ) {
@@ -423,17 +425,19 @@ function order() {
       non_postgres_reason: instlServerDetails.value.nonPostgresReason,
       ...schedule,
     });
-  } else if (instlServerDetails.value.osType == OsType.Windows) {
-    jobService.startJob(loading, "WINDOWS_SERVER", -1, {
+  }
+  // 3. Windows Server 2022
+  else if (
+    instlServerDetails.value.osType == OsType.Windows &&
+    instlServerDetails.value.osVersion == OsVersion.Windows2022
+  ) {
+    jobService.startJob(loading, "WINDOWS_SERVER_2022", -1, {
       fqdn: instlServerDetails.value.serverName,
       categoryType: instlServerDetails.value.categoryType,
       serverType: instlServerDetails.value.category,
       ram: instlServerDetails.value.memory,
       cpu: instlServerDetails.value.cpu,
-      disks:
-        instlServerDetails.value.disk[OsType.Windows][
-          instlServerDetails.value.categoryType!
-        ],
+      disks: instlServerDetails.value.disk[OsType.Windows][instlServerDetails.value.categoryType!],
       network_group_id: instlServerDetails.value.networkGroup.id,
       application_service_id: instlServerDetails.value.appservice.id,
       osVersion: instlServerDetails.value.osVersion,
@@ -445,7 +449,32 @@ function order() {
           : null,
       ...schedule,
     });
-  } else {
+  }
+  // 4. Windows Server 2025
+  else if (
+    instlServerDetails.value.osType == OsType.Windows &&
+    instlServerDetails.value.osVersion == OsVersion.Windows2025
+  ) {
+    jobService.startJob(loading, "WINDOWS_SERVER_2025", -1, {
+      fqdn: instlServerDetails.value.serverName,
+      categoryType: instlServerDetails.value.categoryType,
+      serverType: instlServerDetails.value.category,
+      ram: instlServerDetails.value.memory,
+      cpu: instlServerDetails.value.cpu,
+      disks: instlServerDetails.value.disk[OsType.Windows][instlServerDetails.value.categoryType!],
+      network_group_id: instlServerDetails.value.networkGroup.id,
+      application_service_id: instlServerDetails.value.appservice.id,
+      osVersion: instlServerDetails.value.osVersion,
+      non_postgres_reason: instlServerDetails.value.nonPostgresReason,
+      db_params:
+        instlServerDetails.value.categoryType == categoryType.DB ||
+        instlServerDetails.value.categoryType == categoryType.Mixed
+          ? instlServerDetails.value.dbParams
+          : null,
+      ...schedule,
+    });
+  }
+  else {
     alert(
       "Für die ausgewählte Betriebssystemversion ist derzeit keine Bestellung möglich."
     );

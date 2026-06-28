@@ -1,6 +1,7 @@
 package de.muenchen.mcmp.storagegrid;
 
 import de.muenchen.mcmp.common.AbstractEntity;
+import de.muenchen.mcmp.storage.StorageCategory;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
@@ -38,4 +39,8 @@ public class StorageGridBucket extends AbstractEntity {
 
     @Column(name = "region")
     private String region;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "storage_category")
+    private StorageCategory storageCategory;
 }

@@ -1,89 +1,100 @@
 <template>
-  <v-tooltip
-    location="bottom"
-    :text="activatorDisabled ? 'Editieren nicht möglich für IP-Adressen/Range' : tooltipText"
-    :open-on-hover="true"
-  >
-    <template #activator="{ props: tooltipProps }">
-      <span v-bind="tooltipProps">
-        <v-btn
-          icon
-          variant="flat"
-          :aria-label="tooltipText"
-          :disabled="activatorDisabled"
-          :title="activatorDisabled ? 'Editieren nicht möglich für IP-Adressen/Range' : tooltipText"
-          @click="openDialog"
-        >
-          <v-icon>{{ activatorIcon }}</v-icon>
-        </v-btn>
-      </span>
-    </template>
-  </v-tooltip>
-  <common-dialog
-    v-model="dialog"
-    :loading="loading"
-    :title="dialogTitle"
-    max-width="600"
-    show-actions
-    :submit-activated="canSubmit"
-    :icon="dialogIcon"
-    show-change-warning
-    :check-for-enabled-actions="['STORAGE_CHANGE_NFS_EXPORT_POLICY']"
-    @dialog-cancel="close"
-    @dialog-confirm="save"
-  >
-    <v-form>
-      <v-row class="mb-4">
-        <v-col cols="12">
-          <v-autocomplete
-            v-model="selectedServer"
-            v-model:search="searchText"
-            :items="availableServers"
-            :loading="loadingServers"
-            :label="isEditMode ? 'Server' : 'Server auswählen'"
-            variant="outlined"
-            item-title="name"
-            item-value="fqdn"
-            :clearable="!isEditMode"
-            :disabled="isEditMode"
-            :rules="[
-              rules.notEmptySelectRule('Ein Server muss ausgewählt werden'),
-            ]"
-            @click="handleServerFieldClick"
+  <template v-if="isAllowedShare">
+    <v-tooltip
+      location="bottom"
+      :text="
+        activatorDisabled
+          ? 'Editieren nicht möglich für IP-Adressen/Range'
+          : tooltipText
+      "
+      :open-on-hover="true"
+    >
+      <template #activator="{ props: tooltipProps }">
+        <span v-bind="tooltipProps">
+          <v-btn
+            icon
+            variant="flat"
+            :aria-label="tooltipText"
+            :disabled="activatorDisabled"
+            :title="
+              activatorDisabled
+                ? 'Editieren nicht möglich für IP-Adressen/Range'
+                : tooltipText
+            "
+            @click="openDialog"
           >
-            <template #no-data
-              ><a class="ml-2">Keine Server gefunden</a></template
+            <v-icon>{{ activatorIcon }}</v-icon>
+          </v-btn>
+        </span>
+      </template>
+    </v-tooltip>
+    <common-dialog
+      v-model="dialog"
+      :loading="loading"
+      :title="dialogTitle"
+      max-width="600"
+      show-actions
+      :submit-activated="canSubmit"
+      :icon="dialogIcon"
+      show-change-warning
+      :check-for-enabled-actions="['STORAGE_CHANGE_NFS_EXPORT_POLICY']"
+      @dialog-cancel="close"
+      @dialog-confirm="save"
+    >
+      <v-form>
+        <v-row class="mb-4">
+          <v-col cols="12">
+            <v-autocomplete
+              v-model="selectedServer"
+              v-model:search="searchText"
+              :items="availableServers"
+              :loading="loadingServers"
+              :label="isEditMode ? 'Server' : 'Server auswählen'"
+              variant="outlined"
+              item-title="name"
+              item-value="fqdn"
+              :clearable="!isEditMode"
+              :disabled="isEditMode"
+              :rules="[
+                rules.notEmptySelectRule('Ein Server muss ausgewählt werden'),
+              ]"
+              @click="handleServerFieldClick"
             >
-          </v-autocomplete>
-        </v-col>
-      </v-row>
+              <template #no-data
+                ><a class="ml-2">Keine Server gefunden</a></template
+              >
+            </v-autocomplete>
+          </v-col>
+        </v-row>
 
-      <v-row>
-        <v-col cols="12">
-          <v-select
-            v-model="selectedPermission"
-            label="Berechtigungen"
-            variant="outlined"
-            :items="permissionOptions"
-            item-title="label"
-            item-value="value"
-            :rules="[
-              rules.notEmptySelectRule(
-                'Eine Berechtigung muss ausgewählt werden'
-              ),
-            ]"
-          />
-        </v-col>
-      </v-row>
-    </v-form>
-  </common-dialog>
+        <v-row>
+          <v-col cols="12">
+            <v-select
+              v-model="selectedPermission"
+              label="Berechtigungen"
+              variant="outlined"
+              :items="permissionOptions"
+              item-title="label"
+              item-value="value"
+              :rules="[
+                rules.notEmptySelectRule(
+                  'Eine Berechtigung muss ausgewählt werden'
+                ),
+              ]"
+            />
+          </v-col>
+        </v-row>
+      </v-form>
+    </common-dialog>
+  </template>
 </template>
 
 <script setup lang="ts">
 import type { ServerList } from "@/types/ServerList.ts";
+import type { UnifiedStorageItem } from "@/types/Storage.ts";
 
 import { mdiPencil, mdiPlus } from "@mdi/js";
-import { computed, ref, watch } from "vue";
+import { computed, ref } from "vue";
 
 import jobService from "@/api/jobService.ts";
 import serverService from "@/api/serverService.ts";
@@ -107,17 +118,23 @@ const permissionOptions = [
 
 const props = withDefaults(
   defineProps<{
-  storageUuid: string;
-  mountPath: string;
-  mode?: "add" | "edit";
-  serverFqdn?: string;
-  permission?: string;
-}>(),
+    selectedStorage: UnifiedStorageItem;
+    mode?: "add" | "edit";
+    serverFqdn?: string;
+    permission?: string;
+  }>(),
   {
     mode: "add",
     serverFqdn: "",
     permission: "",
   }
+);
+
+const isAllowedShare = computed(
+  () =>
+    props.selectedStorage.storageCategory == "NFS_STANDARD_SHARE" ||
+    props.selectedStorage.storageCategory == "NFS_CLONE" ||
+    props.selectedStorage.storageCategory == "NFS_WORM"
 );
 
 const isEditMode = computed(() => props.mode === "edit");
@@ -127,9 +144,7 @@ const tooltipText = computed(() =>
 const dialogTitle = computed(() =>
   isEditMode.value ? "Berechtigung bearbeiten" : "Export-Policy ändern"
 );
-const activatorIcon = computed(() =>
-  isEditMode.value ? mdiPencil : mdiPlus
-);
+const activatorIcon = computed(() => (isEditMode.value ? mdiPencil : mdiPlus));
 const dialogIcon = computed(() => (isEditMode.value ? mdiPencil : mdiPlus));
 const canSubmit = computed(() =>
   Boolean(selectedServer.value && selectedPermission.value)
@@ -161,11 +176,6 @@ const activatorDisabled = computed(() => {
   return isEditMode.value && isIpOrRange(props.serverFqdn ?? "");
 });
 
-watch(selectedServer, () => {
-  searchText.value = "";
-});
-
-
 function openDialog() {
   // Prevent opening when in edit mode for IP addresses / ranges
   if (activatorDisabled.value) {
@@ -193,15 +203,15 @@ function close() {
 
 function save() {
   if (canSubmit.value) {
-      jobService
-        .startJob(loading, "STORAGE_CHANGE_NFS_EXPORT_POLICY", -1, {
-          uuid: props.storageUuid,
-          fqdn: selectedServer.value,
-          permission: selectedPermission.value,
-        })
-        .then(() => {
-          close();
-        });
+    jobService
+      .startJob(loading, "STORAGE_CHANGE_NFS_EXPORT_POLICY", -1, {
+        uuid: props.selectedStorage.uuid,
+        fqdn: selectedServer.value,
+        permission: selectedPermission.value,
+      })
+      .then(() => {
+        close();
+      });
   }
 }
 
@@ -228,7 +238,7 @@ function getServers() {
   requestedAlready.value = true;
   loadingServers.value = true;
   serverService
-    .getVisibleServers(loadingServers, 0, -1, "name", "asc", "", [], "")
+    .getVisibleServers(loadingServers, 0, -1, "name", "asc", "", [], "", false)
     .then((response) => {
       serverList.value = response.content;
     })

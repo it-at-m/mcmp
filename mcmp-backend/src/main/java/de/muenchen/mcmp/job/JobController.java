@@ -13,6 +13,7 @@ import de.muenchen.mcmp.server.Server;
 import de.muenchen.mcmp.server.ServerFullDTO;
 import de.muenchen.mcmp.server.ServerService;
 import de.muenchen.mcmp.snapshot.SnapshotService;
+import de.muenchen.mcmp.storage.StorageCategory;
 import de.muenchen.mcmp.storage.StorageType;
 import de.muenchen.mcmp.storage.UnifiedStorageItemDto;
 import de.muenchen.mcmp.storage.UnifiedStorageService;
@@ -69,7 +70,8 @@ public class JobController {
     private static final String WINDOWS_MAINTENANCE_MODE = "WINDOWS_MAINTENANCE_MODE";
     private static final String WINDOWS_MAINTENANCE_MODE_END = "WINDOWS_MAINTENANCE_MODE_END";
     private static final String WINDOWS_TEMP_ADMIN = "WINDOWS_TEMP_ADMIN";
-    private static final String WINDOWS_SERVER = "WINDOWS_SERVER";
+    public static final String WINDOWS_SERVER_2025 = "WINDOWS_SERVER_2025";
+    public static final String WINDOWS_SERVER_2022 = "WINDOWS_SERVER_2022";
 
     private static final String DB_ORACLE_CREATE_BACKUP = "DB_ORACLE_CREATE_BACKUP";
 
@@ -84,8 +86,6 @@ public class JobController {
     public static final String STORAGE_MODIFY_NFS = "STORAGE_MODIFY_NFS";
     public static final String STORAGE_MODIFY_CIFS = "STORAGE_MODIFY_CIFS";
     public static final String STORAGE_CHANGE_NFS_EXPORT_POLICY = "STORAGE_CHANGE_NFS_EXPORT_POLICY";
-    private static final String STORAGE_NFSV3_AND_NFSV3CLONE_REGEX = "^svm[pkc][0-9]{2}dcn.srv.muenchen.de:/(sn3|sn3c|wn3)_[pskcd]_[a-z0-9]{3,20}_[a-z0-9]{3,20}$";
-    private static final String STORAGE_STANDARD_CIFS_AND_CIFSCLONE_REGEX = "^\\\\\\\\svm[pkc][0-9]{2}dcc\\.srv\\.muenchen\\.de\\\\(sc|scc|wc)_[pskcd]_[a-z0-9]{3,20}_[a-z0-9]{3,20}$";
     private static final String STORAGE_CREATE_SNAPSHOT_NFS = "STORAGE_CREATE_SNAPSHOT_NFS";
     private static final String STORAGE_CREATE_SNAPSHOT_CIFS = "STORAGE_CREATE_SNAPSHOT_CIFS";
     private static final String STORAGE_DELETE_SNAPSHOT_NFS = "STORAGE_DELETE_SNAPSHOT_NFS";
@@ -850,9 +850,12 @@ public class JobController {
         jobService.windowsMaintenaceModeEnd(serverId, WINDOWS_MAINTENANCE_MODE_END);
     }
 
-    @PostMapping("/create/" + WINDOWS_SERVER)
-    public void windowsServer(@RequestParam(name = "serverId") final Long serverId,
-                              @RequestBody final Map<String, Object> awxExtraVars) {
+    // ==========================================
+// WINDOWS SERVER 2025
+// ==========================================
+    @PostMapping("/create/" + WINDOWS_SERVER_2025)
+    public void windowsServer2025(@RequestParam(name = "serverId") final Long serverId,
+                                  @RequestBody final Map<String, Object> awxExtraVars) {
         // Validate awxExtraVars
         Object fqdnObj = awxExtraVars.get("fqdn");
         Object categoryTypeObj = awxExtraVars.get("categoryType");
@@ -879,7 +882,7 @@ public class JobController {
         }
 
         Map<?, ?> fqdnBuildingBlocks = requireMap(fqdnObj, "FQDN");
-        List<Map<?, ?>> disks = requireListOfMap(disksObj, "Disks");
+        List<Map<String, Object>> disks = requireListOfMap(disksObj, "Disks");
 
         int ram = Integer.parseInt(ramObj.toString());
         int cpu = Integer.parseInt(cpuObj.toString());
@@ -887,12 +890,13 @@ public class JobController {
             log.warn("Invalid CPU or RAM provided by user: {} for new Windows Server Install", AuthUtils.getUsername());
             throw new IllegalArgumentException("CPU must be between 2 and 8, RAM must be between 4 and 64 GB.");
         }
-        String osVersion = osVersionObj.toString();
-        if (!osVersion.equals("Windows Server 2025") && !osVersion.equals("Windows Server 2022")) {
-            log.warn("Invalid OS Version provided by user: {} for new Windows Server Install", AuthUtils.getUsername());
-            throw new IllegalArgumentException("OS Version is invalid.");
-        }
 
+        String osVersion = osVersionObj.toString();
+        // Prüft, ob die Version zu Windows 2025 passt (als String oder Enum-Wert)
+        if (!osVersion.equals("Windows Server 2025") && !osVersion.equals("WIN2025")) {
+            log.warn("Invalid OS Version provided by user: {} for new Windows Server 2025 Install", AuthUtils.getUsername());
+            throw new IllegalArgumentException("OS Version is invalid for this endpoint.");
+        }
 
         String categoryType = categoryTypeObj.toString();
         String nonPostgresReason = null;
@@ -925,9 +929,93 @@ public class JobController {
             throw new AccessDeniedException("You are not allowed to order a server for this combination of application service and network group.");
         }
 
+        // Übergabe der spezifischen WINDOWS_SERVER_2025 Konstante an den Service
         jobService.windowsServer(fqdnBuildingBlocks, serverTypeMap, categoryType, ram, cpu,
-                disks, networkGroupId, applicationServiceId, osVersion, nonPostgresReason, dbParams, WINDOWS_SERVER);
+                disks, networkGroupId, applicationServiceId, osVersion, nonPostgresReason, dbParams, WINDOWS_SERVER_2025);
+    }
 
+    // ==========================================
+// WINDOWS SERVER 2022
+// ==========================================
+    @PostMapping("/create/" + WINDOWS_SERVER_2022)
+    public void windowsServer2022(@RequestParam(name = "serverId") final Long serverId,
+                                  @RequestBody final Map<String, Object> awxExtraVars) {
+        // Validate awxExtraVars
+        Object fqdnObj = awxExtraVars.get("fqdn");
+        Object categoryTypeObj = awxExtraVars.get("categoryType");
+        Object serverTypeObj = awxExtraVars.get("serverType");
+        Object ramObj = awxExtraVars.get("ram");
+        Object cpuObj = awxExtraVars.get("cpu");
+        Object disksObj = awxExtraVars.get("disks");
+        Object networkGroupIdObj = awxExtraVars.get("network_group_id");
+        Object applicationServiceIdObj = awxExtraVars.get("application_service_id");
+        Object osVersionObj = awxExtraVars.get("osVersion");
+        Object nonPostgresReasonObj = awxExtraVars.get("non_postgres_reason");
+        Object dbParamsObj = awxExtraVars.get("db_params");
+
+        if (fqdnObj == null
+                || categoryTypeObj == null
+                || ramObj == null
+                || cpuObj == null
+                || disksObj == null
+                || networkGroupIdObj == null
+                || applicationServiceIdObj == null
+                || osVersionObj == null) {
+            log.info("Not all needed parameter provided by user: {} to order a server.", AuthUtils.getUsername());
+            throw new MissingFormatArgumentException("Not all needed parameter are provided.");
+        }
+
+        Map<?, ?> fqdnBuildingBlocks = requireMap(fqdnObj, "FQDN");
+        List<Map<String, Object>> disks = requireListOfMap(disksObj, "Disks");
+
+        int ram = Integer.parseInt(ramObj.toString());
+        int cpu = Integer.parseInt(cpuObj.toString());
+        if (cpu < 2 || cpu > 8 || ram < 4 || ram > 64) {
+            log.warn("Invalid CPU or RAM provided by user: {} for new Windows Server Install", AuthUtils.getUsername());
+            throw new IllegalArgumentException("CPU must be between 2 and 8, RAM must be between 4 and 64 GB.");
+        }
+
+        String osVersion = osVersionObj.toString();
+        // Prüft, ob die Version zu Windows 2022 passt (als String oder Enum-Wert)
+        if (!osVersion.equals("Windows Server 2022") && !osVersion.equals("WIN2022")) {
+            log.warn("Invalid OS Version provided by user: {} for new Windows Server 2022 Install", AuthUtils.getUsername());
+            throw new IllegalArgumentException("OS Version is invalid for this endpoint.");
+        }
+
+        String categoryType = categoryTypeObj.toString();
+        String nonPostgresReason = null;
+        Map<?, ?> serverTypeMap = null;
+        if (!categoryType.equals("Standard")) {
+            serverTypeMap = requireMap(serverTypeObj, "Server Type");
+        }
+        if (categoryType.equals("DB")) {
+            if (nonPostgresReasonObj == null) {
+                log.info("Non-Postgres reason not provided by user: {} to order a database server.", AuthUtils.getUsername());
+                throw new MissingFormatArgumentException("Non-Postgres reason must be provided for non-Postgres database servers.");
+            } else {
+                nonPostgresReason = nonPostgresReasonObj.toString();
+                checkNonPostgresReason(nonPostgresReason);
+            }
+        }
+        Map<String, Map<?, ?>> dbParams = null;
+        if ((categoryType.equals("DB") || categoryType.equals("Mixed")) && dbParamsObj == null) {
+            log.info("DB Parameters not provided by user: {} to order a database server.", AuthUtils.getUsername());
+            throw new MissingFormatArgumentException("DB Parameters must be provided for database servers.");
+        } else if (dbParamsObj != null) {
+            dbParams = requireStringMapOfMap(dbParamsObj, "DB Parameters");
+        }
+
+        long applicationServiceId = Integer.parseInt(applicationServiceIdObj.toString());
+        checkServerInstallCanUserEditAppservice(applicationServiceId);
+
+        long networkGroupId = Integer.parseInt(networkGroupIdObj.toString());
+        if (!networkService.isAllowedNetworkGroupForAppservice(networkGroupId, applicationServiceId, categoryTypeObj.toString().equals("DB"))) {
+            throw new AccessDeniedException("You are not allowed to order a server for this combination of application service and network group.");
+        }
+
+        // Übergabe der spezifischen WINDOWS_SERVER_2022 Konstante an den Service
+        jobService.windowsServer(fqdnBuildingBlocks, serverTypeMap, categoryType, ram, cpu,
+                disks, networkGroupId, applicationServiceId, osVersion, nonPostgresReason, dbParams, WINDOWS_SERVER_2022);
     }
 
     // -----------------------------------------------------------------------------------------------------------------
@@ -1045,11 +1133,11 @@ public class JobController {
         if (!awxExtraVars.containsKey("listener")) {
             throw new MissingFormatArgumentException("Listener configuration must be provided.");
         }
-        List<Map<?, ?>> listenerList = requireListOfMap(awxExtraVars.get("listener"), "Listener configuration");
+        List<Map<String, Object>> listenerList = requireListOfMap(awxExtraVars.get("listener"), "Listener configuration");
         if (listenerList.isEmpty()) {
             throw new IllegalArgumentException("At least one listener is required.");
         }
-        Map<?, ?> listener = listenerList.getFirst();
+        Map<String, Object> listener = listenerList.getFirst();
         Object portObj = listener.get("port");
         if (portObj == null) {
             throw new IllegalArgumentException("Port must be provided.");
@@ -1063,6 +1151,7 @@ public class JobController {
         if (port < 1 || port > 65535) {
             throw new IllegalArgumentException("Port must be between 1 and 65535.");
         }
+        listener.put("port", port);
         Object listenerTypeObj = listener.get("listener_type");
         if (!(listenerTypeObj instanceof String listenerType)) {
             throw new IllegalArgumentException("Listener type must be provided.");
@@ -1074,16 +1163,16 @@ public class JobController {
         if (!awxExtraVars.containsKey("server_pools")) {
             throw new MissingFormatArgumentException("Server pools configuration must be provided.");
         }
-        List<Map<?, ?>> serverPools = requireListOfMap(awxExtraVars.get("server_pools"), "Server pools configuration");
+        List<Map<String, Object>> serverPools = requireListOfMap(awxExtraVars.get("server_pools"), "Server pools configuration");
         if (serverPools.isEmpty()) {
             throw new IllegalArgumentException("At least one server pool is required.");
         }
-        Map<?, ?> serverPool = serverPools.getFirst();
-        List<Map<?, ?>> memberList = requireListOfMap(serverPool.get("member"), "Server member");
+        Map<String, Object> serverPool = serverPools.getFirst();
+        List<Map<String, Object>> memberList = requireListOfMap(serverPool.get("member"), "Server member");
         if (memberList.isEmpty()) {
             throw new IllegalArgumentException("At least one server member is required.");
         }
-        for (Map<?, ?> member : memberList) {
+        for (Map<String, Object> member : memberList) {
             Object ipObj = member.get("ip");
             if (ipObj == null || ipObj.toString().isBlank()) {
                 throw new IllegalArgumentException("Member IP is required.");
@@ -1180,9 +1269,7 @@ public class JobController {
                 serverId,
                 StorageType.NFS,
                 "NFS",
-                STORAGE_MODIFY_NFS,
-                STORAGE_NFSV3_AND_NFSV3CLONE_REGEX,
-                UnifiedStorageItemDto::getNfs_mount_path
+                STORAGE_MODIFY_NFS
         );
     }
 
@@ -1194,9 +1281,7 @@ public class JobController {
                 serverId,
                 StorageType.CIFS,
                 "CIFS",
-                STORAGE_MODIFY_CIFS,
-                STORAGE_STANDARD_CIFS_AND_CIFSCLONE_REGEX,
-                UnifiedStorageItemDto::getCifs_mount_path
+                STORAGE_MODIFY_CIFS
         );
     }
 
@@ -1204,9 +1289,7 @@ public class JobController {
                                           Long serverId,
                                           StorageType storageType,
                                           String storageLabel,
-                                          String jobIdentifier,
-                                          String mountPathRegex,
-                                          java.util.function.Function<UnifiedStorageItemDto, String> mountPathExtractor) {
+                                          String jobIdentifier) {
         Object storageUuidObj = awxExtraVars.get("uuid");
         Object newSizeObj = awxExtraVars.get("new_size");
         Object newSnapshotPercentObj = awxExtraVars.get("new_snapshot_percent");
@@ -1235,8 +1318,7 @@ public class JobController {
             throw new IllegalArgumentException("The new size and new snapshot percentage must be whole numbers.");
         }
 
-        final String mountPath = mountPathExtractor.apply(storageItem);
-        if (mountPath == null || !mountPath.matches(mountPathRegex)) {
+        if (!isEditableStorageCategoryNfsCifs(storageType, storageItem.getStorageCategory())) {
             logTriedToCreateJob(jobIdentifier, null);
             throw new AccessDeniedException("You are not allowed to create a job for this " + storageLabel + " share.");
         }
@@ -1281,9 +1363,7 @@ public class JobController {
                 serverId,
                 StorageType.NFS,
                 "NFS",
-                STORAGE_CREATE_SNAPSHOT_NFS,
-                STORAGE_NFSV3_AND_NFSV3CLONE_REGEX,
-                UnifiedStorageItemDto::getNfs_mount_path
+                STORAGE_CREATE_SNAPSHOT_NFS
         );
     }
 
@@ -1295,9 +1375,7 @@ public class JobController {
                 serverId,
                 StorageType.CIFS,
                 "CIFS",
-                STORAGE_CREATE_SNAPSHOT_CIFS,
-                STORAGE_STANDARD_CIFS_AND_CIFSCLONE_REGEX,
-                UnifiedStorageItemDto::getCifs_mount_path
+                STORAGE_CREATE_SNAPSHOT_CIFS
         );
     }
 
@@ -1305,9 +1383,7 @@ public class JobController {
                                                   Long serverId,
                                                   StorageType storageType,
                                                   String storageLabel,
-                                                  String jobIdentifier,
-                                                  String mountPathRegex,
-                                                  java.util.function.Function<UnifiedStorageItemDto, String> mountPathExtractor) {
+                                                  String jobIdentifier) {
         Object storageUuidObj = awxExtraVars.get("uuid");
         Object descriptionObj = awxExtraVars.get("description");
 
@@ -1330,8 +1406,7 @@ public class JobController {
             throw new IllegalArgumentException(storageLabel + " UUID is invalid.");
         }
 
-        final String mountPath = mountPathExtractor.apply(storageItem);
-        if (mountPath == null || !mountPath.matches(mountPathRegex)) {
+        if (!isEditableStorageCategoryNfsCifs(storageType, storageItem.getStorageCategory())) {
             logTriedToCreateJob(jobIdentifier, null);
             throw new AccessDeniedException("You are not allowed to create a job for this " + storageLabel + " share.");
         }
@@ -1357,9 +1432,7 @@ public class JobController {
                 serverId,
                 StorageType.NFS,
                 "NFS",
-                STORAGE_DELETE_SNAPSHOT_NFS,
-                STORAGE_NFSV3_AND_NFSV3CLONE_REGEX,
-                UnifiedStorageItemDto::getNfs_mount_path
+                STORAGE_DELETE_SNAPSHOT_NFS
         );
     }
 
@@ -1371,9 +1444,7 @@ public class JobController {
                 serverId,
                 StorageType.CIFS,
                 "CIFS",
-                STORAGE_DELETE_SNAPSHOT_CIFS,
-                STORAGE_STANDARD_CIFS_AND_CIFSCLONE_REGEX,
-                UnifiedStorageItemDto::getCifs_mount_path
+                STORAGE_DELETE_SNAPSHOT_CIFS
         );
     }
 
@@ -1381,9 +1452,7 @@ public class JobController {
                                                    Long serverId,
                                                    StorageType storageType,
                                                    String storageLabel,
-                                                   String jobIdentifier,
-                                                   String mountPathRegex,
-                                                   java.util.function.Function<UnifiedStorageItemDto, String> mountPathExtractor) {
+                                                   String jobIdentifier) {
         final String snapshotNameRegex = "^[a-z0-9_.-]{3,60}$";
         Object storageUuidObj = awxExtraVars.get("uuid");
         Object snapshotNameObj = awxExtraVars.get("snapshotName");
@@ -1407,8 +1476,7 @@ public class JobController {
             throw new IllegalArgumentException(storageLabel + " UUID is invalid.");
         }
 
-        final String mountPath = mountPathExtractor.apply(storageItem);
-        if (mountPath == null || !mountPath.matches(mountPathRegex)) {
+        if (!isEditableStorageCategoryNfsCifs(storageType, storageItem.getStorageCategory())) {
             logTriedToCreateJob(jobIdentifier, null);
             throw new AccessDeniedException("You are not allowed to create a job for this " + storageLabel + " share.");
         }
@@ -1434,9 +1502,7 @@ public class JobController {
                 serverId,
                 StorageType.NFS,
                 "NFS",
-                STORAGE_CHANGE_SNAPSHOT_POLICY_NFS,
-                STORAGE_NFSV3_AND_NFSV3CLONE_REGEX,
-                UnifiedStorageItemDto::getNfs_mount_path
+                STORAGE_CHANGE_SNAPSHOT_POLICY_NFS
         );
     }
 
@@ -1448,9 +1514,7 @@ public class JobController {
                 serverId,
                 StorageType.CIFS,
                 "CIFS",
-                STORAGE_CHANGE_SNAPSHOT_POLICY_CIFS,
-                STORAGE_STANDARD_CIFS_AND_CIFSCLONE_REGEX,
-                UnifiedStorageItemDto::getCifs_mount_path
+                STORAGE_CHANGE_SNAPSHOT_POLICY_CIFS
         );
     }
 
@@ -1492,8 +1556,7 @@ public class JobController {
             throw new IllegalArgumentException("NFS UUID is invalid.");
         }
 
-        final String mountPath = storageItem.getNfs_mount_path();
-        if (mountPath == null || !mountPath.matches(STORAGE_NFSV3_AND_NFSV3CLONE_REGEX)) {
+        if (!isEditableStorageCategoryNfsCifs(StorageType.NFS, storageItem.getStorageCategory())) {
             logTriedToCreateJob(STORAGE_CHANGE_NFS_EXPORT_POLICY, null);
             throw new AccessDeniedException("You are not allowed to create a job for this NFS share.");
         }
@@ -1511,9 +1574,7 @@ public class JobController {
                                                    Long serverId,
                                                    StorageType storageType,
                                                    String storageLabel,
-                                                   String jobIdentifier,
-                                                   String mountPathRegex,
-                                                   java.util.function.Function<UnifiedStorageItemDto, String> mountPathExtractor) {
+                                                   String jobIdentifier) {
         Object storageUuidObj = awxExtraVars.get("uuid");
         Object newPolicyObj = awxExtraVars.get("newPolicy");
 
@@ -1536,8 +1597,7 @@ public class JobController {
             throw new IllegalArgumentException(storageLabel + " UUID is invalid.");
         }
 
-        final String mountPath = mountPathExtractor.apply(storageItem);
-        if (mountPath == null || !mountPath.matches(mountPathRegex)) {
+        if (!isEditableStorageCategoryNfsCifs(storageType, storageItem.getStorageCategory())) {
             logTriedToCreateJob(jobIdentifier, null);
             throw new AccessDeniedException("You are not allowed to create a job for this " + storageLabel + " share.");
         }
@@ -1581,6 +1641,20 @@ public class JobController {
         log.warn("User {} tried to create a job {} for serverId: {} without permission.", AuthUtils.getUsername(), jobIdentifier, serverId);
     }
 
+    private boolean isEditableStorageCategoryNfsCifs(StorageType storageType, StorageCategory category) {
+        if (storageType == StorageType.NFS) {
+            return category == StorageCategory.NFS_STANDARD_SHARE
+                    || category == StorageCategory.NFS_CLONE
+                    || category == StorageCategory.NFS_WORM;
+        }
+        if (storageType == StorageType.CIFS) {
+            return category == StorageCategory.CIFS_STANDARD_SHARE
+                    || category == StorageCategory.CIFS_CLONE
+                    || category == StorageCategory.CIFS_WORM;
+        }
+        return false;
+    }
+
     private Map<?, ?> requireMap(Object obj, String fieldLabel) {
         if (!(obj instanceof Map<?, ?> map)) {
             throw new IllegalArgumentException(fieldLabel + " must be provided in the correct format.");
@@ -1595,14 +1669,14 @@ public class JobController {
         return list;
     }
 
-    private List<Map<?, ?>> requireListOfMap(Object obj, String fieldLabel) {
+    private List<Map<String, Object>> requireListOfMap(Object obj, String fieldLabel) {
         List<?> list = requireList(obj, fieldLabel);
-        List<Map<?, ?>> result = new ArrayList<>(list.size());
+        List<Map<String, Object>> result = new ArrayList<>(list.size());
         for (Object item : list) {
             if (!(item instanceof Map<?, ?> map)) {
                 throw new IllegalArgumentException(fieldLabel + " must be provided in the correct format.");
             }
-            result.add(map);
+            result.add((Map<String, Object>) map);
         }
         return result;
     }

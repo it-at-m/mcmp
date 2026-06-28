@@ -38,6 +38,7 @@ export const CHANGELOG_BASE = `${API}/changelogs`;
 export const FAQ_CATEGORY_BASE = `${API}/faq-categories`;
 export const FAQ_BASE = `${API}/faqs`;
 export const STORAGE_BASE = `${API}/storage`;
+export const LOADBALANCER_BASE = `${API}/loadbalancer`;
 export const TESTENV_BASE = `${API}/testenv`;
 export const APP_CONFIG_BASE = `${API}/app-config`;
 

@@ -39,11 +39,12 @@ public interface OntapVolumeRepository extends JpaRepository<OntapVolume, Long> 
                                                           @Param("isStorage") boolean isStorage,
                                                           @Param("isOperator") boolean isOperator);
 
-    @Query("SELECT v.volumeUuid, v.name, s.name FROM OntapVolume v " +
+    @Query("SELECT v.volumeUuid, v.name, s.name, v.storageCategory FROM OntapVolume v " +
             "JOIN v.svm s " +
             "WHERE (LOWER(s.name) LIKE '%dcn' OR LOWER(s.name) LIKE '%dcc') " +
             "AND v.ontapCifsShares IS EMPTY " +
             "AND v.ontapQtrees IS EMPTY " +
+            "AND v.storageCategory IS NOT NULL " +
             "AND (:search IS NULL OR LOWER(v.name) LIKE :search OR LOWER(s.name) LIKE :search OR LOWER(CONCAT(s.name, ':', v.mountPathNfs)) LIKE :search) " +
             "AND (" +
             "   :isAdmin = TRUE OR :isReadonly = TRUE OR :isStorage = TRUE OR :isOperator = TRUE OR " +
@@ -56,15 +57,16 @@ public interface OntapVolumeRepository extends JpaRepository<OntapVolume, Long> 
                                           @Param("isStorage") boolean isStorage,
                                           @Param("isOperator") boolean isOperator);
 
-    @Query("SELECT v.volumeUuid, v.name, s.name FROM OntapVolume v " +
+    @Query("SELECT v.volumeUuid, v.name, s.name, v.storageCategory FROM OntapVolume v " +
             "JOIN v.svm s " +
             "JOIN v.ontapCifsShares cs " +
-            "WHERE (:search IS NULL OR (LOWER(v.name) LIKE :search OR LOWER(cs.name) LIKE :search OR LOWER(s.name) LIKE :search OR LOWER(CONCAT(s.name, ':', cs.mountPathCifs)) LIKE :search)) " +
+            "WHERE v.storageCategory IS NOT NULL " +
+            "AND (:search IS NULL OR (LOWER(v.name) LIKE :search OR LOWER(cs.name) LIKE :search OR LOWER(s.name) LIKE :search OR LOWER(CONCAT(s.name, ':', cs.mountPathCifs)) LIKE :search)) " +
             "AND (" +
             "   :isAdmin = TRUE OR :isReadonly = TRUE OR :isStorage = TRUE OR :isOperator = TRUE OR " +
             "   EXISTS (SELECT 1 FROM v.appservices a JOIN a.changeGroup g JOIN g.users u WHERE u.username = :username)" +
             ") " +
-            "GROUP BY v.id, v.volumeUuid, v.name, s.name")
+            "GROUP BY v.id, v.volumeUuid, v.name, s.name, v.storageCategory")
     List<Object[]> findCifsVolumeListItems(@Param("search") String search,
                                            @Param("username") String username,
                                            @Param("isAdmin") boolean isAdmin,

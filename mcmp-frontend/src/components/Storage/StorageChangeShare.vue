@@ -1,15 +1,15 @@
 <template>
-  <CommonDialog
+  <common-dialog
     v-model="dialog"
     :title="title"
     max-width="1000"
     :icon="mdiPencil"
     show-actions
-    :submitActivated="validated"
+    :submit-activated="validated"
+    show-change-warning
+    :check-for-enabled-actions="['STORAGE_MODIFY_NFS', 'STORAGE_MODIFY_CIFS']"
     @dialog-cancel="close"
     @dialog-confirm="save"
-    showChangeWarning
-    :checkForEnabledActions="['STORAGE_MODIFY_NFS', 'STORAGE_MODIFY_CIFS']"
   >
     <template #activator="{ props }">
       <v-tooltip
@@ -32,8 +32,8 @@
 
     <v-row>
       <v-col cols="12">
-        <StorageCharts
-          :selectedStorageItem="selectedStorageItem"
+        <storage-charts
+          :selected-storage-item="selectedStorageItem"
           :preview-size-gb="draftSizeGb"
           :preview-snapshot-reserve-percent="draftSnapshotReservePercent"
         />
@@ -48,8 +48,8 @@
     <v-row>
       <v-col cols="9">
         <v-slider
-          class="mt-3"
           v-model="sliderSizeValue"
+          class="mt-3"
           :label="sliderSizeLabel"
           :min="sliderMinValue"
           :max="sliderMaxValue"
@@ -59,8 +59,8 @@
       </v-col>
       <v-col cols="3">
         <v-text-field
-          rounded
           v-model="sliderSizeValue"
+          rounded
           :label="sliderSizeLabel"
           :suffix="useMbSlider ? 'MB' : 'GB'"
           :disabled="!editable"
@@ -71,6 +71,9 @@
               const numValue = Number(value);
               if (isNaN(numValue)) {
                 return 'Ungültige Zahl';
+              }
+              if (!Number.isInteger(numValue)) {
+                return 'Nur ganze Zahlen erlaubt';
               }
               if (numValue < sliderMinValue) {
                 return `Muss mindestens ${sliderMinValue} ${useMbSlider ? 'MB' : 'GB'} sein`;
@@ -87,8 +90,8 @@
     <v-row v-if="editable && !isWorm">
       <v-col cols="9">
         <v-slider
-          class="mt-3"
           v-model="draftSnapshotReservePercent"
+          class="mt-3"
           label="Snapshotreserve (%)"
           :min="snapshotReserveMinPercent"
           :max="snapshotReserveMaxPercent"
@@ -97,8 +100,8 @@
       </v-col>
       <v-col cols="3">
         <v-text-field
-          rounded
           v-model="draftSnapshotReservePercent"
+          rounded
           label="Snapshotreserve (%)"
           suffix="%"
           type="number"
@@ -108,6 +111,9 @@
               const numValue = Number(value);
               if (isNaN(numValue)) {
                 return 'Ungültige Zahl';
+              }
+              if (!Number.isInteger(numValue)) {
+                return 'Nur ganze Zahlen erlaubt';
               }
               if (numValue < snapshotReserveMinPercent) {
                 return `Muss mindestens ${snapshotReserveMinPercent}% sein`;
@@ -131,7 +137,7 @@
         </v-alert>
       </v-col>
     </v-row>
-  </CommonDialog>
+  </common-dialog>
 </template>
 
 <script setup lang="ts">
@@ -153,12 +159,10 @@ const props = defineProps<{
   selectedStorageItem: UnifiedStorageItem;
 }>();
 
-const emit = defineEmits<{
-  (
+const emit = defineEmits<(
     e: "save",
     payload: { sizeGb: number; snapshotReservePercent: number }
-  ): void;
-}>();
+  ) => void>();
 
 const dialog = ref(false);
 const draftSizeGb = ref(0);
@@ -166,14 +170,12 @@ const draftSnapshotReservePercent = ref(0);
 
 const editable = computed(() => {
   return (
-    (props.selectedStorageItem.type === "NFS" &&
-      props.selectedStorageItem.nfs_mount_path?.match(
-        /svm[pkc][0-9]{2}dcn.srv.muenchen.de:\/(sn3|sn3c|wn3)_[pskcd]_[a-z0-9]{3,20}_[a-z0-9]{3,20}/
-      )) ||
-    (props.selectedStorageItem.type === "CIFS" &&
-        props.selectedStorageItem.cifs_mount_path?.match(
-          /\\\\svm[pkc][0-9]{2}dcc\.srv\.muenchen\.de\\(sc|scc|wc)_[pskcd]_[a-z0-9]{3,20}_[a-z0-9]{3,20}/
-        ))
+    props.selectedStorageItem.storageCategory == "NFS_STANDARD_SHARE" ||
+    props.selectedStorageItem.storageCategory == "NFS_CLONE" ||
+    props.selectedStorageItem.storageCategory == "NFS_WORM" ||
+    props.selectedStorageItem.storageCategory == "CIFS_STANDARD_SHARE" ||
+    props.selectedStorageItem.storageCategory == "CIFS_CLONE" ||
+    props.selectedStorageItem.storageCategory == "CIFS_WORM"
   );
 });
 
@@ -266,7 +268,6 @@ const currentSizeLabel = computed(() => {
     ? `${(currentSizeGb.value * mbPerGb).toFixed(0)} MB`
     : `${currentSizeGb.value.toFixed(1)} GB`;
 });
-
 
 const minimumSizeLabel = computed(() => {
   return useMbSlider.value

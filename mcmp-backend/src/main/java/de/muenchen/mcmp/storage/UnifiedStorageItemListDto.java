@@ -8,7 +8,9 @@ import lombok.Data;
 public class UnifiedStorageItemListDto {
     private String uuid;
     private String name;
+    private String path;
     private StorageType type;
+    private StorageCategory storageCategory;
     private String protocol;
     private String appserviceNames;
 }

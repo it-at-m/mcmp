@@ -121,23 +121,7 @@
       </v-col>
       <v-col cols="3">
         <h3>
-          Typ<info-tooltip>
-            <div class="pa-1">
-              <strong>Speichertyp</strong>
-              <p class="text-caption mt-2 mb-1">
-                <strong>NFS:</strong> Network File System für
-                Unix/Linux-Systeme<br />
-                <strong>CIFS:</strong> Common Internet File System für
-                Windows-Systeme<br />
-                <strong>QTREE:</strong>
-                <span class="text-error"
-                  >Nicht mehr verfügbar zur Bestellung (veraltet)</span
-                ><br />
-                <strong>S3:</strong> Object Storage mit Amazon S3-kompatiblem
-                Interface
-              </p>
-            </div>
-          </info-tooltip>
+          Typ
         </h3>
       </v-col>
     </v-row>
@@ -147,24 +131,14 @@
           {{ formatter.formatBooleanToJaNein(selectedStorageItem.isWorm) }}
         </p>
       </v-col>
-      <v-col
-        cols="3"
-      >
+      <v-col cols="3">
         <p v-if="selectedStorageItem.protocol != 'S3'">
           {{ formatter.formatBooleanToJaNein(selectedStorageItem.isFlexClone) }}
         </p>
       </v-col>
       <v-col cols="3">
         <p>
-          {{ selectedStorageItem.type }}
-          <v-icon
-            v-if="selectedStorageItem.type === 'QTREE'"
-            color="warning"
-            size="small"
-            class="ml-2"
-          >
-            {{ mdiAlert }}
-          </v-icon>
+          {{ formatStorageCategory(selectedStorageItem.storageCategory) }}
         </p>
       </v-col>
     </v-row>
@@ -259,7 +233,23 @@
     </template>
     <v-row>
       <v-col cols="3">
-        <h3>Gesamtgröße</h3>
+        <h3>
+          Gesamtgröße<info-tooltip v-if="selectedStorageItem.protocol === 'S3'">
+            <div class="pa-1">
+              <strong>Tenant-Gesamtgröße</strong>
+              <p class="text-caption mt-2 mb-1">
+                Diese Größe ist nicht die Größe dieses einzelnen Buckets, sondern
+                die Gesamtkapazität des gesamten S3-Tenants da es zurzeit keine Daten über die einzelnen Bucket größen gibt..
+              </p>
+            </div>
+          </info-tooltip>
+        </h3>
+      </v-col>
+      <v-col
+        v-if="selectedStorageItem.protocol === 'S3'"
+        cols="3"
+      >
+        <h3>Tenant</h3>
       </v-col>
       <v-col
         v-if="
@@ -277,6 +267,12 @@
         <p>
           {{ formatter.formatBytesSmart(selectedStorageItem.size) }}
         </p>
+      </v-col>
+      <v-col
+        v-if="selectedStorageItem.protocol === 'S3'"
+        cols="3"
+      >
+        <p>{{ getS3Tenant(selectedStorageItem.name) }}</p>
       </v-col>
       <v-col
         v-if="
@@ -312,7 +308,6 @@
 <script setup lang="ts">
 import type { UnifiedStorageItem } from "@/types/Storage";
 
-import { mdiAlert } from "@mdi/js";
 import { computed, ref } from "vue";
 
 import jobService from "@/api/jobService.ts";
@@ -334,7 +329,6 @@ const emit = defineEmits<(e: "changed") => void>();
 
 const formatter = useFormatter();
 const loading = ref(false);
-
 
 function startChangeShareJob(payload: {
   sizeGb: number;
@@ -381,6 +375,24 @@ function getDiskClass(): string {
     return "-";
   }
 }
+function getS3Tenant(name: string | undefined): string {
+  if (!name) return "-";
+  const parts = name.split("-");
+  return parts.length >= 2 ? (parts[1] ?? "-") : "-";
+}
+
+function formatStorageCategory(category: string | undefined): string {
+  if (!category) return "-";
+  return category
+    .split("_")
+    .map((word) =>
+      word.length <= 4
+        ? word.toUpperCase()
+        : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+    )
+    .join(" ");
+}
+
 function turnToDate(isoString: string | undefined): string {
   // Zeitangeben vom ISO8601 in normales Format umwandeln: PT0S - PT65535S fuer Sekunden, PT0M - PT60M fuer Minuten, PT0H - PT24H fuer Stunden, P0D - P36500D fuer Tage, P0M - P1200M fuer Monate oder P0Y - P100Y für Jahre; max = maximal; min = minimal; none = keine
   if (!isoString) {

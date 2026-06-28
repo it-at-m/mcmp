@@ -2,6 +2,8 @@
 package de.muenchen.mcmp.clients.netapp.ontap;
 
 import de.muenchen.mcmp.ontap.*;
+import de.muenchen.mcmp.storage.StorageCategory;
+import de.muenchen.mcmp.storage.StorageCategoryClassifier;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -710,6 +712,15 @@ public class OntapImportService {
                 qtreesToSave.add(qtree);
             }
             processCifsSharesForQtree(qtreeData, qtree, context, sharesToSave, aclsToSave);
+
+            final StorageCategory qtreeCategory = StorageCategoryClassifier.classifyQtree(qtreeData.mountPathNfs());
+            if (!Objects.equals(qtree.getStorageCategory(), qtreeCategory)) {
+                qtree.setStorageCategory(qtreeCategory);
+                if (!qtreesToSave.contains(qtree)) {
+                    qtreesToSave.add(qtree);
+                }
+            }
+
             context.importedQtreeKeys.add(qtreeKey);
         }
     }
@@ -831,6 +842,17 @@ public class OntapImportService {
         return policyId == null ? null : policyId.toString();
     }
 
+    private StorageCategory computeVolumeStorageCategory(final OntapDTO.VolumeData volumeData) {
+        StorageCategory category = StorageCategoryClassifier.classifyNfs(volumeData.mountPathNfs());
+        if (category == null && volumeData.cifsShares() != null) {
+            category = volumeData.cifsShares().stream()
+                    .map(s -> StorageCategoryClassifier.classifyCifs(s.mountPathCifs()))
+                    .filter(Objects::nonNull)
+                    .findFirst().orElse(null);
+        }
+        return category;
+    }
+
     /**
      * Collects SVMs and volumes from the OntapDTO.
      *
@@ -917,6 +939,15 @@ public class OntapImportService {
 
             processCifsShares(pair.volumeData(), volume, context, sharesToSave, aclsToSave);
             processQtrees(pair.volumeData(), volume, policyMap, context, qtreesToSave, sharesToSave, aclsToSave);
+
+            // Classify storage category after shares and qtrees are resolved
+            final StorageCategory volumeCategory = computeVolumeStorageCategory(pair.volumeData());
+            if (!Objects.equals(volume.getStorageCategory(), volumeCategory)) {
+                volume.setStorageCategory(volumeCategory);
+                if (!volumesToSave.contains(volume)) {
+                    volumesToSave.add(volume);
+                }
+            }
             processedVolumeUuids.add(pair.volumeData().uuid());
 
             // Add children whose parent has now been processed
@@ -956,6 +987,12 @@ public class OntapImportService {
                                                final List<OntapQtree> qtreesToSave,
                                                final ClusterDataContext context) {
         // Save in dependency order
+        // Snapshots must be saved first: volumes may reference them via parentSnapshot,
+        // and any subsequent saveAll can trigger a Hibernate flush that would fail
+        // if those snapshot references are still transient.
+        if (!snapshotsToSave.isEmpty()) {
+            snapshotRepository.saveAll(snapshotsToSave);
+        }
         if (!policiesToSave.isEmpty()) {
             exportPolicyRepository.saveAll(policiesToSave);
         }
@@ -964,9 +1001,6 @@ public class OntapImportService {
         }
         if (!svmsToSave.isEmpty()) {
             svmRepository.saveAll(svmsToSave);
-        }
-        if (!snapshotsToSave.isEmpty()) {
-            snapshotRepository.saveAll(snapshotsToSave);
         }
         // 1. Save aggregates without volumes (ontapVolumes collection is still empty)
         if (!aggregatesToSave.isEmpty()) {

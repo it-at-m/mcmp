@@ -5,8 +5,7 @@
   >
     <template #toolbar-actions>
       <storage-change-nfs-export-policy
-        :storage-uuid="selectedStorageItem.uuid"
-        :mount-path="selectedStorageItem.nfs_mount_path!"
+        :selected-storage="selectedStorageItem"
       />
     </template>
     <v-row>
@@ -36,8 +35,7 @@
         >
           <storage-change-nfs-export-policy
             v-if="rule.clients && rule.clients.length > 0"
-            :storage-uuid="selectedStorageItem.uuid"
-            :mount-path="selectedStorageItem.nfs_mount_path!"
+            :selected-storage="selectedStorageItem"
             mode="edit"
             :server-fqdn="rule.clients[0]"
             :permission="getPermissionValue(rule.rwRules)"

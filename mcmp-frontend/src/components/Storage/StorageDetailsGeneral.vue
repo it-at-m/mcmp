@@ -246,12 +246,6 @@
         </h3>
       </v-col>
       <v-col
-        v-if="selectedStorageItem.protocol === 'S3'"
-        cols="3"
-      >
-        <h3>Tenant</h3>
-      </v-col>
-      <v-col
         v-if="
           (selectedStorageItem.type == 'NFS' ||
             selectedStorageItem.type == 'CIFS') &&
@@ -267,12 +261,6 @@
         <p>
           {{ formatter.formatBytesSmart(selectedStorageItem.size) }}
         </p>
-      </v-col>
-      <v-col
-        v-if="selectedStorageItem.protocol === 'S3'"
-        cols="3"
-      >
-        <p>{{ getS3Tenant(selectedStorageItem.name) }}</p>
       </v-col>
       <v-col
         v-if="

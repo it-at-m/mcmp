@@ -178,7 +178,7 @@ function getServers() {
   }
   requestedAlready.value = true;
   serverService
-    .getVisibleServers(loading, 0, -1, "name", "asc", "", [], "")
+    .getVisibleServers(loading, 0, -1, "name", "asc", "", [], "", false)
     .then((response) => {
       serverList.value = response.content;
     });

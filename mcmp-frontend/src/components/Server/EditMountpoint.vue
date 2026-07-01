@@ -116,7 +116,7 @@
           v-if="mountPoint != null"
           cols="12"
         >
-          <h4>Aktueller Füllstand (bei neuer Göße):</h4>
+          <h4>Aktueller Füllstand (bei neuer Größe):</h4>
           <linear-progress-with-colors
             :value="
               newCapacityGB > 0

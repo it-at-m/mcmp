@@ -19,5 +19,6 @@ public record UnifiedLoadbalancer(
         List<String> addresses,
         List<String> domains,
         Set<String> appserviceNames,
-        List<UnifiedLoadbalancerPoolDTO> pools
+        List<UnifiedLoadbalancerPoolDTO> pools,
+        List<LbIruleDTO> irules
 ) {}

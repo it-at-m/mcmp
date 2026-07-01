@@ -1,7 +1,7 @@
 package de.muenchen.mcmp.loadbalancer;
 
 /**
- * Value type stored as JSONB within lb_pool.monitors and lb_pool_member.monitors.
+ * Read-model carrier for a health monitor, assembled from {@link LbPoolMonitor} for API responses.
  */
 public record LbMonitor(
         String type,

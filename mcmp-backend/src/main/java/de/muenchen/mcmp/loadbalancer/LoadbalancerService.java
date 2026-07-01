@@ -12,8 +12,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -21,7 +21,6 @@ import java.util.stream.Collectors;
 public class LoadbalancerService {
 
     private final LbVirtualServerRepository repository;
-    private final LbPoolRepository poolRepository;
     private final LbPoolMemberRepository poolMemberRepository;
 
     public Page<LbVirtualServerListDTO> getVisibleLoadbalancers(
@@ -62,32 +61,31 @@ public class LoadbalancerService {
         final LbVirtualServer lvs = repository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Loadbalancer not found: " + id));
 
-        final Map<String, LbPoolRef> poolRefs =
-                lvs.getPoolRefs() != null ? lvs.getPoolRefs() : Collections.emptyMap();
+        final List<LbVirtualServerPoolRef> poolRefs =
+                lvs.getPoolRefs() != null ? lvs.getPoolRefs() : Collections.emptyList();
 
-        final List<LbPool> pools = poolRefs.isEmpty()
-                ? Collections.emptyList()
-                : poolRepository.findAllByNameIn(poolRefs.keySet());
-
-        final List<UnifiedLoadbalancerPoolDTO> poolDTOs = pools.stream()
-                .map(pool -> UnifiedLoadbalancerPoolDTO.builder()
-                        .name(pool.getName())
-                        .lbMethod(pool.getLbMethod())
-                        .monitorCondition(pool.getMonitorCondition())
-                        .monitors(pool.getMonitors())
-                        .poolRef(poolRefs.get(pool.getName()))
-                        .members(pool.getMembers() == null ? Collections.emptyList() :
-                                pool.getMembers().stream()
-                                        .map(m -> UnifiedLoadbalancerMemberDTO.builder()
-                                                .ip(m.getIp())
-                                                .port(m.getPort())
-                                                .serverId(m.getServer() != null ? m.getServer().getId() : null)
-                                                .serverName(m.getServer() != null ? m.getServer().getName() : null)
-                                                .monitorCondition(m.getMonitorCondition())
-                                                .monitors(m.getMonitors())
-                                                .build())
-                                        .collect(Collectors.toList()))
-                        .build())
+        final List<UnifiedLoadbalancerPoolDTO> poolDTOs = poolRefs.stream()
+                .map(ref -> {
+                    final LbPool pool = ref.getPool();
+                    return UnifiedLoadbalancerPoolDTO.builder()
+                            .name(pool.getName())
+                            .lbMethod(pool.getLbMethod())
+                            .monitorCondition(pool.getMonitorCondition())
+                            .monitors(toMonitorDTOs(pool.getMonitors()))
+                            .poolRef(new LbPoolRef(ref.getIsDefault(), ref.getHosts(), ref.getPaths()))
+                            .members(pool.getMembers() == null ? Collections.emptyList() :
+                                    pool.getMembers().stream()
+                                            .map(m -> UnifiedLoadbalancerMemberDTO.builder()
+                                                    .ip(m.getIp())
+                                                    .port(m.getPort())
+                                                    .serverId(m.getServer() != null ? m.getServer().getId() : null)
+                                                    .serverName(m.getServer() != null ? m.getServer().getName() : null)
+                                                    .monitorCondition(m.getMonitorCondition())
+                                                    .monitors(toMonitorDTOs(m.getMonitors()))
+                                                    .build())
+                                            .collect(Collectors.toList()))
+                            .build();
+                })
                 .collect(Collectors.toList());
 
         return UnifiedLoadbalancer.builder()
@@ -106,6 +104,10 @@ public class LoadbalancerService {
                         .map(Appservice::getName)
                         .collect(Collectors.toSet()))
                 .pools(poolDTOs)
+                .irules(lvs.getIrules().stream()
+                        .map(i -> new LbIruleDTO(i.getName(), i.getContent()))
+                        .sorted(Comparator.comparing(LbIruleDTO::name))
+                        .collect(Collectors.toList()))
                 .build();
     }
 
@@ -118,6 +120,24 @@ public class LoadbalancerService {
                         .memberIp(p.getMemberIp())
                         .memberPort(p.getMemberPort())
                         .build())
+                .collect(Collectors.toList());
+    }
+
+    private List<LbMonitor> toMonitorDTOs(final List<LbPoolMonitor> monitors) {
+        if (monitors == null) {
+            return Collections.emptyList();
+        }
+        return monitors.stream()
+                .map(m -> new LbMonitor(
+                        m.getType(),
+                        m.getInterval(),
+                        m.getPort(),
+                        m.getMethod(),
+                        m.getPath(),
+                        m.getHost(),
+                        m.getHttpVersion(),
+                        m.getExpect()
+                ))
                 .collect(Collectors.toList());
     }
 

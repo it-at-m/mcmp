@@ -99,10 +99,10 @@
   >
     <v-row>
       <v-col cols="3">
-        <h3>Listen</h3>
+        <h3>Listener Protokoll</h3>
       </v-col>
       <v-col cols="3">
-        <h3>Forward</h3>
+        <h3>Server Protokoll</h3>
       </v-col>
       <v-col cols="3">
         <h3>Port</h3>
@@ -141,25 +141,6 @@
       <v-col cols="3">
         <h3>Redirect HTTP → HTTPS</h3>
       </v-col>
-    </v-row>
-    <v-row>
-      <v-col
-        cols="3"
-        class="pt-0"
-      >
-        <p>{{ formatter.formatBooleanToJaNein(lb.redirect80) }}</p>
-      </v-col>
-    </v-row>
-  </common-card>
-
-  <common-card
-    title="WAF"
-    top-margin="0"
-  >
-    <v-row>
-      <v-col cols="3">
-        <h3>WAF aktiviert</h3>
-      </v-col>
       <v-col
         v-if="lb.wafEnabled"
         cols="3"
@@ -172,7 +153,7 @@
         cols="3"
         class="pt-0"
       >
-        <p>{{ formatter.formatBooleanToJaNein(lb.wafEnabled) }}</p>
+        <p>{{ formatter.formatBooleanToJaNein(lb.redirect80) }}</p>
       </v-col>
       <v-col
         v-if="lb.wafEnabled"

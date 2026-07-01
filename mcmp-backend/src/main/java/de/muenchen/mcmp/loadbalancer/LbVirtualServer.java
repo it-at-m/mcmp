@@ -7,9 +7,9 @@ import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 @Entity
@@ -57,13 +57,8 @@ public class LbVirtualServer extends AbstractEntity {
     @Column(name = "domains", columnDefinition = "jsonb")
     private List<String> domains;
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "irules", columnDefinition = "jsonb")
-    private Map<String, String> irules;
-
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "pool_refs", columnDefinition = "jsonb")
-    private Map<String, LbPoolRef> poolRefs;
+    @OneToMany(mappedBy = "virtualServer", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<LbVirtualServerPoolRef> poolRefs = new ArrayList<>();
 
     @ManyToMany
     @JoinTable(
@@ -73,4 +68,13 @@ public class LbVirtualServer extends AbstractEntity {
             inverseJoinColumns = {@JoinColumn(name = "appservice_id")}
     )
     private Set<Appservice> appservices = new LinkedHashSet<>();
+
+    @ManyToMany
+    @JoinTable(
+            name = "lb_virtual_server_has_irules",
+            schema = "cmp",
+            joinColumns = {@JoinColumn(name = "lb_virtual_server_id")},
+            inverseJoinColumns = {@JoinColumn(name = "lb_irule_id")}
+    )
+    private Set<LbIrule> irules = new LinkedHashSet<>();
 }

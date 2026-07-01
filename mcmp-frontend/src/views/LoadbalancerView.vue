@@ -93,6 +93,16 @@
                       <v-icon size="x-large">{{ mdiCallSplit }}</v-icon>
                     </template>
                   </v-tab>
+                  <v-tab
+                    value="IRules"
+                    rounded="lg"
+                    class="d-flex justify-center align-center"
+                  >
+                    IRules
+                    <template #prepend>
+                      <v-icon size="x-large">{{ mdiScriptText }}</v-icon>
+                    </template>
+                  </v-tab>
                 </v-tabs>
               </v-col>
             </v-row>
@@ -106,6 +116,9 @@
                   </v-tabs-window-item>
                   <v-tabs-window-item value="Pool">
                     <loadbalancer-details-pool :lb="selectedDetail" />
+                  </v-tabs-window-item>
+                  <v-tabs-window-item value="IRules">
+                    <loadbalancer-details-irules :lb="selectedDetail" />
                   </v-tabs-window-item>
                 </v-tabs-window>
               </v-col>
@@ -141,7 +154,7 @@
 import type { LoadbalancerDetail } from "@/types/LoadbalancerDetail";
 import type { LoadbalancerListItem } from "@/types/LoadbalancerListItem";
 
-import { mdiCallSplit, mdiClose, mdiHome } from "@mdi/js";
+import { mdiCallSplit, mdiClose, mdiHome, mdiScriptText } from "@mdi/js";
 import { onMounted, onUnmounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
@@ -149,6 +162,7 @@ import loadbalancerService from "@/api/loadbalancerService";
 import testenvService from "@/api/testenvService.ts";
 import commingSoon from "@/assets/commingSoon.png";
 import LoadbalancerDetailsGeneral from "@/components/Loadbalancer/LoadbalancerDetailsGeneral.vue";
+import LoadbalancerDetailsIrules from "@/components/Loadbalancer/LoadbalancerDetailsIrules.vue";
 import LoadbalancerDetailsPool from "@/components/Loadbalancer/LoadbalancerDetailsPool.vue";
 import LoadbalancerList from "@/components/Loadbalancer/LoadbalancerList.vue";
 

@@ -70,8 +70,25 @@ const selectedId = computed(() =>
   selected.value.length > 0 ? selected.value[0]?.id : null
 );
 
+const domainCounts = computed(() => {
+  const counts = new Map<string, number>();
+  items.value.forEach((item) => {
+    const domain = item.domain ?? item.name;
+    counts.set(domain, (counts.get(domain) ?? 0) + 1);
+  });
+  return counts;
+});
+
 const tableItems = computed<TableItem[]>(() =>
-  items.value.map((item) => ({ ...item, id: item.id, domain: item.domain ?? item.name }))
+  items.value.map((item) => {
+    const domain = item.domain ?? item.name;
+    const isDuplicate = (domainCounts.value.get(domain) ?? 0) > 1;
+    return {
+      ...item,
+      id: item.id,
+      domain: isDuplicate ? `${domain}:${item.port}` : domain,
+    };
+  })
 );
 
 const normalizedUrlParamId = computed(() =>

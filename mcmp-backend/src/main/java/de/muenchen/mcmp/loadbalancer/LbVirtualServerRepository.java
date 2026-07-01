@@ -43,7 +43,14 @@ public interface LbVirtualServerRepository extends JpaRepository<LbVirtualServer
                   AND u.username = :username
             )
         )
-        AND (:search IS NULL OR :search = '' OR lvs.name ILIKE CONCAT('%', :search, '%'))
+        AND (
+            :search IS NULL OR :search = ''
+            OR lvs.name ILIKE CONCAT('%', :search, '%')
+            OR EXISTS (
+                SELECT 1 FROM jsonb_array_elements_text(lvs.domains) d
+                WHERE d ILIKE CONCAT('%', :search, '%')
+            )
+        )
     ) AS filtered
     ORDER BY
         CASE WHEN :sortOrder = 'desc' AND :sortBy = 'domain' THEN firstDomain END DESC NULLS LAST,
@@ -71,7 +78,14 @@ public interface LbVirtualServerRepository extends JpaRepository<LbVirtualServer
               AND u.username = :username
         )
     )
-    AND (:search IS NULL OR :search = '' OR lvs.name ILIKE CONCAT('%', :search, '%'))
+    AND (
+        :search IS NULL OR :search = ''
+        OR lvs.name ILIKE CONCAT('%', :search, '%')
+        OR EXISTS (
+            SELECT 1 FROM jsonb_array_elements_text(lvs.domains) d
+            WHERE d ILIKE CONCAT('%', :search, '%')
+        )
+    )
     """, nativeQuery = true)
     Page<LbVirtualServerList> findVisibleLoadbalancers(
             @Param("username") String username,

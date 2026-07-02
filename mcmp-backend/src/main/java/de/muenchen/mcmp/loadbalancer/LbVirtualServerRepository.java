@@ -32,6 +32,7 @@ public interface LbVirtualServerRepository extends JpaRepository<LbVirtualServer
             OR :isSecurity
             OR :isOperator
             OR :isNetwork
+            OR :isLoadbalancer
             OR EXISTS (
                 SELECT 1
                 FROM cmp.lb_virtual_server_has_appservices lbha
@@ -67,6 +68,7 @@ public interface LbVirtualServerRepository extends JpaRepository<LbVirtualServer
         OR :isSecurity
         OR :isOperator
         OR :isNetwork
+        OR :isLoadbalancer
         OR EXISTS (
             SELECT 1
             FROM cmp.lb_virtual_server_has_appservices lbha
@@ -94,6 +96,7 @@ public interface LbVirtualServerRepository extends JpaRepository<LbVirtualServer
             @Param("isSecurity") boolean isSecurity,
             @Param("isOperator") boolean isOperator,
             @Param("isNetwork") boolean isNetwork,
+            @Param("isLoadbalancer") boolean isLoadbalancer,
             @Param("search") String search,
             @Param("sortBy") String sortBy,
             @Param("sortOrder") String sortOrder,

@@ -42,6 +42,7 @@ public class LoadbalancerService {
                 userRoles.hasSecurityRole(),
                 userRoles.hasOperatorRole(),
                 userRoles.hasNetworkRole(),
+                userRoles.hasLoadbalancerRole(),
                 cleanedSearch,
                 sortBy,
                 sortOrder,

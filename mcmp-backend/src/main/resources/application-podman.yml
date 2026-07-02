@@ -102,6 +102,9 @@ lhm:
     network:
       departments:
         - ITM-IBS341
+    loadbalancer:
+      departments:
+        - ITM-IBS342
     operator:
       departments:
         - ITM-IBS4

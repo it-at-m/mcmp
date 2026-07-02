@@ -242,7 +242,7 @@ import type {
 
 import CommonCard from "@/components/common/CommonCard.vue";
 
-const props = defineProps<{
+defineProps<{
   lb: LoadbalancerDetail;
 }>();
 
@@ -257,7 +257,7 @@ function poolPaths(pool: LoadbalancerPool): string {
 }
 
 function monitorPort(monitor: LbMonitor): string {
-  return monitor.port === "poolmember" ? `Siehe Server Port (${props.lb.port})` : monitor.port ?? "-";
+  return monitor.port === "poolmember" ? `Siehe Server Port` : monitor.port ?? "-";
 }
 </script>
 <style scoped>

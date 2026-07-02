@@ -35,6 +35,7 @@ public final class AuthUtils {
     public static final String ROLE_SECURITY = "ROLE_SECURITY";
     public static final String ROLE_OPERATOR = "ROLE_OPERATOR";
     public static final String ROLE_NETWORK = "ROLE_NETWORK";
+    public static final String ROLE_LOADBALANCER = "ROLE_LOADBALANCER";
     public static final String ROLE_API = "ROLE_API";
     public static final String DEPT_PREFIX = "DEPT_";
 
@@ -118,7 +119,7 @@ public final class AuthUtils {
     public static UserRoles getCurrentUserRoles() {
         final Authentication authentication = getAuthenticated();
         if (authentication == null) {
-            return new UserRoles(NAME_UNAUTHENTICATED_USER, false, false,false, false, false, false, false, false, false, false, false);
+            return new UserRoles(NAME_UNAUTHENTICATED_USER, false, false,false, false, false, false, false, false, false, false, false, false);
         }
         final String username = getUsername();
 
@@ -137,8 +138,9 @@ public final class AuthUtils {
         boolean hasOperatorRole = authoritySet.contains(ROLE_OPERATOR);
         boolean hasNetworkRole = authoritySet.contains(ROLE_NETWORK);
         boolean hasStorageRole = authoritySet.contains(ROLE_STORAGE);
+        boolean hasLoadbalancerRole = authoritySet.contains(ROLE_LOADBALANCER);
 
-        return new UserRoles(username, hasUserRole, isAdmin, isReadonly, hasStorageRole, hasWindowsRole, hasLinuxRole, hasOracleRole, hasNonOracleRole, hasSecurityRole, hasOperatorRole, hasNetworkRole);
+        return new UserRoles(username, hasUserRole, isAdmin, isReadonly, hasStorageRole, hasWindowsRole, hasLinuxRole, hasOracleRole, hasNonOracleRole, hasSecurityRole, hasOperatorRole, hasNetworkRole, hasLoadbalancerRole);
     }
 
     /**

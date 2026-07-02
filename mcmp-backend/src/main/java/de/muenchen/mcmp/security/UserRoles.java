@@ -43,4 +43,7 @@ public class UserRoles {
     @Accessors(fluent = true)
     @Getter
     private final boolean hasNetworkRole;
+    @Accessors(fluent = true)
+    @Getter
+    private final boolean hasLoadbalancerRole;
 }

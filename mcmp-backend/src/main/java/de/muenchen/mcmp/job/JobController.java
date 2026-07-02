@@ -85,6 +85,8 @@ public class JobController {
 
     public static final String STORAGE_MODIFY_NFS = "STORAGE_MODIFY_NFS";
     public static final String STORAGE_MODIFY_CIFS = "STORAGE_MODIFY_CIFS";
+//    public static final String STORAGE_DELETE_NFS = "STORAGE_DELETE_NFS";
+//    public static final String STORAGE_DELETE_CIFS = "STORAGE_DELETE_CIFS";
     public static final String STORAGE_CHANGE_NFS_EXPORT_POLICY = "STORAGE_CHANGE_NFS_EXPORT_POLICY";
     private static final String STORAGE_CREATE_SNAPSHOT_NFS = "STORAGE_CREATE_SNAPSHOT_NFS";
     private static final String STORAGE_CREATE_SNAPSHOT_CIFS = "STORAGE_CREATE_SNAPSHOT_CIFS";
@@ -569,6 +571,7 @@ public class JobController {
         // Validate awxExtraVars
         Object mountPointObj = awxExtraVars.get("mountPoint");
         Object newSizeObj = awxExtraVars.get("newSize");
+        Object volumeGroupObj = awxExtraVars.get("volumeGroup");
 
         if (mountPointObj == null || newSizeObj == null) {
             log.info("Mountpoint Path or new Size for the Mountpoint is not provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
@@ -577,6 +580,13 @@ public class JobController {
 
         String mountPointPath = mountPointObj.toString();
         int newSize = Integer.parseInt(newSizeObj.toString());
+        String logicalName = "";
+        String volumeGroup = volumeGroupObj.toString();
+
+        if (mountPointPath.length() > 50) {
+            log.warn("Invalid lenth of Mountpoint path lengs had provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
+            throw new AccessDeniedException("New Mountpoint path is too long (max 50 characters).");
+        }
 
         if (newSize < (mountPointService.getMountPointByServerIdAndPath(serverId, mountPointPath).capacityInBytes() / (1024 * 1024 * 1024)) ||
                 newSize > 2000) {
@@ -589,9 +599,13 @@ public class JobController {
             throw new AccessDeniedException("Can't change size of mountpoint. Please remove the snapshot first and try it again.");
         }
 
+        if (volumeGroup != "") {
+            logicalName = mountPointPath.substring(mountPointPath.lastIndexOf('/') + 1);
+        }
+
         logCreatedJob(LINUX_MOUNTPOINT_CHANGE, serverId);
 
-        jobService.linuxMountpointChange(serverId, LINUX_MOUNTPOINT_CHANGE, mountPointPath, newSize);
+        jobService.linuxMountpointChange(serverId, LINUX_MOUNTPOINT_CHANGE, mountPointPath, newSize, logicalName, volumeGroup);
     }
 
     @PostMapping("/create/" + LINUX_RHEL10_SERVER)

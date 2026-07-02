@@ -2,11 +2,14 @@
   <v-tooltip
     location="bottom"
     :text="
-      'Bearbeitung nicht möglich ' +
-      (props.selectedServer.powerState != 'poweredOn'
-        ? '(Server ist ausgeschaltet)'
-        : '') +
-      (props.snapshotOnServer ? ' (Server hat einen Snapshot)' : '')
+      props.newMountpoint
+        ? 'Hinzufügen'
+        : 'Bearbeitung' +
+          ' nicht möglich ' +
+          (props.selectedServer.powerState != 'poweredOn'
+            ? '(Server ist ausgeschaltet)'
+            : '') +
+          (props.snapshotOnServer ? ' (Server hat einen Snapshot)' : '')
     "
     :open-on-hover="
       props.selectedServer.powerState != 'poweredOn' || props.snapshotOnServer
@@ -21,37 +24,39 @@
             props.snapshotOnServer
           "
           variant="flat"
-          aria-label="Laufwerke bearbeiten"
+          :aria-label="
+            newMountpoint ? 'Neues lokales Laufwerk anlegen' : 'Laufwerk bearbeiten'
+          "
           @click="dialog = true"
         >
-          <v-icon>{{ mdiPencil }}</v-icon>
+          <v-icon>{{ newMountpoint ? mdiPlus : mdiPencil }}</v-icon>
         </v-btn>
       </span>
     </template>
   </v-tooltip>
-  <CommonDialog
+  <common-dialog
     v-model="dialog"
-    title="Laufwerke bearbeiten"
+    :title="newMountpoint ? 'Neues lokales Laufwerk anlegen' : 'Laufwerk bearbeiten'"
     max-width="1000"
-    :icon="mdiPencil"
+    :icon="props.mountPoints.length > 0 ? mdiPencil : mdiPlus"
     show-actions
-    submitActivated
-    @dialog-cancel="close"
-    @dialog-confirm="save"
-    showChangeWarning
-    :checkForEnabledActions="
+    submit-activated
+    show-change-warning
+    :check-for-enabled-actions="
       selectedServer.guestConfigFullName?.toLowerCase().includes('linux')
         ? ['LINUX_MOUNTPOINT_CHANGE']
         : ['WINDOWS_PARTITION_CHANGE']
     "
+    @dialog-cancel="close"
+    @dialog-confirm="save"
   >
     <v-form ref="form">
       <v-row>
         <v-col
-          cols="12"
           v-if="newCapacityGB >= 2000"
+          cols="12"
         >
-          <CommonAlert color="notice_red">
+          <common-alert color="notice_red">
             <div class="links">
               <h4>Hinweis:</h4>
               Zur Ressourcenerweiterung über den maximalen Wert von 2000 GB
@@ -65,10 +70,9 @@
               </a>
               an IBS48 Linux-Server oder IBS49 Windows-Server
             </div>
-          </CommonAlert>
+          </common-alert>
         </v-col>
         <v-col
-          cols="12"
           v-if="
             ((newCapacityGB -
               (formatter.calculateBtoGB(mountPoint?.freeSpaceInBytes) +
@@ -78,15 +82,24 @@
               newCapacityGB >
             95
           "
+          cols="12"
         >
-          <CommonAlert type="warning">
+          <common-alert type="warning">
             <h4>
               Es wird empfohlen mindestens 5% freien Speicherplatz zu behalten.
             </h4>
-          </CommonAlert>
+          </common-alert>
         </v-col>
-        <v-col cols="12">
+        <v-col
+          v-if="!newMountpoint"
+          cols="12"
+        >
           <h4>Anzupassendes Laufwerk auswählen:</h4>
+        </v-col>
+        <v-col
+          v-if="!newMountpoint"
+          cols="12"
+        >
           <v-autocomplete
             v-model="mountPoint"
             :items="
@@ -113,7 +126,7 @@
           />
         </v-col>
         <v-col
-          v-if="mountPoint != null"
+          v-if="mountPoint != null && !newMountpoint"
           cols="12"
         >
           <h4>Aktueller Füllstand (bei neuer Größe):</h4>
@@ -134,8 +147,33 @@
           />
         </v-col>
         <v-col
+          v-if="newMountpoint"
           cols="12"
-          v-if="mountPoint != null"
+        >
+          <h4>Pfad:</h4>
+          <v-text-field
+            ref="inputRef"
+            v-model="newPath"
+            clearable
+            maxlength="50"
+            placeholder="/mnt/test"
+            :rules="[
+              rules.notEmptyRule('Es muss ein Pfad angegeben werden.'),
+              rules.regexRule(/^\//, 'Pfad muss mit einem \'/\' beginnen.'),
+              rules.regexRule(
+                /^(?!.*\/\/).*$/,
+                'Pfad darf keine nicht \'//\' enthalten.'
+              ),
+              rules.regexRule(
+                /^(?!.*\/$).*$/,
+                'Pfad darf nicht mit \'/\' enden.'
+              ),
+            ]"
+          />
+        </v-col>
+        <v-col
+          v-if="mountPoint != null || newMountpoint"
+          cols="12"
         >
           <v-slider
             v-model="newCapacityGB"
@@ -148,8 +186,8 @@
           />
         </v-col>
         <v-col
+          v-if="mountPoint != null || newMountpoint"
           cols="12"
-          v-if="mountPoint != null"
         >
           <v-text-field
             v-model="newCapacityGB"
@@ -170,13 +208,27 @@
             ]"
           />
         </v-col>
+        <v-col
+          v-if="newMountpoint"
+          cols="12"
+        >
+          <h4>Name der Volume Gruppe:</h4>
+          <v-text-field
+            v-model="newVolumeGroup"
+            clearable
+            maxlength="50"
+            :rules="[
+              rules.notEmptyRule('Es muss eine Volume Gruppe angegeben werden.'),
+            ]"
+          />
+        </v-col>
       </v-row>
     </v-form>
-  </CommonDialog>
+  </common-dialog>
 </template>
 
 <script setup lang="ts">
-import { mdiPencil } from "@mdi/js";
+import { mdiPencil, mdiPlus } from "@mdi/js";
 import { inject, ref, watch } from "vue";
 
 import CommonAlert from "@/components/common/CommonAlert.vue";
@@ -191,11 +243,18 @@ const props = defineProps<{
   selectedServer: Server;
   mountPoints: MountPoint[];
   snapshotOnServer?: boolean;
+  newMountpoint: boolean;
 }>();
 
-const emit = defineEmits<{
-  (e: "save", mountPoint: MountPoint, newCapacityGB: number): void;
-}>();
+const emit =
+  defineEmits<
+    (
+      e: "save",
+      mountPoint: MountPoint,
+      newCapacityGB: number,
+      newVolumeGroup: string
+    ) => void
+  >();
 
 const registerOpenDialog = inject<() => void>("registerOpenDialog");
 const unregisterOpenDialog = inject<() => void>("unregisterOpenDialog");
@@ -205,7 +264,9 @@ const rules = useRules();
 const formatter = useFormatter();
 const dialog = ref(false);
 const mountPoint = ref<MountPoint | null>(null);
-const newCapacityGB = ref();
+const newCapacityGB = ref(5);
+const newPath = ref("");
+const newVolumeGroup = ref("data");
 
 // Dialog-Status überwachen
 watch(dialog, (newValue) => {
@@ -222,13 +283,30 @@ function close() {
 }
 
 function resetForm() {
+  newCapacityGB.value = 5;
   mountPoint.value = null;
 }
 
 function save() {
   form.value?.validate().then((validation: { valid: boolean }) => {
     if (validation.valid) {
-      emit("save", mountPoint.value, newCapacityGB.value);
+      if (props.newMountpoint) {
+        emit(
+          "save",
+          new MountPoint(
+            props.selectedServer.id,
+            newPath.value,
+            0,
+            0,
+            "",
+            false
+          ),
+          newCapacityGB.value,
+          newVolumeGroup.value
+        );
+      } else {
+        emit("save", mountPoint.value, newCapacityGB.value, "");
+      }
       dialog.value = false;
       resetForm();
     }

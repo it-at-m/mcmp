@@ -283,8 +283,10 @@ function close() {
 }
 
 function resetForm() {
-  newCapacityGB.value = 5;
   mountPoint.value = null;
+  newCapacityGB.value = 5;
+  newPath.value = "";
+  newVolumeGroup.value = "";
 }
 
 function save() {

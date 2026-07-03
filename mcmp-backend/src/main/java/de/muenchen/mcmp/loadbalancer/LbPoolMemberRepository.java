@@ -17,7 +17,8 @@ public interface LbPoolMemberRepository extends JpaRepository<LbPoolMember, Long
                 lpm.port      AS memberPort
             FROM cmp.lb_pool_member lpm
             JOIN cmp.lb_pool lp ON lpm.pool_id = lp.id
-            JOIN cmp.lb_virtual_server lvs ON jsonb_exists(lvs.pool_refs, lp.name)
+            JOIN cmp.lb_virtual_server_pool_ref lvspr ON lvspr.lb_pool_id = lp.id
+            JOIN cmp.lb_virtual_server lvs ON lvs.id = lvspr.lb_virtual_server_id
             WHERE lpm.server_id = :serverId
             ORDER BY lvs.name, lp.name
             """, nativeQuery = true)

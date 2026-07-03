@@ -588,12 +588,6 @@ public class JobController {
             throw new AccessDeniedException("New Mountpoint path is too long (max 50 characters).");
         }
 
-        if (newSize < (mountPointService.getMountPointByServerIdAndPath(serverId, mountPointPath).capacityInBytes() / (1024 * 1024 * 1024)) ||
-                newSize > 2000) {
-            log.warn("Invalid size provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
-            throw new IllegalArgumentException("New Size could not be smaller then the old size and not bigger then 2000 GB.");
-        }
-
         if (!snapshotService.getSnapshotsByServerId(serverId).isEmpty()) {
             log.warn("Mountpoint can't be changed with snapshot for serverId: {} by user: {}", AuthUtils.getUsername(), serverId);
             throw new AccessDeniedException("Can't change size of mountpoint. Please remove the snapshot first and try it again.");
@@ -601,6 +595,13 @@ public class JobController {
 
         if (volumeGroup != "") {
             logicalName = mountPointPath.substring(mountPointPath.lastIndexOf('/') + 1);
+        }
+        else {
+            if (newSize < (mountPointService.getMountPointByServerIdAndPath(serverId, mountPointPath).capacityInBytes() / (1024 * 1024 * 1024)) ||
+                    newSize > 2000) {
+                log.warn("Invalid size provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
+                throw new IllegalArgumentException("New Size could not be smaller then the old size and not bigger then 2000 GB.");
+            }
         }
 
         logCreatedJob(LINUX_MOUNTPOINT_CHANGE, serverId);

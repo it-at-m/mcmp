@@ -140,7 +140,7 @@
                     >
                       <v-icon
                         :icon="mdiAlertCircle"
-                        color="orange"
+                        color="grey"
                       />
                     </a>
                   </template>

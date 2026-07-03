@@ -99,6 +99,17 @@
       <v-list-item>
         <SnowTicketsOld />
       </v-list-item>
+      <v-list-item>
+              <v-btn
+                href="https://it-services.muenchen.de/now/platform-analytics-workspace/dashboards/params/edit/false/sys-id/ed9ef3f7d2959f75a70f2bf6768e3d31"
+                target="_blank"
+                rel="noopener"
+                flat
+                :append-icon="mdiOpenInNew"
+              >
+                LCM Dashboard
+              </v-btn>
+            </v-list-item>
     </v-list>
   </v-menu>
 </template>

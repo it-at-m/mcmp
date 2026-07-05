@@ -4,8 +4,6 @@ import de.muenchen.mcmp.common.AbstractEntity;
 import de.muenchen.mcmp.server.Server;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 import java.util.List;
 
@@ -35,7 +33,6 @@ public class LbPoolMember extends AbstractEntity {
     @Column(name = "monitor_condition")
     private String monitorCondition;
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "monitors", columnDefinition = "jsonb")
-    private List<LbMonitor> monitors;
+    @OneToMany(mappedBy = "poolMember", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<LbPoolMonitor> monitors;
 }

@@ -1,5 +1,8 @@
 <template>
-  <CommonCard title="Virtuelle Festplatten" v-show="selectedServer.cloud?.cloudType == 'VCENTER'">
+  <common-card
+    v-show="selectedServer.cloud?.cloudType == 'VCENTER'"
+    title="Virtuelle Festplatten"
+  >
     <v-data-table
       :headers="headers"
       :items="disks"
@@ -13,24 +16,37 @@
         {{ formatter.formatBtoGB(item.capacityInBytes) }} GB
       </template>
     </v-data-table>
-  </CommonCard>
-  <CommonCard
+  </common-card>
+  <common-card
     title="Laufwerke"
-    topMargin="0"
-    isExpansionPanel
+    top-margin="0"
+    is-expansion-panel
   >
     <template #toolbar-actions>
-      <EditMountpoint
-        :mountPoints="props.mountPoints"
-        :selectedServer="props.selectedServer"
-        @save="editMountPoint"
+      <edit-mountpoint
         v-if="
-          mountPoints.length != 0 &&
+          selectedServer.guestToolsFullName.includes('Linux 10') &&
           selectedServer.managed &&
           selectedServer.canEdit &&
           selectedServer.cloud?.cloudType == 'VCENTER'
         "
-        :snapshotOnServer="snapshots.length > 0"
+        :mount-points=[]
+        :selected-server="props.selectedServer"
+        :snapshot-on-server="snapshots.length > 0"
+        :new-mountpoint="true"
+        @save="editMountPoint"
+      />
+      <edit-mountpoint
+        v-if="
+          selectedServer.managed &&
+          selectedServer.canEdit &&
+          selectedServer.cloud?.cloudType == 'VCENTER'
+        "
+        :mount-points="props.mountPoints"
+        :selected-server="props.selectedServer"
+        :snapshot-on-server="snapshots.length > 0"
+        :new-mountpoint="false"
+        @save="editMountPoint"
       />
     </template>
     <v-data-table
@@ -49,7 +65,7 @@
         {{ formatter.formatBytesSmart(item.freeSpaceInBytes) }}
       </template>
       <template #item.actions="{ item }">
-        <LinearProgressWithColors
+        <linear-progress-with-colors
           :value="
             ((item.capacityInBytes - item.freeSpaceInBytes) /
               item.capacityInBytes) *
@@ -79,11 +95,11 @@
         </v-row>
       </template>
     </v-data-table>
-  </CommonCard>
-  <CommonCard
+  </common-card>
+  <common-card
     title="Netzlaufwerke"
-    topMargin="0"
-    isExpansionPanel
+    top-margin="0"
+    is-expansion-panel
   >
     <v-data-table
       :headers="shareMountHeaders"
@@ -101,11 +117,8 @@
         {{ formatter.formatBytesSmart(item.size - item.used) }}
       </template>
       <template #item.used="{ item }">
-        <LinearProgressWithColors
-          :value="
-            (item.used /item.size) *
-            100
-          "
+        <linear-progress-with-colors
+          :value="(item.used / item.size) * 100"
           :show-percentage="true"
         />
       </template>
@@ -115,13 +128,14 @@
         </v-row>
       </template>
     </v-data-table>
-  </CommonCard>
+  </common-card>
 </template>
 
 <script setup lang="ts">
 import type Disk from "@/types/Disk";
 import type MountPoint from "@/types/MountPoint";
 import type Snapshot from "@/types/Snapshot.ts";
+import type { UnifiedStorageMountItem } from "@/types/UnifiedStorageMountItem.ts";
 
 import { mdiLock } from "@mdi/js";
 import { ref } from "vue";
@@ -132,7 +146,6 @@ import LinearProgressWithColors from "@/components/common/LinearProgressWithColo
 import { useFormatter } from "@/composables/formatter";
 import Server from "@/types/Server";
 import EditMountpoint from "./EditMountpoint.vue";
-import type { UnifiedStorageMountItem } from "@/types/UnifiedStorageMountItem.ts";
 
 const jobLoading = ref(true);
 
@@ -145,9 +158,7 @@ const props = defineProps<{
   snapshots: Snapshot[];
 }>();
 
-const emit = defineEmits<{
-  (e: "changed"): void;
-}>();
+const emit = defineEmits<(e: "changed") => void>();
 
 const headers = [
   { title: "Device", key: "device", width: 50, align: "start" },
@@ -241,7 +252,7 @@ const shareMountHeaders = [
 
 const formatter = useFormatter();
 
-function editMountPoint(mountPoint: MountPoint, newCapacityGB: number) {
+function editMountPoint(mountPoint: MountPoint, newCapacityGB: number, newVolumeGroup: string) {
   if (
     props.selectedServer?.guestConfigFullName?.toLowerCase().includes("linux")
   ) {
@@ -253,6 +264,7 @@ function editMountPoint(mountPoint: MountPoint, newCapacityGB: number) {
         {
           mountPoint: mountPoint.diskPath,
           newSize: newCapacityGB,
+          volumeGroup: newVolumeGroup,
         }
       )
       .then(() => {

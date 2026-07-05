@@ -3,7 +3,8 @@ package de.muenchen.mcmp.loadbalancer;
 import java.util.List;
 
 /**
- * Embeddable value type stored as part of the lb_virtual_server.pool_refs JSONB column.
+ * Read-model carrier for a virtual server's pool routing (isDefault/hosts/paths),
+ * assembled from {@link LbVirtualServerPoolRef} for API responses.
  */
 public record LbPoolRef(
         Boolean isDefault,

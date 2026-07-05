@@ -32,6 +32,7 @@ public interface LbVirtualServerRepository extends JpaRepository<LbVirtualServer
             OR :isSecurity
             OR :isOperator
             OR :isNetwork
+            OR :isLoadbalancer
             OR EXISTS (
                 SELECT 1
                 FROM cmp.lb_virtual_server_has_appservices lbha
@@ -43,7 +44,14 @@ public interface LbVirtualServerRepository extends JpaRepository<LbVirtualServer
                   AND u.username = :username
             )
         )
-        AND (:search IS NULL OR :search = '' OR lvs.name ILIKE CONCAT('%', :search, '%'))
+        AND (
+            :search IS NULL OR :search = ''
+            OR lvs.name ILIKE CONCAT('%', :search, '%')
+            OR EXISTS (
+                SELECT 1 FROM jsonb_array_elements_text(lvs.domains) d
+                WHERE d ILIKE CONCAT('%', :search, '%')
+            )
+        )
     ) AS filtered
     ORDER BY
         CASE WHEN :sortOrder = 'desc' AND :sortBy = 'domain' THEN firstDomain END DESC NULLS LAST,
@@ -60,6 +68,7 @@ public interface LbVirtualServerRepository extends JpaRepository<LbVirtualServer
         OR :isSecurity
         OR :isOperator
         OR :isNetwork
+        OR :isLoadbalancer
         OR EXISTS (
             SELECT 1
             FROM cmp.lb_virtual_server_has_appservices lbha
@@ -71,7 +80,14 @@ public interface LbVirtualServerRepository extends JpaRepository<LbVirtualServer
               AND u.username = :username
         )
     )
-    AND (:search IS NULL OR :search = '' OR lvs.name ILIKE CONCAT('%', :search, '%'))
+    AND (
+        :search IS NULL OR :search = ''
+        OR lvs.name ILIKE CONCAT('%', :search, '%')
+        OR EXISTS (
+            SELECT 1 FROM jsonb_array_elements_text(lvs.domains) d
+            WHERE d ILIKE CONCAT('%', :search, '%')
+        )
+    )
     """, nativeQuery = true)
     Page<LbVirtualServerList> findVisibleLoadbalancers(
             @Param("username") String username,
@@ -80,6 +96,7 @@ public interface LbVirtualServerRepository extends JpaRepository<LbVirtualServer
             @Param("isSecurity") boolean isSecurity,
             @Param("isOperator") boolean isOperator,
             @Param("isNetwork") boolean isNetwork,
+            @Param("isLoadbalancer") boolean isLoadbalancer,
             @Param("search") String search,
             @Param("sortBy") String sortBy,
             @Param("sortOrder") String sortOrder,

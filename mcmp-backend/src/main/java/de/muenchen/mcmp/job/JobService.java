@@ -470,13 +470,15 @@ public class JobService {
         createJob(linuxTempRootIdentifier, server, params, new HashMap<>());
     }
 
-    public void linuxMountpointChange(final Long serverId, final String linux_mountpoint_change_identifier, final String mountpointPath, final Integer newSize) {
+    public void linuxMountpointChange(final Long serverId, final String linux_mountpoint_change_identifier, final String mountpointPath, final Integer newSize, final String logicalName, final String volumeGroup) {
         Server server = getServerOrThrow(serverId);
 
         Map<String, Object> params = new HashMap<>();
         params.put("HOSTNAME", server.getName());
         params.put("MOUNTP", mountpointPath);
         params.put("NEW_SIZE", newSize);
+        params.put("LOGICAL_NAME", logicalName);
+        params.put("VOLUME_GROUP", volumeGroup);
 
         createJob(linux_mountpoint_change_identifier, server, params, new HashMap<>());
     }
@@ -994,6 +996,16 @@ public class JobService {
     public void storageModifyCifs(UnifiedStorageItemDto cifsItem, int newSize, int newSnapshotPercentage) {
         storageModifyShare(cifsItem.getCifs_mount_path(), JobController.STORAGE_MODIFY_CIFS, newSize, newSnapshotPercentage);
     }
+
+//    private void storageDeleteNfs(UnifiedStorageItemDto nfsItem) {
+//        Map<String, Object> params = new HashMap<>();
+//        createJob(JobController.STORAGE_DELETE_NFS, null, params, new HashMap<>());
+//    }
+//
+//    private void storageDeleteCifs(UnifiedStorageItemDto cifsItem) {
+//        Map<String, Object> params = new HashMap<>();
+//        createJob(JobController.STORAGE_DELETE_CIFS, null, params, new HashMap<>());
+//    }
 
     public void storageCreateSnapshotNfs(UnifiedStorageItemDto nfsItem, String usage) {
         storageCreateSnapshotShare(nfsItem.getNfs_mount_path(), "STORAGE_CREATE_SNAPSHOT_NFS", usage);

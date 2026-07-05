@@ -1,93 +1,98 @@
 <template>
   <v-container
-	fluid
-	class="split-container"
+    fluid
+    class="split-container"
   >
-	<div
-	  class="split-view"
-	  :class="{ resizing: isResizing }"
-	>
-	  <div
-		class="left-panel"
-		:style="{ width: leftPanelWidth + 'px' }"
-	  >
-		<AppserviceList
-		  :selected="selectedAppserviceRows"
-		  :url-params-id="route.params.appId"
-		  @update:selected="onAppserviceSelected"
-		/>
-	  </div>
+    <div
+      class="split-view"
+      :class="{ resizing: isResizing }"
+    >
+      <div
+        class="left-panel"
+        :style="{ width: leftPanelWidth + 'px' }"
+      >
+        <appservice-list
+          :selected="selectedAppserviceRows"
+          :url-params-id="route.params.appId"
+          @update:selected="onAppserviceSelected"
+        />
+      </div>
 
-	  <div
-		class="split-handle"
-		@mousedown="startResize"
-		@touchstart="startResize"
-		@keyup.left.prevent="resizeLeft"
-		@keyup.right.prevent="resizeRight"
-		tabindex="0"
-	  >
-		<span class="split-handle-bar left"></span>
-		<span class="split-handle-bar right"></span>
-	  </div>
+      <div
+        class="split-handle"
+        tabindex="0"
+        @mousedown="startResize"
+        @touchstart="startResize"
+        @keyup.left.prevent="resizeLeft"
+        @keyup.right.prevent="resizeRight"
+      >
+        <span class="split-handle-bar left"></span>
+        <span class="split-handle-bar right"></span>
+      </div>
 
-	  <div class="right-panel">
-		<div v-if="notFound">
-		  <v-row class="pa-4">
-			<v-col cols="12">
-			  <CommonAlert
-				type="warning"
-				prominent
-			  >
-				<div class="text-subtitle-1">
-				  Der Appservice existiert nicht (mehr) oder Sie haben keine
-				  Berechtigung.
-				</div>
-				<div class="text-body-2 mt-2">
-				  Bitte aktualisieren Sie Ihr Lesezeichen oder wählen Sie einen
-				  Appservice aus der Liste links aus.
-				  <span v-if="notFoundId !== null"> (ID: {{ notFoundId }})</span>
-				</div>
-			  </CommonAlert>
-			</v-col>
-		  </v-row>
-		</div>
-		<div
-		  v-else-if="selectedAppservice"
-		  class="right-panel-inner"
-		>
-		  <div class="right-panel-sticky">
-			<AppserviceStatus :selected-appservice="selectedAppservice" />
-			<v-tabs
-			  v-model="tabAppservices"
-			  align-tabs="start"
-			  slider-color="primary"
-			>
-			  <v-tab value="Allgemeines">
-				Allgemeines
-				<template #prepend>
-				  <v-icon size="x-large">{{ mdiHome }}</v-icon>
-				</template>
-			  </v-tab>
-			</v-tabs>
-		  </div>
-		  <div class="right-panel-scroll">
-			<v-tabs-window v-model="tabAppservices">
-			  <v-tabs-window-item value="Allgemeines">
-				<AppserviceDetailsAllgemein
-				  :selected-appservice="selectedAppservice"
-				/>
-			  </v-tabs-window-item>
-			</v-tabs-window>
-		  </div>
-		</div>
-		<div
-		  v-else
-		  class="d-flex justify-center align-center h-100 text-grey"
-		>
-		  Select an Appservice to view details.
-		</div>
-	  </div>
-	</div>
+      <div class="right-panel">
+        <div v-if="notFound">
+          <v-row class="pa-4">
+            <v-col cols="12">
+              <common-alert
+                type="warning"
+                prominent
+              >
+                <div class="text-subtitle-1">
+                  Der Appservice existiert nicht (mehr) oder Sie haben keine
+                  Berechtigung.
+                </div>
+                <div class="text-body-2 mt-2">
+                  Bitte aktualisieren Sie Ihr Lesezeichen oder wählen Sie einen
+                  Appservice aus der Liste links aus.
+                  <span v-if="notFoundId !== null">
+                    (ID: {{ notFoundId }})</span
+                  >
+                </div>
+              </common-alert>
+            </v-col>
+          </v-row>
+        </div>
+        <div
+          v-else-if="selectedAppservice"
+          class="right-panel-inner"
+        >
+          <div class="right-panel-sticky">
+            <appservice-status :selected-appservice="selectedAppservice" />
+            <v-tabs
+              v-model="tabAppservices"
+              align-tabs="start"
+              slider-color="primary"
+            >
+              <v-tab value="Allgemeines">
+                Allgemeines
+                <template #prepend>
+                  <v-icon size="x-large">{{ mdiHome }}</v-icon>
+                </template>
+              </v-tab>
+            </v-tabs>
+          </div>
+          <div class="right-panel-scroll">
+            <v-tabs-window v-model="tabAppservices">
+              <v-tabs-window-item value="Allgemeines">
+                <appservice-details-allgemein
+                  :selected-appservice="selectedAppservice"
+                />
+                <appservice-details-server
+                  :selected-appservice="selectedAppservice"
+                />
+              </v-tabs-window-item>
+            </v-tabs-window>
+          </div>
+        </div>
+        <div
+          v-else
+          class="d-flex justify-center align-center h-100 text-grey"
+        >
+          Select an Appservice to view details.
+        </div>
+      </div>
+    </div>
   </v-container>
 </template>
 
@@ -101,6 +106,7 @@ import { useRoute, useRouter } from "vue-router";
 
 import appserviceService from "@/api/appserviceService";
 import AppserviceDetailsAllgemein from "@/components/Appservice/AppserviceDetailsAllgemein.vue";
+import AppserviceDetailsServer from "@/components/Appservice/AppserviceDetailsServer.vue";
 import AppserviceList from "@/components/Appservice/AppserviceList.vue";
 import AppserviceStatus from "@/components/Appservice/AppserviceStatus.vue";
 import CommonAlert from "@/components/common/CommonAlert.vue";
@@ -124,57 +130,62 @@ const maxWidthPercent = 0.35;
 function onAppserviceSelected(rows: AppserviceListItem[]) {
   const id = rows[0]?.id;
   if (!id) {
-	void router.push("/appservice");
-	return;
+    void router.push("/appservice");
+    return;
   }
 
   const targetPath = `/appservice/${id}`;
   if (route.path !== targetPath) {
-	void router.push(targetPath);
+    void router.push(targetPath);
   }
 }
 
 async function loadSelectedAppservice(id: number) {
   try {
-	const res = await appserviceService.getAppservice(loadingDetails, id);
-	if (!res || !res.id) {
-	  selectedAppservice.value = null;
-	  notFound.value = true;
-	  notFoundId.value = id;
-	  return;
-	}
+    const res = await appserviceService.getAppservice(loadingDetails, id);
+    if (!res || !res.id) {
+      selectedAppservice.value = null;
+      notFound.value = true;
+      notFoundId.value = id;
+      return;
+    }
 
-	selectedAppservice.value = res;
-	selectedAppserviceRows.value = [
-	  { id: res.id, name: res.name } as AppserviceListItem,
-	];
-	notFound.value = false;
-	notFoundId.value = null;
+    selectedAppservice.value = res;
+    selectedAppserviceRows.value = [
+      { id: res.id, name: res.name } as AppserviceListItem,
+    ];
+    notFound.value = false;
+    notFoundId.value = null;
   } catch {
-	selectedAppservice.value = null;
-	notFound.value = true;
-	notFoundId.value = id;
+    selectedAppservice.value = null;
+    notFound.value = true;
+    notFoundId.value = id;
   }
 }
 
-async function syncSelectionFromRoute(appIdParam: string | string[] | undefined) {
+async function syncSelectionFromRoute(
+  appIdParam: string | string[] | undefined
+) {
   const routeAppId = typeof appIdParam === "string" ? Number(appIdParam) : NaN;
   if (Number.isNaN(routeAppId)) {
-	selectedAppservice.value = null;
-	selectedAppserviceRows.value = [];
-	notFound.value = false;
-	notFoundId.value = null;
-	return;
+    selectedAppservice.value = null;
+    selectedAppserviceRows.value = [];
+    notFound.value = false;
+    notFoundId.value = null;
+    return;
   }
 
   notFound.value = false;
   notFoundId.value = null;
 
   if (selectedAppservice.value?.id === routeAppId) {
-	selectedAppserviceRows.value = [
-	  { id: selectedAppservice.value.id, name: selectedAppservice.value.name } as AppserviceListItem,
-	];
-	return;
+    selectedAppserviceRows.value = [
+      {
+        id: selectedAppservice.value.id,
+        name: selectedAppservice.value.name,
+      } as AppserviceListItem,
+    ];
+    return;
   }
 
   selectedAppserviceRows.value = [{ id: routeAppId } as AppserviceListItem];
@@ -210,21 +221,21 @@ function handleResize(event: MouseEvent | TouchEvent) {
   if (!isResizing.value) return;
 
   const clientX =
-	"touches" in event
-	  ? (event.touches[0]?.clientX ?? event.changedTouches[0]?.clientX)
-	  : event.clientX;
+    "touches" in event
+      ? (event.touches[0]?.clientX ?? event.changedTouches[0]?.clientX)
+      : event.clientX;
   if (clientX === undefined) return;
 
   const containerRect = (event.target as HTMLElement)
-	.closest(".split-container")
-	?.getBoundingClientRect();
+    .closest(".split-container")
+    ?.getBoundingClientRect();
 
   if (containerRect) {
-	const containerWidth = containerRect.width;
-	const minWidth = containerWidth * minWidthPercent;
-	const maxWidth = containerWidth * maxWidthPercent;
-	const newWidth = clientX - containerRect.left;
-	leftPanelWidth.value = Math.min(Math.max(newWidth, minWidth), maxWidth);
+    const containerWidth = containerRect.width;
+    const minWidth = containerWidth * minWidthPercent;
+    const maxWidth = containerWidth * maxWidthPercent;
+    const newWidth = clientX - containerRect.left;
+    leftPanelWidth.value = Math.min(Math.max(newWidth, minWidth), maxWidth);
   }
 }
 
@@ -248,7 +259,7 @@ onUnmounted(() => {
 watch(
   () => route.params.appId,
   (newId) => {
-  void syncSelectionFromRoute(newId);
+    void syncSelectionFromRoute(newId);
   },
   { immediate: true }
 );
@@ -367,61 +378,61 @@ watch(
 @media print {
   .left-panel,
   .split-handle {
-	display: none !important;
+    display: none !important;
   }
 
   .right-panel {
-	width: 100% !important;
-	height: auto !important;
-	overflow: visible !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
   }
 
   .split-container,
   .split-view {
-	display: block !important;
-	height: auto !important;
-	overflow: visible !important;
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
   }
 }
 
 @media (max-width: 768px) {
   .split-handle {
-	width: 18px;
+    width: 18px;
 
-	&:hover {
-	  width: 22px;
-	}
+    &:hover {
+      width: 22px;
+    }
 
-	&:active {
-	  width: 26px !important;
-	}
+    &:active {
+      width: 26px !important;
+    }
   }
 
   .split-view.resizing .split-handle {
-	width: 30px !important;
+    width: 30px !important;
   }
 }
 
 @media (hover: none) {
   .split-handle {
-	width: 20px;
-	background: linear-gradient(
-	  to right,
-	  #f0f0f0 0%,
-	  #d8d8d8 50%,
-	  #f0f0f0 100%
-	);
-	border-color: #999;
+    width: 20px;
+    background: linear-gradient(
+      to right,
+      #f0f0f0 0%,
+      #d8d8d8 50%,
+      #f0f0f0 100%
+    );
+    border-color: #999;
 
-	&::before {
-	  color: #555;
-	}
+    &::before {
+      color: #555;
+    }
 
-	&::after {
-	  background: #666;
-	  width: 2px;
-	  opacity: 0.8;
-	}
+    &::after {
+      background: #666;
+      width: 2px;
+      opacity: 0.8;
+    }
   }
 }
 </style>

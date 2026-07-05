@@ -33,6 +33,11 @@ export interface LoadbalancerPool {
   members: LoadbalancerMember[];
 }
 
+export interface LbIrule {
+  name: string;
+  content: string | null;
+}
+
 export interface LoadbalancerDetail {
   id: number;
   name: string;
@@ -47,4 +52,5 @@ export interface LoadbalancerDetail {
   domains: string[];
   appserviceNames: string[];
   pools: LoadbalancerPool[];
+  irules: LbIrule[];
 }

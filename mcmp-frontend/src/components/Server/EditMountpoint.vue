@@ -25,7 +25,9 @@
           "
           variant="flat"
           :aria-label="
-            newMountpoint ? 'Neues lokales Laufwerk anlegen' : 'Laufwerk bearbeiten'
+            newMountpoint
+              ? 'Neues lokales Laufwerk anlegen'
+              : 'Laufwerk bearbeiten'
           "
           @click="dialog = true"
         >
@@ -36,7 +38,9 @@
   </v-tooltip>
   <common-dialog
     v-model="dialog"
-    :title="newMountpoint ? 'Neues lokales Laufwerk anlegen' : 'Laufwerk bearbeiten'"
+    :title="
+      newMountpoint ? 'Neues lokales Laufwerk anlegen' : 'Laufwerk bearbeiten'
+    "
     max-width="1000"
     :icon="props.mountPoints.length > 0 ? mdiPencil : mdiPlus"
     show-actions
@@ -168,6 +172,10 @@
                 /^(?!.*\/$).*$/,
                 'Pfad darf nicht mit \'/\' enden.'
               ),
+              rules.regexRule(
+                /^[a-z0-9/]+$/,
+                'Pfad darf nur aus Kleinbuchstaben und Zahlen bestehen.'
+              ),
             ]"
           />
         </v-col>
@@ -179,7 +187,15 @@
             v-model="newCapacityGB"
             label="Größe"
             :min="
-              Math.ceil(formatter.calculateBtoGB(mountPoint?.capacityInBytes))
+              Math.ceil(
+                rules.regexRule(
+                  /^[a-z0-9/]+$/,
+                  'Pfad darf nur aus Kleinbuchstaben und Zahlen bestehen.'
+                ),
+                formatter.calculateBtoGB(
+                  mountPoint?.capacityInBytes ?? 1024 ** 3
+                )
+              )
             "
             :max="2000"
             step="1"
@@ -194,16 +210,22 @@
             label="Größe in GB"
             type="number"
             :min="
-              Math.ceil(formatter.calculateBtoGB(mountPoint?.capacityInBytes))
+              Math.ceil(
+                formatter.calculateBtoGB(
+                  mountPoint?.capacityInBytes ?? 1024 ** 3
+                )
+              )
             "
             :max="2000"
             :rules="[
+              (v) => v >= 1 || 'Neue Größe darf nicht kleiner 1 GB sein.',
               (v) =>
                 v >=
                   Math.ceil(
-                    formatter.calculateBtoGB(mountPoint?.capacityInBytes)
-                  ) ||
-                'Neue Größe darf nicht kleiner als die alte Größe seien.',
+                    formatter.calculateBtoGB(
+                      mountPoint?.capacityInBytes ?? 1024 ** 3
+                    )
+                  ) || 'Neue Größe darf nicht kleiner als die alte Größe seien',
               (v) => v <= 2000 || 'Neue Größe darf nicht größer 2TB sein.',
             ]"
           />
@@ -218,7 +240,13 @@
             clearable
             maxlength="50"
             :rules="[
-              rules.notEmptyRule('Es muss eine Volume Gruppe angegeben werden.'),
+              rules.notEmptyRule(
+                'Es muss eine Volume Gruppe angegeben werden.'
+              ),
+              rules.regexRule(
+                /^[a-z0-9]+$/,
+                'Pfad darf nur aus Kleinbuchstaben und Zahlen bestehen.'
+              ),
             ]"
           />
         </v-col>
@@ -298,7 +326,7 @@ function save() {
           new MountPoint(
             props.selectedServer.id,
             newPath.value,
-            0,
+            1,
             0,
             "",
             false

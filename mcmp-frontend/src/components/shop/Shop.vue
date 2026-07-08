@@ -1,7 +1,17 @@
 <template>
-  <v-menu v-model="isOpen">
-    <template v-slot:activator="{ props }">
+  <v-menu
+    v-model="isOpen"
+    :location="railMode ? 'end' : 'bottom'"
+  >
+    <template #activator="{ props }">
+      <v-list-item
+        v-if="railMode"
+        v-bind="props"
+        :prepend-icon="mdiCartArrowDown"
+        title="Neu"
+      />
       <v-btn
+        v-else
         v-bind="props"
         :prepend-icon="mdiCartArrowDown"
         size="large"
@@ -14,17 +24,17 @@
     </template>
     <v-list rounded="lg">
       <v-list-item>
-        <InstallDialog />
+        <install-dialog />
       </v-list-item>
       <v-list-item>
-        <AnsibleUser />
+        <ansible-user />
       </v-list-item>
        <v-list-item>
          <v-menu
            v-model="isLoadbalancerOpen"
            location="right"
          >
-           <template v-slot:activator="{ props }">
+           <template #activator="{ props }">
              <v-btn
                v-bind="props"
                flat
@@ -37,7 +47,7 @@
            </template>
            <v-list>
              <v-list-item>
-               <LoadbalancerOrder />
+               <loadbalancer-order />
              </v-list-item>
              <v-list-item>
                <v-btn
@@ -65,7 +75,7 @@
           v-model="isAnwendOpen"
           location="right"
         >
-          <template v-slot:activator="{ props }">
+          <template #activator="{ props }">
             <v-btn
               v-bind="props"
               flat
@@ -97,7 +107,7 @@
         </v-menu>
       </v-list-item>
       <v-list-item>
-        <SnowTicketsOld />
+        <snow-tickets-old />
       </v-list-item>
       <v-list-item>
               <v-btn
@@ -126,6 +136,10 @@ import InstallDialog from "@/components/install/InstallDialog.vue";
 import LoadbalancerOrder from "@/components/Loadbalancer/LoadbalancerOrder.vue";
 import AnsibleUser from "@/components/shop/AnsibleUser.vue";
 import SnowTicketsOld from "@/components/shop/SnowTicketsOld.vue";
+
+defineProps<{
+  railMode?: boolean;
+}>();
 
 const isOpen = ref(false);
 const isAnwendOpen = ref(false);

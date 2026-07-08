@@ -456,4 +456,28 @@ public class Server extends AbstractEntity {
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     private ServerType serverType = ServerType.UNKNOWN;
+
+    @Column(name = "memory_allocation_expandable_reservation")
+    private Boolean memoryAllocationExpandableReservation;
+
+    @Column(name = "memory_allocation_limit")
+    private Long memoryAllocationLimit;
+
+    @Column(name = "memory_allocation_overhead_limit")
+    private Long memoryAllocationOverheadLimit;
+
+    @Column(name = "memory_allocation_reservation")
+    private Long memoryAllocationReservation;
+
+    @Column(name = "cpu_allocation_expandable_reservation")
+    private Boolean cpuAllocationExpandableReservation;
+
+    @Column(name = "cpu_allocation_limit")
+    private Long cpuAllocationLimit;
+
+    @Column(name = "cpu_allocation_overhead_limit")
+    private Long cpuAllocationOverheadLimit;
+
+    @Column(name = "cpu_allocation_reservation")
+    private Long cpuAllocationReservation;
 }

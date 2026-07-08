@@ -54,53 +54,51 @@
               selectedServer.cloud?.cloudType == 'VCENTER'
             "
           >
-            <ActionButton
+            <action-button
               color="btn_green"
               :icon="mdiPlay"
               :disabled="isRunning"
               tooltip="Server starten"
               :server="selectedServer"
-              jobToCall="VMWARE_START_SERVER"
-              showConfirmDialog
-              confirmDialogTitle="VM Starten"
-              confirmDialogText="Wollen Sie diese VM wirklich starten?"
-              @change="change"
+              job-to-call="VMWARE_START_SERVER"
+              show-confirm-dialog
+              confirm-dialog-title="VM Starten"
+              confirm-dialog-text="Wollen Sie diese VM wirklich starten?"
             />
-            <ActionButton
+            <action-button
               color="btn_red"
               :icon="mdiStop"
               :disabled="!isRunning"
               tooltip="Server stoppen"
               :server="selectedServer"
-              jobToCall="VMWARE_STOP_SERVER"
-              showConfirmDialog
-              confirmDialogTitle="VM Stoppen"
-              confirmDialogText="Wollen Sie diese VM wirklich stoppen?"
-              useExtraSureDialog
-              extraSureCheckboxText="Mir ist bewusst, dass durch das Stoppen der VM eine Serviceunterbrechung entsteht."
-              @change="change"
+              job-to-call="VMWARE_STOP_SERVER"
+              show-confirm-dialog
+              confirm-dialog-title="VM Stoppen"
+              confirm-dialog-text="Wollen Sie diese VM wirklich stoppen?"
+              use-extra-sure-dialog
+              extra-sure-checkbox-text="Mir ist bewusst, dass durch das Stoppen der VM eine Serviceunterbrechung entsteht."
             />
-            <ActionButton
+            <action-button
               color="btn_red"
               :icon="mdiRestart"
               tooltip="Server neustarten"
               :server="selectedServer"
-              jobToCall="VMWARE_RESTART_SERVER"
-              showConfirmDialog
-              confirmDialogTitle="VM Neustarten"
-              confirmDialogText="Wollen Sie diese VM wirklich neustarten?"
-              useExtraSureDialog
-              extraSureCheckboxText="Mir ist bewusst, dass durch das Neustarten der VM eine Serviceunterbrechung entsteht."
-              @change="change"
+              job-to-call="VMWARE_RESTART_SERVER"
+              show-confirm-dialog
+              confirm-dialog-title="VM Neustarten"
+              confirm-dialog-text="Wollen Sie diese VM wirklich neustarten?"
+              use-extra-sure-dialog
+              extra-sure-checkbox-text="Mir ist bewusst, dass durch das Neustarten der VM eine Serviceunterbrechung entsteht."
             />
           </div>
 
-          <WinWartungsModusMenu
-            :server="selectedServer"
+          <win-wartungs-modus-menu
             v-if="selectedServer.canEdit && isWindows && selectedServer.managed"
+            :server="selectedServer"
           />
 
-          <RootAdminRechteBtn
+          <root-admin-rechte-btn
+            v-if="selectedServer.canEdit && isWindows && selectedServer.managed"
             :color="
               selectedServer.hasTempAdminPrivileges &&
               selectedServer.tempPrivilegesExpiresAt
@@ -110,15 +108,19 @@
             :icon="mdiKeyChain"
             :tooltip="Admin72hTooltipText"
             :server="selectedServer"
-            jobToCall="WINDOWS_TEMP_ADMIN"
-            showConfirmDialog
-            confirmDialogTitle="72h Adminrechte beantragen"
-            confirmDialogText="Wollen Sie für 72 Stunden Administratorrechte für diese Windows VM beantragen?"
-            v-if="selectedServer.canEdit && isWindows && selectedServer.managed"
-            @change="change"
+            job-to-call="WINDOWS_TEMP_ADMIN"
+            show-confirm-dialog
+            confirm-dialog-title="72h Adminrechte beantragen"
+            confirm-dialog-text="Wollen Sie für 72 Stunden Administratorrechte für diese Windows VM beantragen?"
           />
 
-          <RootAdminRechteBtn
+          <root-admin-rechte-btn
+            v-if="
+              (selectedServer.canEdit ||
+                (canExecuteOperatorActions && !selectedServer.locked)) &&
+              isLinux &&
+              selectedServer.managed
+            "
             :color="
               selectedServer.hasTempRootPrivileges &&
               selectedServer.tempPrivilegesExpiresAt
@@ -128,64 +130,55 @@
             :icon="mdiKeyChain"
             :tooltip="Root72hTooltipText"
             :server="selectedServer"
-            jobToCall="LINUX_TEMP_ROOT"
-            showConfirmDialog
-            confirmDialogTitle="72h Rootrechte beantragen"
-            confirmDialogText="Wollen Sie für 72 Stunden Root-Rechte für diese Linux VM beantragen?"
+            job-to-call="LINUX_TEMP_ROOT"
+            show-confirm-dialog
+            confirm-dialog-title="72h Rootrechte beantragen"
+            confirm-dialog-text="Wollen Sie für 72 Stunden Root-Rechte für diese Linux VM beantragen?"
             confirm-dialog-link="https://go.muenchen.de/sp/KB0019842"
             confirm-dialog-link-text="Lesen Sie bitte die Hinweise zur Benutzung der Root-Rechte."
-            v-if="
-              (selectedServer.canEdit ||
-                (canExecuteOperatorActions && !selectedServer.locked)) &&
-              isLinux &&
-              selectedServer.managed
-            "
-            @change="change"
           />
 
-          <CheckmkMenu
-            :server="selectedServer"
+          <checkmk-menu
             v-if="selectedServer.canEdit"
+            :server="selectedServer"
           />
 
-          <ActionButton
-            color="btn_red"
-            :icon="mdiDelete"
-            tooltip="Server abbauen"
-            :server="selectedServer"
-            jobToCall="LINUX_DELETE_SERVER"
-            showConfirmDialog
-            confirmDialogTitle="Server abbauen"
-            confirmDialogText="Wollen Sie diesen Server wirklich abbauen?"
-            useExtraSureDialog
-            extraSureCheckboxText="Ich bin mir sicher, dass ich diesen Server abbauen möchte."
-            @change="change"
+          <action-button
             v-if="
               selectedServer.canEdit &&
               isLinux &&
               selectedServer.managed &&
               selectedServer.cloud?.cloudType == 'VCENTER'
             "
-          />
-
-          <ActionButton
             color="btn_red"
             :icon="mdiDelete"
             tooltip="Server abbauen"
             :server="selectedServer"
-            jobToCall="WINDOWS_DELETE_SERVER"
-            showConfirmDialog
-            confirmDialogTitle="Server abbauen"
-            confirmDialogText="Wollen Sie diesen Server wirklich löschen?"
-            useExtraSureDialog
-            extraSureCheckboxText="Ich bin mir sicher, dass ich diesen Server abbauen möchte."
-            @change="change"
+            job-to-call="LINUX_DELETE_SERVER"
+            show-confirm-dialog
+            confirm-dialog-title="Server abbauen"
+            confirm-dialog-text="Wollen Sie diesen Server wirklich abbauen?"
+            use-extra-sure-dialog
+            extra-sure-checkbox-text="Ich bin mir sicher, dass ich diesen Server abbauen möchte."
+          />
+
+          <action-button
             v-if="
               selectedServer.canEdit &&
               isWindows &&
               selectedServer.managed &&
               selectedServer.cloud?.cloudType == 'VCENTER'
             "
+            color="btn_red"
+            :icon="mdiDelete"
+            tooltip="Server abbauen"
+            :server="selectedServer"
+            job-to-call="WINDOWS_DELETE_SERVER"
+            show-confirm-dialog
+            confirm-dialog-title="Server abbauen"
+            confirm-dialog-text="Wollen Sie diesen Server wirklich löschen?"
+            use-extra-sure-dialog
+            extra-sure-checkbox-text="Ich bin mir sicher, dass ich diesen Server abbauen möchte."
           />
         </div>
       </v-col>
@@ -197,8 +190,8 @@
       >
         <div
           class="job-banner"
-          @click="$emit('navigateToHistory')"
           aria-label="Zur History"
+          @click="$emit('navigateToHistory')"
         >
           <strong>{{ jobBannerText }}</strong>
         </div>
@@ -224,8 +217,8 @@
         <div
           class="green-it-banner"
           :class="{ 'dark-mode': isDark }"
-          @click="$emit('navigateToHistory')"
           aria-label="Zur History"
+          @click="$emit('navigateToHistory')"
         >
           <p>{{ greenItBannerIntroText }}</p>
           <ul>
@@ -253,106 +246,101 @@
           :show-arrows="true"
           tabindex="-1"
         >
-          <v-skeleton-loader
-            type="chip"
-            v-if="loadingServerDetails"
-            class="pa-0 ma-0"
-          />
-          <StatusChip
+          <status-chip
             v-if="!selectedServer.canEdit && !loadingServerDetails"
             :value="selectedServer.canEdit"
-            :checkValue="false"
-            matchText="Nur Lesezugriff"
-            notMatchText=""
-            matchMode="equal"
+            :check-value="false"
+            match-text="Nur Lesezugriff"
+            not-match-text=""
+            match-mode="equal"
           />
-          <StatusChip
+          <status-chip
             v-if="
               !selectedServer.canEdit &&
               !loadingServerDetails &&
               selectedServer.numberOfAssignedAppservices === 0
             "
             :value="selectedServer.numberOfAssignedAppservices"
-            :checkValue="1"
-            matchText=""
-            notMatchText="Bearbeitung ist gesperrt."
-            matchMode="greaterEquals"
+            :check-value="1"
+            match-text=""
+            not-match-text="Bearbeitung ist gesperrt."
+            match-mode="greaterEquals"
             tooltip="Server ist keinem Anwendungsservice zugewiesen"
             href="https://go.muenchen.de/sp/KB0023236"
           />
-          <StatusChip
+          <status-chip
             v-if="
               !selectedServer.canEdit &&
               !loadingServerDetails &&
               selectedServer.numberOfAssignedAppservices > 1
             "
             :value="selectedServer.numberOfAssignedAppservices"
-            :checkValue="1"
-            matchText=""
-            notMatchText="Bearbeitung ist gesperrt."
-            matchMode="lessEquals"
+            :check-value="1"
+            match-text=""
+            not-match-text="Bearbeitung ist gesperrt."
+            match-mode="lessEquals"
             tooltip="Server ist mehreren Anwendungsservices zugewiesen"
             href="https://go.muenchen.de/sp/KB0023236"
           />
-          <StatusChip
+          <status-chip
             v-if="
               !loadingServerDetails &&
               selectedServer.hasTempAdminPrivileges &&
               selectedServer.tempPrivilegesExpiresAt
             "
             :value="false"
-            :checkValue="true"
-            matchText=""
-            :notMatchText="tempAdminText"
-            matchMode="equal"
+            :check-value="true"
+            match-text=""
+            :not-match-text="tempAdminText"
+            match-mode="equal"
           />
-          <StatusChip
+          <status-chip
             v-if="
               !loadingServerDetails &&
               selectedServer.hasTempRootPrivileges &&
               selectedServer.tempPrivilegesExpiresAt
             "
             :value="false"
-            :checkValue="true"
-            matchText=""
-            :notMatchText="tempRootText"
-            matchMode="equal"
+            :check-value="true"
+            match-text=""
+            :not-match-text="tempRootText"
+            match-mode="equal"
           />
-          <StatusChip
+          <status-chip
             v-if="
               !loadingServerDetails &&
               selectedServer.maintenanceMode &&
               selectedServer.maintenanceModeExpiresAt
             "
             :value="false"
-            :checkValue="true"
-            matchText=""
-            :notMatchText="maintenanceText"
-            matchMode="equal"
+            :check-value="true"
+            match-text=""
+            :not-match-text="maintenanceText"
+            match-mode="equal"
           />
-          <StatusChip
+          <status-chip
             v-if="
               !loadingServerDetails &&
               Number(selectedServer.patchnightExitcode) != 0
             "
             :value="Number(selectedServer.patchnightExitcode) === 0"
-            :checkValue="true"
-            matchText=""
-            notMatchText="Fehler bei Patchnight"
-            matchMode="equal"
+            :check-value="true"
+            match-text=""
+            not-match-text="Fehler bei Patchnight"
+            match-mode="equal"
             @click="$emit('navigateToPatchnight')"
           />
-          <StatusChip
+          <status-chip
             v-if="
               !loadingServerDetails &&
               selectedServer.canEdit &&
               !selectedServer.managed
             "
             :value="!selectedServer.managed"
-            :checkValue="false"
-            matchText=""
-            notMatchText="Nicht verwaltet"
-            matchMode="equal"
+            :check-value="false"
+            match-text=""
+            not-match-text="Nicht verwaltet"
+            match-mode="equal"
             tooltip="Bearbeitung nur eingeschränkt möglich."
             href="https://mcmp.muenchen.de/#/help/9"
           />
@@ -401,18 +389,13 @@ const canExecuteOperatorActions = computed(() => {
   return isOperator.value && !appStore.isReadOnly;
 });
 
-const emit = defineEmits<{
-  (e: "change"): void;
+defineEmits<{
   (e: "navigateToHistory"): void;
   (e: "navigateToPatchnight"): void;
 }>();
 
 const theme = useTheme();
 const isDark = computed(() => theme.global.current.value.dark);
-
-function change() {
-  emit("change");
-}
 
 const isRunning = computed(() => {
   return props.selectedServer?.powerState === "poweredOn";

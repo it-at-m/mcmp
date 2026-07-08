@@ -92,8 +92,7 @@
       >
         <v-radio
           v-if="type === categoryType.Standard || wouldHaveOptions(type)"
-          :label="type"
-          :value="type"
+          :label="categoryTypeLabels[type] || type" :value="type"
         />
       </template>
     </v-radio-group>
@@ -247,6 +246,10 @@
         </li>
       </ul>
     </div>
+
+        <div class="text-caption text-grey-darken-1">
+          * Pflichtfeld
+        </div>
   </div>
 </template>
 
@@ -323,6 +326,12 @@ const serverCategoryOptions = computed(() => {
   }
   return [];
 });
+
+const categoryTypeLabels: Record<string, string> = {
+  [categoryType.Standard]: "Standardserver",
+  [categoryType.App]: "Applikationsserver",
+  [categoryType.DB]: "Datenbankserver",
+};
 
 // // Bei Textanpassung von LCM_PREFIX muss die Variable auch in der rules.ts angepasst werden
 const LCM_PREFIX =

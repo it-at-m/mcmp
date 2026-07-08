@@ -60,42 +60,8 @@
           </v-row>
         </div>
         <div
-          v-else-if="
-            selectedServer.length === 0 && hasAtLeastOneServer
-          "
-        >
-          <v-row>
-            <v-col cols="6">
-              <v-skeleton-loader type="text" />
-            </v-col>
-            <v-col cols="4" />
-            <v-col cols="2">
-              <v-skeleton-loader type="button@4" />
-            </v-col>
-          </v-row>
-          <v-row>
-            <v-col cols="1">
-              <v-skeleton-loader type="chip" />
-            </v-col>
-            <v-col cols="1">
-              <v-skeleton-loader type="chip" />
-            </v-col>
-            <v-col cols="1">
-              <v-skeleton-loader type="chip" />
-            </v-col>
-            <v-col cols="1">
-              <v-skeleton-loader type="chip" />
-            </v-col>
-            <v-col cols="1">
-              <v-skeleton-loader type="chip" />
-            </v-col>
-          </v-row>
-          <v-row>
-            <v-col cols="12">
-              <v-skeleton-loader type="card" />
-            </v-col>
-          </v-row>
-        </div>
+          v-else-if="selectedServer.length === 0 && hasAtLeastOneServer"
+        />
         <div
           v-else-if="selectedServer.length > 0"
           class="right-panel-inner"
@@ -103,11 +69,7 @@
           <div class="right-panel-sticky">
             <v-row>
               <selected-server-actions-and-status
-                v-if="
-                  selectedServerItem &&
-                  selectedServerItem.id &&
-                  !loadingDetails
-                "
+                v-if="selectedServerItem && selectedServerItem.id"
                 :selected-server="selectedServerItem"
                 :loading-server-details="loadingDetails"
                 @change="getSelectedServer"

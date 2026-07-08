@@ -119,67 +119,75 @@ type (
 
 	// Server represents a virtual machine or server in the cloud environment
 	Server struct {
-		ID                          uint       `gorm:"column:id;primaryKey;autoIncrement:true"`
-		Version                     uint32     `gorm:"column:version;default:0"`
-		CreatedAt                   time.Time  `gorm:"column:created_at;default:CURRENT_TIMESTAMP(3)"`
-		UpdatedAt                   time.Time  `gorm:"column:updated_at;default:CURRENT_TIMESTAMP(3)"`
-		CloudID                     uint       `gorm:"column:cloud_id;not null;uniqueIndex:cloud_uuid_idx;constraint:OnDelete:CASCADE"`
-		Cloud                       Cloud      `gorm:"constraint:OnDelete:CASCADE"`
-		UUID                        string     `gorm:"column:uuid;size:50;not null;uniqueIndex:cloud_uuid_idx"`
-		InstanceUuid                string     `gorm:"column:instance_uuid;size:50"`
-		VmId                        string     `gorm:"column:vm_id;size:50"`
-		Cluster                     string     `gorm:"column:cluster;size:25"`
-		Host                        string     `gorm:"column:host;size:50"`
-		Location                    string     `gorm:"column:location;size:10"`
-		Name                        string     `gorm:"column:name;not null;size:200"`
-		Fqdn                        string     `gorm:"column:fqdn;size:100"`
-		PowerState                  string     `gorm:"column:power_state;not null;size:20"`
-		MemoryMB                    int32      `gorm:"column:memory_mb;not null"`
-		MemoryMBPrev                *int32     `gorm:"column:memory_mb_prev"`
-		MemoryMBChangeDate          *time.Time `gorm:"column:memory_mb_change_date"`
-		NumCpu                      int32      `gorm:"column:num_cpu;not null"`
-		NumCpuPrev                  *int32     `gorm:"column:num_cpu_prev"`
-		NumCpuChangeDate            *time.Time `gorm:"column:num_cpu_change_date"`
-		NumCoresPerSocket           int32      `gorm:"column:num_cores_per_socket"`
-		MemoryHotAddEnabled         bool       `gorm:"column:memory_hot_add_enabled;not null;type:boolean;check:memory_hot_add_enabled in (TRUE, FALSE);default:FALSE"`
-		CpuHotAddEnabled            bool       `gorm:"column:cpu_hot_add_enabled;;not null;type:boolean;check:cpu_hot_add_enabled in (TRUE, FALSE);default:FALSE"`
-		CpuHotRemoveEnabled         bool       `gorm:"column:cpu_hot_remove_enabled;not null;type:boolean;check:cpu_hot_remove_enabled in (TRUE, FALSE);default:FALSE"`
-		CpuTopology                 string     `gorm:"column:cpu_topology;size:100"`
-		VmxVersion                  string     `gorm:"column:vmx_version;size:10"`
-		OverallStatus               Status     `gorm:"column:overall_status;type:varchar(6);not null;default:gray;check:overall_status in ('green','yellow','red','gray');comment:Enum 'green','yellow','red','gray' für OverallStatus"` // 'green','yellow','red','gray'
-		ConfigStatus                Status     `gorm:"column:config_status;type:varchar(6);not null;default:gray;check:config_status in ('green','yellow','red','gray');comment:Enum 'green','yellow','red','gray' für ConfigStatus"`    // 'green','yellow','red','gray'
-		ConfigEqualsTools           bool       `gorm:"column:config_equals_tools;not null;type:boolean;check:config_equals_tools in (TRUE, FALSE);default:FALSE"`
-		GuestConfigId               string     `gorm:"column:guest_config_id;size:50"`
-		GuestConfigFullName         string     `gorm:"column:guest_config_full_name;size:50"`
-		GuestToolsId                string     `gorm:"column:guest_tools_id;size:50"`
-		GuestToolsFullName          string     `gorm:"column:guest_tools_full_name;size:50"`
-		GuestToolsState             string     `gorm:"column:guest_tools_state;size:30"`
-		GuestToolsRunningStatus     string     `gorm:"column:guest_tools_running_status;size:30"`
-		GuestToolsVersionStatus     string     `gorm:"column:guest_tools_version_status;size:30"`
-		GuestToolsVersionStatus2    string     `gorm:"column:guest_tools_version_status2;size:30"`
-		GuestToolsInstallType       string     `gorm:"column:guest_tools_install_type;size:30"`
-		GuestToolsVersion           string     `gorm:"column:guest_tools_version;size:20"`
-		GuestToolsFamily            string     `gorm:"column:guest_tools_family;size:50"`
-		GuestToolsHostname          string     `gorm:"column:guest_tools_hostname;size:200"`
-		GuestToolsIpAddress         string     `gorm:"column:guest_tools_ip_address;size:300"`
-		GuestToolsArchitecture      string     `gorm:"column:guest_tools_architecture;size:10"`
-		GuestToolsBitness           string     `gorm:"column:guest_tools_bitness;size:10"`
-		GuestToolsBuildNumber       string     `gorm:"column:guest_tools_build_number;size:20"`
-		GuestToolsCpeString         string     `gorm:"column:guest_tools_cpe_string;size:100"`
-		GuestToolsDistroAddlVersion string     `gorm:"column:guest_tools_distro_addl_version;size:50"`
-		GuestToolsDistroName        string     `gorm:"column:guest_tools_distro_name;size:100"`
-		GuestToolsDistroVersion     string     `gorm:"column:guest_tools_distro_version;size:20"`
-		GuestToolsFamilyName        string     `gorm:"column:guest_tools_family_name;size:20"`
-		GuestToolsKernelVersion     string     `gorm:"column:guest_tools_kernel_version;size:40"`
-		GuestToolsPrettyName        string     `gorm:"column:guest_tools_pretty_name;size:100"`
-		VDisks                      uint8      `gorm:"column:vdisks;default:0"`
-		VDisksCapacityInBytes       int64      `gorm:"column:vdisks_capacity_in_bytes;default:0"`
-		BootTime                    *time.Time `gorm:"column:boot_time"`
-		Locked                      bool       `gorm:"column:locked;not null;type:boolean;default:FALSE"`
-		HotPlugMemoryLimit          *int64     `gorm:"column:hot_plug_memory_limit"`
-		HotPlugMemoryIncrementSize  *int64     `gorm:"column:hot_plug_memory_increment_size"`
-		ServerKind                  ServerKind `gorm:"column:server_kind;type:server_kind;default:'UNKNOWN'::server_kind;not null"`
-		ServerType                  ServerType `gorm:"column:server_type;type:server_type;default:'UNKNOWN'::server_type;not null"`
+		ID                                    uint       `gorm:"column:id;primaryKey;autoIncrement:true"`
+		Version                               uint32     `gorm:"column:version;default:0"`
+		CreatedAt                             time.Time  `gorm:"column:created_at;default:CURRENT_TIMESTAMP(3)"`
+		UpdatedAt                             time.Time  `gorm:"column:updated_at;default:CURRENT_TIMESTAMP(3)"`
+		CloudID                               uint       `gorm:"column:cloud_id;not null;uniqueIndex:cloud_uuid_idx;constraint:OnDelete:CASCADE"`
+		Cloud                                 Cloud      `gorm:"constraint:OnDelete:CASCADE"`
+		UUID                                  string     `gorm:"column:uuid;size:50;not null;uniqueIndex:cloud_uuid_idx"`
+		InstanceUuid                          string     `gorm:"column:instance_uuid;size:50"`
+		VmId                                  string     `gorm:"column:vm_id;size:50"`
+		Cluster                               string     `gorm:"column:cluster;size:25"`
+		Host                                  string     `gorm:"column:host;size:50"`
+		Location                              string     `gorm:"column:location;size:10"`
+		Name                                  string     `gorm:"column:name;not null;size:200"`
+		Fqdn                                  string     `gorm:"column:fqdn;size:100"`
+		PowerState                            string     `gorm:"column:power_state;not null;size:20"`
+		MemoryMB                              int32      `gorm:"column:memory_mb;not null"`
+		MemoryMBPrev                          *int32     `gorm:"column:memory_mb_prev"`
+		MemoryMBChangeDate                    *time.Time `gorm:"column:memory_mb_change_date"`
+		NumCpu                                int32      `gorm:"column:num_cpu;not null"`
+		NumCpuPrev                            *int32     `gorm:"column:num_cpu_prev"`
+		NumCpuChangeDate                      *time.Time `gorm:"column:num_cpu_change_date"`
+		NumCoresPerSocket                     int32      `gorm:"column:num_cores_per_socket"`
+		MemoryHotAddEnabled                   bool       `gorm:"column:memory_hot_add_enabled;not null;type:boolean;check:memory_hot_add_enabled in (TRUE, FALSE);default:FALSE"`
+		CpuHotAddEnabled                      bool       `gorm:"column:cpu_hot_add_enabled;;not null;type:boolean;check:cpu_hot_add_enabled in (TRUE, FALSE);default:FALSE"`
+		CpuHotRemoveEnabled                   bool       `gorm:"column:cpu_hot_remove_enabled;not null;type:boolean;check:cpu_hot_remove_enabled in (TRUE, FALSE);default:FALSE"`
+		CpuTopology                           string     `gorm:"column:cpu_topology;size:100"`
+		VmxVersion                            string     `gorm:"column:vmx_version;size:10"`
+		OverallStatus                         Status     `gorm:"column:overall_status;type:varchar(6);not null;default:gray;check:overall_status in ('green','yellow','red','gray');comment:Enum 'green','yellow','red','gray' für OverallStatus"` // 'green','yellow','red','gray'
+		ConfigStatus                          Status     `gorm:"column:config_status;type:varchar(6);not null;default:gray;check:config_status in ('green','yellow','red','gray');comment:Enum 'green','yellow','red','gray' für ConfigStatus"`    // 'green','yellow','red','gray'
+		ConfigEqualsTools                     bool       `gorm:"column:config_equals_tools;not null;type:boolean;check:config_equals_tools in (TRUE, FALSE);default:FALSE"`
+		GuestConfigId                         string     `gorm:"column:guest_config_id;size:50"`
+		GuestConfigFullName                   string     `gorm:"column:guest_config_full_name;size:50"`
+		GuestToolsId                          string     `gorm:"column:guest_tools_id;size:50"`
+		GuestToolsFullName                    string     `gorm:"column:guest_tools_full_name;size:50"`
+		GuestToolsState                       string     `gorm:"column:guest_tools_state;size:30"`
+		GuestToolsRunningStatus               string     `gorm:"column:guest_tools_running_status;size:30"`
+		GuestToolsVersionStatus               string     `gorm:"column:guest_tools_version_status;size:30"`
+		GuestToolsVersionStatus2              string     `gorm:"column:guest_tools_version_status2;size:30"`
+		GuestToolsInstallType                 string     `gorm:"column:guest_tools_install_type;size:30"`
+		GuestToolsVersion                     string     `gorm:"column:guest_tools_version;size:20"`
+		GuestToolsFamily                      string     `gorm:"column:guest_tools_family;size:50"`
+		GuestToolsHostname                    string     `gorm:"column:guest_tools_hostname;size:200"`
+		GuestToolsIpAddress                   string     `gorm:"column:guest_tools_ip_address;size:300"`
+		GuestToolsArchitecture                string     `gorm:"column:guest_tools_architecture;size:10"`
+		GuestToolsBitness                     string     `gorm:"column:guest_tools_bitness;size:10"`
+		GuestToolsBuildNumber                 string     `gorm:"column:guest_tools_build_number;size:20"`
+		GuestToolsCpeString                   string     `gorm:"column:guest_tools_cpe_string;size:100"`
+		GuestToolsDistroAddlVersion           string     `gorm:"column:guest_tools_distro_addl_version;size:50"`
+		GuestToolsDistroName                  string     `gorm:"column:guest_tools_distro_name;size:100"`
+		GuestToolsDistroVersion               string     `gorm:"column:guest_tools_distro_version;size:20"`
+		GuestToolsFamilyName                  string     `gorm:"column:guest_tools_family_name;size:20"`
+		GuestToolsKernelVersion               string     `gorm:"column:guest_tools_kernel_version;size:40"`
+		GuestToolsPrettyName                  string     `gorm:"column:guest_tools_pretty_name;size:100"`
+		VDisks                                uint8      `gorm:"column:vdisks;default:0"`
+		VDisksCapacityInBytes                 int64      `gorm:"column:vdisks_capacity_in_bytes;default:0"`
+		BootTime                              *time.Time `gorm:"column:boot_time"`
+		Locked                                bool       `gorm:"column:locked;not null;type:boolean;default:FALSE"`
+		HotPlugMemoryLimit                    *int64     `gorm:"column:hot_plug_memory_limit"`
+		HotPlugMemoryIncrementSize            *int64     `gorm:"column:hot_plug_memory_increment_size"`
+		ServerKind                            ServerKind `gorm:"column:server_kind;type:server_kind;default:'UNKNOWN'::server_kind;not null"`
+		ServerType                            ServerType `gorm:"column:server_type;type:server_type;default:'UNKNOWN'::server_type;not null"`
+		MemoryAllocationExpandableReservation bool       `gorm:"column:memory_allocation_expandable_reservation"`
+		MemoryAllocationLimit                 *int64     `gorm:"column:memory_allocation_limit"`
+		MemoryAllocationOverheadLimit         *int64     `gorm:"column:memory_allocation_overhead_limit"`
+		MemoryAllocationReservation           *int64     `gorm:"column:memory_allocation_reservation"`
+		CpuAllocationExpandableReservation    bool       `gorm:"column:cpu_allocation_expandable_reservation"`
+		CpuAllocationLimit                    *int64     `gorm:"column:cpu_allocation_limit"`
+		CpuAllocationOverheadLimit            *int64     `gorm:"column:cpu_allocation_overhead_limit"`
+		CpuAllocationReservation              *int64     `gorm:"column:cpu_allocation_reservation"`
 	}
 
 	// Disk represents a virtual disk attached to a server
@@ -417,6 +425,14 @@ func (storedVM *Server) CompareAndUpdate(newVM Server, timeNow time.Time) bool {
 		storedVM.CpuHotRemoveEnabled != newVM.CpuHotRemoveEnabled ||
 		!compareInt64Ptr(storedVM.HotPlugMemoryLimit, newVM.HotPlugMemoryLimit) ||
 		!compareInt64Ptr(storedVM.HotPlugMemoryIncrementSize, newVM.HotPlugMemoryIncrementSize) ||
+		storedVM.MemoryAllocationExpandableReservation != newVM.MemoryAllocationExpandableReservation ||
+		!compareInt64Ptr(storedVM.MemoryAllocationLimit, newVM.MemoryAllocationLimit) ||
+		!compareInt64Ptr(storedVM.MemoryAllocationOverheadLimit, newVM.MemoryAllocationOverheadLimit) ||
+		!compareInt64Ptr(storedVM.MemoryAllocationReservation, newVM.MemoryAllocationReservation) ||
+		storedVM.CpuAllocationExpandableReservation != newVM.CpuAllocationExpandableReservation ||
+		!compareInt64Ptr(storedVM.CpuAllocationLimit, newVM.CpuAllocationLimit) ||
+		!compareInt64Ptr(storedVM.CpuAllocationOverheadLimit, newVM.CpuAllocationOverheadLimit) ||
+		!compareInt64Ptr(storedVM.CpuAllocationReservation, newVM.CpuAllocationReservation) ||
 		storedVM.CpuTopology != newVM.CpuTopology ||
 		storedVM.VmxVersion != newVM.VmxVersion ||
 		storedVM.OverallStatus != newVM.OverallStatus ||
@@ -482,6 +498,14 @@ func (storedVM *Server) CompareAndUpdate(newVM Server, timeNow time.Time) bool {
 		storedVM.CpuHotRemoveEnabled = newVM.CpuHotRemoveEnabled
 		storedVM.HotPlugMemoryLimit = newVM.HotPlugMemoryLimit
 		storedVM.HotPlugMemoryIncrementSize = newVM.HotPlugMemoryIncrementSize
+		storedVM.MemoryAllocationExpandableReservation = newVM.MemoryAllocationExpandableReservation
+		storedVM.MemoryAllocationLimit = newVM.MemoryAllocationLimit
+		storedVM.MemoryAllocationOverheadLimit = newVM.MemoryAllocationOverheadLimit
+		storedVM.MemoryAllocationReservation = newVM.MemoryAllocationReservation
+		storedVM.CpuAllocationExpandableReservation = newVM.CpuAllocationExpandableReservation
+		storedVM.CpuAllocationLimit = newVM.CpuAllocationLimit
+		storedVM.CpuAllocationOverheadLimit = newVM.CpuAllocationOverheadLimit
+		storedVM.CpuAllocationReservation = newVM.CpuAllocationReservation
 		storedVM.CpuTopology = newVM.CpuTopology
 		storedVM.VmxVersion = newVM.VmxVersion
 		storedVM.OverallStatus = newVM.OverallStatus
@@ -1145,60 +1169,68 @@ func processVM(db *gorm.DB, cloud Cloud, vm mo.VirtualMachine,
 		serverLocked = false
 	}
 	newVM := Server{
-		Version:                     0,
-		CreatedAt:                   timeNow,
-		UpdatedAt:                   timeNow,
-		CloudID:                     cloud.ID,
-		UUID:                        vm.Summary.Config.Uuid,
-		InstanceUuid:                vm.Summary.Config.InstanceUuid,
-		VmId:                        vm.Summary.Vm.Value,
-		Cluster:                     clustername,
-		Host:                        hostname,
-		Location:                    identifyLocation(hostname),
-		Name:                        vm.Summary.Config.Name,
-		PowerState:                  string(vm.Runtime.PowerState),
-		MemoryMB:                    memoryMB,
-		NumCpu:                      vm.Summary.Config.NumCpu,
-		NumCoresPerSocket:           convertPtrToInt32(vm.Config.Hardware.NumCoresPerSocket),
-		MemoryHotAddEnabled:         convertPtrToBool(vm.Config.MemoryHotAddEnabled),
-		CpuHotAddEnabled:            convertPtrToBool(vm.Config.CpuHotAddEnabled),
-		CpuHotRemoveEnabled:         convertPtrToBool(vm.Config.CpuHotRemoveEnabled),
-		HotPlugMemoryLimit:          new(vm.Config.HotPlugMemoryLimit),
-		HotPlugMemoryIncrementSize:  new(vm.Config.HotPlugMemoryIncrementSize),
-		CpuTopology:                 convertCpuAffinityToString(vm.Config.CpuAffinity),
-		VmxVersion:                  RemoveVMXPrefix(vm.Config.Version),
-		OverallStatus:               Status(overallStatus),
-		ConfigStatus:                Status(configStatus),
-		ConfigEqualsTools:           vm.Config.GuestId == vm.Guest.GuestId,
-		GuestConfigId:               vm.Config.GuestId,
-		GuestConfigFullName:         vm.Config.GuestFullName,
-		GuestToolsId:                vm.Guest.GuestId,
-		GuestToolsFullName:          vm.Guest.GuestFullName,
-		GuestToolsState:             string(vm.Guest.ToolsStatus),
-		GuestToolsRunningStatus:     vm.Guest.ToolsRunningStatus,
-		GuestToolsVersionStatus:     vm.Guest.ToolsVersionStatus,
-		GuestToolsVersionStatus2:    vm.Guest.ToolsVersionStatus2,
-		GuestToolsInstallType:       vm.Guest.ToolsInstallType,
-		GuestToolsVersion:           vm.Guest.ToolsVersion,
-		GuestToolsFamily:            vm.Guest.GuestFamily,
-		GuestToolsHostname:          vm.Guest.HostName,
-		GuestToolsIpAddress:         vm.Guest.IpAddress,
-		GuestToolsArchitecture:      detailsMap["architecture"],
-		GuestToolsBitness:           detailsMap["bitness"],
-		GuestToolsBuildNumber:       detailsMap["buildNumber"],
-		GuestToolsCpeString:         detailsMap["cpeString"],
-		GuestToolsDistroAddlVersion: detailsMap["distroAddlVersion"],
-		GuestToolsDistroName:        detailsMap["distroName"],
-		GuestToolsDistroVersion:     detailsMap["distroVersion"],
-		GuestToolsFamilyName:        detailsMap["familyName"],
-		GuestToolsKernelVersion:     detailsMap["kernelVersion"],
-		GuestToolsPrettyName:        detailsMap["prettyName"],
-		VDisks:                      numberOfVDisks,
-		VDisksCapacityInBytes:       vDiskSumCapacityInBytes,
-		BootTime:                    vm.Runtime.BootTime,
-		Locked:                      serverLocked,
-		ServerKind:                  ServerKindVirtual,
-		ServerType:                  ServerTypeVmVcenter,
+		Version:                               0,
+		CreatedAt:                             timeNow,
+		UpdatedAt:                             timeNow,
+		CloudID:                               cloud.ID,
+		UUID:                                  vm.Summary.Config.Uuid,
+		InstanceUuid:                          vm.Summary.Config.InstanceUuid,
+		VmId:                                  vm.Summary.Vm.Value,
+		Cluster:                               clustername,
+		Host:                                  hostname,
+		Location:                              identifyLocation(hostname),
+		Name:                                  vm.Summary.Config.Name,
+		PowerState:                            string(vm.Runtime.PowerState),
+		MemoryMB:                              memoryMB,
+		NumCpu:                                vm.Summary.Config.NumCpu,
+		NumCoresPerSocket:                     convertPtrToInt32(vm.Config.Hardware.NumCoresPerSocket),
+		MemoryHotAddEnabled:                   convertPtrToBool(vm.Config.MemoryHotAddEnabled),
+		CpuHotAddEnabled:                      convertPtrToBool(vm.Config.CpuHotAddEnabled),
+		CpuHotRemoveEnabled:                   convertPtrToBool(vm.Config.CpuHotRemoveEnabled),
+		HotPlugMemoryLimit:                    new(vm.Config.HotPlugMemoryLimit),
+		HotPlugMemoryIncrementSize:            new(vm.Config.HotPlugMemoryIncrementSize),
+		MemoryAllocationExpandableReservation: convertPtrToBool(vm.Config.MemoryAllocation.ExpandableReservation),
+		MemoryAllocationLimit:                 vm.Config.MemoryAllocation.Limit,
+		MemoryAllocationOverheadLimit:         vm.Config.MemoryAllocation.OverheadLimit,
+		MemoryAllocationReservation:           vm.Config.MemoryAllocation.Reservation,
+		CpuAllocationExpandableReservation:    convertPtrToBool(vm.Config.CpuAllocation.ExpandableReservation),
+		CpuAllocationLimit:                    vm.Config.CpuAllocation.Limit,
+		CpuAllocationOverheadLimit:            vm.Config.CpuAllocation.OverheadLimit,
+		CpuAllocationReservation:              vm.Config.CpuAllocation.Reservation,
+		CpuTopology:                           convertCpuAffinityToString(vm.Config.CpuAffinity),
+		VmxVersion:                            RemoveVMXPrefix(vm.Config.Version),
+		OverallStatus:                         Status(overallStatus),
+		ConfigStatus:                          Status(configStatus),
+		ConfigEqualsTools:                     vm.Config.GuestId == vm.Guest.GuestId,
+		GuestConfigId:                         vm.Config.GuestId,
+		GuestConfigFullName:                   vm.Config.GuestFullName,
+		GuestToolsId:                          vm.Guest.GuestId,
+		GuestToolsFullName:                    vm.Guest.GuestFullName,
+		GuestToolsState:                       string(vm.Guest.ToolsStatus),
+		GuestToolsRunningStatus:               vm.Guest.ToolsRunningStatus,
+		GuestToolsVersionStatus:               vm.Guest.ToolsVersionStatus,
+		GuestToolsVersionStatus2:              vm.Guest.ToolsVersionStatus2,
+		GuestToolsInstallType:                 vm.Guest.ToolsInstallType,
+		GuestToolsVersion:                     vm.Guest.ToolsVersion,
+		GuestToolsFamily:                      vm.Guest.GuestFamily,
+		GuestToolsHostname:                    vm.Guest.HostName,
+		GuestToolsIpAddress:                   vm.Guest.IpAddress,
+		GuestToolsArchitecture:                detailsMap["architecture"],
+		GuestToolsBitness:                     detailsMap["bitness"],
+		GuestToolsBuildNumber:                 detailsMap["buildNumber"],
+		GuestToolsCpeString:                   detailsMap["cpeString"],
+		GuestToolsDistroAddlVersion:           detailsMap["distroAddlVersion"],
+		GuestToolsDistroName:                  detailsMap["distroName"],
+		GuestToolsDistroVersion:               detailsMap["distroVersion"],
+		GuestToolsFamilyName:                  detailsMap["familyName"],
+		GuestToolsKernelVersion:               detailsMap["kernelVersion"],
+		GuestToolsPrettyName:                  detailsMap["prettyName"],
+		VDisks:                                numberOfVDisks,
+		VDisksCapacityInBytes:                 vDiskSumCapacityInBytes,
+		BootTime:                              vm.Runtime.BootTime,
+		Locked:                                serverLocked,
+		ServerKind:                            ServerKindVirtual,
+		ServerType:                            ServerTypeVmVcenter,
 	}
 
 	// Thread-sicherer Zugriff auf existingVMs

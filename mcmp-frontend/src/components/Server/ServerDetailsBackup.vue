@@ -25,7 +25,6 @@
           props.snapshots.filter((s) => !s.description?.includes('NetWorker'))
             .length
         "
-        @save="addSnapshot()"
       />
     </template>
     <v-data-table
@@ -217,8 +216,6 @@ const props = defineProps<{
   loading: boolean[];
 }>();
 
-const emit = defineEmits<(e: "changed") => void>();
-
 const selectedTypes = ref<string[]>([]);
 const jobLoading = ref(false);
 const formatter = useFormatter();
@@ -301,19 +298,6 @@ function revertSnapshot(snapshot: Snapshot) {
     .startJob(jobLoading, "VMWARE_REVERT_SNAPSHOT", props.selectedServer.id, {
       snapshotId: snapshot.snapshotId,
     })
-}
-
-function addSnapshot() {
-  emit("changed");
-  // Dummy API request
-  //alert(`Add Snapshot für ${props.selectedServer.name}`);
-}
-
-function restoreBackup(item: Backup) {
-  // Dummy API call
-  alert(
-    `Backup mit Name '${item.saveSetName}' und Zeit '${formatter.formatToGermanLocalTime(item.saveTime)}' wird wiederhergestellt (Dummy).`
-  );
 }
 
 function formatDeleteDate(item: Snapshot): string {

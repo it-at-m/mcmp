@@ -88,7 +88,7 @@ const manualRoutes = [
 const routes = [
   ...fileBasedRoutes,
   ...manualRoutes,
-  { path: "/:catchAll(.*)*", redirect: "/server" }, // CatchAll route
+  { path: "/:catchAll(.*)*", redirect: "/appservice" }, // CatchAll route
 ];
 
 const history = createWebHashHistory();

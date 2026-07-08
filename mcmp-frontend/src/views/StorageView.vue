@@ -36,6 +36,7 @@
           :model-value="selectedStorage"
           :url-params-id="route.params.id"
           @update:selected="onStorageSelected"
+          @update:total-items="onStorageTotalItemsUpdate"
         />
       </div>
 
@@ -142,10 +143,29 @@
           </div>
         </div>
         <div
+          v-else-if="storageTotalItems === 0"
+          class="d-flex justify-center align-center h-100 pa-4"
+        >
+          <v-alert
+            type="warning"
+            variant="tonal"
+            max-width="500"
+          >
+            Es sind keine Storage-Items vorhanden.
+            <br />
+            <a
+              href="https://example.com/kb/storage-items"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Mehr dazu im Knowledge-Base-Artikel
+            </a>
+          </v-alert>
+        </div>
+        <div
           v-else
           class="d-flex justify-center align-center h-100 text-grey"
         >
-          Select a Storage Item to view details.
         </div>
       </div>
     </div>
@@ -197,6 +217,7 @@ const snapshots = ref<UnifiedStorageSnapshotItem[]>([]);
 const testing = ref<boolean>(false); // Only show view in test env
 const showBanner = ref(true); // Controls visibility of the test-environment banner
 const loadingTestEnv = ref(false);
+const storageTotalItems = ref<number | null>(null);
 
 const route = useRoute();
 const router = useRouter();
@@ -214,6 +235,10 @@ const backupTabBoolean = computed(() => {
     (detail.type === "NFS" || detail.type === "CIFS") && detail.isWorm === false
   );
 });
+
+const onStorageTotalItemsUpdate = (totalItems: number) => {
+  storageTotalItems.value = totalItems;
+};
 
 const onStorageSelected = (item: UnifiedStorageItemList | null) => {
   if (!item) {

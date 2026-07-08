@@ -129,7 +129,6 @@
           v-else
           class="d-flex justify-center align-center h-100 text-grey"
         >
-          Loadbalancer auswählen um Details anzuzeigen.
         </div>
       </div>
     </div>

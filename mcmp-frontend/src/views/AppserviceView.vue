@@ -89,7 +89,6 @@
           v-else
           class="d-flex justify-center align-center h-100 text-grey"
         >
-          Select an Appservice to view details.
         </div>
       </div>
     </div>

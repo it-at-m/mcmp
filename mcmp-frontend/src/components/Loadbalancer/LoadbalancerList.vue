@@ -15,7 +15,39 @@
       @update:search="onSearchUpdate"
       @row-click="onRowClick"
       @load-more="onLoadMore"
-    />
+    >
+      <template #no-data>
+        <v-row />
+        <v-row>
+          <v-col>
+            <v-alert
+              v-if="search && search.length > 0"
+              type="info"
+            >
+              <h2>Keine Loadbalancer gefunden</h2>
+              <span>Bitte überprüfen Sie Ihre Filtereinstellungen</span>
+            </v-alert>
+            <v-alert
+              v-else
+              type="info"
+              class="links"
+            >
+              <h2>Keine Loadbalancer verfügbar</h2>
+              <span
+                >Bitte überprüfen Sie das Ihre Loadbalancer einem
+                Anwendungsservice zugeordnet sind.<br />Weitere Informationen
+                finden Sie
+              </span>
+              <a
+                :href="APPSERVICE_EXPLAIN_URL"
+                target="_blank"
+                >hier</a
+              >
+            </v-alert>
+          </v-col>
+        </v-row>
+      </template>
+    </scrollable-list-table>
   </div>
 </template>
 
@@ -27,6 +59,7 @@ import { computed, nextTick, onMounted, ref, watch } from "vue";
 
 import loadbalancerService from "@/api/loadbalancerService";
 import ScrollableListTable from "@/components/common/ScrollableListTable.vue";
+import { APPSERVICE_EXPLAIN_URL } from "@/constants.ts";
 
 interface SortByEntry {
   key: string;
@@ -199,5 +232,14 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   min-height: 0;
+}
+
+.links a,
+.links a:visited,
+.links a:hover,
+.links a:active {
+  /* noinspection CssUnresolvedCustomProperty */
+  color: rgb(var(--v-theme-link));
+  text-decoration: none;
 }
 </style>

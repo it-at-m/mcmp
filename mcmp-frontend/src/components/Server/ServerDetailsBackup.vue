@@ -1,7 +1,7 @@
 <template>
-  <CommonCard
-    title="Snapshots"
+  <common-card
     v-show="selectedServer.cloud?.cloudType == 'VCENTER'"
+    title="Snapshots"
   >
   <template #append-title>
       <info-tooltip class="ml-2">
@@ -16,12 +16,12 @@
       </info-tooltip>
     </template>
     <template #toolbar-actions>
-      <AddSnapshot
+      <add-snapshot
         v-if="
           selectedServer.canEdit && selectedServer.cloud?.cloudType == 'VCENTER'
         "
         :server="props.selectedServer"
-        :snapshotCount="
+        :snapshot-count="
           props.snapshots.filter((s) => !s.description?.includes('NetWorker'))
             .length
         "
@@ -45,12 +45,12 @@
         {{ formatDeleteDate(item) }}
       </template>
       <template #item.edit="{ item }">
-        <DeleteRevertSnapshot
+        <delete-revert-snapshot
           :snapshot="item"
           :action="'revert'"
           @save="revertSnapshot(item)"
         />
-        <DeleteRevertSnapshot
+        <delete-revert-snapshot
           :snapshot="item"
           :action="'delete'"
           @save="deleteSnapshot(item)"
@@ -62,10 +62,10 @@
         </v-row>
       </template>
     </v-data-table>
-  </CommonCard>
-  <CommonCard
+  </common-card>
+  <common-card
     title="Backups"
-    topMargin="0"
+    top-margin="0"
   >
   <template #append-title>
       <info-tooltip class="ml-2">
@@ -105,7 +105,7 @@
         </template>
         <v-list>
           <v-list-item>
-            <AddBackup
+            <add-backup
               v-if="
                 selectedServer.canEdit &&
                 getBackupTypeFromServerName(selectedServer.name) == 'Oracle'
@@ -191,7 +191,7 @@
         </v-row>
       </template>
     </v-data-table>
-  </CommonCard>
+  </common-card>
 </template>
 
 <script setup lang="ts">
@@ -217,9 +217,7 @@ const props = defineProps<{
   loading: boolean[];
 }>();
 
-const emit = defineEmits<{
-  (e: "changed"): void;
-}>();
+const emit = defineEmits<(e: "changed") => void>();
 
 const selectedTypes = ref<string[]>([]);
 const jobLoading = ref(false);
@@ -296,11 +294,6 @@ function deleteSnapshot(snapshot: Snapshot) {
     .startJob(jobLoading, "VMWARE_DELETE_SNAPSHOT", props.selectedServer.id, {
       snapshotId: snapshot.snapshotId,
     })
-    .then(() => {
-      emit("changed");
-    });
-  // Dummy API request
-  //alert(`Delete Snapshot: ${snapshot.name}`);
 }
 
 function revertSnapshot(snapshot: Snapshot) {
@@ -308,11 +301,6 @@ function revertSnapshot(snapshot: Snapshot) {
     .startJob(jobLoading, "VMWARE_REVERT_SNAPSHOT", props.selectedServer.id, {
       snapshotId: snapshot.snapshotId,
     })
-    .then(() => {
-      emit("changed");
-    });
-  // Dummy API request
-  //alert(`Revert Snapshot: ${snapshot.name}`);
 }
 
 function addSnapshot() {

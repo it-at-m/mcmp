@@ -158,8 +158,6 @@ const props = defineProps<{
   snapshots: Snapshot[];
 }>();
 
-const emit = defineEmits<(e: "changed") => void>();
-
 const headers = [
   { title: "Device", key: "device", width: 50, align: "start" },
   { title: "Größe", key: "capacityInBytes", width: "64%", align: "center" },
@@ -267,9 +265,6 @@ function editMountPoint(mountPoint: MountPoint, newCapacityGB: number, newVolume
           volumeGroup: newVolumeGroup,
         }
       )
-      .then(() => {
-        emit("changed");
-      });
   }
   if (
     props.selectedServer?.guestConfigFullName?.toLowerCase().includes("windows")
@@ -284,9 +279,6 @@ function editMountPoint(mountPoint: MountPoint, newCapacityGB: number, newVolume
           newSize: newCapacityGB,
         }
       )
-      .then(() => {
-        emit("changed");
-      });
   }
 }
 </script>

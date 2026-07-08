@@ -187,13 +187,13 @@
             v-model="newCapacityGB"
             label="Größe"
             :min="
-              Math.ceil(
-                rules.regexRule(
-                  /^[a-z0-9/]+$/,
-                  'Pfad darf nur aus Kleinbuchstaben und Zahlen bestehen.'
-                ),
-                formatter.calculateBtoGB(
-                  mountPoint?.capacityInBytes ?? 1024 ** 3
+              Math.max(
+                Math.ceil(formatter.calculateBtoGB(mountPoint?.capacityInBytes ?? 0)),
+                Math.ceil(
+                  formatter.calculateBtoGB(
+                    (mountPoint?.capacityInBytes ?? 0) -
+                      (mountPoint?.freeSpaceInBytes ?? 0)
+                  ) / 0.95
                 )
               )
             "
@@ -210,9 +210,13 @@
             label="Größe in GB"
             type="number"
             :min="
-              Math.ceil(
-                formatter.calculateBtoGB(
-                  mountPoint?.capacityInBytes ?? 1024 ** 3
+              Math.max(
+                Math.ceil(formatter.calculateBtoGB(mountPoint?.capacityInBytes ?? 1024 ** 3)),
+                Math.ceil(
+                  formatter.calculateBtoGB(
+                    (mountPoint?.capacityInBytes ?? 1024 ** 3) -
+                      (mountPoint?.freeSpaceInBytes ?? 0)
+                  ) / 0.95
                 )
               )
             "
@@ -226,6 +230,15 @@
                       mountPoint?.capacityInBytes ?? 1024 ** 3
                     )
                   ) || 'Neue Größe darf nicht kleiner als die alte Größe seien',
+              (v) =>
+                v >=
+                  Math.ceil(
+                    formatter.calculateBtoGB(
+                      (mountPoint?.capacityInBytes ?? 1024 ** 3) -
+                        (mountPoint?.freeSpaceInBytes ?? 0)
+                    ) / 0.95
+                  ) ||
+                'Neue Größe muss mindestens 5% freien Speicherplatz zulassen.',
               (v) => v <= 2000 || 'Neue Größe darf nicht größer 2TB sein.',
             ]"
           />
@@ -349,6 +362,7 @@ function save() {
 .links a:visited,
 .links a:hover,
 .links a:active {
+  /* noinspection CssUnresolvedCustomProperty */
   color: rgb(var(--v-theme-link));
   text-decoration: none;
 }

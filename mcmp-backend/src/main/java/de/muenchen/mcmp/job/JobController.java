@@ -461,6 +461,10 @@ public class JobController {
             throw new MissingFormatArgumentException("Action value must be provided.");
         }
         String action = actionObj.toString();
+        if (!List.of("new", "remove", "fix_all").contains(action)) {
+            log.warn("Invalid discovery action provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
+            throw new IllegalArgumentException("Invalid discovery action: " + action);
+        }
 
         logCreatedJob(CHECKMK_SERVICE_DISCOVERY, serverId);
 
@@ -485,6 +489,10 @@ public class JobController {
             throw new MissingFormatArgumentException("Time values must be provided.");
         }
         String time = timeObj.toString();
+        if (!List.of("1500", "1700", "1900", "2100", "2300").contains(time)) {
+            log.warn("Invalid time provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
+            throw new IllegalArgumentException("Time must be a value of: 1500, 1700, 1900, 2100, 2300");
+        }
 
         logCreatedJob(LINUX_PATCHNIGHT_TIME_CHANGE, serverId);
 
@@ -581,11 +589,21 @@ public class JobController {
         String mountPointPath = mountPointObj.toString();
         int newSize = Integer.parseInt(newSizeObj.toString());
         String logicalName = "";
-        String volumeGroup = volumeGroupObj.toString();
+        String volumeGroup = volumeGroupObj != null ? volumeGroupObj.toString() : "";
 
         if (mountPointPath.length() > 50) {
             log.warn("Invalid lenth of Mountpoint path lengs had provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
             throw new AccessDeniedException("New Mountpoint path is too long (max 50 characters).");
+        }
+
+        if (!mountPointPath.equals("/") && (!mountPointPath.matches("^/[a-zA-Z0-9_./-]*[a-zA-Z0-9_-]$") || mountPointPath.contains("//"))) {
+            log.warn("Invalid Mountpoint path provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
+            throw new IllegalArgumentException("Mountpoint path must be an absolute path without '//' or a trailing '/', using only letters, digits, '.', '_' and '-'.");
+        }
+
+        if (!volumeGroup.isEmpty() && !volumeGroup.matches("^[a-zA-Z0-9_.-]{1,50}$")) {
+            log.warn("Invalid volume group name provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
+            throw new IllegalArgumentException("Volume group name may only contain letters, digits, '.', '_' and '-' (max 50 characters).");
         }
 
         if (!snapshotService.getSnapshotsByServerId(serverId).isEmpty()) {
@@ -593,7 +611,7 @@ public class JobController {
             throw new AccessDeniedException("Can't change size of mountpoint. Please remove the snapshot first and try it again.");
         }
 
-        if (volumeGroup != "") {
+        if (!volumeGroup.isEmpty()) {
             logicalName = mountPointPath.substring(mountPointPath.lastIndexOf('/') + 1);
         }
         else {
@@ -898,6 +916,7 @@ public class JobController {
 
         Map<?, ?> fqdnBuildingBlocks = requireMap(fqdnObj, "FQDN");
         List<Map<String, Object>> disks = requireListOfMap(disksObj, "Disks");
+        validateWinDiskSizes(disks);
 
         int ram = Integer.parseInt(ramObj.toString());
         int cpu = Integer.parseInt(cpuObj.toString());
@@ -982,6 +1001,7 @@ public class JobController {
 
         Map<?, ?> fqdnBuildingBlocks = requireMap(fqdnObj, "FQDN");
         List<Map<String, Object>> disks = requireListOfMap(disksObj, "Disks");
+        validateWinDiskSizes(disks);
 
         int ram = Integer.parseInt(ramObj.toString());
         int cpu = Integer.parseInt(cpuObj.toString());
@@ -1260,6 +1280,10 @@ public class JobController {
                 Object method = monitor.get("method");
                 if (!List.of("GET", "HEAD", "OPTIONS").contains(method != null ? method.toString() : "")) {
                     throw new IllegalArgumentException("Invalid monitor method: " + method);
+                }
+                Object receiveString = monitor.get("receive_string");
+                if (receiveString != null && receiveString.toString().length() > 255) {
+                    throw new IllegalArgumentException("Monitor receive string must not exceed 255 characters.");
                 }
             } else if (!(monitorObj instanceof String s && "tcp".equals(s))) {
                 throw new IllegalArgumentException("Invalid monitor entry: " + monitorObj);
@@ -1635,6 +1659,22 @@ public class JobController {
     // Helper Methods
     // -----------------------------------------------------------------------------------------------------------------
 
+    private void validateWinDiskSizes(List<Map<String, Object>> disks) {
+        for (Map<String, Object> disk : disks) {
+            Object sizeObj = disk.get("size");
+            int size;
+            try {
+                size = Integer.parseInt(String.valueOf(sizeObj));
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Disk size must be a whole number.");
+            }
+            if (size < 1 || size > 500) {
+                log.warn("Invalid disk size provided by user: {}", AuthUtils.getUsername());
+                throw new IllegalArgumentException("Disk size must be between 1 and 500 GB.");
+            }
+        }
+    }
+
     private void checkNonPostgresReason(String reason) {
         if (reason == null || reason.isBlank()) {
             log.warn("User {} tried to create a non-Postgres job without providing a reason.", AuthUtils.getUsername());
@@ -1642,9 +1682,9 @@ public class JobController {
         } else if (reason.length() > 500) {
             log.warn("User {} provided a reason that is too long for a non-Postgres job.", AuthUtils.getUsername());
             throw new IllegalArgumentException("The reason must not exceed 500 characters.");
-        } else if (reason.length() < 25) {
+        } else if (reason.length() < 50) {
             log.warn("User {} provided a reason that is too short for a non-Postgres job.", AuthUtils.getUsername());
-            throw new IllegalArgumentException("The reason must be at least 25 characters long.");
+            throw new IllegalArgumentException("The reason must be at least 50 characters long.");
         }
     }
 

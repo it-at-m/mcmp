@@ -1,5 +1,5 @@
 <template>
-  <CommonCard title="Allgemein">
+  <common-card title="Allgemein">
     <div v-if="!selectedServer.patchnightIncluded">
       Server ist nicht in der Patchnight
     </div>
@@ -46,17 +46,17 @@
         </v-col>
       </v-row>
     </div>
-  </CommonCard>
-  <CommonCard
+  </common-card>
+  <common-card
     v-if="selectedServer.patchnightIncluded"
     title="Nächste Patchnight"
-    topMargin="0"
+    top-margin="0"
   >
     <template #toolbar-actions>
-      <EditPatchnightTime
-        :selectedServer="props.selectedServer"
-        @save="change_patchnight_time"
+      <edit-patchnight-time
         v-if="props.selectedServer.canEdit && props.selectedServer.roleLinux"
+        :selected-server="props.selectedServer"
+        @save="change_patchnight_time"
       />
     </template>
     <v-row>
@@ -94,18 +94,18 @@
         </p>
       </v-col>
       <v-col
+        v-if="Number(selectedServer.patchnightChangeNumber) != 0"
         cols="4"
         class="pt-0"
-        v-if="Number(selectedServer.patchnightChangeNumber) != 0"
       >
         {{ selectedServer.patchnightChangeNumber }}
       </v-col>
     </v-row>
-  </CommonCard>
-  <CommonCard
+  </common-card>
+  <common-card
     v-if="selectedServer.patchnightIncluded"
     title="Vergangene Patchnight"
-    topMargin="0"
+    top-margin="0"
   >
     <v-row>
       <v-col>
@@ -145,7 +145,7 @@
         </div>
       </v-col>
     </v-row>
-  </CommonCard>
+  </common-card>
 </template>
 
 <script setup lang="ts">
@@ -163,10 +163,6 @@ const props = defineProps<{
   selectedServer: Server;
 }>();
 
-const emit = defineEmits<{
-  (e: "changed"): void;
-}>();
-
 const formatter = useFormatter();
 
 function change_patchnight_time(time: string) {
@@ -179,8 +175,5 @@ function change_patchnight_time(time: string) {
         time: time.replace(":", ""),
       }
     )
-    .then(() => {
-      emit("changed");
-    });
 }
 </script>

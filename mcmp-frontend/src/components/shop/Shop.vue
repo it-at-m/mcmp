@@ -8,8 +8,14 @@
         v-if="railMode"
         v-bind="props"
         :prepend-icon="mdiCartArrowDown"
-        title="Neu"
-      />
+      >
+        <v-tooltip
+          activator="parent"
+          location="right"
+        >
+          Neu
+        </v-tooltip>
+      </v-list-item>
       <v-btn
         v-else
         v-bind="props"

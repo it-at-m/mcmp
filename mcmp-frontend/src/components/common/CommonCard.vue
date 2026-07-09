@@ -13,7 +13,10 @@
         density="compact"
         color="transparent"
       >
-        <div v-if="$slots['prepend-title'] && $slots['prepend-title']().length" class="ml-4 d-flex align-center">
+        <div
+          v-if="$slots['prepend-title'] && $slots['prepend-title']().length"
+          class="ml-4 d-flex align-center"
+        >
           <slot name="prepend-title" />
         </div>
         <v-toolbar-title class="text-h6">
@@ -28,8 +31,8 @@
         <v-tooltip location="bottom">
           <template #activator="{ props: tooltipProps }">
             <v-btn
-              v-bind="tooltipProps"
               v-if="!disableExpansion"
+              v-bind="tooltipProps"
               :icon="expanded ? mdiChevronUp : mdiChevronDown"
               variant="text"
               @click="expanded = !expanded"
@@ -52,8 +55,10 @@
 </template>
 
 <script setup lang="ts">
+import type { Ref } from "vue";
+
 import { mdiChevronDown, mdiChevronUp } from "@mdi/js";
-import { ref } from "vue";
+import { computed, inject, ref } from "vue";
 
 const props = withDefaults(
   defineProps<{
@@ -62,12 +67,40 @@ const props = withDefaults(
     loading?: boolean;
     disableExpansion?: boolean;
     isDefaultExpanded?: boolean;
+    cardId?: string;
   }>(),
   {
+    topMargin: undefined,
     disableExpansion: false,
     isDefaultExpanded: true,
+    cardId: undefined,
   }
 );
 
-const expanded = ref(props.disableExpansion ? true : props.isDefaultExpanded);
+interface CardExpandStore {
+  isExpanded: (id: string, fallback: boolean) => boolean;
+  setExpanded: (id: string, value: boolean) => void;
+}
+
+const store = inject<CardExpandStore | null>("cardExpandStore", null);
+const currentTabRef = inject<Ref<string> | null>("currentTab", null);
+const ownerTab = currentTabRef ? currentTabRef.value : "";
+const cardKey = `${ownerTab}::${props.cardId ?? props.title}`;
+const defaultExpanded = props.disableExpansion ? true : props.isDefaultExpanded;
+
+store?.setExpanded(cardKey, store.isExpanded(cardKey, defaultExpanded));
+
+const localExpanded = ref(defaultExpanded);
+
+const expanded = computed({
+  get: () =>
+    store ? store.isExpanded(cardKey, defaultExpanded) : localExpanded.value,
+  set: (value: boolean) => {
+    if (store) {
+      store.setExpanded(cardKey, value);
+    } else {
+      localExpanded.value = value;
+    }
+  },
+});
 </script>

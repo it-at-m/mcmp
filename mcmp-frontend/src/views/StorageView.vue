@@ -68,13 +68,14 @@
               </v-col>
             </v-row>
             <v-row>
-              <v-col>
+              <v-col class="d-flex align-center">
                 <v-tabs
                   v-model="tab"
                   align-tabs="start"
                   slider-color="primary"
                   show-arrows
                   density="compact"
+                  class="flex-grow-1"
                 >
                   <v-tab
                     value="Allgemeines"
@@ -107,6 +108,11 @@
                     </template>
                   </v-tab>
                 </v-tabs>
+
+                <collapse-all-cards-button
+                  :expanded="allCardsExpanded"
+                  @toggle="toggleAllCards"
+                />
               </v-col>
             </v-row>
           </div>
@@ -165,8 +171,7 @@
         <div
           v-else
           class="d-flex justify-center align-center h-100 text-grey"
-        >
-        </div>
+        ></div>
       </div>
     </div>
   </v-container>
@@ -198,10 +203,12 @@ import { useRoute, useRouter } from "vue-router";
 import storageService from "@/api/storageService";
 import testenvService from "@/api/testenvService.ts";
 import commingSoon from "@/assets/commingSoon.png";
+import CollapseAllCardsButton from "@/components/common/CollapseAllCardsButton.vue";
 import StorageDetailsBackup from "@/components/Storage/StorageDetailsBackup.vue";
 import StorageDetailsGeneral from "@/components/Storage/StorageDetailsGeneral.vue";
 import StorageDetailsPermissions from "@/components/Storage/StorageDetailsPermissions.vue";
 import StorageList from "@/components/Storage/StorageList.vue";
+import { useCollapsibleCards } from "@/composables/useCollapsibleCards";
 
 const leftPanelWidth = ref(400);
 const isResizing = ref(false);
@@ -212,6 +219,8 @@ const selectedStorage = ref<UnifiedStorageItemList[]>([]);
 const selectedStorageDetail = ref<UnifiedStorageItem | null>(null);
 const tab = ref("Allgemeines");
 const loadingDetails = ref(false);
+
+const { allCardsExpanded, toggleAllCards } = useCollapsibleCards(tab);
 const loadingSnapshots = ref(false);
 const snapshots = ref<UnifiedStorageSnapshotItem[]>([]);
 const testing = ref<boolean>(false); // Only show view in test env

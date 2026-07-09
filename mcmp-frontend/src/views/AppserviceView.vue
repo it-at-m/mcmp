@@ -59,18 +59,26 @@
         >
           <div class="right-panel-sticky">
             <appservice-status :selected-appservice="selectedAppservice" />
-            <v-tabs
-              v-model="tabAppservices"
-              align-tabs="start"
-              slider-color="primary"
-            >
-              <v-tab value="Allgemeines">
-                Allgemeines
-                <template #prepend>
-                  <v-icon size="x-large">{{ mdiHome }}</v-icon>
-                </template>
-              </v-tab>
-            </v-tabs>
+            <div class="d-flex align-center">
+              <v-tabs
+                v-model="tabAppservices"
+                align-tabs="start"
+                slider-color="primary"
+                class="flex-grow-1"
+              >
+                <v-tab value="Allgemeines">
+                  Allgemeines
+                  <template #prepend>
+                    <v-icon size="x-large">{{ mdiHome }}</v-icon>
+                  </template>
+                </v-tab>
+              </v-tabs>
+
+              <collapse-all-cards-button
+                :expanded="allCardsExpanded"
+                @toggle="toggleAllCards"
+              />
+            </div>
           </div>
           <div class="right-panel-scroll">
             <v-tabs-window v-model="tabAppservices">
@@ -88,8 +96,7 @@
         <div
           v-else
           class="d-flex justify-center align-center h-100 text-grey"
-        >
-        </div>
+        ></div>
       </div>
     </div>
   </v-container>
@@ -108,12 +115,17 @@ import AppserviceDetailsAllgemein from "@/components/Appservice/AppserviceDetail
 import AppserviceDetailsServer from "@/components/Appservice/AppserviceDetailsServer.vue";
 import AppserviceList from "@/components/Appservice/AppserviceList.vue";
 import AppserviceStatus from "@/components/Appservice/AppserviceStatus.vue";
+import CollapseAllCardsButton from "@/components/common/CollapseAllCardsButton.vue";
 import CommonAlert from "@/components/common/CommonAlert.vue";
+import { useCollapsibleCards } from "@/composables/useCollapsibleCards";
 
 const selectedAppserviceRows = ref<AppserviceListItem[]>([]);
 const selectedAppservice = ref<Appservice | null>(null);
 const tabAppservices = ref("Allgemeines");
 const loadingDetails = ref(false);
+
+const { allCardsExpanded, toggleAllCards } =
+  useCollapsibleCards(tabAppservices);
 
 const notFound = ref(false);
 const notFoundId = ref<number | null>(null);

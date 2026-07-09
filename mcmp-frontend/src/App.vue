@@ -18,7 +18,10 @@
         v-if="!appStore.isReadOnly && !appStore.isLocked"
         nav
       >
-        <shop rail-mode />
+        <shop
+          rail-mode
+          :collapsed="rail"
+        />
       </v-list>
       <v-divider />
       <v-list nav>
@@ -31,14 +34,14 @@
           :active="isCenterNavActive(btn.path)"
           color="primary"
         >
-        <v-tooltip
-                    v-if="rail"
-                    activator="parent"
-                    location="right"
-                  >
-                    {{ btn.text }}
-                  </v-tooltip>
-                </v-list-item>
+          <v-tooltip
+            v-if="rail"
+            activator="parent"
+            location="right"
+          >
+            {{ btn.text }}
+          </v-tooltip>
+        </v-list-item>
       </v-list>
     </v-navigation-drawer>
     <v-app-bar

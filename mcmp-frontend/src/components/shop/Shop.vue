@@ -8,8 +8,10 @@
         v-if="railMode"
         v-bind="props"
         :prepend-icon="mdiCartArrowDown"
+        :title="collapsed ? undefined : 'Neu'"
       >
         <v-tooltip
+          v-if="collapsed"
           activator="parent"
           location="right"
         >
@@ -35,46 +37,48 @@
       <v-list-item>
         <ansible-user />
       </v-list-item>
-       <v-list-item>
-         <v-menu
-           v-model="isLoadbalancerOpen"
-           location="right"
-         >
-           <template #activator="{ props }">
-             <v-btn
-               v-bind="props"
-               flat
-             >
-               Loadbalancer
-               <v-icon end>{{
-                 isLoadbalancerOpen ? mdiChevronUp : mdiChevronDown
-               }}</v-icon>
-             </v-btn>
-           </template>
-           <v-list>
-             <v-list-item>
-               <loadbalancer-order />
-             </v-list-item>
-             <v-list-item>
-               <v-btn
-                 href="https://it-services.muenchen.de/sp?id=sc_cat_item&sys_id=d27584b32b2b36d05779ff1ece91bfb9"
-                  target="_blank"
-                  rel="noopener"
-                 flat
-                 :append-icon="mdiOpenInNew"
-                  >Ändern</v-btn>
-              </v-list-item>
-             <v-list-item>
-                <v-btn
-                  href="https://it-services.muenchen.de/sp?id=sc_cat_item&sys_id=4f8a347b2b2f76d05779ff1ece91bf1b"
-                    target="_blank"
-                    rel="noopener"
-                  flat
-                  :append-icon="mdiOpenInNew"
-                    >Löschen</v-btn>
-             </v-list-item>
-            </v-list>
-          </v-menu>
+      <v-list-item>
+        <v-menu
+          v-model="isLoadbalancerOpen"
+          location="right"
+        >
+          <template #activator="{ props }">
+            <v-btn
+              v-bind="props"
+              flat
+            >
+              Loadbalancer
+              <v-icon end>{{
+                isLoadbalancerOpen ? mdiChevronUp : mdiChevronDown
+              }}</v-icon>
+            </v-btn>
+          </template>
+          <v-list>
+            <v-list-item>
+              <loadbalancer-order />
+            </v-list-item>
+            <v-list-item>
+              <v-btn
+                href="https://it-services.muenchen.de/sp?id=sc_cat_item&sys_id=d27584b32b2b36d05779ff1ece91bfb9"
+                target="_blank"
+                rel="noopener"
+                flat
+                :append-icon="mdiOpenInNew"
+                >Ändern</v-btn
+              >
+            </v-list-item>
+            <v-list-item>
+              <v-btn
+                href="https://it-services.muenchen.de/sp?id=sc_cat_item&sys_id=4f8a347b2b2f76d05779ff1ece91bf1b"
+                target="_blank"
+                rel="noopener"
+                flat
+                :append-icon="mdiOpenInNew"
+                >Löschen</v-btn
+              >
+            </v-list-item>
+          </v-list>
+        </v-menu>
       </v-list-item>
       <v-list-item>
         <v-menu
@@ -116,16 +120,16 @@
         <snow-tickets-old />
       </v-list-item>
       <v-list-item>
-              <v-btn
-                href="https://it-services.muenchen.de/now/platform-analytics-workspace/dashboards/params/edit/false/sys-id/ed9ef3f7d2959f75a70f2bf6768e3d31"
-                target="_blank"
-                rel="noopener"
-                flat
-                :append-icon="mdiOpenInNew"
-              >
-                LCM Dashboard
-              </v-btn>
-            </v-list-item>
+        <v-btn
+          href="https://it-services.muenchen.de/now/platform-analytics-workspace/dashboards/params/edit/false/sys-id/ed9ef3f7d2959f75a70f2bf6768e3d31"
+          target="_blank"
+          rel="noopener"
+          flat
+          :append-icon="mdiOpenInNew"
+        >
+          LCM Dashboard
+        </v-btn>
+      </v-list-item>
     </v-list>
   </v-menu>
 </template>
@@ -145,6 +149,7 @@ import SnowTicketsOld from "@/components/shop/SnowTicketsOld.vue";
 
 defineProps<{
   railMode?: boolean;
+  collapsed?: boolean;
 }>();
 
 const isOpen = ref(false);

@@ -48,6 +48,7 @@ type (
 		Mountpoints               []Mountpoint    `json:"mountpoints,omitempty"`
 		Partitions                []Partition     `json:"partitions,omitempty"`
 		LogicalVolumes            []LogicalVolume `json:"logical_volumes,omitempty"`
+		Repositories              []string        `json:"repositories,omitempty"`
 	}
 
 	Interface struct {

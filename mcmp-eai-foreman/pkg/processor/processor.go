@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -499,6 +500,9 @@ func (sp *ServiceProcessor) transformForemanHostToMCMP(foremanHost *foreman.Host
 	mcmpHost.Partitions = sp.extractPartitionsFromFacts(foremanHost.Facts)
 	mcmpHost.LogicalVolumes = sp.extractLogicalVolumesFromFacts(foremanHost.Facts)
 
+	// Extract repositories information
+	mcmpHost.Repositories = sp.extractRepositoriesFromFacts(foremanHost.Facts)
+
 	return mcmpHost
 }
 
@@ -867,6 +871,36 @@ func (sp *ServiceProcessor) extractStringValueFromFacts(facts map[string]interfa
 	}
 
 	return nil
+}
+
+// extractRepositoriesFromFacts extracts the repositories list from Foreman facts.
+// The repositories fact is expected to be a JSON-encoded string array.
+func (sp *ServiceProcessor) extractRepositoriesFromFacts(facts map[string]interface{}) []string {
+	if facts == nil {
+		return nil
+	}
+
+	repoData, ok := facts["repositories"]
+	if !ok || repoData == nil {
+		return nil
+	}
+
+	repoStr, ok := repoData.(string)
+	if !ok || repoStr == "" {
+		return nil
+	}
+
+	var repositories []string
+	if err := json.Unmarshal([]byte(repoStr), &repositories); err != nil {
+		sp.debugPrintf("Warning: Failed to parse repositories JSON string: %v", err)
+		return nil
+	}
+
+	sort.Slice(repositories, func(i, j int) bool {
+		return strings.ToLower(repositories[i]) < strings.ToLower(repositories[j])
+	})
+	
+	return repositories
 }
 
 // extractBooleanValueFromFacts extracts a boolean value from Foreman host facts.

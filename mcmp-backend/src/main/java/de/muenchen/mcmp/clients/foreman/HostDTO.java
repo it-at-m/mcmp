@@ -77,7 +77,9 @@ public record HostDTO(
         @JsonProperty("mountpoints")
         List<MountpointDTO> mountpoints,
         @JsonProperty("partitions")
-        List<PartitionDTO> partitions
-        ) {}
+        List<PartitionDTO> partitions,
+        @JsonProperty("repositories")
+        List<String> repositories
+) {}
 
 

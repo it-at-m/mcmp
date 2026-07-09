@@ -198,3 +198,6 @@ mcmp-frontend/reports
 # ========= Frontend specific ==========
 route-map.d.ts
 
+# SQL-Dumps
+/dumps/*
+!/dumps/.gitkeep

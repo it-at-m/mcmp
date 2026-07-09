@@ -2,8 +2,11 @@ name: mcmp-stack
 
 services:
   postgres:
-    image: postgres:17.4-alpine3.21@sha256:7062a2109c4b51f3c792c7ea01e83ed12ef9a980886e3b3d380a7d2e5f6ce3f5
+    image: postgres:17.7-alpine3.21@sha256:5bcb5623bb6999b2f7fbd2109f0bfc1f144d138b52ca35ede95d644d93585c2f
     environment:
+      # Local development credentials only.
+      # This docker compose file is intended for local developer machines and must not be used for production deployments.
+      # The static password below is intentionally non-secret and only protects the local Docker PostgreSQL instance.
       - POSTGRES_DB=cmp
       - POSTGRES_USER=cmp
       - POSTGRES_PASSWORD=cmp
@@ -22,6 +25,9 @@ services:
   pg-admin:
     image: dpage/pgadmin4:9.0.0@sha256:1b2f1ecb93ed2c20530703f77acdfa0da8c2470a4e17044504057cea2d6b4fac
     environment:
+      # Local development credentials only.
+      # This pgAdmin instance is only exposed for the local Docker development stack.
+      # The static password below is intentionally non-secret and must not be reused outside local development.
       - PGADMIN_DEFAULT_EMAIL=admin@admin.com
       - PGADMIN_DEFAULT_PASSWORD=admin
       - PGADMIN_CONFIG_SERVER_MODE=False
@@ -46,6 +52,9 @@ services:
     command:
       - start-dev
     environment:
+      # Local development credentials only.
+      # This Keycloak container runs in start-dev mode for the local Docker stack.
+      # The static admin password below is intentionally non-secret and must not be used in production.
       - KC_BOOTSTRAP_ADMIN_USERNAME=admin
       - KC_BOOTSTRAP_ADMIN_PASSWORD=admin
       - KC_HEALTH_ENABLED=true
@@ -71,6 +80,8 @@ services:
     depends_on:
       - keycloak
     environment:
+      # Local development credentials only.
+      # These values match the local Keycloak start-dev container above and are intentionally non-secret.
       ADMIN_USER: admin
       ADMIN_PASSWORD: admin
       BASEURL: http://keycloak:8100/auth

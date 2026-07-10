@@ -503,6 +503,9 @@ func (sp *ServiceProcessor) transformForemanHostToMCMP(foremanHost *foreman.Host
 	// Extract repositories information
 	mcmpHost.Repositories = sp.extractRepositoriesFromFacts(foremanHost.Facts)
 
+	// Extract lhm_managed_ facts that are true
+	mcmpHost.LhmManaged = sp.extractLhmManagedFromFacts(foremanHost.Facts)
+
 	return mcmpHost
 }
 
@@ -899,8 +902,30 @@ func (sp *ServiceProcessor) extractRepositoriesFromFacts(facts map[string]interf
 	sort.Slice(repositories, func(i, j int) bool {
 		return strings.ToLower(repositories[i]) < strings.ToLower(repositories[j])
 	})
-	
+
 	return repositories
+}
+
+// extractLhmManagedFromFacts extracts all facts starting with "lhm_managed_" that have the value true, sorted alphabetically.
+func (sp *ServiceProcessor) extractLhmManagedFromFacts(facts map[string]interface{}) []string {
+	if facts == nil {
+		return nil
+	}
+
+	var managed []string
+	for key := range facts {
+		if strings.HasPrefix(strings.ToLower(key), "lhm_managed_") {
+			if sp.extractBooleanValueFromFacts(facts, key) {
+				managed = append(managed, key)
+			}
+		}
+	}
+
+	sort.Slice(managed, func(i, j int) bool {
+		return strings.ToLower(managed[i]) < strings.ToLower(managed[j])
+	})
+
+	return managed
 }
 
 // extractBooleanValueFromFacts extracts a boolean value from Foreman host facts.

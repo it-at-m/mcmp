@@ -79,7 +79,9 @@ public record HostDTO(
         @JsonProperty("partitions")
         List<PartitionDTO> partitions,
         @JsonProperty("repositories")
-        List<String> repositories
+        List<String> repositories,
+        @JsonProperty("lhm_managed")
+        List<String> lhmManaged
 ) {}
 
 

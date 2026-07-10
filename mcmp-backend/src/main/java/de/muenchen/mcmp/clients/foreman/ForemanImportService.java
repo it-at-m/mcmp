@@ -541,12 +541,24 @@ public class ForemanImportService {
         final Boolean expectedTetrationAgent = hostDTO.tetrationAgentIsInstalled();
         final Boolean expectedNonOracleRole = calculateNonOracleRole(hostDTO);
 
+        final List<String> managedList = hostDTO.lhmManaged() != null ? hostDTO.lhmManaged() : List.of();
+        final boolean expectedFilebeat = managedList.contains("lhm_managed_middleware_filebeat");
+        final boolean expectedHttpd = managedList.contains("lhm_managed_middleware_httpd");
+        final boolean expectedJava = managedList.contains("lhm_managed_middleware_java");
+        final boolean expectedPhp = managedList.contains("lhm_managed_middleware_php");
+        final boolean expectedTomcat = managedList.contains("lhm_managed_middleware_tomcat");
+
         // Check basic fields
         if (!Objects.equals(server.getManaged(), true) ||
             !Objects.equals(server.getForemanSource(), hostDTO.source()) ||
             !Objects.equals(server.getForemanId(), expectedForemanId) ||
             !Objects.equals(server.getFqdn(), expectedFqdn) ||
             !Objects.equals(server.getTetrationAgentInstalled(), expectedTetrationAgent) ||
+            !Objects.equals(server.getManagedMiddlewareFilebeat(), expectedFilebeat) ||
+            !Objects.equals(server.getManagedMiddlewareHttpd(), expectedHttpd) ||
+            !Objects.equals(server.getManagedMiddlewareJava(), expectedJava) ||
+            !Objects.equals(server.getManagedMiddlewarePhp(), expectedPhp) ||
+            !Objects.equals(server.getManagedMiddlewareTomcat(), expectedTomcat) ||
             (hostDTO.linux() && (
             !Objects.equals(server.getPatchnightTime(), hostDTO.patchnightStartTime()) ||
             !Objects.equals(server.getPatchnightGroup(), expectedPatchnightGroup) ||
@@ -663,6 +675,13 @@ public class ForemanImportService {
             server.setPatchnightExitcode(newExitcode);
         }
         server.setTetrationAgentInstalled(newTetrationAgent);
+
+        final List<String> managedList = hostDTO.lhmManaged() != null ? hostDTO.lhmManaged() : List.of();
+        server.setManagedMiddlewareFilebeat(managedList.contains("lhm_managed_middleware_filebeat"));
+        server.setManagedMiddlewareHttpd(managedList.contains("lhm_managed_middleware_httpd"));
+        server.setManagedMiddlewareJava(managedList.contains("lhm_managed_middleware_java"));
+        server.setManagedMiddlewarePhp(managedList.contains("lhm_managed_middleware_php"));
+        server.setManagedMiddlewareTomcat(managedList.contains("lhm_managed_middleware_tomcat"));
 
         // Server info fields (only update if provided)
         if (hostDTO.serverInfosTicketnr() != null && !hostDTO.serverInfosTicketnr().isBlank()) {
@@ -1045,6 +1064,13 @@ public class ForemanImportService {
             server.setTetrationAgentInstalled(false);
             needsUpdate = true;
         }
+
+        // Managed middleware flags
+        needsUpdate |= resetBooleanField(server::getManagedMiddlewareFilebeat, server::setManagedMiddlewareFilebeat);
+        needsUpdate |= resetBooleanField(server::getManagedMiddlewareHttpd, server::setManagedMiddlewareHttpd);
+        needsUpdate |= resetBooleanField(server::getManagedMiddlewareJava, server::setManagedMiddlewareJava);
+        needsUpdate |= resetBooleanField(server::getManagedMiddlewarePhp, server::setManagedMiddlewarePhp);
+        needsUpdate |= resetBooleanField(server::getManagedMiddlewareTomcat, server::setManagedMiddlewareTomcat);
 
         // Database flags
         needsUpdate |= resetBooleanField(server::getDbOracle, server::setDbOracle);

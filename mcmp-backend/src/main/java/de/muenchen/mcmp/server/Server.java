@@ -488,4 +488,30 @@ public class Server extends AbstractEntity {
 
     @Column(name = "cpu_allocation_reservation")
     private Long cpuAllocationReservation;
+
+    @NotNull
+    @ColumnDefault("false")
+    @Column(name = "managed_middleware_filebeat", nullable = false)
+    private Boolean managedMiddlewareFilebeat = false;
+
+    @NotNull
+    @ColumnDefault("false")
+    @Column(name = "managed_middleware_httpd", nullable = false)
+    private Boolean managedMiddlewareHttpd = false;
+
+    @NotNull
+    @ColumnDefault("false")
+    @Column(name = "managed_middleware_java", nullable = false)
+    private Boolean managedMiddlewareJava = false;
+
+    @NotNull
+    @ColumnDefault("false")
+    @Column(name = "managed_middleware_php", nullable = false)
+    private Boolean managedMiddlewarePhp = false;
+
+    @NotNull
+    @ColumnDefault("false")
+    @Column(name = "managed_middleware_tomcat", nullable = false)
+    private Boolean managedMiddlewareTomcat = false;
+
 }

@@ -62,7 +62,11 @@
       </template>
 
       <template #[`item.name`]="{ item }">
-        {{ item.type?.toUpperCase() === 'QTREE' && item.path ? item.path : item.name }}
+        {{
+          item.type?.toUpperCase() === "QTREE" && item.path
+            ? item.path
+            : item.name
+        }}
       </template>
 
       <template #[`item.storageCategory`]="{ item }">
@@ -78,6 +82,36 @@
           </template>
           {{ formatStorageCategory(item.storageCategory) }}
         </v-tooltip>
+      </template>
+      <template #no-data>
+        <v-row />
+        <v-row>
+          <v-col>
+            <v-alert
+              v-if="search && search.length > 0"
+              type="info"
+            >
+              <h2>Keine Storages gefunden</h2>
+              <span>Bitte überprüfen Sie Ihre Filtereinstellungen</span>
+            </v-alert>
+            <v-alert
+              v-else
+              type="info"
+              class="links"
+            >
+              <h2>Keine Storages verfügbar</h2>
+              <span
+                >Bitte überprüfen Sie das Ihre Storages einem Anwendungsservice
+                zugeordnet sind.<br />Weitere Informationen finden Sie
+              </span>
+              <a
+                :href="APPSERVICE_EXPLAIN_URL"
+                target="_blank"
+                >hier</a
+              >
+            </v-alert>
+          </v-col>
+        </v-row>
       </template>
     </scrollable-list-table>
   </div>
@@ -98,6 +132,7 @@ import { computed, nextTick, onMounted, ref, watch } from "vue";
 
 import storageService from "@/api/storageService";
 import ScrollableListTable from "@/components/common/ScrollableListTable.vue";
+import { APPSERVICE_EXPLAIN_URL } from "@/constants.ts";
 
 interface SortByEntry {
   key: string;
@@ -114,6 +149,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: "update:modelValue", selected: UnifiedStorageItemList[]): void;
   (e: "update:selected", selected: UnifiedStorageItemList | null): void;
+  (e: "update:totalItems", totalItems: number): void;
 }>();
 
 const search = ref("");
@@ -129,15 +165,15 @@ const selectedCategoryFilters = ref<string[]>([]);
 
 const allCategories = [
   { value: "NFS_STANDARD_SHARE", label: "NFS Standard Share" },
-  { value: "NFS_CLONE",          label: "NFS Clone" },
-  { value: "NFS_WORM",           label: "NFS WORM" },
-  { value: "NFS_SHARED",         label: "NFS Shared" },
-  { value: "ORACLE_VOLUME",      label: "Oracle Volume" },
-  { value: "CIFS_STANDARD_SHARE",label: "CIFS Standard Share" },
-  { value: "CIFS_CLONE",         label: "CIFS Clone" },
-  { value: "CIFS_WORM",          label: "CIFS WORM" },
-  { value: "S3_SERVICE_BUCKET",  label: "S3 Service Bucket" },
-  { value: "ORACLE_FRA_QTREE",   label: "Oracle FRA Qtree" },
+  { value: "NFS_CLONE", label: "NFS Clone" },
+  { value: "NFS_WORM", label: "NFS WORM" },
+  { value: "NFS_SHARED", label: "NFS Shared" },
+  { value: "ORACLE_VOLUME", label: "Oracle Volume" },
+  { value: "CIFS_STANDARD_SHARE", label: "CIFS Standard Share" },
+  { value: "CIFS_CLONE", label: "CIFS Clone" },
+  { value: "CIFS_WORM", label: "CIFS WORM" },
+  { value: "S3_SERVICE_BUCKET", label: "S3 Service Bucket" },
+  { value: "ORACLE_FRA_QTREE", label: "Oracle FRA Qtree" },
 ];
 
 const selectedId = computed(() =>
@@ -151,7 +187,9 @@ const headers = ref<DataTableHeader[]>([
   { title: "Name", key: "name", sortable: true },
 ]);
 
-const currentSort = computed<SortByEntry>(() => sortBy.value[0] ?? { key: "name", order: "asc" });
+const currentSort = computed<SortByEntry>(
+  () => sortBy.value[0] ?? { key: "name", order: "asc" }
+);
 
 const tableItems = computed<TableItem[]>(() =>
   items.value.map((item) => ({
@@ -297,6 +335,10 @@ const onLoadMore = async () => {
   }
 };
 
+watch(totalItems, (newVal) => {
+  emit("update:totalItems", newVal);
+});
+
 watch(search, async () => {
   currentPage.value = 1;
   await loadItems(1);
@@ -371,5 +413,14 @@ onMounted(async () => {
 
 :deep(th:first-child) {
   padding-left: 6px !important;
+}
+
+.links a,
+.links a:visited,
+.links a:hover,
+.links a:active {
+  /* noinspection CssUnresolvedCustomProperty */
+  color: rgb(var(--v-theme-link));
+  text-decoration: none;
 }
 </style>

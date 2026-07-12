@@ -1111,8 +1111,8 @@ public class JobService {
             if (!acceptedDBVersions.get(dbTypeParams.get("db_type").toString()).contains(dbTypeParams.get("db_version").toString())) {
                 throw new IllegalArgumentException("The database version is invalid.");
             }
-            if (!dbTypeParams.get("customer_db_name").toString().matches("^[a-zA-Z0-9_-]+$") ||
-                    !dbTypeParams.get("customer_db_user").toString().matches("^[a-zA-Z0-9_-]+$")) {
+            if (!dbTypeParams.get("customer_db_name").toString().matches("^[a-zA-Z0-9_-]{1,20}$") ||
+                    !dbTypeParams.get("customer_db_user").toString().matches("^[a-zA-Z0-9_-]{1,20}$")) {
                 throw new IllegalArgumentException("The database name or username is invalid.");
             }
 
@@ -1124,7 +1124,7 @@ public class JobService {
             params.put("customer_db_schema", "");
             params.put("customer_db_charset", "");
             if(dbTypeParams.get("db_type").toString().equals("postgresql")) {
-                if (!dbTypeParams.get("customer_db_schema").toString().matches("^[a-zA-Z0-9_-]+$")) {
+                if (!dbTypeParams.get("customer_db_schema").toString().matches("^[a-zA-Z0-9_-]{1,20}$")) {
                     throw new IllegalArgumentException("The database schema is invalid.");
                 }
                 params.put("customer_db_schema", dbTypeParams.get("customer_db_schema").toString());

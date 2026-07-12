@@ -240,7 +240,7 @@
             </template>
           </v-tooltip>
           <os-cell
-            :osFullName="item.os || ''"
+            :os-full-name="item.os || ''"
             size="small"
             class="os-icon-inline"
           />
@@ -268,15 +268,15 @@
         <v-row>
           <v-col>
             <v-alert
-              type="info"
               v-if="search && search.length > 0"
+              type="info"
             >
               <h2>Keine Server gefunden</h2>
               <span>Bitte überprüfen Sie Ihre Filtereinstellungen</span>
             </v-alert>
             <v-alert
-              type="info"
               v-else
+              type="info"
             >
               <h2>Keine Server verfügbar</h2>
               <span
@@ -284,7 +284,7 @@
                 zugeordnet sind.<br />Weitere Informationen finden Sie
               </span>
               <a
-                :href="noServersFaqLink"
+                :href="APPSERVICE_EXPLAIN_URL"
                 target="_blank"
                 >hier</a
               >
@@ -316,6 +316,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import serverService from "@/api/serverService";
 import ScrollableListTable from "@/components/common/ScrollableListTable.vue";
 import OsCell from "@/components/Server/OsCell.vue";
+import { APPSERVICE_EXPLAIN_URL } from "@/constants.ts";
 import { useUserStore } from "@/stores/user.ts";
 
 const favoritesFilter = ref(
@@ -338,7 +339,6 @@ const statusFilter = ref<string[]>(
   JSON.parse(localStorage.getItem("mcmp_status_filter") || "[]")
 );
 const osFilter = ref<string>(localStorage.getItem("mcmp_os_filter") || "");
-const noServersFaqLink = "https://go.muenchen.de/sp/KB0023236";
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
 const userStore = useUserStore();
 
@@ -357,10 +357,6 @@ const emit = defineEmits<{
 const headers = ref<DataTableHeader[]>([
   { title: "Servername", key: "name", align: "start", sortable: true },
 ]);
-
-const isAdmin = computed(
-  () => userStore.getUser?.authorities?.includes("ROLE_ADMIN") || false
-);
 
 const filteredServers = computed(() => servers.value);
 
@@ -408,7 +404,6 @@ async function toggleFavorite(server: any) {
       servers.value = [...servers.value, server];
     }
     sortServersByFavorite();
-    console.error("Fehler beim Aktualisieren des Favoriten-Status:", error);
   }
 }
 

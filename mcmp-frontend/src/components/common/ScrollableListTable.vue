@@ -30,8 +30,6 @@
         :search="searchModel"
         :items-per-page="itemsPerPage"
         :sort-by="sortBy"
-        @update:sort-by="emit('update:sortBy', $event)"
-        @click:row="onRowClick"
         select-strategy="single"
         item-value="id"
         density="compact"
@@ -39,6 +37,8 @@
         class="scrollable-list-table"
         hide-default-footer
         hover
+        @update:sort-by="emit('update:sortBy', $event)"
+        @click:row="onRowClick"
       >
         <!-- Alle Header- und Item-Slots durchreichen -->
         <template
@@ -341,6 +341,14 @@ defineExpose({ resetSelection, triggerObserveScroll });
   max-width: none !important;
   border-collapse: separate;
   border-spacing: 0;
+}
+
+/* Colspan rows (no-data / loading) must not inflate the table's max-content
+   width based on their own long text - exclude them from the column-width
+   calculation, they still stretch to the table's actual rendered width. */
+:deep(.v-data-table-rows-no-data td),
+:deep(.v-data-table-rows-loading td) {
+  width: 1px;
 }
 
 :deep(.focused-row td) {

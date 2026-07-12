@@ -59,43 +59,7 @@
             </v-col>
           </v-row>
         </div>
-        <div
-          v-else-if="
-            selectedServer.length === 0 && hasAtLeastOneServer
-          "
-        >
-          <v-row>
-            <v-col cols="6">
-              <v-skeleton-loader type="text" />
-            </v-col>
-            <v-col cols="4" />
-            <v-col cols="2">
-              <v-skeleton-loader type="button@4" />
-            </v-col>
-          </v-row>
-          <v-row>
-            <v-col cols="1">
-              <v-skeleton-loader type="chip" />
-            </v-col>
-            <v-col cols="1">
-              <v-skeleton-loader type="chip" />
-            </v-col>
-            <v-col cols="1">
-              <v-skeleton-loader type="chip" />
-            </v-col>
-            <v-col cols="1">
-              <v-skeleton-loader type="chip" />
-            </v-col>
-            <v-col cols="1">
-              <v-skeleton-loader type="chip" />
-            </v-col>
-          </v-row>
-          <v-row>
-            <v-col cols="12">
-              <v-skeleton-loader type="card" />
-            </v-col>
-          </v-row>
-        </div>
+        <div v-else-if="selectedServer.length === 0 && hasAtLeastOneServer" />
         <div
           v-else-if="selectedServer.length > 0"
           class="right-panel-inner"
@@ -103,11 +67,7 @@
           <div class="right-panel-sticky">
             <v-row>
               <selected-server-actions-and-status
-                v-if="
-                  selectedServerItem &&
-                  selectedServerItem.id &&
-                  !loadingDetails
-                "
+                v-if="selectedServerItem && selectedServerItem.id"
                 :selected-server="selectedServerItem"
                 :loading-server-details="loadingDetails"
                 @change="getSelectedServer"
@@ -116,13 +76,17 @@
               />
             </v-row>
             <v-row>
-              <v-col v-if="selectedServerItem">
+              <v-col
+                v-if="selectedServerItem"
+                class="d-flex align-center"
+              >
                 <v-tabs
                   v-model="tab"
                   align-tabs="start"
                   slider-color="primary"
                   show-arrows
                   density="compact"
+                  class="flex-grow-1"
                 >
                   <v-tab
                     value="Allgemeines"
@@ -317,6 +281,11 @@
                     </template>
                   </v-tooltip>
                 </v-tabs>
+
+                <collapse-all-cards-button
+                  :expanded="allCardsExpanded"
+                  @toggle="toggleAllCards"
+                />
               </v-col>
             </v-row>
           </div>
@@ -401,7 +370,9 @@
                   </v-tabs-window-item>
 
                   <v-tabs-window-item value="Expert">
-                    <server-details-expert :selected-server="selectedServerItem" />
+                    <server-details-expert
+                      :selected-server="selectedServerItem"
+                    />
                   </v-tabs-window-item>
                 </v-tabs-window>
               </v-col>
@@ -417,9 +388,9 @@
 import type Backup from "@/types/Backup";
 import type Disk from "@/types/Disk";
 import type JobList from "@/types/JobList";
+import type { LbServerMembership } from "@/types/LbServerMembership";
 import type MountPoint from "@/types/MountPoint";
 import type Nic from "@/types/Nic";
-import type { LbServerMembership } from "@/types/LbServerMembership";
 import type Snapshot from "@/types/Snapshot";
 import type { UnifiedStorageMountItem } from "@/types/UnifiedStorageMountItem.ts";
 
@@ -439,12 +410,13 @@ import { useDisplay } from "vuetify";
 import backupService from "@/api/backupService";
 import diskService from "@/api/diskService";
 import jobService from "@/api/jobService";
+import loadbalancerService from "@/api/loadbalancerService";
 import mountPointService from "@/api/mountPointService";
 import nicService from "@/api/nicService";
-import loadbalancerService from "@/api/loadbalancerService";
 import serverService from "@/api/serverService";
 import snapshotService from "@/api/snapshotService";
 import StorageService from "@/api/storageService.ts";
+import CollapseAllCardsButton from "@/components/common/CollapseAllCardsButton.vue";
 import CommonAlert from "@/components/common/CommonAlert.vue";
 import SelectedServerActionsAndStatus from "@/components/Server/SelectedServerActionsAndStatus.vue";
 import ServerDetailsAllgemein from "@/components/Server/ServerDetailsAllgemein.vue";
@@ -455,6 +427,7 @@ import ServerDetailsHistory from "@/components/Server/ServerDetailsHistory.vue";
 import ServerDetailsNetzwerk from "@/components/Server/ServerDetailsNetzwerk.vue";
 import ServerDetailsPatchnight from "@/components/Server/ServerDetailsPatchnight.vue";
 import ServerList from "@/components/Server/ServerList.vue";
+import { useCollapsibleCards } from "@/composables/useCollapsibleCards";
 import Server from "@/types/Server";
 
 type HttpError = Error & { status?: number };
@@ -468,6 +441,9 @@ const selectedServer = ref<Server[]>([]);
 const selectedServerItem = computed(() => selectedServer.value[0] ?? null);
 const tab = ref("Allgemeines");
 const loadingDetails = ref(true);
+
+const { allCardsExpanded, toggleAllCards } = useCollapsibleCards(tab);
+
 const disks = ref<Disk[]>([]);
 const loadingDisks = ref(true);
 const mountPoints = ref<MountPoint[]>([]);
@@ -669,11 +645,9 @@ function fetchDisks(silent = false) {
   const serverId = selectedServerItem.value?.id;
   if (serverId) {
     const loadingRef = silent ? ref(false) : loadingDisks;
-    return diskService
-      .getDisksByServerId(loadingRef, serverId)
-      .then((res) => {
-        disks.value = res;
-      });
+    return diskService.getDisksByServerId(loadingRef, serverId).then((res) => {
+      disks.value = res;
+    });
   } else {
     disks.value = [];
     return Promise.resolve();
@@ -730,11 +704,9 @@ function fetchNics(silent = false) {
   const serverId = selectedServerItem.value?.id;
   if (serverId) {
     const loadingRef = silent ? ref(false) : loadingNics;
-    return nicService
-      .getNicsByServerId(loadingRef, serverId)
-      .then((res) => {
-        nics.value = res;
-      });
+    return nicService.getNicsByServerId(loadingRef, serverId).then((res) => {
+      nics.value = res;
+    });
   } else {
     nics.value = [];
     return Promise.resolve();
@@ -760,9 +732,11 @@ function fetchBackups(silent = false) {
   const serverId = selectedServerItem.value?.id;
   if (serverId) {
     const loadingRef = silent ? ref(false) : loadingBackups;
-    return backupService.getBackupsByServerId(loadingRef, serverId).then((res) => {
-      backups.value = res;
-    });
+    return backupService
+      .getBackupsByServerId(loadingRef, serverId)
+      .then((res) => {
+        backups.value = res;
+      });
   } else {
     backups.value = [];
     return Promise.resolve();

@@ -3,6 +3,7 @@ package de.muenchen.mcmp.appservice;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import de.muenchen.mcmp.common.AbstractEntity;
 import de.muenchen.mcmp.group.Group;
+import de.muenchen.mcmp.repository.Repository;
 import de.muenchen.mcmp.server.Server;
 import de.muenchen.mcmp.types.EnvironmentType;
 import de.muenchen.mcmp.user.User;
@@ -66,6 +67,10 @@ public class Appservice extends AbstractEntity {
             inverseJoinColumns = @JoinColumn(name = "server_id"))
     @ToString.Exclude
     private Set<Server> servers = new LinkedHashSet<>();
+
+    @ManyToMany(mappedBy = "appservices")
+    @ToString.Exclude
+    private Set<Repository> repositories = new LinkedHashSet<>();
 
     @NotNull
     @ColumnDefault("false")

@@ -36,6 +36,7 @@
           :model-value="selectedStorage"
           :url-params-id="route.params.id"
           @update:selected="onStorageSelected"
+          @update:total-items="onStorageTotalItemsUpdate"
         />
       </div>
 
@@ -67,13 +68,14 @@
               </v-col>
             </v-row>
             <v-row>
-              <v-col>
+              <v-col class="d-flex align-center">
                 <v-tabs
                   v-model="tab"
                   align-tabs="start"
                   slider-color="primary"
                   show-arrows
                   density="compact"
+                  class="flex-grow-1"
                 >
                   <v-tab
                     value="Allgemeines"
@@ -106,6 +108,11 @@
                     </template>
                   </v-tab>
                 </v-tabs>
+
+                <collapse-all-cards-button
+                  :expanded="allCardsExpanded"
+                  @toggle="toggleAllCards"
+                />
               </v-col>
             </v-row>
           </div>
@@ -142,11 +149,29 @@
           </div>
         </div>
         <div
+          v-else-if="storageTotalItems === 0"
+          class="d-flex justify-center align-center h-100 pa-4"
+        >
+          <v-alert
+            type="warning"
+            variant="tonal"
+            max-width="500"
+          >
+            Es sind keine Storage-Items vorhanden.
+            <br />
+            <a
+              href="https://example.com/kb/storage-items"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Mehr dazu im Knowledge-Base-Artikel
+            </a>
+          </v-alert>
+        </div>
+        <div
           v-else
           class="d-flex justify-center align-center h-100 text-grey"
-        >
-          Select a Storage Item to view details.
-        </div>
+        ></div>
       </div>
     </div>
   </v-container>
@@ -178,10 +203,12 @@ import { useRoute, useRouter } from "vue-router";
 import storageService from "@/api/storageService";
 import testenvService from "@/api/testenvService.ts";
 import commingSoon from "@/assets/commingSoon.png";
+import CollapseAllCardsButton from "@/components/common/CollapseAllCardsButton.vue";
 import StorageDetailsBackup from "@/components/Storage/StorageDetailsBackup.vue";
 import StorageDetailsGeneral from "@/components/Storage/StorageDetailsGeneral.vue";
 import StorageDetailsPermissions from "@/components/Storage/StorageDetailsPermissions.vue";
 import StorageList from "@/components/Storage/StorageList.vue";
+import { useCollapsibleCards } from "@/composables/useCollapsibleCards";
 
 const leftPanelWidth = ref(400);
 const isResizing = ref(false);
@@ -192,11 +219,14 @@ const selectedStorage = ref<UnifiedStorageItemList[]>([]);
 const selectedStorageDetail = ref<UnifiedStorageItem | null>(null);
 const tab = ref("Allgemeines");
 const loadingDetails = ref(false);
+
+const { allCardsExpanded, toggleAllCards } = useCollapsibleCards(tab);
 const loadingSnapshots = ref(false);
 const snapshots = ref<UnifiedStorageSnapshotItem[]>([]);
 const testing = ref<boolean>(false); // Only show view in test env
 const showBanner = ref(true); // Controls visibility of the test-environment banner
 const loadingTestEnv = ref(false);
+const storageTotalItems = ref<number | null>(null);
 
 const route = useRoute();
 const router = useRouter();
@@ -214,6 +244,10 @@ const backupTabBoolean = computed(() => {
     (detail.type === "NFS" || detail.type === "CIFS") && detail.isWorm === false
   );
 });
+
+const onStorageTotalItemsUpdate = (totalItems: number) => {
+  storageTotalItems.value = totalItems;
+};
 
 const onStorageSelected = (item: UnifiedStorageItemList | null) => {
   if (!item) {

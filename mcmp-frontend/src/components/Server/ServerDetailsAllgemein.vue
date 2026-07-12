@@ -718,7 +718,6 @@ const props = defineProps<{
   selectedServer: Server;
 }>();
 
-const emit = defineEmits<(e: "changed") => void>();
 const firstAppservice = computed(
   () => props.selectedServer.appservices?.[0] ?? null
 );
@@ -768,9 +767,6 @@ function change_cpu_ram(
       scheduleTime: scheduleTime != null ? scheduleTime : undefined,
       schedulePatchnight: schedulePatchnight,
     })
-    .then(() => {
-      emit("changed");
-    });
 }
 
 const isCpuInCooldown = computed(() => {

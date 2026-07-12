@@ -1,6 +1,6 @@
 <template>
   <div class="appservice-list-container-root">
-    <ScrollableListTable
+    <scrollable-list-table
       ref="tableRef"
       :items="appservicesItems"
       :total-items="itemsAvailableToLoad"
@@ -18,16 +18,39 @@
       <template #no-data>
         <v-row>
           <v-col>
-            <v-alert type="info">
+            <v-alert
+              v-if="search && search.length > 0"
+              type="info"
+            >
+              <h2>Keine Anwendungsservices gefunden</h2>
+              <span>Bitte überprüfen Sie Ihre Filtereinstellungen</span>
+            </v-alert>
+            <v-alert
+              v-else
+              type="info"
+              class="links"
+            >
               <h2 v-if="search && search.length > 0">
                 Keine Anwendungsservices gefunden
               </h2>
-              <h2 v-else>Keine Anwendungsservices verfügbar</h2>
+              <div v-else>
+                <h2>Keine Appservices verfügbar</h2>
+                <span
+                  >Bitte überprüfen Sie, das Sie einer Changegroup mit
+                  Anwendungsservices zugewiesen sind.<br />Weitere Informationen
+                  finden Sie
+                </span>
+                <a
+                  :href="APPSERVICE_EXPLAIN_URL"
+                  target="_blank"
+                  >hier</a
+                >
+              </div>
             </v-alert>
           </v-col>
         </v-row>
       </template>
-    </ScrollableListTable>
+    </scrollable-list-table>
   </div>
 </template>
 
@@ -39,6 +62,7 @@ import { nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 
 import appserviceService from "@/api/appserviceService.ts";
 import ScrollableListTable from "@/components/common/ScrollableListTable.vue";
+import { APPSERVICE_EXPLAIN_URL } from "@/constants.ts";
 
 const loading = ref(false);
 const search = ref("");
@@ -187,5 +211,13 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   min-height: 0;
+}
+.links a,
+.links a:visited,
+.links a:hover,
+.links a:active {
+  /* noinspection CssUnresolvedCustomProperty */
+  color: rgb(var(--v-theme-link));
+  text-decoration: none;
 }
 </style>

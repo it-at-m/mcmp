@@ -1,6 +1,49 @@
 <template>
   <v-app v-if="isUserAuthorized">
     <the-snackbar />
+    <v-navigation-drawer
+      v-if="!showLockPage"
+      :rail="rail"
+      permanent
+    >
+      <v-list nav>
+        <v-list-item
+          :prepend-icon="rail ? mdiMenu : mdiMenuOpen"
+          :title="rail ? undefined : 'Einklappen'"
+          @click="rail = !rail"
+        />
+      </v-list>
+      <v-divider />
+      <v-list
+        v-if="!appStore.isReadOnly && !appStore.isLocked"
+        nav
+      >
+        <shop
+          rail-mode
+          :collapsed="rail"
+        />
+      </v-list>
+      <v-divider />
+      <v-list nav>
+        <v-list-item
+          v-for="btn in buttonsCenter"
+          :key="btn.text"
+          :to="{ path: btn.path }"
+          :prepend-icon="btn.icon"
+          :title="btn.text"
+          :active="isCenterNavActive(btn.path)"
+          color="primary"
+        >
+          <v-tooltip
+            v-if="rail"
+            activator="parent"
+            location="right"
+          >
+            {{ btn.text }}
+          </v-tooltip>
+        </v-list-item>
+      </v-list>
+    </v-navigation-drawer>
     <v-app-bar
       v-if="!showLockPage"
       color="backgroundLight"
@@ -17,7 +60,7 @@
           >
             <template #activator="{ props: tooltipProps }">
               <router-link
-                to="/server"
+                to="/appservice"
                 v-bind="tooltipProps"
               >
                 <img
@@ -41,48 +84,7 @@
         <v-col
           cols="6"
           class="d-flex align-center justify-center"
-        >
-          <shop v-if="!appStore.isReadOnly && !appStore.isLocked" />
-          <template
-            v-for="btn in buttonsCenter"
-            :key="btn.text"
-          >
-            <!-- Unter 1500px: nur Icon mit Tooltip -->
-            <v-tooltip
-              v-if="!showNavText"
-              :text="btn.text"
-              location="top"
-            >
-              <template #activator="{ props: tooltipProps }">
-                <v-btn
-                  v-bind="tooltipProps"
-                  :to="{ path: btn.path }"
-                  :color="isCenterNavActive(btn.path) ? 'primary' : undefined"
-                  :variant="isCenterNavActive(btn.path) ? 'tonal' : 'text'"
-                  icon
-                  size="large"
-                  class="mr-2"
-                >
-                  <v-icon>{{ btn.icon }}</v-icon>
-                </v-btn>
-              </template>
-            </v-tooltip>
-
-            <!-- Ab 1500px: Icon + Text -->
-            <v-btn
-              v-else
-              :prepend-icon="btn.icon"
-              size="large"
-              :to="{ path: btn.path }"
-              :color="isCenterNavActive(btn.path) ? 'primary' : undefined"
-              :variant="isCenterNavActive(btn.path) ? 'tonal' : 'text'"
-              rounded
-              class="mr-2"
-            >
-              <span>{{ btn.text }}</span>
-            </v-btn>
-          </template>
-        </v-col>
+        />
         <v-col
           cols="3"
           class="d-flex align-center justify-end"
@@ -225,6 +227,8 @@ import {
   mdiHelpCircleOutline,
   mdiHistory,
   mdiLockAlert,
+  mdiMenu,
+  mdiMenuOpen,
   mdiMessageTextOutline,
   mdiMoonWaningCrescent,
   mdiServer,
@@ -234,7 +238,7 @@ import {
 } from "@mdi/js";
 import { computed, onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
-import { useDisplay, useTheme } from "vuetify";
+import { useTheme } from "vuetify";
 
 import appVersionService from "@/api/appVersionService.ts";
 import jobService from "@/api/jobService";
@@ -256,8 +260,7 @@ const route = useRoute();
 
 const theme = useTheme();
 
-const { width } = useDisplay();
-const showNavText = computed(() => width.value >= 1400);
+const rail = ref(true);
 
 const currentTheme = computed(() => theme.global.current.value);
 const themeLoading = ref(false);
@@ -342,6 +345,7 @@ function loadUser(): void {
     .then((user: User) => {
       userStore.setUser(user);
       userLoaded.value = true;
+      sessionStorage.removeItem("mcmp_auth_redirect_reload");
     })
     .catch(() => {
       // No user info received, so fallback

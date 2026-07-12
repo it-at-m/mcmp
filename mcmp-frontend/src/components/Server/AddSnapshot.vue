@@ -10,25 +10,25 @@
           icon
           :disabled="isDisabled"
           variant="flat"
-          @click="openDialog"
           aria-label="Snapshot erstellen"
+          @click="openDialog"
         >
           <v-icon>{{ isBatchOperation ? mdiTagPlus : mdiPlus }}</v-icon>
         </v-btn>
       </span>
     </template>
   </v-tooltip>
-  <CommonDialog
+  <common-dialog
     :model-value="dialog"
     max-width="600"
     title="Snapshot erstellen"
     :icon="mdiPencil"
     show-actions
-    submitActivated
+    submit-activated
+    show-change-warning
+    :check-for-enabled-actions="['VMWARE_CREATE_SNAPSHOT']"
     @dialog-cancel="close()"
     @dialog-confirm="save()"
-    showChangeWarning
-    :checkForEnabledActions="['VMWARE_CREATE_SNAPSHOT']"
   >
     <v-form ref="form">
       <div v-if="serverPowerOnInDialog">
@@ -65,27 +65,27 @@
         :rules="[validationRules.maxLengthRule(50, 'Maximal 50 Zeichen erlaubt.')]"
         :counter="50"
       />
-      <CommonAlert
-        color="notice_red"
+      <common-alert
         v-if="withShutdown"
+        color="notice_red"
       >
         <h4>Hinweis:</h4>
         Vor der Erstellung des Snapshots wird der Server heruntergefahren um
         eine mögliche Dateninkonsistenz zu vermeiden. Dadurch kommt es zu einer
         kurzen Downtime. Nach der Erstellung wird der Server automatisch wieder
         hochgefahren.
-      </CommonAlert>
-      <CommonAlert
-        color="notice_red"
+      </common-alert>
+      <common-alert
         v-if="!withShutdown"
+        color="notice_red"
       >
         <h4>Hinweis:</h4>
         Vor der Erstellung des Snapshots wird der Server
         <strong>NICHT</strong> heruntergefahren. Dies kann es zu einer möglichen
         Dateninkonsistenz führen.
-      </CommonAlert>
+      </common-alert>
     </v-form>
-  </CommonDialog>
+  </common-dialog>
 </template>
 
 <script setup lang="ts">
@@ -107,10 +107,6 @@ const props = defineProps<{
   selectedServers?: Server[];
   parentAllSelectedServersEligible?: boolean;
   parentDisabledTooltip?: string;
-}>();
-
-const emit = defineEmits<{
-  (e: "save", save: boolean): boolean;
 }>();
 
 const validationRules = useRules();
@@ -176,7 +172,6 @@ function save() {
 
       dialog.value = false;
       unregisterOpenDialog?.();
-      emit("save", true);
       resetForm();
     }
   });

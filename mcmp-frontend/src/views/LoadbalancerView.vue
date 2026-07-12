@@ -65,13 +65,14 @@
               </v-col>
             </v-row>
             <v-row>
-              <v-col>
+              <v-col class="d-flex align-center">
                 <v-tabs
                   v-model="tab"
                   align-tabs="start"
                   slider-color="primary"
                   show-arrows
                   density="compact"
+                  class="flex-grow-1"
                 >
                   <v-tab
                     value="Allgemeines"
@@ -104,6 +105,11 @@
                     </template>
                   </v-tab>
                 </v-tabs>
+
+                <collapse-all-cards-button
+                  :expanded="allCardsExpanded"
+                  @toggle="toggleAllCards"
+                />
               </v-col>
             </v-row>
           </div>
@@ -128,9 +134,7 @@
         <div
           v-else
           class="d-flex justify-center align-center h-100 text-grey"
-        >
-          Loadbalancer auswählen um Details anzuzeigen.
-        </div>
+        ></div>
       </div>
     </div>
   </v-container>
@@ -161,10 +165,12 @@ import { useRoute, useRouter } from "vue-router";
 import loadbalancerService from "@/api/loadbalancerService";
 import testenvService from "@/api/testenvService.ts";
 import commingSoon from "@/assets/commingSoon.png";
+import CollapseAllCardsButton from "@/components/common/CollapseAllCardsButton.vue";
 import LoadbalancerDetailsGeneral from "@/components/Loadbalancer/LoadbalancerDetailsGeneral.vue";
 import LoadbalancerDetailsIrules from "@/components/Loadbalancer/LoadbalancerDetailsIrules.vue";
 import LoadbalancerDetailsPool from "@/components/Loadbalancer/LoadbalancerDetailsPool.vue";
 import LoadbalancerList from "@/components/Loadbalancer/LoadbalancerList.vue";
+import { useCollapsibleCards } from "@/composables/useCollapsibleCards";
 
 const leftPanelWidth = ref(400);
 const isResizing = ref(false);
@@ -175,6 +181,8 @@ const selectedItems = ref<LoadbalancerListItem[]>([]);
 const selectedDetail = ref<LoadbalancerDetail | null>(null);
 const tab = ref("Allgemeines");
 const loadingDetails = ref(false);
+
+const { allCardsExpanded, toggleAllCards } = useCollapsibleCards(tab);
 const testing = ref(false);
 const showBanner = ref(true);
 const loadingTestEnv = ref(false);

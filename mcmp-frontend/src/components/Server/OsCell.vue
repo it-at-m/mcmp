@@ -31,10 +31,14 @@ import debianIcon from "@/assets/debian.svg";
 import linuxIcon from "@/assets/linux.svg";
 import otherIcon from "@/assets/other.svg";
 
-const windowsIcon = "https://monitoring.muenchen.de/lhmmon/check_mk/themes/facelift/images/icon_windows_msi.svg";
-const rhelIcon = "https://monitoring.muenchen.de/lhmmon/check_mk/themes/facelift/images/icon_linux_rpm.svg"
-const ubuntuIcon = "https://monitoring.muenchen.de/lhmmon/check_mk/themes/facelift/images/icon_linux_deb.svg"
-const vmwareIcon = "https://monitoring.muenchen.de/lhmmon/check_mk/themes/facelift/images/icon_vsphere.svg"
+const windowsIcon =
+  "https://monitoring.muenchen.de/lhmmon/check_mk/themes/facelift/images/icon_windows_msi.svg";
+const rhelIcon =
+  "https://monitoring.muenchen.de/lhmmon/check_mk/themes/facelift/images/icon_linux_rpm.svg";
+const ubuntuIcon =
+  "https://monitoring.muenchen.de/lhmmon/check_mk/themes/facelift/images/icon_linux_deb.svg";
+const vmwareIcon =
+  "https://monitoring.muenchen.de/lhmmon/check_mk/themes/facelift/images/icon_vsphere.svg";
 
 const props = defineProps<{
   osFullName: string;

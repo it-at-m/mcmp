@@ -5,9 +5,14 @@ import type {
   ServerTypeMixed,
 } from "@/types/ServerTypes.ts";
 
+
+
 import type NetworkGroup from "./NetworkGroup";
 
+
+
 import NewServername from "@/types/NewServername.ts";
+
 
 export enum OsType {
   Linux = "Linux",
@@ -67,7 +72,9 @@ export default class installServerDetails {
     // hardware settings
     public memory: number,
     public cpu: number,
-    public disk: Partial<Record<OsType, Partial<Record<categoryType, DiskEntry[]>>>>,
+    public disk: Partial<
+      Record<OsType, Partial<Record<categoryType, DiskEntry[]>>>
+    >,
     public networkGroup: NetworkGroup | null,
 
     // linux custom

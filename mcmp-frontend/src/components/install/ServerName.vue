@@ -3,57 +3,57 @@
     <v-form ref="form">
       <!-- Cluster Checkbox statt Präfix-Dropdown -->
       <v-checkbox
-          v-model="useClusterPrefix"
-          label="Server wird Teil eines DB-Clusters"
-          @change="onClusterToggle"
-          v-if="instlServerDetails.category?.allowedPrefixes.length > 0"
+        v-if="instlServerDetails.category?.allowedPrefixes.length > 0"
+        v-model="useClusterPrefix"
+        label="Server wird Teil eines DB-Clusters"
+        @change="onClusterToggle"
       />
 
       <v-text-field
-          v-model="instlServerDetails.serverName!.application"
-          label="Applikationsname*"
-          clearable
-          :rules="nameRule"
-          @input="debouncedGenerateServerName()"
-          rounded
+        v-model="instlServerDetails.serverName!.application"
+        label="Applikationsname*"
+        clearable
+        :rules="nameRule"
+        rounded
+        @input="debouncedGenerateServerName()"
       />
 
       <v-checkbox
-          v-model="changeNumbers"
-          label="Servernummerierung anpassen?"
+        v-model="changeNumbers"
+        label="Servernummerierung anpassen?"
       />
       <v-number-input
-          v-model="instlServerDetails.serverName!.customNumber"
-          v-if="changeNumbers"
-          :min="1"
-          :max="999"
-          hint="Erlaubte Werte 1 bis 999"
-          persistent-hint
-          control-variant="split"
-          @update:model-value="debouncedGenerateServerName()"
+        v-if="changeNumbers"
+        v-model="instlServerDetails.serverName!.customNumber"
+        :min="1"
+        :max="999"
+        hint="Erlaubte Werte 1 bis 999"
+        persistent-hint
+        control-variant="split"
+        @update:model-value="debouncedGenerateServerName()"
       >
       </v-number-input>
 
       <strong>Domäne*</strong>
       <v-radio-group
-          v-model="instlServerDetails.serverName!.domain"
-          inline
-          :rules="domainRule"
+        v-model="instlServerDetails.serverName!.domain"
+        inline
+        :rules="domainRule"
       >
         <v-radio
-            v-for="domain in domains"
-            :key="domain"
-            :label="domain"
-            :value="domain"
-            @change="generateServerName()"
+          v-for="domain in domains"
+          :key="domain"
+          :label="domain"
+          :value="domain"
+          @change="generateServerName()"
         />
       </v-radio-group>
 
       <strong>Voraussichtlicher Servername</strong>
       <br />
       <v-progress-circular
-          indeterminate
-          v-if="loading"
+        v-if="loading"
+        indeterminate
       />
       <span>{{ instlServerDetails.expectedServerName }}</span>
     </v-form>
@@ -62,6 +62,7 @@
 
 <script setup lang="ts">
 import type { ServerCategoryType } from "@/types/ServerTypes.ts";
+
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 
 import infobloxFQDNService from "@/api/infobloxFQDNService.ts";
@@ -100,17 +101,17 @@ function computeMaxLength(): number {
 
 const nameRule = computed(() => [
   validationRules.minLengthRule(
-      3,
-      "Der Name muss mindestens 3 Zeichen lang sein."
+    3,
+    "Der Name muss mindestens 3 Zeichen lang sein."
   ),
   validationRules.maxLengthRule(
-      computeMaxLength(),
-      `Der Name darf maximal ${computeMaxLength()} Zeichen lang sein.`
+    computeMaxLength(),
+    `Der Name darf maximal ${computeMaxLength()} Zeichen lang sein.`
   ),
   validationRules.notEmptyRule("Der Name darf nicht leer sein."),
   validationRules.regexRule(
-      /^[a-z][a-z0-9]+$/,
-      "Der Name muss mit einem Kleinbuchstaben anfangen und darf nur aus Kleinbuchstaben und Zahlen bestehen."
+    /^[a-z][a-z0-9]+$/,
+    "Der Name muss mit einem Kleinbuchstaben anfangen und darf nur aus Kleinbuchstaben und Zahlen bestehen."
   ),
 ]);
 
@@ -143,12 +144,12 @@ function generateServerName() {
 
         let serverType = props.instlServerDetails.serverName.serverType;
         if (
-            props.instlServerDetails.category &&
-            "kenner" in props.instlServerDetails.category &&
-            !("appCategorys" in props.instlServerDetails.category)
+          props.instlServerDetails.category &&
+          "kenner" in props.instlServerDetails.category &&
+          !("appCategorys" in props.instlServerDetails.category)
         ) {
           const category = props.instlServerDetails
-              .category as ServerCategoryType;
+            .category as ServerCategoryType;
           if (category.kenner) {
             serverType = serverType + category.kenner;
           }
@@ -157,11 +158,11 @@ function generateServerName() {
         // set Os prefix only if no kenner is set
         if (serverType.length == 0) {
           if (
-              OperatingSystem.Linux.includes(props.instlServerDetails.osVersion)
+            OperatingSystem.Linux.includes(props.instlServerDetails.osVersion)
           ) {
             serverType = serverType + "lx";
           } else if (
-              OperatingSystem.Windows.includes(props.instlServerDetails.osVersion)
+            OperatingSystem.Windows.includes(props.instlServerDetails.osVersion)
           ) {
             serverType = serverType + "wi";
           } else {
@@ -170,18 +171,18 @@ function generateServerName() {
         }
 
         infobloxFQDNService
-            .getFreeServerFQDN(
-                loading,
-                props.instlServerDetails.serverName.prefix,
-                props.instlServerDetails.serverName.application,
-                serverType,
-                props.instlServerDetails.appservice!.id,
-                props.instlServerDetails.serverName.domain,
-                props.instlServerDetails.serverName.customNumber
-            )
-            .then((responseFQDN) => {
-              props.instlServerDetails.expectedServerName = responseFQDN;
-            });
+          .getFreeServerFQDN(
+            loading,
+            props.instlServerDetails.serverName.prefix,
+            props.instlServerDetails.serverName.application,
+            serverType,
+            props.instlServerDetails.appservice!.id,
+            props.instlServerDetails.serverName.domain,
+            props.instlServerDetails.serverName.customNumber
+          )
+          .then((responseFQDN) => {
+            props.instlServerDetails.expectedServerName = responseFQDN;
+          });
       }
     });
   });
@@ -190,8 +191,8 @@ function generateServerName() {
 // Handler für die Cluster-Checkbox
 function onClusterToggle() {
   props.instlServerDetails.serverName!.prefix = useClusterPrefix.value
-      ? "cn-"
-      : "";
+    ? "cn-"
+    : "";
   debouncedGenerateServerName();
 }
 
@@ -203,28 +204,28 @@ onMounted(() => {
 });
 
 watch(
-    () => [
-      props.instlServerDetails.appservice,
-      props.instlServerDetails.osType,
-      props.instlServerDetails.osVersion,
-      props.instlServerDetails.categoryType,
-      props.instlServerDetails.category,
-    ],
-    ([appservice, osType, osVersion, categoryTypeInst, category]) => {
-      props.instlServerDetails.serverName!.prefix = "";
-      useClusterPrefix.value = false;
-      if (appservice && osType && osVersion && categoryTypeInst && category) {
-        generateServerName();
-      } else if (
-          appservice &&
-          osType &&
-          osVersion &&
-          categoryTypeInst == categoryType.Standard
-      ) {
-        generateServerName();
-      } else {
-        props.instlServerDetails.expectedServerName = "";
-      }
+  () => [
+    props.instlServerDetails.appservice,
+    props.instlServerDetails.osType,
+    props.instlServerDetails.osVersion,
+    props.instlServerDetails.categoryType,
+    props.instlServerDetails.category,
+  ],
+  ([appservice, osType, osVersion, categoryTypeInst, category]) => {
+    props.instlServerDetails.serverName!.prefix = "";
+    useClusterPrefix.value = false;
+    if (appservice && osType && osVersion && categoryTypeInst && category) {
+      generateServerName();
+    } else if (
+      appservice &&
+      osType &&
+      osVersion &&
+      categoryTypeInst == categoryType.Standard
+    ) {
+      generateServerName();
+    } else {
+      props.instlServerDetails.expectedServerName = "";
     }
+  }
 );
 </script>

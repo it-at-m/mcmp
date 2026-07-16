@@ -13,8 +13,8 @@
       :aria-label="lableText + 'datum auswählen'"
       hide-header
       hide-actions
-      @update:model-value="updateDate"
       :rules="dateRules"
+      @update:model-value="updateDate"
     />
   </div>
   <br />
@@ -23,12 +23,12 @@
     label="Uhrzeit"
     type="time"
     :aria-label="lableText + 'uhrzeit eintragen'"
-    @update:model-value="writeInDate"
     :rules="timeRules"
+    @update:model-value="writeInDate"
   >
     <template
-      v-slot:append-inner
       v-if="withButtons"
+      #append-inner
     >
       <v-btn
         :icon="mdiChevronUp"
@@ -48,7 +48,7 @@
 
 <script setup lang="ts">
 import { mdiChevronDown, mdiChevronUp } from "@mdi/js";
-import { computed, inject, ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 
 const props = defineProps<{
   lableText: string;
@@ -101,7 +101,7 @@ function roundTimeToHalfHour(time: string) {
   if (!time) return "";
 
   // Parse time with default values to prevent undefined
-  var [hours = 0, minutes = 0] = time.split(":").map(Number);
+  let [hours = 0, minutes = 0] = time.split(":").map(Number);
 
   // Wenn Minuten < 30 → auf 30 setzen
   if (minutes < 30 && minutes > 0) {
@@ -126,7 +126,7 @@ function roundTimeToHalfHour(time: string) {
 function increase() {
   if (!time.value) return "";
   // Parse time with default values to prevent undefined
-  var [hours = 0, minutes = 0] = time.value.split(":").map(Number);
+  let [hours = 0, minutes = 0] = time.value.split(":").map(Number);
 
   minutes += 1;
 
@@ -139,7 +139,7 @@ function increase() {
 function decrease() {
   if (!time.value) return;
   // Parse time with default values to prevent undefined
-  var [hours = 0, minutes = 0] = time.value.split(":").map(Number);
+  let [hours = 0, minutes = 0] = time.value.split(":").map(Number);
 
   // Wenn Minuten < 30 → auf 30 setzen
   if (minutes <= 30 && minutes > 0) {

@@ -82,8 +82,8 @@
           >
           <v-btn
             color="primary"
-            @click="saveCategory"
             :loading="loading"
+            @click="saveCategory"
             >Speichern</v-btn
           >
         </v-card-actions>
@@ -117,8 +117,8 @@
           >
           <v-btn
             color="error"
-            @click="deleteCategory"
             :loading="loading"
+            @click="deleteCategory"
             >Endgültig löschen</v-btn
           >
         </v-card-actions>

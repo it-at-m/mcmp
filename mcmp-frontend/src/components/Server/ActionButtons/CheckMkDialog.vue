@@ -174,7 +174,10 @@ const tooltip = computed(() => {
     return "Keine Server ausgewählt.";
   }
   if (!props.parentAllSelectedServersEligible) {
-    return props.parentDisabledTooltip || "Nicht berechtigt oder Server nicht verwaltet.";
+    return (
+      props.parentDisabledTooltip ||
+      "Nicht berechtigt oder Server nicht verwaltet."
+    );
   }
   return props.title;
 });
@@ -234,10 +237,20 @@ function save() {
         };
         if (props.isBatchOperation) {
           (props.selectedServerIds ?? []).forEach((id) => {
-            jobService.startJob(loading, "CHECKMK_SET_DOWNTIME", id, downtimePayload);
+            jobService.startJob(
+              loading,
+              "CHECKMK_SET_DOWNTIME",
+              id,
+              downtimePayload
+            );
           });
         } else {
-          jobService.startJob(loading, "CHECKMK_SET_DOWNTIME", props.server!.id, downtimePayload);
+          jobService.startJob(
+            loading,
+            "CHECKMK_SET_DOWNTIME",
+            props.server!.id,
+            downtimePayload
+          );
         }
       }
 

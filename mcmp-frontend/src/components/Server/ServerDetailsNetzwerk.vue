@@ -103,7 +103,6 @@ function formatIps(ip: string) {
   if (!ip) return "-";
   return ip;
 }
-
 </script>
 <style scoped>
 .links a,

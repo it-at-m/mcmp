@@ -13,8 +13,8 @@
           variant="flat"
           icon
           size="small"
-          @click="onBtnClick"
           :aria-label="tooltip"
+          @click="onBtnClick"
         >
           <v-icon
             :icon="icon"
@@ -25,41 +25,78 @@
       </span>
     </template>
   </v-tooltip>
-  <CommonDialog
+  <common-dialog
     :model-value="dialog"
     :title="confirmDialogTitle"
     :icon="icon"
     max-width="600"
-    @dialogConfirm="onDialogConfirm"
-    @dialog-cancel="onDialogCancel"
     show-actions
-    :submitActivated="validated"
-    showChangeWarning
-    :checkForEnabledActions="jobToCall ? [jobToCall] : undefined"
+    :submit-activated="validated"
+    show-change-warning
+    :check-for-enabled-actions="jobToCall ? [jobToCall] : undefined"
+    @dialog-confirm="onDialogConfirm"
+    @dialog-cancel="onDialogCancel"
   >
-    <CommonAlert
+    <common-alert
+      v-if="server || (isBatchOperation && selectedServerIds?.length)"
       color="accent"
-      v-if="server || (isBatchOperation && selectedServerIds?.length)">
-      <div v-if="server" class="server-info-label">Ausgewählter Server:</div>
-      <div v-if="server" class="server-name">{{ server.name }}</div>
+    >
+      <div
+        v-if="server"
+        class="server-info-label"
+      >
+        Ausgewählter Server:
+      </div>
+      <div
+        v-if="server"
+        class="server-name"
+      >
+        {{ server.name }}
+      </div>
 
-      <div v-else-if="isBatchOperation" class="server-info-label">Ausgewählte Server:</div>
-      <div v-else-if="isBatchOperation" class="server-name">{{ selectedServerIds?.length }} Server</div>
+      <div
+        v-if="isBatchOperation"
+        class="server-info-label"
+      >
+        Ausgewählte Server:
+      </div>
+      <div
+        v-if="isBatchOperation"
+        class="server-name"
+      >
+        {{ selectedServerIds?.length }} Server
+      </div>
 
-      <div v-if="isBatchOperation && selectedServers && selectedServers.length" class="mt-2">
+      <div
+        v-if="isBatchOperation && selectedServers && selectedServers.length"
+        class="mt-2"
+      >
         <ul class="pl-4">
-          <li v-for="s in selectedServers.filter(x => selectedServerIds?.includes(x.id))" :key="s.id">{{ s.name }}</li>
+          <li
+            v-for="s in selectedServers.filter((x) =>
+              selectedServerIds?.includes(x.id)
+            )"
+            :key="s.id"
+          >
+            {{ s.name }}
+          </li>
         </ul>
       </div>
-    </CommonAlert>
+    </common-alert>
 
     <!-- One-time hint for single-server dialog -->
-    <CommonAlert color="accent" v-if="showBatchHint && !isBatchOperation" class="mt-2">
+    <common-alert
+      v-if="showBatchHint && !isBatchOperation"
+      color="accent"
+      class="mt-2"
+    >
       <h4>Tipp:</h4>
       <div>
-        Es können jetzt auch mehrere Root/Admin-Rechte gleichzeitig bestellt werden. Gehen Sie dazu auf einen Anwendungsservice und wählen Sie die gewünschten Server aus der Liste unten aus.
+        Es können jetzt auch mehrere Root/Admin-Rechte gleichzeitig bestellt
+        werden. Gehen Sie dazu auf einen Anwendungsservice und wählen Sie die
+        gewünschten Server aus der Liste unten aus.
       </div>
-    </CommonAlert>
+    </common-alert>
 
     <br />
     {{ confirmDialogText || "Wollen Sie die Aktion ausführen?" }}
@@ -136,7 +173,7 @@
         "
       />
     </div>
-  </CommonDialog>
+  </common-dialog>
 </template>
 
 <script setup lang="ts">
@@ -166,9 +203,7 @@ const props = defineProps<{
   isBatchOperation?: boolean;
 }>();
 
-const emit = defineEmits<{
-  (e: "change"): void;
-}>();
+const emit = defineEmits<(e: "change") => void>();
 
 const registerOpenDialog = inject<() => void>("registerOpenDialog");
 const unregisterOpenDialog = inject<() => void>("unregisterOpenDialog");
@@ -187,7 +222,7 @@ const BATCH_HINT_KEY = "mcmp_root_admin_batch_hint_v1";
 const showBatchHint = ref(false);
 
 function tryValidation() {
-  if (!isOtherUser) {
+  if (!isOtherUser.value) {
     validated.value = true;
     return;
   }
@@ -204,7 +239,11 @@ function onBtnClick() {
       if (!shown) {
         showBatchHint.value = true;
         // mark as shown so it is not displayed again
-        try { localStorage.setItem(BATCH_HINT_KEY, "1"); } catch (e) { /* ignore */ }
+        try {
+          localStorage.setItem(BATCH_HINT_KEY, "1");
+        } catch (e) {
+          /* ignore */
+        }
       }
     }
 
@@ -236,15 +275,15 @@ const getActionIdentifierForServer = (server?: Server) => {
 function makeJobCall() {
   // if batch operation, iterate over selectedServerIds
   if (props.isBatchOperation) {
-    const ids = props.selectedServerIds ?? (props.selectedServers?.map(s => s.id) ?? []);
+    const ids =
+      props.selectedServerIds ?? props.selectedServers?.map((s) => s.id) ?? [];
     if (ids.length === 0) {
-      console.warn("No servers selected for batch operation");
       return;
     }
 
     loading.value = true;
-    const promises = ids.map(id => {
-      const server = props.selectedServers?.find(s => s.id === id);
+    const promises = ids.map((id) => {
+      const server = props.selectedServers?.find((s) => s.id === id);
       const action = props.jobToCall ?? getActionIdentifierForServer(server);
       const extraVars: Record<string, any> = {
         duration: "3 days",
@@ -262,12 +301,11 @@ function makeJobCall() {
   }
 
   if (!props.jobToCall) {
-    console.error("No job specified to call");
     return;
   }
 
   // format duration in awx format e.g. 3 days or 72 hours
-  let duration = "3 days";
+  const duration = "3 days";
   /*if (rootUntilDate.value) {
     const today = new Date();
     const until = new Date(rootUntilDate.value);

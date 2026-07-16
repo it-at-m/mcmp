@@ -64,7 +64,7 @@
         <v-expansion-panel :title="category.name">
           <v-expansion-panel-text>
             <h2 class="text-h5 mb-4">
-              <InfoTooltip
+              <info-tooltip
                 v-if="category.description"
                 :text="category.description"
               />
@@ -72,8 +72,8 @@
 
             <v-card
               v-for="faq in getFaqsByCategory(category.id)"
-              :key="faq.id"
               :id="`faq-${faq.id}`"
+              :key="faq.id"
               color="backgroundLight"
               variant="flat"
               class="mb-4 border"
@@ -142,8 +142,8 @@
                   icon
                   size="small"
                   variant="text"
-                  @click.stop="copyFaqLink(faq.id)"
                   title="Link kopieren"
+                  @click.stop="copyFaqLink(faq.id)"
                 >
                   <v-icon size="small">{{ mdiLink }}</v-icon>
                 </v-btn>
@@ -234,8 +234,8 @@
           >
           <v-btn
             color="primary"
-            @click="saveFaq"
             :loading="loading"
+            @click="saveFaq"
             >Speichern</v-btn
           >
         </v-card-actions>
@@ -262,8 +262,8 @@
           >
           <v-btn
             color="error"
-            @click="deleteFaq"
             :loading="loading"
+            @click="deleteFaq"
             >Löschen</v-btn
           >
         </v-card-actions>
@@ -272,7 +272,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import {
   mdiChevronDown,
   mdiChevronUp,

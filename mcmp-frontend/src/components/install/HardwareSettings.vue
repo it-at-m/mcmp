@@ -18,9 +18,13 @@
         <strong>Arbeitspeicher in GB*</strong>
         <v-number-input
           v-model="instlServerDetails.memory"
-          :min="instlServerDetails.category?.label == 'OracleDB'?6:4"
+          :min="instlServerDetails.category?.label == 'OracleDB' ? 6 : 4"
           :max="64"
-          :hint="'Erlaubte Werte ' + (instlServerDetails.category?.label == 'OracleDB'?6:4) + ' bis 64'"
+          :hint="
+            'Erlaubte Werte ' +
+            (instlServerDetails.category?.label == 'OracleDB' ? 6 : 4) +
+            ' bis 64'
+          "
           persistent-hint
           control-variant="split"
           variant="solo"
@@ -35,17 +39,17 @@
           instlServerDetails.categoryType == 'Standard'
         "
       >
-        <DiskSizeInput
+        <disk-size-input
           v-model="
             instlServerDetails.disk[OsType.Windows][categoryType.Standard][0]
               .size
           "
           title="Größe Festplatte C:\"
-          :minSizeInGB="
+          :min-size-in-g-b="
             instlServerDetails.disk[OsType.Windows][categoryType.Standard][0]
               .min_size
           "
-          :maxSizeInGB="
+          :max-size-in-g-b="
             instlServerDetails.disk[OsType.Windows][categoryType.Standard][0]
               .max_size
           "
@@ -63,23 +67,27 @@
           ]"
           :key="diskConfig.drive_number"
         >
-          <DiskSizeInput
+          <disk-size-input
             v-model="diskConfig.size"
             :title="`Größe Festplatte ${diskConfig.label}`"
-            :minSizeInGB="diskConfig.min_size"
-            :maxSizeInGB="diskConfig.max_size"
+            :min-size-in-g-b="diskConfig.min_size"
+            :max-size-in-g-b="diskConfig.max_size"
           />
         </div>
       </v-col>
     </v-row>
     <strong>Netzwerkgruppe*</strong>&nbsp;
-    <a href="https://go.muenchen.de/sp/KB0023952" target="_blank" rel="noopener noreferrer">
-    Hilfe
-    <v-icon
-      :icon="mdiOpenInNew"
-      size="16"
-      style="vertical-align: baseline; position: relative; top: 2px"
-    />
+    <a
+      href="https://go.muenchen.de/sp/KB0023952"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      Hilfe
+      <v-icon
+        :icon="mdiOpenInNew"
+        size="16"
+        style="vertical-align: baseline; position: relative; top: 2px"
+      />
     </a>
     <v-autocomplete
       v-model="instlServerDetails.networkGroup"
@@ -91,27 +99,33 @@
       rounded
       variant="outlined"
     />
-    <CommonAlert
+    <common-alert
       color="info"
       class="mt-2"
     >
-      Sollten Ihnen ein bestimmtes Netz fehlen, können Sie dieses ganz einfach über das Ticket
-      <a href="https://it-services.muenchen.de/sp?id=sc_cat_item&sys_id=4567ec71835d3ed0eba660e0deaad35d" target="_blank" rel="noopener noreferrer">
+      Sollten Ihnen ein bestimmtes Netz fehlen, können Sie dieses ganz einfach
+      über das Ticket
+      <a
+        href="https://it-services.muenchen.de/sp?id=sc_cat_item&sys_id=4567ec71835d3ed0eba660e0deaad35d"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
         Netzwerkgruppe in MCMP zuordnen
         <v-icon
-            :icon="mdiOpenInNew"
-            size="16"
-            style="vertical-align: baseline; position: relative; top: 2px"
+          :icon="mdiOpenInNew"
+          size="16"
+          style="vertical-align: baseline; position: relative; top: 2px"
         />
       </a>
       beantragen.
-    </CommonAlert>
+    </common-alert>
   </v-container>
 </template>
 
 <script setup lang="ts">
 import type NetworkGroup from "@/types/NetworkGroup.ts";
 
+import { mdiOpenInNew } from "@mdi/js";
 import { onMounted, ref, watch } from "vue";
 
 import networkService from "@/api/networkService";
@@ -121,7 +135,6 @@ import installServerDetails, {
   categoryType,
   OsType,
 } from "@/types/installServerDetails";
-import { mdiOpenInNew } from "@mdi/js";
 
 const props = defineProps<{
   instlServerDetails: installServerDetails;
@@ -165,8 +178,8 @@ watch(
 .links a:visited,
 .links a:hover,
 .links a:active {
+  /* noinspection CssUnresolvedCustomProperty */
   color: rgb(var(--v-theme-link));
   text-decoration: none;
 }
-
 </style>

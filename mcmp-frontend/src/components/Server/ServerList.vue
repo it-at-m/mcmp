@@ -317,7 +317,6 @@ import serverService from "@/api/serverService";
 import ScrollableListTable from "@/components/common/ScrollableListTable.vue";
 import OsCell from "@/components/Server/OsCell.vue";
 import { APPSERVICE_EXPLAIN_URL } from "@/constants.ts";
-import { useUserStore } from "@/stores/user.ts";
 
 const favoritesFilter = ref(
   localStorage.getItem("mcmp_favorites_filter") === "true"
@@ -340,7 +339,6 @@ const statusFilter = ref<string[]>(
 );
 const osFilter = ref<string>(localStorage.getItem("mcmp_os_filter") || "");
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
-const userStore = useUserStore();
 
 const props = defineProps<{
   selected: ServerList[];

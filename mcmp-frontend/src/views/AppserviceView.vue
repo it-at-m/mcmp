@@ -89,6 +89,12 @@
                 <appservice-details-server
                   :selected-appservice="selectedAppservice"
                 />
+                <appservice-details-storage
+                  :selected-appservice="selectedAppservice"
+                />
+                <appservice-details-loadbalancer
+                  :selected-appservice="selectedAppservice"
+                />
               </v-tabs-window-item>
             </v-tabs-window>
           </div>
@@ -112,7 +118,9 @@ import { useRoute, useRouter } from "vue-router";
 
 import appserviceService from "@/api/appserviceService";
 import AppserviceDetailsAllgemein from "@/components/Appservice/AppserviceDetailsAllgemein.vue";
+import AppserviceDetailsLoadbalancer from "@/components/Appservice/AppserviceDetailsLoadbalancer.vue";
 import AppserviceDetailsServer from "@/components/Appservice/AppserviceDetailsServer.vue";
+import AppserviceDetailsStorage from "@/components/Appservice/AppserviceDetailsStorage.vue";
 import AppserviceList from "@/components/Appservice/AppserviceList.vue";
 import AppserviceStatus from "@/components/Appservice/AppserviceStatus.vue";
 import CollapseAllCardsButton from "@/components/common/CollapseAllCardsButton.vue";

@@ -35,7 +35,7 @@ public record LoadBalancerDTO(
     ) {}
 
     public record PoolRefDTO(
-            @JsonProperty("default") boolean isDefault,
+            @JsonProperty("default") Boolean isDefault,
             List<String> hosts,
             List<String> paths
     ) {}

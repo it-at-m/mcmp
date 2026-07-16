@@ -13,7 +13,7 @@
       <v-col cols="3">
         <h3>
           MCMP-Anwendungsservice{{
-            lb.appserviceNames && lb.appserviceNames.length > 1 ? "s" : ""
+            lb.appservices && lb.appservices.length > 1 ? "s" : ""
           }}<info-tooltip>
             <div class="pa-1">
               <strong>MCMP Anwendungservice-Ansicht</strong>
@@ -29,9 +29,17 @@
     <v-row>
       <v-col
         cols="3"
-        class="pt-0"
+        class="pt-0 links"
       >
         <p>{{ lb.name }}</p>
+        <a
+          v-if="lb.tenantRepositoryUrl"
+          :href="lb.tenantRepositoryUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Repository
+        </a>
       </v-col>
       <v-col
         cols="3"
@@ -74,19 +82,23 @@
         cols="3"
         class="pt-0 links"
       >
-        <div v-if="lb.appserviceNames && lb.appserviceNames.length > 1">
+        <div v-if="lb.appservices && lb.appservices.length > 1">
           <ul style="padding-left: 0; list-style-position: inside">
             <li
-              v-for="name in lb.appserviceNames"
-              :key="name"
+              v-for="appservice in lb.appservices"
+              :key="appservice.id"
               class="mb-1"
             >
-              {{ name }}
+              <router-link :to="`/appservice/${appservice.id}`">
+                {{ appservice.name }}
+              </router-link>
             </li>
           </ul>
         </div>
-        <p v-else-if="lb.appserviceNames && lb.appserviceNames.length === 1">
-          {{ lb.appserviceNames[0] }}
+        <p v-else-if="lb.appservices && lb.appservices.length === 1">
+          <router-link :to="`/appservice/${lb.appservices[0].id}`">
+            {{ lb.appservices[0].name }}
+          </router-link>
         </p>
         <p v-else>-</p>
       </v-col>
@@ -99,7 +111,17 @@
   >
     <v-row>
       <v-col cols="3">
-        <h3>Listener Protokoll</h3>
+        <h3>
+          Listener Protokoll<info-tooltip>
+            <div class="pa-1">
+              <p class="text-caption mt-2 mb-1">
+                Der Listener nimmt die Anfragen des Clients auf dem definierten
+                Port an, verarbeitet diese und leitet sie dann an den passenden
+                Pool von Servern weiter.
+              </p>
+            </div>
+          </info-tooltip>
+        </h3>
       </v-col>
       <v-col cols="3">
         <h3>Server Protokoll</h3>
@@ -108,7 +130,25 @@
         <h3>Port</h3>
       </v-col>
       <v-col cols="3">
-        <h3>Persistenz</h3>
+        <h3>
+          Persistenz<info-tooltip>
+            <div class="pa-1">
+              <p class="text-caption mt-2 mb-1">
+                Sollen wiederholte Anfragen desselben Clients an denselben
+                Server weitergeleitet werden?
+              </p>
+              <p class="text-caption mt-2 mb-1">
+                <strong>Cookie:</strong> Der Client erhält bei der ersten
+                Anfrage ein Cookie vom Loadbalancer, durch das er bei
+                darauffolgenden Anfragen identifiziert werden kann.
+              </p>
+              <p class="text-caption mt-2 mb-1">
+                <strong>Source-Address:</strong> Der Client wird anhand seiner
+                Quell-IP identifiziert.
+              </p>
+            </div>
+          </info-tooltip>
+        </h3>
       </v-col>
     </v-row>
     <v-row>
@@ -139,13 +179,38 @@
     </v-row>
     <v-row>
       <v-col cols="3">
-        <h3>Redirect HTTP → HTTPS</h3>
+        <h3>
+          Redirect HTTP → HTTPS<info-tooltip>
+            <div class="pa-1">
+              <p class="text-caption mt-2 mb-1">
+                Der Listener lauscht zusätzlich auf Port 80 (http) und leitet
+                Anfragen von dort auf Port 443 (https) weiter.
+              </p>
+            </div>
+          </info-tooltip>
+        </h3>
       </v-col>
       <v-col
         v-if="lb.wafEnabled"
         cols="3"
       >
-        <h3>WAF Status</h3>
+        <h3>
+          WAF-Status<info-tooltip>
+            <div class="pa-1">
+              <p class="text-caption mt-2 mb-1">
+                Verhalten des Web-Application-Firewall-Moduls:
+              </p>
+              <p class="text-caption mt-2 mb-1">
+                <strong>blocking:</strong> Als bösartig klassifizierte Requests
+                werden blockiert.
+              </p>
+              <p class="text-caption mt-2 mb-1">
+                <strong>transparent:</strong> Als bösartig klassifizierte
+                Requests werden nicht blockiert, lediglich geloggt.
+              </p>
+            </div>
+          </info-tooltip>
+        </h3>
       </v-col>
     </v-row>
     <v-row>

@@ -15,8 +15,8 @@
         />
       </v-col>
       <v-col cols="1">
-        <InlineTooltip
-          marginTop="5"
+        <inline-tooltip
+          margin-top="5"
           class="links"
         >
           <p>
@@ -31,7 +31,7 @@
             <br />http: Loadbalancer kommuniziert unverschlüsselt mit http
             <br />https: Loadbalancer kommuniziert verschlüsselt mit http
           </p>
-        </InlineTooltip>
+        </inline-tooltip>
       </v-col>
       <v-col cols="6">
         <v-text-field
@@ -60,8 +60,8 @@
           />
         </v-col>
         <v-col cols="1">
-          <InlineTooltip
-            marginTop="3"
+          <inline-tooltip
+            margin-top="3"
             class="links"
           >
             <p>
@@ -70,7 +70,7 @@
               einen Cookie den er vom Loadbalancer erhält <br />source-address:
               Client wird durch seine Source IP definiert
             </p>
-          </InlineTooltip>
+          </inline-tooltip>
         </v-col>
       </v-row>
       <v-expansion-panels>
@@ -84,8 +84,8 @@
                 />
               </v-col>
               <v-col cols="1">
-                <InlineTooltip
-                  marginTop="3"
+                <inline-tooltip
+                  margin-top="3"
                   class="links"
                 >
                   <p>
@@ -96,7 +96,7 @@
                       >X-Forwarded-For Header</a
                     >
                   </p>
-                </InlineTooltip>
+                </inline-tooltip>
               </v-col>
               <v-col cols="5">
                 <v-checkbox
@@ -105,8 +105,8 @@
                 />
               </v-col>
               <v-col cols="1">
-                <InlineTooltip
-                  marginTop="3"
+                <inline-tooltip
+                  margin-top="3"
                   class="links"
                 >
                   <p>
@@ -118,7 +118,7 @@
                     >
                     verwendet
                   </p>
-                </InlineTooltip>
+                </inline-tooltip>
               </v-col>
             </v-row>
           </v-expansion-panel-text>

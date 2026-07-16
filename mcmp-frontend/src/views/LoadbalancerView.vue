@@ -217,8 +217,9 @@ async function syncSelectionFromRoute(idParam: string | string[] | undefined) {
         id: selectedDetail.value.id,
         name: selectedDetail.value.name,
         listen: selectedDetail.value.listen,
+        domain: selectedDetail.value.domains[0],
         port: selectedDetail.value.port,
-        appserviceName: selectedDetail.value.appserviceNames[0] ?? null,
+        appserviceName: selectedDetail.value.appservices[0]?.name ?? null,
       },
     ];
   } catch {

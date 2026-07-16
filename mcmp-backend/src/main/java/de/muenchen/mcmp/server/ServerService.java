@@ -153,6 +153,7 @@ public class ServerService {
                 .serverType(serverListExtended.getServerType())
                 .managed(serverListExtended.getManaged())
                 .canEdit(serverListExtended.getCanEdit())
+                .hasWarnings(Boolean.TRUE.equals(serverListExtended.getHasWarnings()))
                 .build();
     }
 

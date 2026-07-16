@@ -149,11 +149,29 @@
               </v-tooltip>
             </td>
             <td>
-              <span class="font-weight-bold">
-                <router-link :to="`/server/${server.id}`">
-                  {{ server.name }}
-                </router-link>
-              </span>
+              <div class="d-flex align-center">
+                <span class="font-weight-bold">
+                  <router-link :to="`/server/${server.id}`">
+                    {{ server.name }}
+                  </router-link>
+                </span>
+                <!-- Tooltip & Icon für die Warnung (Handlung erforderlich) -->
+                <v-tooltip
+                  v-if="server.hasWarnings"
+                  location="top"
+                  text="Handlung erforderlich"
+                >
+                  <template #activator="{ props: tooltipProps }">
+                    <v-icon
+                      v-bind="tooltipProps"
+                      :icon="mdiAlert"
+                      color="orange"
+                      size="20"
+                      class="ml-1"
+                    />
+                  </template>
+                </v-tooltip>
+              </div>
             </td>
             <td>
               <div class="d-flex align-center">
@@ -245,6 +263,7 @@ import type Appservice from "@/types/Appservice.ts";
 import type Server from "@/types/Server.ts";
 
 import {
+  mdiAlert,
   mdiCloud,
   mdiKeyChain,
   mdiPauseCircle,

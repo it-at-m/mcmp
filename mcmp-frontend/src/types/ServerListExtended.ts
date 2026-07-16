@@ -11,4 +11,5 @@ export interface ServerListExtended {
   serverType?: string;
   managed?: boolean;
   canEdit?: boolean;
+  hasWarnings?: boolean;
 }

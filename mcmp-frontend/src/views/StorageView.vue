@@ -151,8 +151,7 @@
         <div
           v-else-if="storageTotalItems === 0"
           class="d-flex justify-center align-center h-100 pa-4"
-        >
-        </div>
+        ></div>
         <div
           v-else
           class="d-flex justify-center align-center h-100 text-grey"

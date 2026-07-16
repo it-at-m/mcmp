@@ -149,6 +149,6 @@ export default class Server {
     public os: string,
     public serverCustomAttributes: Record<string, string>,
     public cpuUtil: number,
-    public memUsedPercent: number,
+    public memUsedPercent: number
   ) {}
 }

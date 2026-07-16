@@ -2,7 +2,7 @@ import type { AppVersion } from "@/types/AppVersion.ts";
 import type { Ref } from "vue";
 
 import { defaultResponseHandler, getConfig } from "@/api/fetch-utils";
-import { getApiBase, APP_VERSION_BASE } from "@/constants";
+import { APP_VERSION_BASE, getApiBase } from "@/constants";
 
 export default {
   getVersion(loading: Ref<boolean>): Promise<AppVersion> {

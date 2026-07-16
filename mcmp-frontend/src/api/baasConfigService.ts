@@ -8,7 +8,7 @@ import {
   postConfig,
   putConfig,
 } from "@/api/fetch-utils";
-import { getApiBase, BAAS_BASE } from "@/constants";
+import { BAAS_BASE, getApiBase } from "@/constants";
 
 export default {
   getBaasConfigs(loading: Ref<boolean>): Promise<BaasConfig[]> {
@@ -23,10 +23,7 @@ export default {
       });
   },
 
-  createConfig(
-    baasConfig: BaasConfig,
-    loading: Ref<boolean>
-  ): Promise<void> {
+  createConfig(baasConfig: BaasConfig, loading: Ref<boolean>): Promise<void> {
     loading.value = true;
     return fetch(`${getApiBase()}${BAAS_BASE}`, postConfig(baasConfig))
       .then((response) => {
@@ -54,10 +51,7 @@ export default {
         loading.value = false;
       });
   },
-  updateConfig(
-    baasConfig: BaasConfig,
-    loading: Ref<boolean>
-  ): Promise<void> {
+  updateConfig(baasConfig: BaasConfig, loading: Ref<boolean>): Promise<void> {
     loading.value = true;
     return fetch(`${getApiBase()}${BAAS_BASE}`, putConfig(baasConfig))
       .then((response) => {

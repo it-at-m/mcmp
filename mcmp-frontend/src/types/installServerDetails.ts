@@ -21,10 +21,10 @@ export enum OsVersion {
   Windows2022 = "Windows Server 2022",
 }
 
-export type Os = {
+export interface Os {
   Linux: string[];
   Windows: string[];
-};
+}
 
 export const OperatingSystem: Os = {
   Linux: [OsVersion.RHEL9, OsVersion.RHEL10],
@@ -38,13 +38,13 @@ export enum categoryType {
   Mixed = "Mixed",
 }
 
-export type DiskEntry = {
+export interface DiskEntry {
   drive_number: number;
   label: string;
   size: number;
   min_size: number;
   max_size: number;
-};
+}
 
 export default class installServerDetails {
   constructor(
@@ -67,15 +67,15 @@ export default class installServerDetails {
     // hardware settings
     public memory: number,
     public cpu: number,
-    public disk: { [key in OsType]?: { [key in categoryType]?: DiskEntry[] } },
+    public disk: Partial<Record<OsType, Partial<Record<categoryType, DiskEntry[]>>>>,
     public networkGroup: NetworkGroup | null,
 
     // linux custom
-    public isLinuxCustom: boolean = false,
-    public linuxCustomExtraVars: string = "",
+    public isLinuxCustom = false,
+    public linuxCustomExtraVars = "",
 
     // remove schedule
-    public schedule: boolean = false,
+    public schedule = false,
     public removeScheduleTime: Date = new Date()
   ) {}
 

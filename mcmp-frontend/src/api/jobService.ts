@@ -5,7 +5,13 @@ import type JobStatistics from "@/types/JobStatistics";
 import type { Page } from "@/types/Page";
 import type { Ref } from "vue";
 
-import { apiFetch, defaultResponseHandler, getConfig, postConfig, putConfig } from "@/api/fetch-utils";
+import {
+  apiFetch,
+  defaultResponseHandler,
+  getConfig,
+  postConfig,
+  putConfig,
+} from "@/api/fetch-utils";
 import { getApiBase, JOB_BASE } from "@/constants";
 
 export default {
@@ -33,7 +39,7 @@ export default {
     page = 1,
     itemsPerPage = 10,
     sortBy: string | null = null,
-    sortDesc: boolean = false
+    sortDesc = false
   ): Promise<Page<JobList>> {
     loading.value = true;
     const params = new URLSearchParams();
@@ -62,7 +68,7 @@ export default {
     page = 1,
     itemsPerPage = 10,
     sortBy: string | null = null,
-    sortDesc: boolean = false
+    sortDesc = false
   ): Promise<Page<JobList>> {
     loading.value = true;
     const params = new URLSearchParams();
@@ -125,7 +131,7 @@ export default {
     page: number,
     itemsPerPage: number,
     sortBy: string | null = null,
-    sortDesc: boolean = false,
+    sortDesc = false,
     jobId: string | null = null,
     awxJobId: string | null = null,
     createdAtFrom: string | null = null,

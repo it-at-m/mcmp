@@ -1,4 +1,4 @@
-export type AppVersion = {
+export interface AppVersion {
   version: string | null;
   buildTime: string | null;
   javaVersion: string | null;
@@ -8,4 +8,4 @@ export type AppVersion = {
   gitCommitIdFull: string | null;
   gitCommitTime: string | null;
   gitDirty: boolean | null;
-};
+}

@@ -2,11 +2,8 @@ import type { AdminUser } from "@/types/AdminUser";
 import type { UserAutocomplete } from "@/types/UserAutocomplete";
 import type { Ref } from "vue";
 
-
-
 import { apiFetch, postConfig, putConfig } from "@/api/fetch-utils";
 import { getApiBase, USER_BASE } from "@/constants";
-
 
 export default {
   getAdminUsers(loading: Ref<boolean>): Promise<AdminUser[]> {

@@ -1,7 +1,8 @@
 import fs from "fs";
 import path from "path";
-import archiver from "archiver";
 import { fileURLToPath } from "url";
+
+import archiver from "archiver";
 
 // Recreate __dirname because it is not automatically available in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -39,7 +40,11 @@ if (!fs.existsSync(metaInfFolder)) {
   fs.mkdirSync(metaInfFolder, { recursive: true });
 }
 const versionFilePath = path.resolve(metaInfFolder, "version.txt");
-fs.writeFileSync(versionFilePath, `Version: ${version}\nBuild-Time: ${new Date().toISOString()}`, "utf8");
+fs.writeFileSync(
+  versionFilePath,
+  `Version: ${version}\nBuild-Time: ${new Date().toISOString()}`,
+  "utf8"
+);
 console.log(version);
 console.log("Version file created: META-INF/version.txt");
 
@@ -50,7 +55,9 @@ const archive = archiver("zip", {
 });
 
 output.on("close", () => {
-  console.log(`${archive.pointer()} total bytes were packed into ${warFilePath}.`);
+  console.log(
+    `${archive.pointer()} total bytes were packed into ${warFilePath}.`
+  );
   console.log("WAR archive has been successfully created.");
 });
 
@@ -63,6 +70,3 @@ archive.pipe(output);
 // Add everything from the "dist" folder into the WAR archive
 archive.directory(distFolder, false);
 archive.finalize();
-
-
-

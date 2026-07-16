@@ -1,11 +1,8 @@
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 
-
-
 import appConfigService from "@/api/appConfigService";
 import { SystemMode } from "@/types/AppConfig";
-
 
 export const useAppStore = defineStore("app", () => {
   const systemMode = ref<SystemMode>(SystemMode.NORMAL);
@@ -32,7 +29,11 @@ export const useAppStore = defineStore("app", () => {
     }
   }
 
-  function setSystemStatus(mode: SystemMode, message: string, messageMarkdown: string) {
+  function setSystemStatus(
+    mode: SystemMode,
+    message: string,
+    messageMarkdown: string
+  ) {
     systemMode.value = mode;
     maintenanceMessage.value = message;
     maintenanceMessageMarkdown.value = messageMarkdown;

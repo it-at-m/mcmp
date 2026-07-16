@@ -10,7 +10,7 @@ export function setRuntimeConfig(config: RuntimeConfig) {
 }
 
 export function getApiBase(): string {
-    return runtimeConfig?.apiBaseUrl || "/api";
+  return runtimeConfig?.apiBaseUrl || "/api";
 }
 
 const API = "/api/backend-service";
@@ -46,7 +46,7 @@ export const AD2IMAGE_URL = import.meta.env.VITE_AD2IMAGE_URL;
 
 export const SNACKBAR_DEFAULT_TIMEOUT = 5000;
 
-export const APPSERVICE_EXPLAIN_URL= "https://go.muenchen.de/sp/KB0023236";
+export const APPSERVICE_EXPLAIN_URL = "https://go.muenchen.de/sp/KB0023236";
 
 export const enum STATUS_INDICATORS {
   SUCCESS = "success",

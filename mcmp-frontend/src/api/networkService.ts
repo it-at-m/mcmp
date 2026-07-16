@@ -59,7 +59,10 @@ export default {
     networkGroup: NetworkGroup
   ): Promise<void> {
     loading.value = true;
-    return fetch(`${getApiBase()}${NETWORK_BASE}/groups`, putConfig(networkGroup))
+    return fetch(
+      `${getApiBase()}${NETWORK_BASE}/groups`,
+      putConfig(networkGroup)
+    )
       .then((response) => {
         defaultResponseHandler(
           response,
@@ -77,7 +80,10 @@ export default {
     networkGroup: NetworkGroup
   ): Promise<void> {
     loading.value = true;
-    return fetch(`${getApiBase()}${NETWORK_BASE}/groups`, postConfig(networkGroup))
+    return fetch(
+      `${getApiBase()}${NETWORK_BASE}/groups`,
+      postConfig(networkGroup)
+    )
       .then((response) => {
         defaultResponseHandler(
           response,

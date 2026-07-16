@@ -4,6 +4,7 @@ import {
   routes as fileBasedRoutes,
   handleHotUpdate,
 } from "vue-router/auto-routes";
+
 import AppserviceView from "@/views/AppserviceView.vue";
 import HilfeView from "@/views/HilfeView.vue";
 import HistoryView from "@/views/HistoryView.vue";

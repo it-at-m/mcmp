@@ -2,7 +2,7 @@ import type Backup from "@/types/Backup";
 import type { Ref } from "vue";
 
 import { defaultResponseHandler, getConfig } from "@/api/fetch-utils";
-import { getApiBase, BACKUP_BASE } from "@/constants";
+import { BACKUP_BASE, getApiBase } from "@/constants";
 
 export default {
   getBackupsByServerId(

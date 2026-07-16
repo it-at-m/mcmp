@@ -3,11 +3,11 @@ import type AppserviceList from "@/types/AppserviceList.ts";
 import type { Page } from "@/types/Page";
 import type { Ref } from "vue";
 
-
-
-import { defaultResponseHandler, getConfig, putConfig } from "@/api/fetch-utils";
+import {
+  defaultResponseHandler,
+  getConfig,
+} from "@/api/fetch-utils";
 import { APPSERVICE_BASE, getApiBase } from "@/constants";
-
 
 export default {
   getAppservices(

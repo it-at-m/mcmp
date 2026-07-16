@@ -11,6 +11,6 @@ export default class NetworkGroup {
     public storage: boolean,
     public restrict: boolean,
     public appservices: Appservice[] = [],
-    public environment: EnvironmentType,
+    public environment: EnvironmentType
   ) {}
 }

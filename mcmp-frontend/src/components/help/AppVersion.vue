@@ -1,5 +1,5 @@
 <template>
-  <common-card title="Version">
+  <common-card title="MCMP">
     <v-alert
       v-if="versionError"
       type="error"
@@ -37,6 +37,16 @@
             <a
               class="links"
               :href="`https://github.com/it-at-m/mcmp/commit/${encodeURIComponent(String(value))}`"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {{ value }}
+            </a>
+          </template>
+          <template v-else-if="item.key === 'repo' && value">
+            <a
+              class="links"
+              :href="value"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -84,6 +94,8 @@
 </template>
 
 <script setup lang="ts">
+
+
 import type { AppVersion } from "@/types/AppVersion.ts";
 import type { DataTableHeader } from "vuetify/framework";
 
@@ -120,7 +132,12 @@ const rows = computed<VersionRow[]>(() => {
   const v = version.value;
 
   const allRows: VersionRow[] = [
-    { key: "appVersion", label: "App-Version", value: v?.version ?? "—" },
+    {
+      key: "repo",
+      label: "Repository",
+      value: "https://github.com/it-at-m/mcmp",
+    },
+    { key: "appVersion", label: "Version", value: v?.version ?? "—" },
     {
       key: "buildTime",
       label: "Build-Zeit",
@@ -155,7 +172,7 @@ const rows = computed<VersionRow[]>(() => {
     return allRows;
   }
 
-  const adminOnlyKeys = ["gitCommitIdFull", "buildTime", "gitCommitTime"];
+  const adminOnlyKeys = ["gitDirty"];
   return allRows.filter((row) => !adminOnlyKeys.includes(row.key));
 });
 

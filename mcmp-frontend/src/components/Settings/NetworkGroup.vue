@@ -1,11 +1,11 @@
 <template>
-  <CommonCard title="Netzwerk/Netzwerkgruppen">
+  <common-card title="Netzwerk/Netzwerkgruppen">
     <template #toolbar-actions>
       <v-btn
         icon
-        @click="refreshNetworkGroups"
         :loading="loading"
         aria-label="Netzwerkgruppen aktualisieren"
+        @click="refreshNetworkGroups"
       >
         <v-icon>{{ mdiReload }}</v-icon>
       </v-btn>
@@ -104,11 +104,11 @@
                 >
                   Keine Applikationsservices zugewiesen
                 </span>
-                <NetworkGroupAppserviceAssignment
+                <network-group-appservice-assignment
                   v-if="isNetworkAdmin"
                   :networkgroup="item"
-                  @save="assingAppservicesToNetworkgroup"
                   class="ml-1"
+                  @save="assingAppservicesToNetworkgroup"
                 />
               </div>
             </v-col>
@@ -116,12 +116,12 @@
           <td>
             <v-btn
               text
-              @click.stop="toggleExpand(item.id!)"
               :aria-label="
                 expanded.includes(item.id!)
                   ? `Netzwerke für ${item.name} einklappen`
                   : `Netzwerke für ${item.name} ausklappen`
               "
+              @click.stop="toggleExpand(item.id!)"
             >
               <v-icon>
                 {{
@@ -163,12 +163,12 @@
                   <span>{{ network.name }}</span>
                   <v-btn
                     text
-                    @click.stop="toggleNetworkExpand(network.id)"
                     :aria-label="
                       expandedNetworks.includes(network.id?.toString() ?? '')
                         ? `Details für Netzwerk ${network.name} einklappen`
                         : `Details für Netzwerk ${network.name} ausklappen`
                     "
+                    @click.stop="toggleNetworkExpand(network.id)"
                   >
                     <v-icon>
                       {{
@@ -266,7 +266,7 @@
         </td>
       </template>
     </v-data-table>
-  </CommonCard>
+  </common-card>
 </template>
 
 <script setup lang="ts">

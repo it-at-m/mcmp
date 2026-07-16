@@ -1,10 +1,10 @@
 <template>
-  <CommonCard title="Adminbenutzer">
+  <common-card title="Adminbenutzer">
     <template #toolbar-actions>
       <v-btn
         :icon="mdiPlus"
-        @click="askAddPermission"
         aria-label="Adminrechte hinzufügen"
+        @click="askAddPermission"
       />
     </template>
 
@@ -14,22 +14,22 @@
       :items-per-page="-1"
       hide-default-footer
     >
-      <template v-slot:item.edit="{ item }">
+      <template #item.edit="{ item }">
         <v-btn
           :icon="mdiDelete"
-          @click="askDeletePermission(item)"
           :aria-label="`Adminrechte für ${item.username} löschen`"
+          @click="askDeletePermission(item)"
         />
       </template>
     </v-data-table>
-  </CommonCard>
+  </common-card>
   <v-dialog
     v-model="addDialog"
     max-width="500px"
   >
     <admin-user-add
-      @addDialog="(dialog) => (addDialog = dialog)"
-      @toAdd="(item) => updatePermission(item)"
+      @add-dialog="(dialog) => (addDialog = dialog)"
+      @to-add="(item) => updatePermission(item)"
     />
   </v-dialog>
   <v-dialog

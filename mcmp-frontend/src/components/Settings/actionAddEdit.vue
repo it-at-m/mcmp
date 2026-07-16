@@ -1,12 +1,12 @@
 <template>
-  <CommonDialog
+  <common-dialog
     v-model="dialog"
     :submit-activated="true"
     :title="title"
     :icon="icon"
     show-actions
     @dialog-confirm="save"
-    @dialogCancel="reset"
+    @dialog-cancel="reset"
   >
     <template #activator="{ props }">
       <v-btn
@@ -27,24 +27,24 @@
       <v-row>
         <v-col cols="3">
           <v-switch
+            v-model="actionTmp.enabled"
             color="_blue"
             :label="
               actionTmp.enabled ? 'Aktion aktiviert' : 'Aktion deaktiviert'
             "
-            v-model="actionTmp.enabled"
           />
         </v-col>
         <v-col cols="3">
           <v-switch
+            v-model="actionTmp.isLowPriority"
             color="_blue"
             label="Niedrige Priorität"
-            v-model="actionTmp.isLowPriority"
           />
         </v-col>
         <v-col cols="6">
           <v-text-field
-            label="Identifier"
             v-model="actionTmp.identifier"
+            label="Identifier"
             :disabled="!!props.action"
             placeholder="Identifier der Aktion. Kann nicht mehr geändert werden und wird vom Entwicklungsteam vergeben!"
             maxlength="50"
@@ -58,9 +58,9 @@
       <v-row>
         <v-col cols="12">
           <v-textarea
+            v-model="actionTmp.comment"
             variant="outlined"
             placeholder="Team / Verantwortliche Person / Kommentar"
-            v-model="actionTmp.comment"
             :rules="[
               rules.notEmptyRule(
                 'Bitte geben Sie ein Team oder eine verantwortliche Person an.'
@@ -75,8 +75,8 @@
       <v-row>
         <v-col cols="6">
           <v-text-field
-            label="Titel"
             v-model="actionTmp.title"
+            label="Titel"
             :rules="[
               rules.notEmptyRule('Darf nicht leer sein.'),
               rules.maxLengthRule(512, 'Maximal 512 Zeichen sind erlaubt.'),
@@ -85,10 +85,10 @@
         </v-col>
         <v-col cols="6">
           <v-textarea
+            v-model="actionTmp.description"
             variant="outlined"
             label="Beschreibung"
             placeholder="z.B. Für den Server ${server.fqdn} soll XY durchgeführt werden."
-            v-model="actionTmp.description"
             :rules="[
               rules.maxLengthRule(8192, 'Maximal 8192 Zeichen sind erlaubt.'),
             ]"
@@ -100,8 +100,8 @@
       <v-row>
         <v-col cols="6">
           <v-text-field
-            label="Titel (Job Läuft)"
             v-model="actionTmp.executionTitle"
+            label="Titel (Job Läuft)"
             :rules="[
               rules.notEmptyRule('Darf nicht leer sein.'),
               rules.maxLengthRule(512, 'Maximal 512 Zeichen sind erlaubt.'),
@@ -110,10 +110,10 @@
         </v-col>
         <v-col cols="6">
           <v-textarea
+            v-model="actionTmp.executionDescription"
             variant="outlined"
             label="Beschreibung (Job Läuft)"
             placeholder="z.B. Für den Server ${server.fqdn} wird XY durchgeführt."
-            v-model="actionTmp.executionDescription"
             :rules="[
               rules.maxLengthRule(8192, 'Maximal 8192 Zeichen sind erlaubt.'),
             ]"
@@ -125,8 +125,8 @@
       <v-row>
         <v-col cols="6">
           <v-text-field
-            label="Titel (Job Erfolgreich)"
             v-model="actionTmp.successTitle"
+            label="Titel (Job Erfolgreich)"
             :rules="[
               rules.notEmptyRule('Darf nicht leer sein.'),
               rules.maxLengthRule(512, 'Maximal 512 Zeichen sind erlaubt.'),
@@ -135,10 +135,10 @@
         </v-col>
         <v-col cols="6">
           <v-textarea
+            v-model="actionTmp.successDescription"
             variant="outlined"
             label="Beschreibung (Job Erfolgreich)"
             placeholder="z.B. Für den Server ${server.fqdn} konnte XY erfolgreich durchgeführt werden."
-            v-model="actionTmp.successDescription"
             :rules="[
               rules.maxLengthRule(8192, 'Maximal 8192 Zeichen sind erlaubt.'),
             ]"
@@ -150,8 +150,8 @@
       <v-row>
         <v-col cols="6">
           <v-text-field
-            label="Titel (Fehlerfall)"
             v-model="actionTmp.errorTitle"
+            label="Titel (Fehlerfall)"
             :rules="[
               rules.notEmptyRule('Darf nicht leer sein.'),
               rules.maxLengthRule(512, 'Maximal 512 Zeichen sind erlaubt.'),
@@ -160,10 +160,10 @@
         </v-col>
         <v-col cols="6">
           <v-textarea
+            v-model="actionTmp.errorDescription"
             variant="outlined"
             label="Beschreibung (Fehlerfall)"
             placeholder="z.B. Für den Server ${server.fqdn} konnte XY nicht erfolgreich durchgeführt werden!"
-            v-model="actionTmp.errorDescription"
             :rules="[
               rules.maxLengthRule(8192, 'Maximal 8192 Zeichen sind erlaubt.'),
             ]"
@@ -177,9 +177,9 @@
           <v-toolbar color="backgroundLight">
             <v-toolbar-title>
               <v-switch
+                v-model="actionTmp.awxJobEnabled"
                 color="_blue"
                 label="AWX Job ausführen"
-                v-model="actionTmp.awxJobEnabled"
                 class="mt-5"
               >
                 <template #label>
@@ -187,11 +187,11 @@
                 </template>
               </v-switch>
             </v-toolbar-title>
-            <ActionImport
+            <action-import
               :current-action="actionTmp"
-              @imported="onImport"
               :disable="actionTmp.awxConfig == null || !actionTmp.awxJobEnabled"
               :all-actions="allActions"
+              @imported="onImport"
             />
           </v-toolbar>
         </v-col>
@@ -199,8 +199,8 @@
       <v-row v-if="actionTmp.awxJobEnabled">
         <v-col cols="4">
           <v-select
-            label="AWX Config"
             v-model="actionTmp.awxConfig"
+            label="AWX Config"
             :items="awxConfigs"
             item-title="apiDescription"
             :item-value="(item) => item"
@@ -215,8 +215,8 @@
         </v-col>
         <v-col cols="4">
           <v-select
-            label="AWX Template Type"
             v-model="actionTmp.awxTemplateType"
+            label="AWX Template Type"
             :items="templateTypes"
             item-title="text"
             item-value="key"
@@ -243,9 +243,9 @@
       <v-row v-if="actionTmp.awxJobEnabled">
         <v-col cols="6">
           <v-text-field
+            v-model="actionTmp.awxJobTags"
             label="AWX Job Tags"
             placeholder="tag1,tag2,..."
-            v-model="actionTmp.awxJobTags"
             :rules="[
               rules.maxLengthRule(100, 'Maximal 100 Zeichen sind erlaubt.'),
             ]"
@@ -253,9 +253,9 @@
         </v-col>
         <v-col cols="6">
           <v-text-field
+            v-model="actionTmp.awxSkipTags"
             label="AWX Skip Tags"
             placeholder="tag1,tag2,..."
-            v-model="actionTmp.awxSkipTags"
             :rules="[
               rules.maxLengthRule(100, 'Maximal 100 Zeichen sind erlaubt.'),
             ]"
@@ -264,8 +264,8 @@
       </v-row>
       <v-textarea
         v-if="actionTmp.awxJobEnabled"
-        label="AWX Extra Vars"
         v-model="actionTmp.awxExtraVars"
+        label="AWX Extra Vars"
         placeholder='{"key":"value"}'
         :rules="[rules.maxLengthRule(250, 'Maximal 250 Zeichen sind erlaubt.')]"
         rows="2"
@@ -281,8 +281,8 @@
                 v-bind="props"
                 :icon="mdiInformation"
                 size="large"
-                @click="openLink"
                 aria-label="Extra Vars Infos Link öffnen"
+                @click="openLink"
               />
             </template>
           </v-tooltip>
@@ -290,16 +290,16 @@
       </v-textarea>
       <v-switch
         v-if="actionTmp.awxJobEnabled"
+        v-model="awxAdvancedOptions"
         color="_blue"
         label="Weitere Parameter"
-        v-model="awxAdvancedOptions"
         class="mt-5"
       ></v-switch>
       <v-row v-if="actionTmp.awxJobEnabled && awxAdvancedOptions">
         <v-col cols="6">
           <v-text-field
-            label="AWX SCM Branch"
             v-model="actionTmp.awxScmBranch"
+            label="AWX SCM Branch"
             :rules="[
               rules.maxLengthRule(100, 'Maximal 100 Zeichen sind erlaubt.'),
             ]"
@@ -307,8 +307,8 @@
         </v-col>
         <v-col cols="6">
           <v-text-field
-            label="AWX Inventory ID"
             v-model="actionTmp.awxInventoryId"
+            label="AWX Inventory ID"
             type="number"
           />
         </v-col>
@@ -316,24 +316,24 @@
       <v-row v-if="actionTmp.awxJobEnabled && awxAdvancedOptions">
         <v-col cols="6">
           <v-text-field
-            label="AWX Limit"
             v-model="actionTmp.awxLimit"
+            label="AWX Limit"
             :rules="[
               rules.maxLengthRule(100, 'Maximal 100 Zeichen sind erlaubt.'),
             ]"
           />
         </v-col>
         <v-col
-          cols="6"
           v-if="
             actionTmp.awxJobEnabled &&
             awxAdvancedOptions &&
             actionTmp.awxTemplateType == 'template'
           "
+          cols="6"
         >
           <v-text-field
-            label="AWX Credentials"
             v-model="actionTmp.awxCredentials"
+            label="AWX Credentials"
             placeholder="[1,2,...]"
             :rules="[
               rules.maxLengthRule(100, 'Maximal 100 Zeichen sind erlaubt.'),
@@ -350,16 +350,16 @@
       >
         <v-col cols="6">
           <v-select
-            label="AWX Job Type"
             v-model="actionTmp.awxJobType"
+            label="AWX Job Type"
             :items="['run', 'check']"
             :menu-props="{ persistent: true, closeOnContentClick: true }"
           />
         </v-col>
         <v-col cols="6">
           <v-text-field
-            label="AWX Verbosity"
             v-model="actionTmp.awxVerbosity"
+            label="AWX Verbosity"
             type="number"
           />
         </v-col>
@@ -373,15 +373,15 @@
       >
         <v-col cols="6">
           <v-text-field
-            label="AWX Timeout"
             v-model="actionTmp.awxTimeout"
+            label="AWX Timeout"
             type="number"
           />
         </v-col>
         <v-col cols="6">
           <v-text-field
-            label="AWX Forks"
             v-model="actionTmp.awxForks"
+            label="AWX Forks"
             type="number"
           />
         </v-col>
@@ -395,15 +395,15 @@
       >
         <v-col cols="6">
           <v-text-field
-            label="AWX Job Slice Count"
             v-model="actionTmp.awxJobSliceCount"
+            label="AWX Job Slice Count"
             type="number"
           />
         </v-col>
         <v-col cols="6">
           <v-text-field
-            label="AWX Execution Environment"
             v-model="actionTmp.awxExecutionEnvironment"
+            label="AWX Execution Environment"
             type="number"
           />
         </v-col>
@@ -417,8 +417,8 @@
       >
         <v-col cols="6">
           <v-text-field
-            label="AWX Instance Groups"
             v-model="actionTmp.awxInstanceGroups"
+            label="AWX Instance Groups"
             :rules="[
               rules.maxLengthRule(100, 'Maximal 100 Zeichen sind erlaubt.'),
             ]"
@@ -427,8 +427,8 @@
         </v-col>
         <v-col cols="6">
           <v-text-field
-            label="AWX Labels"
             v-model="actionTmp.awxLabels"
+            label="AWX Labels"
             :rules="[
               rules.maxLengthRule(100, 'Maximal 100 Zeichen sind erlaubt.'),
             ]"
@@ -439,8 +439,8 @@
       <v-row v-if="actionTmp.awxJobEnabled">
         <v-col cols="12">
           <v-text-field
-            label="Geschätzte AWX-Laufzeit in Minuten"
             v-model="actionTmp.awxEstimatedRuntime"
+            label="Geschätzte AWX-Laufzeit in Minuten"
             type="number"
             min="0"
             :rules="[(v) => v >= 0 || 'Wert muss größer oder gleich 0 sein.']"
@@ -472,8 +472,8 @@
               <v-switch
                 color="_blue"
                 :model-value="!!actionTmp.snowConfig"
-                @update:model-value="onSnowEnabledChange"
                 class="mt-5"
+                @update:model-value="onSnowEnabledChange"
               >
                 <template #label>
                   <span class="v-toolbar-title">ServiceNow</span>
@@ -486,8 +486,8 @@
       <v-row v-if="actionTmp.snowConfig">
         <v-col cols="6">
           <v-select
-            label="ServiceNow Config"
             v-model="actionTmp.snowConfig"
+            label="ServiceNow Config"
             :items="snowConfigs"
             item-title="apiDescription"
             :item-value="(item) => item"
@@ -503,8 +503,8 @@
         <v-col cols="6">
           <v-switch
             v-if="testing"
-            color="_red"
             v-model="actionTmp.createIncidents"
+            color="_red"
             label="Incidents bei Fehlern erstellen"
             class="mt-5 ml-4"
           />
@@ -520,8 +520,8 @@
           <v-toolbar color="backgroundLight">
             <v-toolbar-title>
               <v-switch
-                color="_blue"
                 v-model="actionTmp.changeRequired"
+                color="_blue"
                 class="mt-5"
               >
                 <template #label>
@@ -540,8 +540,8 @@
       >
         <v-col cols="6">
           <v-select
-            label="Change Typ"
             v-model="actionTmp.changeType"
+            label="Change Typ"
             :items="[
               { title: 'Normaler Change', value: 'normal' },
               { title: 'Standard Change', value: 'standard' },
@@ -553,13 +553,13 @@
           />
         </v-col>
         <v-col
-          cols="6"
           v-if="actionTmp.changeType === 'normal'"
           key="change-action-field"
+          cols="6"
         >
           <v-combobox
-            label="Change Action"
             v-model="actionTmp.changeAction"
+            label="Change Action"
             :items="['other', 'decommissioning']"
             maxlength="64"
             :rules="[
@@ -569,13 +569,13 @@
           />
         </v-col>
         <v-col
-          cols="6"
           v-if="actionTmp.changeType === 'standard'"
           key="change-template-field"
+          cols="6"
         >
           <v-text-field
-            label="Change Template (ServiceNow SysID)"
             v-model="actionTmp.changeTemplate"
+            label="Change Template (ServiceNow SysID)"
             maxlength="64"
             :rules="[
               (v) => !!v || 'Change Template ist ein Pflichtfeld.',
@@ -593,9 +593,9 @@
           class="py-1"
         >
           <v-textarea
+            v-model="actionTmp.changeJustification"
             variant="outlined"
             label="Begründung"
-            v-model="actionTmp.changeJustification"
             required
             maxlength="16384"
             :rules="[
@@ -619,9 +619,9 @@
           class="py-1"
         >
           <v-textarea
+            v-model="actionTmp.changeImplementationPlan"
             variant="outlined"
             label="Rolloutplan"
-            v-model="actionTmp.changeImplementationPlan"
             required
             maxlength="16384"
             :rules="[
@@ -645,9 +645,9 @@
           class="py-1"
         >
           <v-textarea
+            v-model="actionTmp.changeRiskImpactAnalysis"
             variant="outlined"
             label="Risiko- und Auswirkungsanalyse"
-            v-model="actionTmp.changeRiskImpactAnalysis"
             required
             maxlength="16384"
             :rules="[
@@ -671,9 +671,9 @@
           class="py-1"
         >
           <v-textarea
+            v-model="actionTmp.changeBackoutPlan"
             variant="outlined"
             label="Rollbackplan"
-            v-model="actionTmp.changeBackoutPlan"
             required
             maxlength="16384"
             :rules="[
@@ -697,8 +697,8 @@
           <v-toolbar color="backgroundLight">
             <v-toolbar-title>
               <v-switch
-                color="_blue"
                 v-model="actionTmp.quickdiscovery"
+                color="_blue"
                 class="mt-5"
               >
                 <template #label>
@@ -719,8 +719,8 @@
           <v-toolbar color="backgroundLight">
             <v-toolbar-title>
               <v-switch
-                color="_blue"
                 v-model="actionTmp.serverInstallation"
+                color="_blue"
                 class="mt-5"
               >
                 <template #label>
@@ -735,7 +735,7 @@
         </v-col>
       </v-row>
     </v-form>
-  </CommonDialog>
+  </common-dialog>
 </template>
 
 <script setup lang="ts">
@@ -755,9 +755,9 @@ const props = defineProps<{
   title: string;
   icon: string;
   action?: Action;
-  awxConfigs: Array<AwxConfig>;
-  snowConfigs: Array<SnowConfig>;
-  allActions: Array<Action>;
+  awxConfigs: AwxConfig[];
+  snowConfigs: SnowConfig[];
+  allActions: Action[];
 }>();
 
 const ariaLabel = ref<string>(
@@ -766,9 +766,7 @@ const ariaLabel = ref<string>(
     : "Action hinzufügen"
 );
 
-const emits = defineEmits<{
-  (e: "save", action: Action): void;
-}>();
+const emits = defineEmits<(e: "save", action: Action) => void>();
 
 const dialog = ref(false);
 const rules = useRules();

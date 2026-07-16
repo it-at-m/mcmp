@@ -29,18 +29,18 @@
         class="d-flex align-center"
       >
         <v-btn
-          @click="loadStatistics"
           :loading="loading"
           color="primary"
           class="mr-2"
+          @click="loadStatistics"
         >
           Lade Statistik
         </v-btn>
         <v-btn
-          @click="exportToCsv"
           :disabled="sortedStatistics.length === 0"
           color="secondary"
           variant="outlined"
+          @click="exportToCsv"
         >
           Export CSV
         </v-btn>
@@ -360,9 +360,12 @@ const chartOption = computed(() => {
       trigger: "axis",
       axisPointer: { type: "shadow" },
       formatter: (params: any[]) => {
-        const total = chartData.value.find((d) => d.action === params[0]?.name)?.totalJobs ?? 0;
+        const total =
+          chartData.value.find((d) => d.action === params[0]?.name)
+            ?.totalJobs ?? 0;
         const lines = params.map(
-          (p: any) => `<span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:${p.color};"></span>${p.seriesName}: <b>${p.value}</b>`
+          (p: any) =>
+            `<span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:${p.color};"></span>${p.seriesName}: <b>${p.value}</b>`
         );
         lines.push(`<hr style="margin:4px 0"/><b>Anzahl Jobs: ${total}</b>`);
         return `<div>${params[0]?.name}<br/>${lines.join("<br/>")}</div>`;

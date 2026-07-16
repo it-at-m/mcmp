@@ -8,8 +8,8 @@
         v-bind="btnProps"
         :icon="mdiImport"
         aria-label="AWX Template importieren"
-        @click="openDialog"
         :disabled="props.disable"
+        @click="openDialog"
       />
     </template>
     <v-card>
@@ -32,10 +32,10 @@
             <v-btn
               :icon="mdiRefresh"
               size="small"
-              @click="fetchOrganizations(true)"
               :loading="loadingOrganizations"
               aria-label="Organisationen neu laden"
               variant="text"
+              @click="fetchOrganizations(true)"
             />
           </template>
         </v-autocomplete>
@@ -55,9 +55,9 @@
         >
           <v-row>
             <v-col
-              cols="6"
               v-for="change in changedFields"
               :key="change.field"
+              cols="6"
             >
               <div>
                 <strong>{{ change.field }}</strong>
@@ -177,9 +177,7 @@ function closeDialog() {
   selectedTemplateDetails.value = null;
 }
 
-const emit = defineEmits<{
-  (e: "imported", action: Action): void;
-}>();
+const emit = defineEmits<(e: "imported", action: Action) => void>();
 
 function mapTemplateToAction(t: any): Action {
   const identifier = generateIdentifier(t.name ?? "");
@@ -254,10 +252,10 @@ const importFields = [
 ];
 
 function generateIdentifier(title: string): string {
-  let base = title
+  const base = title
     .trim()
     .toUpperCase()
-    .replace(/[\s\-]+/g, "_");
+    .replace(/[\s-]+/g, "_");
   let identifier = base;
   let exists = props.allActions.some((a) => a.identifier === identifier);
   while (exists) {

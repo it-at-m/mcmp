@@ -121,8 +121,8 @@
             item-title="apiDescription"
             item-value="id"
             :loading="loadingInfobloxConfig"
-            @update:modelValue="getInfobloxConfigs"
             clearable
+            @update:model-value="getInfobloxConfigs"
           />
 
           <strong>Backup System</strong>
@@ -132,8 +132,8 @@
             item-title="apiDescription"
             item-value="id"
             :loading="loadingBaasConfig"
-            @update:modelValue="getBaasConfigs"
             clearable
+            @update:model-value="getBaasConfigs"
           />
 
           <strong>Server bearbeitbar</strong>
@@ -184,11 +184,7 @@ import infobloxConfigService from "@/api/infobloxConfigService";
 import { useRules } from "@/composables/rules";
 
 export type Config =
-  | SnowConfig
-  | AwxConfig
-  | InfobloxConfig
-  | BaasConfig
-  | Cloud;
+  SnowConfig | AwxConfig | InfobloxConfig | BaasConfig | Cloud;
 
 const props = defineProps<{
   toEdit: Config;

@@ -1052,6 +1052,15 @@ public class JobService {
         createJob(JobController.STORAGE_CHANGE_NFS_EXPORT_POLICY, null, params, new HashMap<>());
     }
 
+    public void storageChangeCifsPermissions(UnifiedStorageItemDto cifsItem, String ad, String permission) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("MCMPSTRG_AD_OBJECT", ad);
+        params.put("MCMPSTRG_PERMISSION", permission);
+        params.put("MCMPSTRG_UNCPATH", cifsItem.getCifs_mount_path());
+
+        createJob(JobController.STORAGE_CHANGE_CIFS_PERMISSIONS, null, params, new HashMap<>());
+    }
+
     private void storageChangeSnapshotPolicyShare(String mountPath, String jobIdentifier, String newPolicy) {
         Map<String, Object> params = new HashMap<>();
         if (Objects.equals(jobIdentifier, "STORAGE_CHANGE_SNAPSHOT_POLICY_NFS")) {

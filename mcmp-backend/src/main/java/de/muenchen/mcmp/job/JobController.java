@@ -46,39 +46,40 @@ public class JobController {
     private final MountPointService mountPointService;
     private final SnapshotService snapshotService;
     private final UnifiedStorageService unifiedStorageService;
+    private final UserService userService;
 
-    private static final String VMWARE_START_SERVER = "VMWARE_START_SERVER";
-    private static final String VMWARE_STOP_SERVER = "VMWARE_STOP_SERVER";
-    private static final String VMWARE_RESTART_SERVER = "VMWARE_RESTART_SERVER";
-    private static final String VMWARE_CHANGE_CPU_RAM = "VMWARE_CHANGE_CPU_RAM";
-    private static final String VMWARE_CREATE_SNAPSHOT = "VMWARE_CREATE_SNAPSHOT";
-    private static final String VMWARE_DELETE_SNAPSHOT = "VMWARE_DELETE_SNAPSHOT";
-    private static final String VMWARE_REVERT_SNAPSHOT = "VMWARE_REVERT_SNAPSHOT";
+    public static final String VMWARE_START_SERVER = "VMWARE_START_SERVER";
+    public static final String VMWARE_STOP_SERVER = "VMWARE_STOP_SERVER";
+    public static final String VMWARE_RESTART_SERVER = "VMWARE_RESTART_SERVER";
+    public static final String VMWARE_CHANGE_CPU_RAM = "VMWARE_CHANGE_CPU_RAM";
+    public static final String VMWARE_CREATE_SNAPSHOT = "VMWARE_CREATE_SNAPSHOT";
+    public static final String VMWARE_DELETE_SNAPSHOT = "VMWARE_DELETE_SNAPSHOT";
+    public static final String VMWARE_REVERT_SNAPSHOT = "VMWARE_REVERT_SNAPSHOT";
 
-    private static final String CHECKMK_SET_DOWNTIME = "CHECKMK_SET_DOWNTIME";
-    private static final String CHECKMK_SERVICE_DISCOVERY = "CHECKMK_SERVICE_DISCOVERY";
+    public static final String CHECKMK_SET_DOWNTIME = "CHECKMK_SET_DOWNTIME";
+    public static final String CHECKMK_SERVICE_DISCOVERY = "CHECKMK_SERVICE_DISCOVERY";
 
-    private static final String LINUX_DELETE_SERVER = "LINUX_DELETE_SERVER";
-    private static final String LINUX_PATCHNIGHT_TIME_CHANGE = "LINUX_PATCHNIGHT_TIME_CHANGE";
-    private static final String LINUX_TEMP_ROOT = "LINUX_TEMP_ROOT";
-    private static final String LINUX_MOUNTPOINT_CHANGE = "LINUX_MOUNTPOINT_CHANGE";
-    private static final String LINUX_RHEL10_SERVER = "LINUX_RHEL10_SERVER";
-    private static final String LINUX_RHEL9_SERVER = "LINUX_RHEL9_SERVER";
+    public static final String LINUX_DELETE_SERVER = "LINUX_DELETE_SERVER";
+    public static final String LINUX_PATCHNIGHT_TIME_CHANGE = "LINUX_PATCHNIGHT_TIME_CHANGE";
+    public static final String LINUX_TEMP_ROOT = "LINUX_TEMP_ROOT";
+    public static final String LINUX_MOUNTPOINT_CHANGE = "LINUX_MOUNTPOINT_CHANGE";
+    public static final String LINUX_RHEL10_SERVER = "LINUX_RHEL10_SERVER";
+    public static final String LINUX_RHEL9_SERVER = "LINUX_RHEL9_SERVER";
 
-    private static final String WINDOWS_DELETE_SERVER = "WINDOWS_DELETE_SERVER";
-    private static final String WINDOWS_PARTITION_CHANGE = "WINDOWS_PARTITION_CHANGE";
-    private static final String WINDOWS_MAINTENANCE_MODE = "WINDOWS_MAINTENANCE_MODE";
-    private static final String WINDOWS_MAINTENANCE_MODE_END = "WINDOWS_MAINTENANCE_MODE_END";
-    private static final String WINDOWS_TEMP_ADMIN = "WINDOWS_TEMP_ADMIN";
+    public static final String WINDOWS_DELETE_SERVER = "WINDOWS_DELETE_SERVER";
+    public static final String WINDOWS_PARTITION_CHANGE = "WINDOWS_PARTITION_CHANGE";
+    public static final String WINDOWS_MAINTENANCE_MODE = "WINDOWS_MAINTENANCE_MODE";
+    public static final String WINDOWS_MAINTENANCE_MODE_END = "WINDOWS_MAINTENANCE_MODE_END";
+    public static final String WINDOWS_TEMP_ADMIN = "WINDOWS_TEMP_ADMIN";
     public static final String WINDOWS_SERVER_2025 = "WINDOWS_SERVER_2025";
     public static final String WINDOWS_SERVER_2022 = "WINDOWS_SERVER_2022";
 
-    private static final String DB_ORACLE_CREATE_BACKUP = "DB_ORACLE_CREATE_BACKUP";
+    public static final String DB_ORACLE_CREATE_BACKUP = "DB_ORACLE_CREATE_BACKUP";
 
-    private static final String ANSIBLE_USER_ADD = "ANSIBLE_USER_ADD";
-    private static final String ANSIBLE_USER_REMOVE = "ANSIBLE_USER_REMOVE";
+    public static final String ANSIBLE_USER_ADD = "ANSIBLE_USER_ADD";
+    public static final String ANSIBLE_USER_REMOVE = "ANSIBLE_USER_REMOVE";
 
-    private static final String LOADBALANCER_F5 = "LOADBALANCER_F5";
+    public static final String LOADBALANCER_F5 = "LOADBALANCER_F5";
 
     public static final String GREEN_IT_VMWARE_SHUTDOWN = "GREEN_IT_VMWARE_SHUTDOWN";
     public static final String GREEN_IT_VMWARE_RIGHTSIZE = "GREEN_IT_VMWARE_RIGHTSIZE";
@@ -88,14 +89,14 @@ public class JobController {
 //    public static final String STORAGE_DELETE_NFS = "STORAGE_DELETE_NFS";
 //    public static final String STORAGE_DELETE_CIFS = "STORAGE_DELETE_CIFS";
     public static final String STORAGE_CHANGE_NFS_EXPORT_POLICY = "STORAGE_CHANGE_NFS_EXPORT_POLICY";
-    private static final String STORAGE_CREATE_SNAPSHOT_NFS = "STORAGE_CREATE_SNAPSHOT_NFS";
-    private static final String STORAGE_CREATE_SNAPSHOT_CIFS = "STORAGE_CREATE_SNAPSHOT_CIFS";
-    private static final String STORAGE_DELETE_SNAPSHOT_NFS = "STORAGE_DELETE_SNAPSHOT_NFS";
-    private static final String STORAGE_DELETE_SNAPSHOT_CIFS = "STORAGE_DELETE_SNAPSHOT_CIFS";
-    private static final String STORAGE_CHANGE_SNAPSHOT_POLICY_NFS = "STORAGE_CHANGE_SNAPSHOT_POLICY_NFS";
-    private static final String STORAGE_CHANGE_SNAPSHOT_POLICY_CIFS = "STORAGE_CHANGE_SNAPSHOT_POLICY_CIFS";
+    public static final String STORAGE_CHANGE_CIFS_PERMISSIONS = "STORAGE_CHANGE_CIFS_PERMISSIONS";
+    public static final String STORAGE_CREATE_SNAPSHOT_NFS = "STORAGE_CREATE_SNAPSHOT_NFS";
+    public static final String STORAGE_CREATE_SNAPSHOT_CIFS = "STORAGE_CREATE_SNAPSHOT_CIFS";
+    public static final String STORAGE_DELETE_SNAPSHOT_NFS = "STORAGE_DELETE_SNAPSHOT_NFS";
+    public static final String STORAGE_DELETE_SNAPSHOT_CIFS = "STORAGE_DELETE_SNAPSHOT_CIFS";
+    public static final String STORAGE_CHANGE_SNAPSHOT_POLICY_NFS = "STORAGE_CHANGE_SNAPSHOT_POLICY_NFS";
+    public static final String STORAGE_CHANGE_SNAPSHOT_POLICY_CIFS = "STORAGE_CHANGE_SNAPSHOT_POLICY_CIFS";
 
-    private final UserService userService;
 
     @HasUserOrSpecialRole
     @GetMapping("/{jobId}/hierarchy")
@@ -1607,6 +1608,61 @@ public class JobController {
 
         logCreatedJob(STORAGE_CHANGE_NFS_EXPORT_POLICY, serverId);
         jobService.storageChangeNfsExportPolicy(storageItem, fqdn, permission);
+    }
+
+    @PostMapping("/create/" + STORAGE_CHANGE_CIFS_PERMISSIONS)
+    public void storageChangeCifsPermissions(@RequestParam(name = "serverId") final Long serverId,
+                                             @RequestBody final Map<String, Object> awxExtraVars) {
+        Object storageUuidObj = awxExtraVars.get("uuid");
+        Object adObj = awxExtraVars.get("ad");
+        Object permissionObj = awxExtraVars.get("permission");
+
+        if (storageUuidObj == null || adObj == null || permissionObj == null) {
+            log.info("CIFS UUID, ad or permission not provided by user: {} for serverId: {}",
+                    AuthUtils.getUsername(), serverId);
+            throw new MissingFormatArgumentException("CIFS UUID, ad and permission must be provided.");
+        }
+
+        String ad = adObj.toString();
+        String permission = permissionObj.toString();
+
+        if (ad.isBlank()) {
+            log.info("AD object is blank provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
+            throw new IllegalArgumentException("AD object must not be blank.");
+        }
+
+        if (!List.of("full_control", "change", "read", "no_access").contains(permission)) {
+            log.info("Invalid permission provided by user: {} for serverId: {} for job {}",
+                    AuthUtils.getUsername(), serverId, STORAGE_CHANGE_CIFS_PERMISSIONS);
+            throw new IllegalArgumentException("Permission must be one of: full_control, change, read, no_access.");
+        }
+
+        final UnifiedStorageItemDto storageItem;
+        try {
+            storageItem = unifiedStorageService.getUnifiedStorageItem(storageUuidObj.toString(), StorageType.CIFS);
+        } catch (IllegalArgumentException e) {
+            log.info("CIFS UUID provided by user: {} for serverId: {} is invalid.", AuthUtils.getUsername(), serverId);
+            throw new IllegalArgumentException("CIFS UUID is invalid.");
+        }
+        if (!isEditableStorageCategoryNfsCifs(StorageType.CIFS, storageItem.getStorageCategory())) {
+            logTriedToCreateJob(STORAGE_CHANGE_CIFS_PERMISSIONS, null);
+            throw new AccessDeniedException("You are not allowed to create a job for this CIFS share.");
+        }
+
+        if (storageItem.getCifs_share_acl_list() == null
+                || storageItem.getCifs_share_acl_list().stream().noneMatch(acl -> ad.equals(acl.getUserOrGroup()))) {
+            log.info("Provided AD '{}' is not part of CIFS ACL list for UUID {} by user {} (serverId: {})",
+                    ad, storageItem.getUuid(), AuthUtils.getUsername(), serverId);
+            throw new IllegalArgumentException("AD object is not part of the CIFS ACL list.");
+        }
+
+        if (!unifiedStorageService.canUserEditStorage(storageItem.getUuid(), StorageType.CIFS)) {
+            logTriedToCreateJob(STORAGE_CHANGE_CIFS_PERMISSIONS, null);
+            throw new AccessDeniedException("You are not allowed to create a job for this CIFS share.");
+        }
+
+        logCreatedJob(STORAGE_CHANGE_CIFS_PERMISSIONS, serverId);
+        jobService.storageChangeCifsPermissions(storageItem, ad, permission);
     }
 
     private void handleStorageChangeSnapshotPolicyShare(Map<String, Object> awxExtraVars,

@@ -16,6 +16,23 @@
       @row-click="onRowClick"
       @load-more="onLoadMore"
     >
+      <template #item.domain="{ item }">
+        <div class="domain-header">
+          <v-tooltip>
+            <template #activator="{ props: tooltipProps }">
+              <img
+                class="domain-header-icon"
+                v-bind="tooltipProps"
+                src="https://monitoring.muenchen.de/lhmmon/check_mk/images/icons/f5.png"
+                alt="Loadbalancer icon"
+                aria-hidden="true"
+              />
+            </template>
+            F5 Loadbalancer
+          </v-tooltip>
+          <span>{{ item.domain }}</span>
+        </div>
+      </template>
       <template #no-data>
         <v-row />
         <v-row>
@@ -241,5 +258,17 @@ onMounted(async () => {
   /* noinspection CssUnresolvedCustomProperty */
   color: rgb(var(--v-theme-link));
   text-decoration: none;
+}
+
+.domain-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.domain-header-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
 }
 </style>

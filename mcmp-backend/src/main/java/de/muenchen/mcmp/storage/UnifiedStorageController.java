@@ -37,6 +37,12 @@ public class UnifiedStorageController {
         return unifiedStorageService.getUnifiedStorageMountsByServerId(serverId);
     }
 
+    @GetMapping("/unified/appservice/{appserviceId}")
+    public List<UnifiedStorageItemListDto> getUnifiedStorageByAppserviceId(
+            @PathVariable Long appserviceId) {
+        return unifiedStorageService.getUnifiedStorageByAppserviceId(appserviceId);
+    }
+
     @GetMapping("/unified/{type}/{uuid}/snapshots")
     public List<UnifiedStorageSnapshotListDto> getUnifiedStorageSnapshots(
             @PathVariable String type,

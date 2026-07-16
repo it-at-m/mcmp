@@ -152,21 +152,6 @@
           v-else-if="storageTotalItems === 0"
           class="d-flex justify-center align-center h-100 pa-4"
         >
-          <v-alert
-            type="warning"
-            variant="tonal"
-            max-width="500"
-          >
-            Es sind keine Storage-Items vorhanden.
-            <br />
-            <a
-              href="https://example.com/kb/storage-items"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Mehr dazu im Knowledge-Base-Artikel
-            </a>
-          </v-alert>
         </div>
         <div
           v-else

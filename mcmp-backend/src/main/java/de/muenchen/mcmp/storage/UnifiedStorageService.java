@@ -378,6 +378,102 @@ public class UnifiedStorageService {
     }
 
     @Transactional(readOnly = true)
+    public List<UnifiedStorageItemListDto> getUnifiedStorageByAppserviceId(Long appserviceId) {
+        final UserRoles userRoles = AuthUtils.getCurrentUserRoles();
+        String username = userRoles.getUsername();
+        boolean isAdmin = userRoles.hasAdminRole();
+        boolean isReadonly = userRoles.hasReadonlyRole();
+        boolean isStorage = userRoles.hasStorageRole();
+        boolean isOperator = userRoles.hasOperatorRole();
+
+        List<UnifiedStorageItemListDto> allItems = new ArrayList<>();
+
+        List<Object[]> nfsItems = ontapVolumeRepository.findNfsVolumeListItemsByAppserviceId(appserviceId, username, isAdmin, isReadonly, isStorage, isOperator);
+        List<UUID> nfsVolumeUuids = nfsItems.stream().map(row -> (UUID) row[0]).toList();
+        Map<String, String> nfsAppserviceNames = loadVolumeAppserviceNames(nfsVolumeUuids);
+
+        for (Object[] row : nfsItems) {
+            String uuidStr = row[0].toString();
+            String svmName = (String) row[2];
+            String protocol = determineProtocolFromSvmName(svmName);
+            if (protocol == null) {
+                protocol = "NFS";
+            }
+            allItems.add(UnifiedStorageItemListDto.builder()
+                    .uuid(uuidStr)
+                    .name((String) row[1])
+                    .type(StorageType.NFS)
+                    .storageCategory(row[3] != null ? StorageCategory.valueOf(row[3].toString()) : null)
+                    .protocol(protocol)
+                    .appserviceNames(nfsAppserviceNames.get(uuidStr))
+                    .build());
+        }
+
+        List<Object[]> cifsItems = ontapVolumeRepository.findCifsVolumeListItemsByAppserviceId(appserviceId, username, isAdmin, isReadonly, isStorage, isOperator);
+        List<UUID> cifsVolumeUuids = cifsItems.stream().map(row -> (UUID) row[0]).toList();
+        Map<String, String> cifsAppserviceNames = loadVolumeAppserviceNames(cifsVolumeUuids);
+
+        for (Object[] row : cifsItems) {
+            String uuidStr = row[0].toString();
+            String svmName = (String) row[2];
+            String protocol = determineProtocolFromSvmName(svmName);
+            if (protocol == null) {
+                protocol = "CIFS";
+            }
+            allItems.add(UnifiedStorageItemListDto.builder()
+                    .uuid(uuidStr)
+                    .name((String) row[1])
+                    .type(StorageType.CIFS)
+                    .storageCategory(row[3] != null ? StorageCategory.valueOf(row[3].toString()) : null)
+                    .protocol(protocol)
+                    .appserviceNames(cifsAppserviceNames.get(uuidStr))
+                    .build());
+        }
+
+        List<Object[]> qtreeItems = ontapQtreeRepository.findNfsQtreeListItemsByAppserviceId(appserviceId, username, isAdmin, isReadonly, isStorage, isOperator);
+        List<Long> qtreeIds = qtreeItems.stream().map(row -> (Long) row[0]).toList();
+        Map<String, String> qtreeAppserviceNames = loadQtreeAppserviceNames(qtreeIds);
+
+        for (Object[] row : qtreeItems) {
+            String idStr = row[0].toString();
+            String svmName = (String) row[2];
+            String protocol = determineProtocolFromSvmName(svmName);
+            if (protocol == null) {
+                protocol = "NFS";
+            }
+            allItems.add(UnifiedStorageItemListDto.builder()
+                    .uuid(idStr)
+                    .name((String) row[1])
+                    .path(row[3] != null ? ((String) row[3]).replaceFirst("^/", "") : null)
+                    .type(StorageType.QTREE)
+                    .storageCategory(row[4] != null ? StorageCategory.valueOf(row[4].toString()) : null)
+                    .protocol(protocol)
+                    .appserviceNames(qtreeAppserviceNames.get(idStr))
+                    .build());
+        }
+
+        List<Object[]> bucketItems = storageGridBucketRepository.findBucketListItemsByAppserviceId(appserviceId, username, isAdmin, isReadonly, isStorage, isOperator);
+        List<Long> bucketIds = bucketItems.stream().map(row -> (Long) row[0]).toList();
+        Map<String, String> bucketAppserviceNames = loadBucketAppserviceNames(bucketIds);
+
+        for (Object[] row : bucketItems) {
+            String idStr = row[0].toString();
+            allItems.add(UnifiedStorageItemListDto.builder()
+                    .uuid(idStr)
+                    .name((String) row[1])
+                    .type(StorageType.S3)
+                    .storageCategory(row[2] != null ? StorageCategory.valueOf(row[2].toString()) : null)
+                    .protocol("S3")
+                    .appserviceNames(bucketAppserviceNames.get(idStr))
+                    .build());
+        }
+
+        allItems.sort(Comparator.comparing(this::effectiveName, String.CASE_INSENSITIVE_ORDER));
+
+        return allItems;
+    }
+
+    @Transactional(readOnly = true)
     public List<UnifiedStorageMountItemDto> getUnifiedStorageMountsByServerId(Long serverId) {
         final UserRoles userRoles = AuthUtils.getCurrentUserRoles();
         String username = userRoles.getUsername();

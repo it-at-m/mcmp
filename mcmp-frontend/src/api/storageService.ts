@@ -1,6 +1,6 @@
+import type { Page } from "@/types/Page";
 import type { UnifiedStorageItem } from "@/types/Storage";
 import type { UnifiedStorageItemList } from "@/types/UnifiedStorageItemList";
-import type { Page } from "@/types/Page";
 import type { UnifiedStorageMountItem } from "@/types/UnifiedStorageMountItem.ts";
 import type { UnifiedStorageSnapshotItem } from "@/types/UnifiedStorageSnapshotItem.ts";
 import type { Ref } from "vue";
@@ -56,6 +56,16 @@ export default {
   ): Promise<UnifiedStorageMountItem[]> {
     return apiFetch(
       `${getApiBase()}${STORAGE_BASE}/unified/server/${serverId}/mounts`,
+      {},
+      loading
+    );
+  },
+  getUnifiedStorageByAppserviceId(
+    loading: Ref<boolean>,
+    appserviceId: number
+  ): Promise<UnifiedStorageItemList[]> {
+    return apiFetch(
+      `${getApiBase()}${STORAGE_BASE}/unified/appservice/${appserviceId}`,
       {},
       loading
     );

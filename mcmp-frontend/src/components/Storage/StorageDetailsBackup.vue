@@ -29,36 +29,36 @@
       </v-col>
     </v-row>
     <v-row>
-    <v-data-table
-      :items="snapshots"
-      :headers="headers"
-      :loading="loading || backupLoading"
-      :sort-by="[{ key: 'createTime', order: 'asc' }]"
-      density="compact"
-    >
-      <template #[`item.createTime`]="{ item }">
-        {{ new Date(item.createTime).toLocaleString() }}
-      </template>
-      <template #[`item.actions`]="{ item }">
-        <v-tooltip
-          v-if="canManageSnapshots"
-          location="bottom"
-          text="Snapshot löschen"
-        >
-          <template #activator="{ props: tooltipProps }">
-            <v-btn
-              v-bind="tooltipProps"
-              icon
-              variant="flat"
-              aria-label="Snapshot löschen"
-              @click="requestDeleteSnapshot(item.name)"
-            >
-              <v-icon>{{ mdiDelete }}</v-icon>
-            </v-btn>
-          </template>
-        </v-tooltip>
-      </template>
-    </v-data-table>
+      <v-data-table
+        :items="snapshots"
+        :headers="headers"
+        :loading="loading || backupLoading"
+        :sort-by="[{ key: 'createTime', order: 'asc' }]"
+        density="compact"
+      >
+        <template #[`item.createTime`]="{ item }">
+          {{ new Date(item.createTime).toLocaleString() }}
+        </template>
+        <template #[`item.actions`]="{ item }">
+          <v-tooltip
+            v-if="canManageSnapshots"
+            location="bottom"
+            text="Snapshot löschen"
+          >
+            <template #activator="{ props: tooltipProps }">
+              <v-btn
+                v-bind="tooltipProps"
+                icon
+                variant="flat"
+                aria-label="Snapshot löschen"
+                @click="requestDeleteSnapshot(item.name)"
+              >
+                <v-icon>{{ mdiDelete }}</v-icon>
+              </v-btn>
+            </template>
+          </v-tooltip>
+        </template>
+      </v-data-table>
     </v-row>
   </common-card>
   <common-dialog
@@ -112,14 +112,22 @@ const headers: any[] = [
 const policies = [
   { value: "dcc-6h", title: "Ein Snapshot pro Stunde der letzten 6h" },
   { value: "dcc-24h", title: "Ein Snapshot pro Stunde der letzten 24h" },
-  { value: "dcc-24h4d", title: "Ein Snapshot pro Stunde der letzten 24h + 4 Snapshots der letzten 4 Tage um 22 Uhr" },
-  { value: "dcc-24h7d", title: "Ein Snapshot pro Stunde der letzten 24h + 7 Snapshots der letzten 7 Tage um 22 Uhr" },
-  { value: "none", title: "keine automatischen Snapshots" }
+  {
+    value: "dcc-24h4d",
+    title:
+      "Ein Snapshot pro Stunde der letzten 24h + 4 Snapshots der letzten 4 Tage um 22 Uhr",
+  },
+  {
+    value: "dcc-24h7d",
+    title:
+      "Ein Snapshot pro Stunde der letzten 24h + 7 Snapshots der letzten 7 Tage um 22 Uhr",
+  },
+  { value: "none", title: "keine automatischen Snapshots" },
 ];
 
 function getPolicyTitle(policyValue: string | undefined): string {
   if (!policyValue) return "Unbekannt";
-  const policy = policies.find(p => p.value === policyValue);
+  const policy = policies.find((p) => p.value === policyValue);
   return policy ? policy.title : policyValue;
 }
 

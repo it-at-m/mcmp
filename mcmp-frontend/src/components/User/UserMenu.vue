@@ -1,6 +1,6 @@
 <template>
   <v-menu>
-    <template v-slot:activator="{ props }">
+    <template #activator="{ props }">
       <v-btn
         v-bind="props"
         variant="text"
@@ -43,7 +43,7 @@
     </v-card>
   </v-menu>
 
-  <UserSettingsDialog v-model="showSettings" />
+  <user-settings-dialog v-model="showSettings" />
 </template>
 
 <script setup lang="ts">

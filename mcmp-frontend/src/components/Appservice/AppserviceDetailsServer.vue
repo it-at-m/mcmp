@@ -19,7 +19,7 @@
                   :icon="mdiAlert"
                   color="orange"
                   size="22"
-                  class="mr-2"
+                  class="ml-2"
                 />
               </template>
             </v-tooltip>

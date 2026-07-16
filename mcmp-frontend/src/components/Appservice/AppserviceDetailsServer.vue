@@ -7,7 +7,7 @@
           title="Zugeordnete Server"
           top-margin="0"
         >
-          <template #append>
+          <template #append-title>
             <v-tooltip
               v-if="anyServerHasWarnings"
               location="top"

@@ -1,5 +1,8 @@
 <template>
-  <common-card title="Informationen">
+  <common-card
+    title="Informationen"
+    class="links"
+  >
     <v-row>
       <v-col cols="3">
         <h3>Name</h3>

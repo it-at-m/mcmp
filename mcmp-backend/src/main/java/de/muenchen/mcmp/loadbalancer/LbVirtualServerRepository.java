@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
+
 public interface LbVirtualServerRepository extends JpaRepository<LbVirtualServer, Long> {
 
     @Query(value = """
@@ -101,4 +103,51 @@ public interface LbVirtualServerRepository extends JpaRepository<LbVirtualServer
             @Param("sortBy") String sortBy,
             @Param("sortOrder") String sortOrder,
             Pageable pageable);
+
+    @Query(value = """
+    SELECT DISTINCT
+        lvs.id          AS id,
+        lvs.name        AS name,
+        lvs.listen      AS listen,
+        lvs.port        AS port,
+        (
+            SELECT a.name
+            FROM cmp.lb_virtual_server_has_appservices lbha2
+            JOIN cmp.appservice a ON lbha2.appservice_id = a.id
+            WHERE lbha2.lb_virtual_server_id = lvs.id
+            ORDER BY a.name
+            LIMIT 1
+        ) AS appserviceName
+    FROM cmp.lb_virtual_server lvs
+    JOIN cmp.lb_virtual_server_has_appservices lbha ON lbha.lb_virtual_server_id = lvs.id
+    WHERE lbha.appservice_id = :appserviceId
+    AND (
+        :isAdmin
+        OR :isReadonly
+        OR :isSecurity
+        OR :isOperator
+        OR :isNetwork
+        OR :isLoadbalancer
+        OR EXISTS (
+            SELECT 1
+            FROM cmp.lb_virtual_server_has_appservices lbha3
+            JOIN cmp.appservice a ON lbha3.appservice_id = a.id
+            JOIN cmp."group" g ON a.change_group_id = g.id
+            JOIN cmp.group_membership gm ON g.id = gm.group_id
+            JOIN cmp.user u ON gm.user_id = u.id
+            WHERE lbha3.lb_virtual_server_id = lvs.id
+              AND u.username = :username
+        )
+    )
+    ORDER BY lvs.name
+    """, nativeQuery = true)
+    List<LbVirtualServerList> findByAppserviceId(
+            @Param("appserviceId") Long appserviceId,
+            @Param("username") String username,
+            @Param("isAdmin") boolean isAdmin,
+            @Param("isReadonly") boolean isReadonly,
+            @Param("isSecurity") boolean isSecurity,
+            @Param("isOperator") boolean isOperator,
+            @Param("isNetwork") boolean isNetwork,
+            @Param("isLoadbalancer") boolean isLoadbalancer);
 }

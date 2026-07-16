@@ -120,9 +120,7 @@
         </h3>
       </v-col>
       <v-col cols="3">
-        <h3>
-          Typ
-        </h3>
+        <h3>Typ</h3>
       </v-col>
     </v-row>
     <v-row>
@@ -238,8 +236,9 @@
             <div class="pa-1">
               <strong>Tenant-Gesamtgröße</strong>
               <p class="text-caption mt-2 mb-1">
-                Diese Größe ist nicht die Größe dieses einzelnen Buckets, sondern
-                die Gesamtkapazität des gesamten S3-Tenants da es zurzeit keine Daten über die einzelnen Bucket größen gibt..
+                Diese Größe ist nicht die Größe dieses einzelnen Buckets,
+                sondern die Gesamtkapazität des gesamten S3-Tenants da es
+                zurzeit keine Daten über die einzelnen Bucket größen gibt..
               </p>
             </div>
           </info-tooltip>
@@ -362,11 +361,6 @@ function getDiskClass(): string {
   } else {
     return "-";
   }
-}
-function getS3Tenant(name: string | undefined): string {
-  if (!name) return "-";
-  const parts = name.split("-");
-  return parts.length >= 2 ? (parts[1] ?? "-") : "-";
 }
 
 function formatStorageCategory(category: string | undefined): string {

@@ -2,7 +2,7 @@ import type Disk from "@/types/Disk";
 import type { Ref } from "vue";
 
 import { defaultResponseHandler, getConfig } from "@/api/fetch-utils";
-import { getApiBase, DISK_BASE } from "@/constants";
+import { DISK_BASE, getApiBase } from "@/constants";
 
 export default {
   getDisksByServerId(loading: Ref<boolean>, serverId: number): Promise<Disk[]> {

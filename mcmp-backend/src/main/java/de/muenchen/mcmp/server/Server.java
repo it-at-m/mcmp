@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import de.muenchen.mcmp.appservice.Appservice;
 import de.muenchen.mcmp.cloud.Cloud;
 import de.muenchen.mcmp.common.AbstractEntity;
+import de.muenchen.mcmp.repository.Repository;
 import de.muenchen.mcmp.types.EnvironmentType;
 import de.muenchen.mcmp.types.ServerKind;
 import de.muenchen.mcmp.types.ServerRightsizingType;
@@ -13,6 +14,7 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 import org.hibernate.annotations.*;
 import org.hibernate.type.SqlTypes;
 
@@ -37,6 +39,7 @@ public class Server extends AbstractEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "cloud_id", nullable = false)
+    @ToString.Exclude
     private Cloud cloud;
 
     @Column(name = "uuid", nullable = false, columnDefinition = "text")
@@ -292,7 +295,12 @@ public class Server extends AbstractEntity {
     private Integer numCpuRecommended;
 
     @ManyToMany(mappedBy = "servers")
+    @ToString.Exclude
     private Set<Appservice> appservices = new LinkedHashSet<>();
+
+    @ManyToMany(mappedBy = "servers")
+    @ToString.Exclude
+    private Set<Repository> repositories = new LinkedHashSet<>();
 
     @Column(name = "snow_server_name", columnDefinition = "text")
     private String snowServerName;
@@ -480,4 +488,30 @@ public class Server extends AbstractEntity {
 
     @Column(name = "cpu_allocation_reservation")
     private Long cpuAllocationReservation;
+
+    @NotNull
+    @ColumnDefault("false")
+    @Column(name = "managed_middleware_filebeat", nullable = false)
+    private Boolean managedMiddlewareFilebeat = false;
+
+    @NotNull
+    @ColumnDefault("false")
+    @Column(name = "managed_middleware_httpd", nullable = false)
+    private Boolean managedMiddlewareHttpd = false;
+
+    @NotNull
+    @ColumnDefault("false")
+    @Column(name = "managed_middleware_java", nullable = false)
+    private Boolean managedMiddlewareJava = false;
+
+    @NotNull
+    @ColumnDefault("false")
+    @Column(name = "managed_middleware_php", nullable = false)
+    private Boolean managedMiddlewarePhp = false;
+
+    @NotNull
+    @ColumnDefault("false")
+    @Column(name = "managed_middleware_tomcat", nullable = false)
+    private Boolean managedMiddlewareTomcat = false;
+
 }

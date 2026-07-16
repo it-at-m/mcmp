@@ -25,15 +25,15 @@
           <v-row>
             <v-col cols="6">
               <v-text-field
-                label="Name"
                 v-model="networkGroupTmp.name"
+                label="Name"
                 :rules="[rules.notEmptyRule('Darf nicht leer sein.')]"
               />
             </v-col>
             <v-col cols="6">
               <v-select
-                label="Umgebung"
                 v-model="networkGroupTmp.environment"
+                label="Umgebung"
                 :items="Object.values(EnvironmentType)"
                 :rules="[rules.notEmptySelectRule('Darf nicht leer sein.')]"
                 :menu-props="{ persistent: true, closeOnContentClick: true }"
@@ -43,11 +43,11 @@
           <v-row>
             <v-col cols="6">
               <v-select
+                v-model="selectedType"
                 label="Typ"
                 :items="['application', 'database', 'storage']"
-                v-model="selectedType"
-                @update:modelValue="onTypeChange"
                 :menu-props="{ persistent: true, closeOnContentClick: true }"
+                @update:model-value="onTypeChange"
               />
             </v-col>
           </v-row>
@@ -100,9 +100,7 @@ const networkGroupTmp = ref<NetworkGroup>({
 });
 const selectedType = ref<"application" | "database" | "storage" | null>(null);
 
-const emit = defineEmits<{
-  (e: "save", networkGroup: NetworkGroup): void;
-}>();
+const emit = defineEmits<(e: "save", networkGroup: NetworkGroup) => void>();
 
 onMounted(() => {
   if (props.networkGroup) {

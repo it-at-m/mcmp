@@ -6,7 +6,7 @@
   >
     <template #activator="{ props: tooltipProps }">
       <v-chip
-        v-bind="tooltip === '' ? {}:tooltipProps"
+        v-bind="tooltip === '' ? {} : tooltipProps"
         :text="isMatch ? matchText : notMatchText"
         :base-color="isMatch ? '_green' : '_red'"
         :ripple="false"
@@ -23,19 +23,19 @@
 import { computed } from "vue";
 
 const props = withDefaults(
-    defineProps<{
-      tooltip?: string;
-      value?: string | number | boolean;
-      checkValue: string | number | boolean;
-      matchText: string;
-      notMatchText: string;
-      matchMode: "equal" | "greater" | "less" | "greaterEquals" | "lessEquals";
-      href?: string;
-    }>(),
-    {
-      value: false,
-      tooltip: ''
-    }
+  defineProps<{
+    tooltip?: string;
+    value?: string | number | boolean;
+    checkValue: string | number | boolean;
+    matchText: string;
+    notMatchText: string;
+    matchMode: "equal" | "greater" | "less" | "greaterEquals" | "lessEquals";
+    href?: string;
+  }>(),
+  {
+    value: false,
+    tooltip: "",
+  }
 );
 
 const isMatch = computed(() => {

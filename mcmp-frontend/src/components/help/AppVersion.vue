@@ -1,5 +1,5 @@
 <template>
-  <CommonCard title="Version">
+  <common-card title="Version">
     <v-alert
       v-if="versionError"
       type="error"
@@ -29,7 +29,7 @@
       hide-default-header
       density="comfortable"
     >
-      <template v-slot:[`item.value`]="{ item, value }">
+      <template #[`item.value`]="{ item, value }">
         <span :class="{ 'version-mono': item.mono }">
           <template
             v-if="item.key === 'gitCommitIdFull' && value && value !== '—'"
@@ -49,8 +49,8 @@
         </span>
       </template>
     </v-data-table>
-  </CommonCard>
-  <CommonCard
+  </common-card>
+  <common-card
     title="Verwendete Technologien"
     class="mt-4"
   >
@@ -64,7 +64,7 @@
       hide-default-header
       density="comfortable"
     >
-      <template v-slot:[`item.value`]="{ value }">
+      <template #[`item.value`]="{ value }">
         <a
           class="links d-inline-flex align-center"
           :href="value"
@@ -80,7 +80,7 @@
         </a>
       </template>
     </v-data-table>
-  </CommonCard>
+  </common-card>
 </template>
 
 <script setup lang="ts">
@@ -100,12 +100,12 @@ const props = defineProps({
   },
 });
 
-type VersionRow = {
+interface VersionRow {
   key: string;
   label: string;
   value: string;
   mono?: boolean;
-};
+}
 
 const version = ref<AppVersion | null>(null);
 const versionLoading = ref(false);
@@ -234,6 +234,7 @@ onMounted(() => {
 :deep(a.links:visited),
 :deep(a.links:hover),
 :deep(a.links:active) {
+  /* noinspection CssUnresolvedCustomProperty */
   color: rgb(var(--v-theme-link));
   text-decoration: none;
 }

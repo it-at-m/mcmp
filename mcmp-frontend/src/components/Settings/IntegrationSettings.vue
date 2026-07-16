@@ -3,27 +3,27 @@
   <integration-setting
     :title="'AWX'"
     :configs="awxConfigs"
-    @updateTable="getTableData"
+    @update-table="getTableData"
   />
   <integration-setting
     :title="'ServiceNow'"
     :configs="snowConfigs"
-    @updateTable="getTableData"
+    @update-table="getTableData"
   />
   <integration-setting
     :title="'Infoblox'"
     :configs="infobloxConfigs"
-    @updateTable="getTableData"
+    @update-table="getTableData"
   />
   <integration-setting
     :title="'Backup Systeme'"
     :configs="baasConfigs"
-    @updateTable="getTableData"
+    @update-table="getTableData"
   />
   <integration-setting
     :title="'Clouds'"
     :configs="clouds"
-    @updateTable="getTableData"
+    @update-table="getTableData"
   />
 </template>
 

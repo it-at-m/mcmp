@@ -159,10 +159,13 @@ const props = defineProps<{
   selectedStorageItem: UnifiedStorageItem;
 }>();
 
-const emit = defineEmits<(
-    e: "save",
-    payload: { sizeGb: number; snapshotReservePercent: number }
-  ) => void>();
+const emit =
+  defineEmits<
+    (
+      e: "save",
+      payload: { sizeGb: number; snapshotReservePercent: number }
+    ) => void
+  >();
 
 const dialog = ref(false);
 const draftSizeGb = ref(0);

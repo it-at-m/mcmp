@@ -8,7 +8,7 @@ import {
   postConfig,
   putConfig,
 } from "@/api/fetch-utils";
-import { getApiBase, CLOUD_BASE } from "@/constants";
+import { CLOUD_BASE, getApiBase } from "@/constants";
 
 export default {
   getClouds(loading: Ref<boolean>): Promise<Cloud[]> {
@@ -52,7 +52,7 @@ export default {
   },
   updateConfig(cloud: Cloud, loading: Ref<boolean>): Promise<void> {
     loading.value = true;
-    if(cloud.apiPassword == null){
+    if (cloud.apiPassword == null) {
       cloud.apiPassword = undefined;
     }
     return fetch(`${getApiBase()}${CLOUD_BASE}`, putConfig(cloud))

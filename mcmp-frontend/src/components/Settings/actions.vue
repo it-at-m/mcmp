@@ -1,13 +1,13 @@
 <template>
-  <CommonCard title="Actions">
+  <common-card title="Actions">
     <template #toolbar-actions>
-      <actionAddEdit
+      <action-add-edit
         title="Action hinzufügen"
         :icon="mdiPlus"
-        :awxConfigs="awxConfigs"
-        :snowConfigs="snowConfigs"
-        @save="saveAction"
+        :awx-configs="awxConfigs"
+        :snow-configs="snowConfigs"
         :all-actions="items"
+        @save="saveAction"
       />
     </template>
 
@@ -18,7 +18,7 @@
       :loading="loading"
       hide-default-footer
     >
-      <template v-slot:item.enabled="{ item }">
+      <template #item.enabled="{ item }">
         <v-chip
           :color="item.enabled ? '_green' : '_red'"
           dark
@@ -26,30 +26,30 @@
           {{ item.enabled ? "Aktiv" : "Inaktiv" }}
         </v-chip>
       </template>
-      <template v-slot:item.changeRequired="{ item }">
+      <template #item.changeRequired="{ item }">
         {{ formatter.formatBooleanToGerman(item.changeRequired) }}
       </template>
-      <template v-slot:item.createIncidents="{ item }">
+      <template #item.createIncidents="{ item }">
         <span :class="{ 'text-error': item.createIncidents === false }">
           {{ formatter.formatBooleanToGerman(item.createIncidents) }}
         </span>
       </template>
-      <template v-slot:item.awxJobEnabled="{ item }">
+      <template #item.awxJobEnabled="{ item }">
         {{ formatter.formatBooleanToGerman(item.awxJobEnabled) }}
       </template>
-      <template v-slot:item.edit="{ item }">
-        <actionAddEdit
+      <template #item.edit="{ item }">
+        <action-add-edit
           title="Action bearbeiten"
           :icon="mdiPencil"
           :action="item"
-          :awxConfigs="awxConfigs"
-          :snowConfigs="snowConfigs"
-          @save="editItem"
+          :awx-configs="awxConfigs"
+          :snow-configs="snowConfigs"
           :all-actions="items"
+          @save="editItem"
         />
       </template>
     </v-data-table>
-  </CommonCard>
+  </common-card>
 </template>
 
 <script setup lang="ts">

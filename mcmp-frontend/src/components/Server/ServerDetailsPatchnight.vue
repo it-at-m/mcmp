@@ -166,14 +166,13 @@ const props = defineProps<{
 const formatter = useFormatter();
 
 function change_patchnight_time(time: string) {
-  jobService
-    .startJob(
-      jobLoading,
-      "LINUX_PATCHNIGHT_TIME_CHANGE",
-      props.selectedServer.id,
-      {
-        time: time.replace(":", ""),
-      }
-    )
+  jobService.startJob(
+    jobLoading,
+    "LINUX_PATCHNIGHT_TIME_CHANGE",
+    props.selectedServer.id,
+    {
+      time: time.replace(":", ""),
+    }
+  );
 }
 </script>

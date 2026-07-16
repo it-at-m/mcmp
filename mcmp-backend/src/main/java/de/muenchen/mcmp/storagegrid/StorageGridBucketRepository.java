@@ -60,6 +60,21 @@ public interface StorageGridBucketRepository extends JpaRepository<StorageGridBu
             "WHERE b.id IN :ids")
     List<StorageGridBucket> findByIdsWithAppservices(@Param("ids") List<Long> ids);
 
+    @Query("SELECT b.id, b.name, b.storageCategory FROM StorageGridBucket b " +
+            "JOIN b.storageGridAccount.appservices ab " +
+            "WHERE ab.id = :appserviceId " +
+            "AND b.storageCategory IS NOT NULL " +
+            "AND (" +
+            "   :isAdmin = TRUE OR :isReadonly = TRUE OR :isStorage = TRUE OR :isOperator = TRUE OR " +
+            "   EXISTS (SELECT 1 FROM b.storageGridAccount.appservices a JOIN a.changeGroup g JOIN g.users u WHERE u.username = :username)" +
+            ")")
+    List<Object[]> findBucketListItemsByAppserviceId(@Param("appserviceId") Long appserviceId,
+                                                     @Param("username") String username,
+                                                     @Param("isAdmin") boolean isAdmin,
+                                                     @Param("isReadonly") boolean isReadonly,
+                                                     @Param("isStorage") boolean isStorage,
+                                                     @Param("isOperator") boolean isOperator);
+
     @Query("SELECT CASE WHEN :isAdmin = TRUE OR :isStorage = TRUE OR EXISTS (" +
             "SELECT 1 FROM StorageGridBucket b " +
             "JOIN b.storageGridAccount acc " +

@@ -1,27 +1,35 @@
 <template>
-  <CommonDialog
+  <common-dialog
     v-model="dialog"
     :loading="loading"
     title="Ansible User Aktionen"
     max-width="600"
     show-actions
-    submitActivated
+    submit-activated
     :icon="mdiAccount"
+    show-change-warning
+    :check-for-enabled-actions="['ANSIBLE_USER_ADD', 'ANSIBLE_USER_REMOVE']"
     @dialog-cancel="close"
     @dialog-confirm="save"
-    showChangeWarning
-    :checkForEnabledActions="['ANSIBLE_USER_ADD', 'ANSIBLE_USER_REMOVE']"
   >
-  <CommonAlert
-          color="info"
-          class="mb-6"
-          v-if="isAdd"
+    <common-alert
+      v-if="isAdd"
+      color="info"
+      class="mb-6"
+    >
+      <div>
+        Neuen Ansible User erstellen und/oder bestehenden User auf weitere
+        Server berechtigen.
+        <br />Infos unter
+        <a
+          href="https://go.muenchen.de/sp/KB0014700"
+          target="_blank"
+          rel="noopener"
+          class="text-primary font-weight-bold text-decoration-none"
+          >KB0014700</a
         >
-          <div>
-        Neuen Ansible User erstellen und/oder bestehenden User auf weitere Server berechtigen.
-                <br>Infos unter <a href="https://go.muenchen.de/sp/KB0014700" target="_blank" rel="noopener" class="text-primary font-weight-bold text-decoration-none">KB0014700</a>
-          </div>
-        </CommonAlert>
+      </div>
+    </common-alert>
 
     <template #activator="{ props }">
       <v-btn
@@ -91,17 +99,17 @@
         </v-autocomplete>
       </v-row>
     </v-form>
-    <CommonAlert
+    <common-alert
+      v-if="!isAdd"
       color="info"
       class="mt-4"
-      v-if="!isAdd"
     >
       <div>
         Der Ansible User wird von allen Servern entfernt, welche der Abteilung
         des Benutzers zugeordnet sind.
       </div>
-    </CommonAlert>
-  </CommonDialog>
+    </common-alert>
+  </common-dialog>
 </template>
 <script setup lang="ts">
 import type { ServerList } from "@/types/ServerList.ts";

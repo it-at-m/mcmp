@@ -1,17 +1,17 @@
 <template>
-  <CommonDialog
+  <common-dialog
     v-model="dialog"
     :loading="loading"
     title="Server"
     max-width="1200"
-    @dialog-cancel="close"
-    submitActivated
-    :checkForEnabledActions="[
+    submit-activated
+    :check-for-enabled-actions="[
       'LINUX_RHEL9_SERVER',
       'LINUX_RHEL10_SERVER',
       'WINDOWS_SERVER_2025',
       'WINDOWS_SERVER_2022',
     ]"
+    @dialog-cancel="close"
   >
     <template #activator="{ props }">
       <v-btn
@@ -30,96 +30,96 @@
       :items="pages"
       rounded="lg"
     >
-      <template v-slot:item.1>
+      <template #item.1>
         <div style="min-height: 500px">
-          <GeneralSettings :instlServerDetails="instlServerDetails" />
+          <general-settings :instl-server-details="instlServerDetails" />
         </div>
       </template>
 
-      <template v-slot:item.2>
+      <template #item.2>
         <div style="min-height: 500px">
-          <ExtraSettings
+          <extra-settings
             v-if="
               instlServerDetails.categoryType === categoryType.DB ||
               instlServerDetails.categoryType === categoryType.Mixed
             "
-            :instlServerDetails="instlServerDetails"
+            :instl-server-details="instlServerDetails"
           />
-          <ServerName
+          <server-name
             v-else
-            :instlServerDetails="instlServerDetails"
+            :instl-server-details="instlServerDetails"
           />
         </div>
       </template>
 
-      <template v-slot:item.3>
+      <template #item.3>
         <div style="min-height: 500px">
-          <ServerName
+          <server-name
             v-if="
               instlServerDetails.categoryType === categoryType.DB ||
               instlServerDetails.categoryType === categoryType.Mixed
             "
-            :instlServerDetails="instlServerDetails"
+            :instl-server-details="instlServerDetails"
           />
-          <HardwareSettings
+          <hardware-settings
             v-else
-            :instlServerDetails="instlServerDetails"
+            :instl-server-details="instlServerDetails"
           />
         </div>
       </template>
 
-      <template v-slot:item.4>
+      <template #item.4>
         <div style="min-height: 500px">
-          <HardwareSettings
+          <hardware-settings
             v-if="
               instlServerDetails.categoryType === categoryType.DB ||
               instlServerDetails.categoryType === categoryType.Mixed
             "
-            :instlServerDetails="instlServerDetails"
+            :instl-server-details="instlServerDetails"
           />
-          <DeleteSchedule
+          <delete-schedule
             v-else-if="
               !(
                 instlServerDetails.categoryType === categoryType.DB ||
                 instlServerDetails.categoryType === categoryType.Mixed
               ) && instlServerDetails.schedule
             "
-            :instlServerDetails="instlServerDetails"
+            :instl-server-details="instlServerDetails"
           />
-          <InstallSummary
+          <install-summary
             v-else
-            :instlServerDetails="instlServerDetails"
+            :instl-server-details="instlServerDetails"
           />
         </div>
       </template>
 
-      <template v-slot:item.5>
+      <template #item.5>
         <div style="min-height: 500px">
-          <DeleteSchedule
+          <delete-schedule
             v-if="
               (instlServerDetails.categoryType === categoryType.DB ||
                 instlServerDetails.categoryType === categoryType.Mixed) &&
               instlServerDetails.schedule
             "
-            :instlServerDetails="instlServerDetails"
+            :instl-server-details="instlServerDetails"
           />
-          <InstallSummary
+          <install-summary
             v-else
-            :instlServerDetails="instlServerDetails"
+            :instl-server-details="instlServerDetails"
           />
         </div>
       </template>
 
-      <template v-slot:item.6>
+      <template #item.6>
         <div style="min-height: 500px">
-          <InstallSummary
+          <install-summary
             v-if="instlServerDetails.schedule"
-            :instlServerDetails="instlServerDetails"
+            :instl-server-details="instlServerDetails"
           />
         </div>
       </template>
 
-      <template v-slot:actions="{ next, prev }">
+      <template #actions="{ next, prev }">
         <div class="d-flex justify-space-between w-100 mt-4 mb-4 px-4">
           <v-btn
             :prepend-icon="mdiArrowLeft"
@@ -127,8 +127,8 @@
             variant="outlined"
             rounded="xl"
             class="action-btn cancel-btn"
-            @click="prev"
             :disabled="step == 1"
+            @click="prev"
             >Zurück
           </v-btn>
           <v-btn
@@ -146,7 +146,7 @@
         </div>
       </template>
     </v-stepper>
-  </CommonDialog>
+  </common-dialog>
 </template>
 
 <script setup lang="ts">
@@ -154,7 +154,6 @@ import type { ServerCategoryType } from "@/types/ServerTypes.ts";
 
 import { mdiArrowLeft, mdiArrowRight } from "@mdi/js";
 import { computed, inject, ref } from "vue";
-import { shades } from "vuetify/util/colors";
 
 import jobService from "@/api/jobService";
 import CommonDialog from "@/components/common/CommonDialog.vue";
@@ -315,7 +314,7 @@ function order() {
     instlServerDetails.value.isLinuxCustom &&
     userStore.getUser?.authorities?.includes("ROLE_LINUX")
   ) {
-    let json = JSON.parse(instlServerDetails.value.linuxCustomExtraVars);
+    const json = JSON.parse(instlServerDetails.value.linuxCustomExtraVars);
 
     Object.assign(json, { linux_custom: true });
 
@@ -378,7 +377,8 @@ function order() {
       return;
     }
   }
-  instlServerDetails.value.serverName!.prefix = instlServerDetails.value.serverName!.prefix || "";
+  instlServerDetails.value.serverName!.prefix =
+    instlServerDetails.value.serverName!.prefix || "";
   instlServerDetails.value.serverName!.serverType = serverType;
 
   // 1. RHEL 10
@@ -437,7 +437,10 @@ function order() {
       serverType: instlServerDetails.value.category,
       ram: instlServerDetails.value.memory,
       cpu: instlServerDetails.value.cpu,
-      disks: instlServerDetails.value.disk[OsType.Windows][instlServerDetails.value.categoryType!],
+      disks:
+        instlServerDetails.value.disk[OsType.Windows][
+          instlServerDetails.value.categoryType!
+        ],
       network_group_id: instlServerDetails.value.networkGroup.id,
       application_service_id: instlServerDetails.value.appservice.id,
       osVersion: instlServerDetails.value.osVersion,
@@ -461,7 +464,10 @@ function order() {
       serverType: instlServerDetails.value.category,
       ram: instlServerDetails.value.memory,
       cpu: instlServerDetails.value.cpu,
-      disks: instlServerDetails.value.disk[OsType.Windows][instlServerDetails.value.categoryType!],
+      disks:
+        instlServerDetails.value.disk[OsType.Windows][
+          instlServerDetails.value.categoryType!
+        ],
       network_group_id: instlServerDetails.value.networkGroup.id,
       application_service_id: instlServerDetails.value.appservice.id,
       osVersion: instlServerDetails.value.osVersion,
@@ -473,8 +479,7 @@ function order() {
           : null,
       ...schedule,
     });
-  }
-  else {
+  } else {
     alert(
       "Für die ausgewählte Betriebssystemversion ist derzeit keine Bestellung möglich."
     );
@@ -497,10 +502,12 @@ function order() {
 
 .cancel-btn {
   border: 2px solid #90a4ae;
+  /* noinspection CssUnresolvedCustomProperty */
   color: rgb(var(--v-theme-cancel));
 }
 
 .cancel-btn:hover {
+  /* noinspection CssUnresolvedCustomProperty */
   background: rgb(var(--v-theme-bg_light));
   border-color: #90a4ae;
   transform: translateY(-1px);

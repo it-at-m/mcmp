@@ -3,7 +3,6 @@ package de.muenchen.mcmp.loadbalancer;
 import lombok.Builder;
 
 import java.util.List;
-import java.util.Set;
 
 @Builder
 public record UnifiedLoadbalancer(
@@ -18,7 +17,8 @@ public record UnifiedLoadbalancer(
         boolean redirect80,
         List<String> addresses,
         List<String> domains,
-        Set<String> appserviceNames,
+        List<LbAppserviceRefDTO> appservices,
+        String tenantRepositoryUrl,
         List<UnifiedLoadbalancerPoolDTO> pools,
         List<LbIruleDTO> irules
 ) {}

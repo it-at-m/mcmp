@@ -3,9 +3,9 @@
     <v-row>
       <v-col>
         <v-autocomplete
-          label="Anwendungsservice*"
           v-model="ldblOrder.appservice"
           v-model:search="search"
+          label="Anwendungsservice*"
           :items="applicationServices"
           item-title="name"
           :loading="loading"
@@ -13,7 +13,6 @@
           rounded
           clearable
           variant="outlined"
-          @update:search="onSearchUpdate"
           :rules="[
             rules.notEmptySelectRule(
               'Ein Anwendungsservice muss ausgewählt werden'
@@ -22,6 +21,7 @@
               'Der ausgewählte Anwendungsservice hat keine zugewiesenen Server',
           ]"
           class="mt-2"
+          @update:search="onSearchUpdate"
         >
           <template #no-data
             ><a class="ml-2">Keine Anwendungsservices gefunden</a></template
@@ -70,15 +70,15 @@
     </v-row>
     <v-row>
       <v-col>
-        <CommonAlert type="info">
+        <common-alert type="info">
           Vorraussichtlicher DNS Eintrag:
           <v-progress-circular
-            indeterminate
             v-if="dnsLoading"
+            indeterminate
             size="16"
           />
           <strong v-else>{{ expectedDnsEntry }}</strong>
-        </CommonAlert>
+        </common-alert>
       </v-col>
     </v-row>
   </v-form>

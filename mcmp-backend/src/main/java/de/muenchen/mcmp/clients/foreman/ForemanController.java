@@ -68,10 +68,15 @@ public class ForemanController implements DisposableBean {
             try (ForemanServerCache cache = foremanServerCache.loadForResource()) {
                 log.info("Foreman server cache loaded for import operation");
 
+                // 1) Pre-process: Ensure all repositories exist before processing hosts
+                log.info("Pre-processing: Ensuring all repositories exist in database");
+                foremanImportService.ensureAllRepositoriesExist(foremanDataDTO.hosts());
+
                 final List<ServerMatcher<HostDTO>> strategies = createForemanStrategies(cache);
 
                 final Set<Long> processedServerIDs = new HashSet<>();
 
+                // 2) Process each host
                 for (final HostDTO hostDTO : foremanDataDTO.hosts()) {
                     try {
                         foremanImportService.processHostInNewTransaction(hostDTO, processedServerIDs, strategies);
@@ -82,7 +87,7 @@ public class ForemanController implements DisposableBean {
                     }
                 }
 
-                // Reset servers not in import
+                // 3) Reset servers not in import
                 foremanImportService.resetUnprocessedServers(processedServerIDs);
 
                 log.info("Successfully processed Foreman data");

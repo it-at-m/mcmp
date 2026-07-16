@@ -4,6 +4,8 @@ import de.muenchen.mcmp.common.AbstractEntity;
 import de.muenchen.mcmp.mountPoint.MountPoint;
 import de.muenchen.mcmp.mountPoint.MountPointRepository;
 import de.muenchen.mcmp.ontap.*;
+import de.muenchen.mcmp.repository.Repository;
+import de.muenchen.mcmp.repository.RepositoryRepository;
 import de.muenchen.mcmp.server.Server;
 import de.muenchen.mcmp.server.ServerRepository;
 import de.muenchen.mcmp.server.matching.ServerMatcher;
@@ -19,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -34,6 +37,7 @@ public class ForemanImportService {
     private final OntapQtreeServerMountRepository ontapQtreeServerMountRepository;
     private final OntapVolumeRepository ontapVolumeRepository;
     private final OntapVolumeServerMountRepository ontapVolumeServerMountRepository;
+    private final RepositoryRepository repositoryRepository;
 
     /**
      * Processes a single host in its own transaction.
@@ -62,10 +66,71 @@ public class ForemanImportService {
             if (server.getManaged() && !server.getRoleWindows()) {
                 processMountPointsWithFallback(server, hostDTO);
                 syncOntapServerMounts(server, hostDTO.mountpoints());
+                syncRepositories(server, hostDTO.repositories());
+            } else {
+                // If server is unmanaged or Windows, ensure no repository assignments exist
+                if (repositoryRepository.existsAssignmentsByServerId(server.getId())) {
+                    repositoryRepository.deleteAssignmentsByServerId(server.getId());
+                    log.debug("Cleared repository assignments for server {} (now unmanaged or Windows)", server.getName());
+                }
             }
         } else {
             log.warn("Foreman Host {} from {} with ID {} could not be matched to any server", hostDTO.name(), hostDTO.source(), hostDTO.id());
         }
+    }
+
+    /**
+     * Pre-processes all hosts to ensure all repositories exist in the database.
+     * This is a performance optimization to avoid individual repository lookups per server.
+     *
+     * @param hosts the list of hosts to process
+     */
+    @Transactional
+    public void ensureAllRepositoriesExist(final List<HostDTO> hosts) {
+        log.info("Pre-processing repositories from {} hosts", hosts.size());
+
+        // 1) Collect all unique repository names from all hosts
+        final Set<String> allRepoNames = hosts.stream()
+                .filter(host -> host.repositories() != null)
+                .flatMap(host -> host.repositories().stream())
+                .filter(name -> name != null && !name.isBlank())
+                .collect(Collectors.toSet());
+
+        if (allRepoNames.isEmpty()) {
+            log.debug("No repositories found in host data");
+            return;
+        }
+
+        log.info("Found {} unique repositories across all hosts", allRepoNames.size());
+
+        // 2) Load existing repositories from database
+        final List<Repository> existingRepos = repositoryRepository.findAll();
+        final Set<String> existingRepoNames = existingRepos.stream()
+                .map(Repository::getName)
+                .collect(Collectors.toSet());
+
+        // 3) Identify missing repositories
+        final Set<String> missingRepoNames = allRepoNames.stream()
+                .filter(name -> !existingRepoNames.contains(name))
+                .collect(Collectors.toSet());
+
+        if (missingRepoNames.isEmpty()) {
+            log.debug("All repositories already exist in database");
+            return;
+        }
+
+        // 4) Create all missing repositories in batch
+        log.info("Creating {} new repositories", missingRepoNames.size());
+        final List<Repository> newRepos = missingRepoNames.stream()
+                .map(name -> {
+                    Repository repo = new Repository();
+                    repo.setName(name);
+                    return repo;
+                })
+                .toList();
+
+        repositoryRepository.saveAll(newRepos);
+        log.info("Successfully created {} new repositories", newRepos.size());
     }
 
     /**
@@ -307,6 +372,89 @@ public class ForemanImportService {
     }
 
     /**
+     * Synchronizes server repositories incrementally.
+     * - Creates missing repositories in the database
+     * - Adds new repository assignments to the server
+     * - Removes assignments that no longer exist in Foreman
+     */
+    private void syncRepositories(final Server server, final List<String> repositoryNames) {
+        if (server == null || server.getId() == null) {
+            log.warn("Cannot sync repositories: server or server ID is null");
+            return;
+        }
+
+        // 1) Load existing assignments from database
+        final List<Repository> currentRepos = repositoryRepository.findAllByServersId(server.getId());
+        final Set<String> currentRepoNames = currentRepos.stream()
+                .map(Repository::getName)
+                .collect(Collectors.toSet());
+
+        // 2) Handle case where no repositories exist in Foreman -> clear all assignments
+        if (repositoryNames == null || repositoryNames.isEmpty()) {
+            if (!currentRepos.isEmpty()) {
+                for (Repository repo : currentRepos) {
+                    repo.getServers().remove(server);
+                }
+                repositoryRepository.saveAll(currentRepos);
+                log.debug("Cleared all repository assignments for server {}", server.getName());
+            }
+            return;
+        }
+
+        final Set<String> targetRepoNames = new HashSet<>(repositoryNames);
+
+        // 3) Identify repos to add and remove
+        final Set<String> reposToAdd = targetRepoNames.stream()
+                .filter(name -> !currentRepoNames.contains(name))
+                .collect(Collectors.toSet());
+
+        final List<Repository> reposToRemove = currentRepos.stream()
+                .filter(repo -> !targetRepoNames.contains(repo.getName()))
+                .toList();
+
+        boolean changed = false;
+
+        // 4) Process removals via native query to avoid updating Repository entity
+        if (!reposToRemove.isEmpty()) {
+            for (Repository repo : reposToRemove) {
+                repositoryRepository.deleteAssignment(repo.getId(), server.getId());
+            }
+            changed = true;
+            log.debug("Removed {} repository assignments from server {}", reposToRemove.size(), server.getName());
+        }
+
+        // 5) Process additions
+        if (!reposToAdd.isEmpty()) {
+            for (String name : reposToAdd) {
+                Repository repository = getOrCreateRepositoryFromCache(name);
+                // Native check and insert to avoid loading/updating the Repository entity
+                if (!repositoryRepository.existsAssignment(repository.getId(), server.getId())) {
+                    repositoryRepository.insertAssignment(repository.getId(), server.getId());
+                    changed = true;
+                }
+            }
+            log.debug("Added repository assignments to server {}", server.getName());
+        }
+
+        if (changed) {
+            log.debug("Successfully synchronized repositories for server {}", server.getName());
+        }
+    }
+
+    /**
+     * Gets or creates a repository using an in-memory cache to avoid repeated DB lookups.
+     * This method should be called within a transaction-scoped cache.
+     */
+    private Repository getOrCreateRepositoryFromCache(final String name) {
+        return repositoryRepository.findByName(name)
+                .orElseGet(() -> {
+                    Repository newRepo = new Repository();
+                    newRepo.setName(name);
+                    return repositoryRepository.save(newRepo);
+                });
+    }
+
+    /**
      * Generic method to delete qtree and volume mounts with logging.
      */
     private void deleteMounts(final Long serverId,
@@ -393,12 +541,24 @@ public class ForemanImportService {
         final Boolean expectedTetrationAgent = hostDTO.tetrationAgentIsInstalled();
         final Boolean expectedNonOracleRole = calculateNonOracleRole(hostDTO);
 
+        final List<String> managedList = hostDTO.lhmManaged() != null ? hostDTO.lhmManaged() : List.of();
+        final boolean expectedFilebeat = managedList.contains("lhm_managed_middleware_filebeat");
+        final boolean expectedHttpd = managedList.contains("lhm_managed_middleware_httpd");
+        final boolean expectedJava = managedList.contains("lhm_managed_middleware_java");
+        final boolean expectedPhp = managedList.contains("lhm_managed_middleware_php");
+        final boolean expectedTomcat = managedList.contains("lhm_managed_middleware_tomcat");
+
         // Check basic fields
         if (!Objects.equals(server.getManaged(), true) ||
             !Objects.equals(server.getForemanSource(), hostDTO.source()) ||
             !Objects.equals(server.getForemanId(), expectedForemanId) ||
             !Objects.equals(server.getFqdn(), expectedFqdn) ||
             !Objects.equals(server.getTetrationAgentInstalled(), expectedTetrationAgent) ||
+            !Objects.equals(server.getManagedMiddlewareFilebeat(), expectedFilebeat) ||
+            !Objects.equals(server.getManagedMiddlewareHttpd(), expectedHttpd) ||
+            !Objects.equals(server.getManagedMiddlewareJava(), expectedJava) ||
+            !Objects.equals(server.getManagedMiddlewarePhp(), expectedPhp) ||
+            !Objects.equals(server.getManagedMiddlewareTomcat(), expectedTomcat) ||
             (hostDTO.linux() && (
             !Objects.equals(server.getPatchnightTime(), hostDTO.patchnightStartTime()) ||
             !Objects.equals(server.getPatchnightGroup(), expectedPatchnightGroup) ||
@@ -515,6 +675,13 @@ public class ForemanImportService {
             server.setPatchnightExitcode(newExitcode);
         }
         server.setTetrationAgentInstalled(newTetrationAgent);
+
+        final List<String> managedList = hostDTO.lhmManaged() != null ? hostDTO.lhmManaged() : List.of();
+        server.setManagedMiddlewareFilebeat(managedList.contains("lhm_managed_middleware_filebeat"));
+        server.setManagedMiddlewareHttpd(managedList.contains("lhm_managed_middleware_httpd"));
+        server.setManagedMiddlewareJava(managedList.contains("lhm_managed_middleware_java"));
+        server.setManagedMiddlewarePhp(managedList.contains("lhm_managed_middleware_php"));
+        server.setManagedMiddlewareTomcat(managedList.contains("lhm_managed_middleware_tomcat"));
 
         // Server info fields (only update if provided)
         if (hostDTO.serverInfosTicketnr() != null && !hostDTO.serverInfosTicketnr().isBlank()) {
@@ -864,6 +1031,12 @@ public class ForemanImportService {
         if (Boolean.TRUE.equals(server.getManaged())) {
             server.setManaged(false);
             needsUpdate = true;
+
+            // Optimized cleanup: only delete if assignments actually exist
+            if (repositoryRepository.existsAssignmentsByServerId(server.getId())) {
+                repositoryRepository.deleteAssignmentsByServerId(server.getId());
+                log.debug("Cleared repository assignments for unprocessed server {}", server.getName());
+            }
         }
         if (server.getRoleLinux()) {
             if (server.getPatchnightTime() != null) {
@@ -891,6 +1064,13 @@ public class ForemanImportService {
             server.setTetrationAgentInstalled(false);
             needsUpdate = true;
         }
+
+        // Managed middleware flags
+        needsUpdate |= resetBooleanField(server::getManagedMiddlewareFilebeat, server::setManagedMiddlewareFilebeat);
+        needsUpdate |= resetBooleanField(server::getManagedMiddlewareHttpd, server::setManagedMiddlewareHttpd);
+        needsUpdate |= resetBooleanField(server::getManagedMiddlewareJava, server::setManagedMiddlewareJava);
+        needsUpdate |= resetBooleanField(server::getManagedMiddlewarePhp, server::setManagedMiddlewarePhp);
+        needsUpdate |= resetBooleanField(server::getManagedMiddlewareTomcat, server::setManagedMiddlewareTomcat);
 
         // Database flags
         needsUpdate |= resetBooleanField(server::getDbOracle, server::setDbOracle);

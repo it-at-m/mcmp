@@ -32,4 +32,9 @@ public class LoadbalancerController {
     public List<LbServerMembershipDTO> getPoolMembershipsByServerId(@PathVariable("serverId") final Long serverId) {
         return service.getPoolMembershipsByServerId(serverId);
     }
+
+    @GetMapping("/appservice/{appserviceId}")
+    public List<LbVirtualServerListDTO> getLoadbalancersByAppserviceId(@PathVariable("appserviceId") final Long appserviceId) {
+        return service.getLoadbalancersByAppserviceId(appserviceId);
+    }
 }

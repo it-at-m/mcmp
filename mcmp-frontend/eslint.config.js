@@ -1,15 +1,18 @@
 import { fileURLToPath, URL } from "node:url";
 
+
+
 import jsEslintConfig from "@eslint/js";
 import vueI18nEslintConfig from "@intlify/eslint-plugin-vue-i18n";
 import vuePrettierEslintConfigSkipFormatting from "@vue/eslint-config-prettier/skip-formatting";
-import {
-  defineConfigWithVueTs,
-  vueTsConfigs,
-} from "@vue/eslint-config-typescript";
+import { defineConfigWithVueTs, vueTsConfigs } from "@vue/eslint-config-typescript";
 import { ESLint } from "eslint";
 import vueEslintConfig from "eslint-plugin-vue";
 import { includeIgnoreFile } from "eslint/config";
+
+
+
+
 
 const prettierIgnorePath = fileURLToPath(
   new URL(".prettierignore", import.meta.url)
@@ -41,6 +44,12 @@ export default defineConfigWithVueTs(
       "@intlify/vue-i18n/no-missing-keys-in-other-locales": ["error"],
       "@intlify/vue-i18n/no-unknown-locale": ["error"],
       "@intlify/vue-i18n/no-unused-keys": ["error"],
+      "vue/valid-v-slot": [
+        "error",
+        {
+          allowModifiers: true,
+        },
+      ],
     },
     settings: {
       "vue-i18n": {

@@ -14,7 +14,7 @@ export default {
   async getPrices(loading: Ref<boolean>): Promise<Price[]> {
     loading.value = true;
     try {
-      let response = await fetch(`${getApiBase()}${PRICE_BASE}`, getConfig());
+      const response = await fetch(`${getApiBase()}${PRICE_BASE}`, getConfig());
       defaultResponseHandler(response);
       return response.json();
     } finally {

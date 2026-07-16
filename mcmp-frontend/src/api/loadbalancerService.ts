@@ -1,6 +1,6 @@
+import type { LbServerMembership } from "@/types/LbServerMembership";
 import type { LoadbalancerDetail } from "@/types/LoadbalancerDetail";
 import type { LoadbalancerListItem } from "@/types/LoadbalancerListItem.ts";
-import type { LbServerMembership } from "@/types/LbServerMembership";
 import type { Page } from "@/types/Page";
 import type { Ref } from "vue";
 
@@ -36,11 +36,7 @@ export default {
     loading: Ref<boolean>,
     id: number
   ): Promise<LoadbalancerDetail> {
-    return apiFetch(
-      `${getApiBase()}${LOADBALANCER_BASE}/${id}`,
-      {},
-      loading
-    );
+    return apiFetch(`${getApiBase()}${LOADBALANCER_BASE}/${id}`, {}, loading);
   },
 
   getPoolMembershipsByServerId(
@@ -49,6 +45,16 @@ export default {
   ): Promise<LbServerMembership[]> {
     return apiFetch(
       `${getApiBase()}${LOADBALANCER_BASE}/server/${serverId}`,
+      {},
+      loading
+    );
+  },
+  getLoadbalancersByAppserviceId(
+    loading: Ref<boolean>,
+    appserviceId: number
+  ): Promise<LoadbalancerListItem[]> {
+    return apiFetch(
+      `${getApiBase()}${LOADBALANCER_BASE}/appservice/${appserviceId}`,
       {},
       loading
     );

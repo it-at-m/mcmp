@@ -40,9 +40,7 @@ interface Props {
   loading?: boolean; // Passed from parent but not used
 }
 
-interface Emits {
-  (e: "update:modelValue", value: UserAutocomplete | null): void;
-}
+type Emits = (e: "update:modelValue", value: UserAutocomplete | null) => void;
 
 defineEmits<Emits>();
 

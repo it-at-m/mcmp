@@ -24,24 +24,24 @@
           <v-row>
             <v-col cols="6">
               <v-text-field
-                label="Name"
                 v-model="priceTmp.name"
+                label="Name"
                 :rules="[rules.notEmptyRule('Darf nicht leer sein.')]"
                 :disabled="props.price?.name !== undefined"
               />
             </v-col>
             <v-col cols="6">
               <v-textarea
-                label="Beschreibung"
                 v-model="priceTmp.description"
+                label="Beschreibung"
               />
             </v-col>
           </v-row>
           <v-row>
             <v-col cols="6">
               <v-number-input
-                label="Preis pro Einheit"
                 v-model="priceTmp.pricePerUnit"
+                label="Preis pro Einheit"
                 :rules="[rules.notEmptyRule('Darf nicht leer sein.')]"
                 :min="0"
                 :step="0.01"
@@ -50,8 +50,8 @@
             </v-col>
             <v-col cols="6">
               <v-select
-                label="Währung"
                 v-model="priceTmp.currency"
+                label="Währung"
                 :items="['EURO', 'USD', 'CHF']"
                 :rules="[rules.notEmptyRule('Darf nicht leer sein.')]"
                 :menu-props="{ persistent: true, closeOnContentClick: true }"
@@ -105,9 +105,7 @@ const priceTmp = ref<Price>({
     props.price?.description !== undefined ? props.price.description : "",
 });
 
-const emit = defineEmits<{
-  (e: "save", price: Price): void;
-}>();
+const emit = defineEmits<(e: "save", price: Price) => void>();
 
 function close() {
   dialog.value = false;

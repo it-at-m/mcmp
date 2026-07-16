@@ -11,7 +11,7 @@
     >
       <template #item.osSortKey="{ item }">
         <os-cell
-          :osFullName="item.osFullName"
+          :os-full-name="item.osFullName"
           size="small"
           class="os-icon-inline"
         />
@@ -166,6 +166,7 @@ onMounted(() => {
 :deep(a.links:visited),
 :deep(a.links:hover),
 :deep(a.links:active) {
+  /* noinspection CssUnresolvedCustomProperty */
   color: rgb(var(--v-theme-link));
   text-decoration: none;
 }

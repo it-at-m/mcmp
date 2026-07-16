@@ -43,4 +43,13 @@ public class StorageGridBucket extends AbstractEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "storage_category")
     private StorageCategory storageCategory;
+
+    @Column(name = "snow_name", length = Integer.MAX_VALUE)
+    private String snowName;
+
+    @Column(name = "snow_sys_id", length = Integer.MAX_VALUE)
+    private String snowSysId;
+
+    @Column(name = "snow_sys_class", length = Integer.MAX_VALUE)
+    private String snowSysClass;
 }

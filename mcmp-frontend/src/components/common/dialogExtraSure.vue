@@ -1,13 +1,13 @@
 <template>
-  <CommonDialog
+  <common-dialog
     :model-value="dialog"
     :title="title"
     :icon="icon"
     max-width="600"
-    @dialogConfirm="onDo"
-    @dialog-cancel="onCancel"
     show-actions
-    :submitActivated="checked"
+    :submit-activated="checked"
+    @dialog-confirm="onDo"
+    @dialog-cancel="onCancel"
   >
     <strong>{{ text }}</strong>
     <v-spacer />
@@ -22,14 +22,13 @@
         required
       />
     </v-form>
-  </CommonDialog>
+  </common-dialog>
 </template>
 
 <script setup lang="ts">
-import { mdiAlertCircle } from "@mdi/js";
 import { ref } from "vue";
+
 import CommonDialog from "@/components/common/CommonDialog.vue";
-import CommonWarning from "@/components/common/CommonAlert.vue";
 
 const props = defineProps<{
   title: string;

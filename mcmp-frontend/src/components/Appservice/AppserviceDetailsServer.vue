@@ -3,7 +3,10 @@
     v-if="props.selectedAppservice?.servers?.length"
     class="links"
   >
-    <common-card title="Zugeordnete Server" top-margin="0">
+    <common-card
+      title="Zugeordnete Server"
+      top-margin="0"
+    >
       <template #toolbar-actions>
         <div class="action-buttons">
           <add-snapshot
@@ -84,7 +87,9 @@
             title="Downtime setzen"
             :is-batch-operation="true"
             :selected-server-ids="selectedServers"
-            :parent-all-selected-servers-eligible="allSelectedServersEligibleForDowntime"
+            :parent-all-selected-servers-eligible="
+              allSelectedServersEligibleForDowntime
+            "
             :parent-disabled-tooltip="downtimeDisabledTooltip"
             @save="onBatchOrderCompleteDone"
           />
@@ -278,14 +283,13 @@ import { computed, ref, watch } from "vue";
 
 import serverService from "@/api/serverService";
 import snapshotService from "@/api/snapshotService";
+import CommonCard from "@/components/common/CommonCard.vue";
 import ActionButton from "@/components/Server/ActionButtons/ActionButton.vue";
 import CheckMkDialog from "@/components/Server/ActionButtons/CheckMkDialog.vue";
 import RootAdminRechteBtn from "@/components/Server/ActionButtons/RootAdminRechteBtn.vue";
 import AddSnapshot from "@/components/Server/AddSnapshot.vue";
 import OsCell from "@/components/Server/OsCell.vue";
-import CommonCard from "@/components/common/CommonCard.vue";
 import { useFormatter } from "@/composables/formatter.ts";
-import { useRules } from "@/composables/rules.ts";
 import { useUserStore } from "@/stores/user.ts";
 
 const props = defineProps<{
@@ -523,7 +527,10 @@ const noSelectionTooltip = "Keine Server ausgewählt.";
 const snapshotDisabledTooltip = computed(() => {
   if (allSelectedServersEligibleForSnapshot.value) return "";
   if (selectedServers.value.length === 0) return noSelectionTooltip;
-  if (Array.from(fullServerCache.value.keys()).length < selectedServers.value.length) {
+  if (
+    Array.from(fullServerCache.value.keys()).length <
+    selectedServers.value.length
+  ) {
     return "Serverdaten werden geladen. Bitte warten.";
   }
   return "Nur auf virtuellen Servern mit Bestellberechtigung und ohne bestehenden Snapshot können Snapshots erstellt werden.";
@@ -532,7 +539,10 @@ const snapshotDisabledTooltip = computed(() => {
 const downtimeDisabledTooltip = computed(() => {
   if (allSelectedServersEligibleForDowntime.value) return "";
   if (selectedServers.value.length === 0) return noSelectionTooltip;
-  if (Array.from(fullServerCache.value.keys()).length < selectedServers.value.length) {
+  if (
+    Array.from(fullServerCache.value.keys()).length <
+    selectedServers.value.length
+  ) {
     return "Serverdaten werden geladen. Bitte warten.";
   }
   return "Nur auf Servern mit Bestellberechtigung kann eine Downtime gesetzt werden.";

@@ -1,10 +1,10 @@
 <template>
   <v-menu
+    v-model="isOpen"
     location="right"
     max-height="500"
-    v-model="isOpen"
   >
-    <template v-slot:activator="{ props }">
+    <template #activator="{ props }">
       <v-btn
         v-bind="props"
         flat
@@ -25,11 +25,11 @@
         :key="category"
       >
         <v-menu
+          v-model="isOpenList[idx]"
           location="right top"
           max-height="400"
-          v-model="isOpenList[idx]"
         >
-          <template v-slot:activator="{ props }">
+          <template #activator="{ props }">
             <v-btn
               v-bind="props"
               flat
@@ -98,7 +98,7 @@ const SnowTicketsOldMap = {
     {
       Name: "Linux VM NFS-Speicher anpassen",
       href: "https://it-services.muenchen.de/sp?id=sc_cat_item&sys_id=73fd83e11bde1094588efddacd4bcb92",
-    }
+    },
   ],
   windows: [
     {

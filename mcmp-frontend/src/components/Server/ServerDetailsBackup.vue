@@ -3,14 +3,17 @@
     v-show="selectedServer.cloud?.cloudType == 'VCENTER'"
     title="Snapshots"
   >
-  <template #append-title>
+    <template #append-title>
       <info-tooltip class="ml-2">
         <div class="pa-1">
           <strong>Snapshots</strong>
           <p class="text-caption mt-2 mb-1">
-            <strong>Verwendung:</strong> Kurzfristiger Sicherungspunkt direkt vor Änderungen (z.B. Updates oder Konfigurationsanpassungen).
-            <br>Kein eigenständiges Backup, da direkt von der VM bzw. der Serverinfrastruktur abhängig.<br>
-            <strong>Aufbewahrung:</strong> max 10 Tage, da die Performance des Servers beeinträchtigt werden kann.
+            <strong>Verwendung:</strong> Kurzfristiger Sicherungspunkt direkt
+            vor Änderungen (z.B. Updates oder Konfigurationsanpassungen).
+            <br />Kein eigenständiges Backup, da direkt von der VM bzw. der
+            Serverinfrastruktur abhängig.<br />
+            <strong>Aufbewahrung:</strong> max 10 Tage, da die Performance des
+            Servers beeinträchtigt werden kann.
           </p>
         </div>
       </info-tooltip>
@@ -66,12 +69,13 @@
     title="Backups"
     top-margin="0"
   >
-  <template #append-title>
+    <template #append-title>
       <info-tooltip class="ml-2">
         <div class="pa-1">
           <strong>Reguläre Backups</strong>
           <p class="text-caption mt-2 mb-1">
-            Komplette und unabhängige Kopie der Daten mit vom  Produktivsystem unabhängiger Aufbewahrung.
+            Komplette und unabhängige Kopie der Daten mit vom Produktivsystem
+            unabhängiger Aufbewahrung.
           </p>
         </div>
       </info-tooltip>
@@ -201,8 +205,8 @@ import { mdiFilterVariant, mdiPlus } from "@mdi/js";
 import { computed, ref } from "vue";
 
 import jobService from "@/api/jobService";
-import InfoTooltip from "@/components/common/InfoTooltip.vue";
 import CommonCard from "@/components/common/CommonCard.vue";
+import InfoTooltip from "@/components/common/InfoTooltip.vue";
 import AddSnapshot from "@/components/Server/AddSnapshot.vue";
 import AddBackup from "@/components/Server/Backup/AddBackup.vue";
 import DeleteRevertSnapshot from "@/components/Server/DeleteRevertSnapshot.vue";
@@ -287,17 +291,25 @@ function getBackupTypeFromServerName(serverName: string): string {
 }
 
 function deleteSnapshot(snapshot: Snapshot) {
-  jobService
-    .startJob(jobLoading, "VMWARE_DELETE_SNAPSHOT", props.selectedServer.id, {
+  jobService.startJob(
+    jobLoading,
+    "VMWARE_DELETE_SNAPSHOT",
+    props.selectedServer.id,
+    {
       snapshotId: snapshot.snapshotId,
-    })
+    }
+  );
 }
 
 function revertSnapshot(snapshot: Snapshot) {
-  jobService
-    .startJob(jobLoading, "VMWARE_REVERT_SNAPSHOT", props.selectedServer.id, {
+  jobService.startJob(
+    jobLoading,
+    "VMWARE_REVERT_SNAPSHOT",
+    props.selectedServer.id,
+    {
       snapshotId: snapshot.snapshotId,
-    })
+    }
+  );
 }
 
 function formatDeleteDate(item: Snapshot): string {

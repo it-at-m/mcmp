@@ -188,7 +188,9 @@
             label="Größe"
             :min="
               Math.max(
-                Math.ceil(formatter.calculateBtoGB(mountPoint?.capacityInBytes ?? 0)),
+                Math.ceil(
+                  formatter.calculateBtoGB(mountPoint?.capacityInBytes ?? 0)
+                ),
                 Math.ceil(
                   formatter.calculateBtoGB(
                     (mountPoint?.capacityInBytes ?? 0) -
@@ -211,7 +213,11 @@
             type="number"
             :min="
               Math.max(
-                Math.ceil(formatter.calculateBtoGB(mountPoint?.capacityInBytes ?? 1024 ** 3)),
+                Math.ceil(
+                  formatter.calculateBtoGB(
+                    mountPoint?.capacityInBytes ?? 1024 ** 3
+                  )
+                ),
                 Math.ceil(
                   formatter.calculateBtoGB(
                     (mountPoint?.capacityInBytes ?? 1024 ** 3) -

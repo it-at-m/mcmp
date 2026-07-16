@@ -20,10 +20,6 @@ export default {
     );
   },
 
-  getChangelogById(loading: Ref<boolean>, id: number): Promise<Changelog> {
-    return apiFetch<Changelog>(`${BASE_URL()}/${id}`, {}, loading);
-  },
-
   createChangelog(
     loading: Ref<boolean>,
     changelog: Changelog
@@ -51,15 +47,6 @@ export default {
       },
       loading
     );
-  },
-
-  publishChangelog(
-      loading: Ref<boolean>,
-      id: number,
-      changelog: Changelog
-  ): Promise<Changelog> {
-    changelog.isPublished = true;
-    return this.updateChangelog(loading, id, changelog);
   },
 
   deleteChangelog(loading: Ref<boolean>, id: number): Promise<void> {

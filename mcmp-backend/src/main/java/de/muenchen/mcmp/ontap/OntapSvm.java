@@ -8,6 +8,7 @@ import lombok.Setter;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Getter
@@ -32,4 +33,16 @@ public class OntapSvm extends AbstractEntity {
     @NotNull
     @Column(name = "name", nullable = false)
     private String name;
+
+    @Column(name = "snow_name", length = Integer.MAX_VALUE)
+    private String snowName;
+
+    @Column(name = "snow_sys_id", length = Integer.MAX_VALUE)
+    private String snowSysId;
+
+    @Column(name = "snow_sys_class", length = Integer.MAX_VALUE)
+    private String snowSysClass;
+
+    @Column(name = "snow_last_discovered")
+    private OffsetDateTime snowLastDiscovered;
 }

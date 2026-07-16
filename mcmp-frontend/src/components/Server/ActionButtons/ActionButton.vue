@@ -5,7 +5,11 @@
     :aria-label="tooltip"
   >
     <template #activator="{ props: tooltipProps }">
-      <span v-bind="tooltipProps" class="tooltip-activator" style="display:inline-flex">
+      <span
+        v-bind="tooltipProps"
+        class="tooltip-activator"
+        style="display: inline-flex"
+      >
         <v-btn
           :disabled="computedDisabled || loading"
           :color="color"
@@ -16,48 +20,87 @@
           target="_blank"
           icon
           size="small"
-          v-on="(server || props.isBatchOperation) ? { click: onBtnClick } : {}"
           :alt="tooltip"
           :aria-label="tooltip"
+          v-on="server || props.isBatchOperation ? { click: onBtnClick } : {}"
         >
-        <v-icon
-          :size="tooltip == 'KVM Konsole öffnen' ? 'large' : 'x-large'"
-          role="img"
-          :style="tooltip == 'Server neustarten' ? 'transform: rotate(45deg);' : ''"
-          >{{ icon }}
-        </v-icon>
+          <v-icon
+            :size="tooltip == 'KVM Konsole öffnen' ? 'large' : 'x-large'"
+            role="img"
+            :style="
+              tooltip == 'Server neustarten' ? 'transform: rotate(45deg);' : ''
+            "
+            >{{ icon }}
+          </v-icon>
         </v-btn>
       </span>
     </template>
   </v-tooltip>
 
-  <CommonDialog
+  <common-dialog
     :model-value="dialog"
     :title="confirmDialogTitle"
     :icon="icon"
     max-width="600"
-    @dialogConfirm="onDialogConfirm"
-    @dialog-cancel="onDialogCancel"
     show-actions
-    :submitActivated="validated"
-    :showChangeWarning="true"
-    :checkForEnabledActions="jobToCall ? [jobToCall] : undefined"
+    :submit-activated="validated"
+    :show-change-warning="true"
+    :check-for-enabled-actions="jobToCall ? [jobToCall] : undefined"
+    @dialog-confirm="onDialogConfirm"
+    @dialog-cancel="onDialogCancel"
   >
-    <CommonAlert
+    <common-alert
+      v-if="
+        server || (props.isBatchOperation && props.selectedServerIds?.length)
+      "
       color="accent"
-      v-if="server || (props.isBatchOperation && props.selectedServerIds?.length)">
-      <div v-if="server" class="server-info-label">Ausgewählter Server:</div>
-      <div v-if="server" class="server-name">{{ server.name }}</div>
+    >
+      <div
+        v-if="server"
+        class="server-info-label"
+      >
+        Ausgewählter Server:
+      </div>
+      <div
+        v-if="server"
+        class="server-name"
+      >
+        {{ server.name }}
+      </div>
 
-      <div v-else-if="props.isBatchOperation" class="server-info-label">Ausgewählte Server:</div>
-      <div v-else-if="props.isBatchOperation" class="server-name">{{ props.selectedServerIds?.length }} Server</div>
+      <div
+        v-else-if="props.isBatchOperation"
+        class="server-info-label"
+      >
+        Ausgewählte Server:
+      </div>
+      <div
+        v-else-if="props.isBatchOperation"
+        class="server-name"
+      >
+        {{ props.selectedServerIds?.length }} Server
+      </div>
 
-      <div v-if="props.isBatchOperation && props.selectedServers && props.selectedServers.length" class="mt-2">
+      <div
+        v-if="
+          props.isBatchOperation &&
+          props.selectedServers &&
+          props.selectedServers.length
+        "
+        class="mt-2"
+      >
         <ul class="pl-4">
-          <li v-for="s in props.selectedServers.filter(x => props.selectedServerIds?.includes(x.id))" :key="s.id">{{ s.name }}</li>
+          <li
+            v-for="s in props.selectedServers.filter((x) =>
+              props.selectedServerIds?.includes(x.id)
+            )"
+            :key="s.id"
+          >
+            {{ s.name }}
+          </li>
         </ul>
       </div>
-    </CommonAlert>
+    </common-alert>
 
     <br />
     {{ confirmDialogText || "Wollen sie die Aktion ausführen?" }}
@@ -68,10 +111,11 @@
         label="Durchführungszeitpunkt anpassen"
         @change="changeToSchedule"
       />
-      <CommonTimePicker
+      <common-time-picker
         v-if="schedule"
-        lableText="Durchführungs"
-        :timeRules="[
+        v-model:raw-date-in="rawDate"
+        lable-text="Durchführungs"
+        :time-rules="[
           validationRules.notEmptyRule('Endzeitpunkt darf nicht leer sein.'),
           validationRules.isNotPastTime(
             new Date(),
@@ -79,18 +123,17 @@
             'Endzeitpunkt darf nicht in der Vergangenheit liegen.'
           ),
         ]"
-        v-model:rawDateIn="rawDate"
       />
     </v-form>
     <a
+      v-if="confirmDialogLink"
       :href="confirmDialogLink"
       target="_blank"
-      v-if="confirmDialogLink"
       >hier</a
     >
-  </CommonDialog>
+  </common-dialog>
 
-  <DialogExtraSure
+  <dialog-extra-sure
     v-if="props.useExtraSureDialog && extraSureDialog"
     v-model="extraSureDialog"
     :title="confirmDialogTitle || 'Bestätigen sie die Aktion'"
@@ -103,7 +146,7 @@
 </template>
 
 <script setup lang="ts">
-import { inject, ref, watch, computed } from "vue";
+import { computed, inject, ref, watch } from "vue";
 
 import jobService from "@/api/jobService";
 import CommonAlert from "@/components/common/CommonAlert.vue";
@@ -134,9 +177,7 @@ const props = defineProps<{
   parentAllSelectedServersEligible?: boolean;
 }>();
 
-const emit = defineEmits<{
-  (e: "change"): void;
-}>();
+const emit = defineEmits<(e: "change") => void>();
 
 const registerOpenDialog = inject<() => void>("registerOpenDialog");
 const unregisterOpenDialog = inject<() => void>("unregisterOpenDialog");
@@ -192,15 +233,14 @@ function onDialogCancel() {
 function makeJobCall() {
   // batch operation: iterate over selectedServerIds
   if (props.isBatchOperation) {
-    const ids = props.selectedServerIds ?? (props.selectedServers?.map((s) => s.id) ?? []);
+    const ids =
+      props.selectedServerIds ?? props.selectedServers?.map((s) => s.id) ?? [];
     if (ids.length === 0) {
-      console.warn("No servers selected for batch operation");
       return;
     }
 
     // parent-driven disabled reason takes precedence
     if (!props.parentAllSelectedServersEligible) {
-      console.warn("Parent flagged batch as not eligible");
       return;
     }
 
@@ -228,7 +268,6 @@ function makeJobCall() {
   }
 
   if (!props.jobToCall) {
-    console.error("No job specified to call");
     return;
   }
 

@@ -32,10 +32,10 @@
             label="Appservices suchen..."
             :prepend-inner-icon="mdiMagnify"
             :append-inner-icon="searchQuery ? mdiClose : undefined"
-            @click:append-inner="searchQuery = ''"
             variant="outlined"
             density="compact"
             class="mb-1"
+            @click:append-inner="searchQuery = ''"
           />
 
           <!-- Statistik -->
@@ -60,9 +60,9 @@
             <v-btn
               variant="outlined"
               size="small"
-              @click="setFilter('selected')"
               :color="filterMode === 'selected' ? 'primary' : undefined"
               class="mr-2"
+              @click="setFilter('selected')"
             >
               <v-icon class="mr-1">{{ mdiFilterCheck }}</v-icon>
               Nur ausgewählte
@@ -70,9 +70,9 @@
             <v-btn
               variant="outlined"
               size="small"
-              @click="setFilter('unselected')"
               :color="filterMode === 'unselected' ? 'primary' : undefined"
               class="mr-2"
+              @click="setFilter('unselected')"
             >
               <v-icon class="mr-1">{{ mdiFilterRemove }}</v-icon>
               Nur nicht ausgewählte
@@ -80,8 +80,8 @@
             <v-btn
               variant="outlined"
               size="small"
-              @click="selectAllFiltered"
               class="mr-2"
+              @click="selectAllFiltered"
             >
               {{
                 searchQuery || filterMode !== "all"
@@ -92,8 +92,8 @@
             <v-btn
               variant="outlined"
               size="small"
-              @click="deselectAllFiltered"
               class="mr-2"
+              @click="deselectAllFiltered"
             >
               {{
                 searchQuery || filterMode !== "all"
@@ -104,8 +104,8 @@
             <v-btn
               variant="outlined"
               size="small"
-              @click="resetToOriginal"
               class="mr-2"
+              @click="resetToOriginal"
             >
               <v-icon class="mr-1">{{ mdiRestore }}</v-icon>
               Zurücksetzen
@@ -145,8 +145,8 @@
                     {{ item.name }}
                   </v-list-item-title>
                   <template
-                    #append
                     v-if="isSelected(item.id)"
+                    #append
                   >
                     <v-icon
                       color="primary"
@@ -208,9 +208,10 @@ const props = defineProps<{
   networkgroup: NetworkGroup;
 }>();
 
-const emit = defineEmits<{
-  (e: "save", networkgroup: NetworkGroup, appservices: number[]): void;
-}>();
+const emit =
+  defineEmits<
+    (e: "save", networkgroup: NetworkGroup, appservices: number[]) => void
+  >();
 
 const form = ref<HTMLFormElement>();
 const dialog = ref(false);

@@ -160,7 +160,9 @@ export function formatBooleanToGerman(
   return value ? "Ja" : "Nein";
 }
 
-export function formatBooleanToJaNein(value: boolean | null | undefined): string {
+export function formatBooleanToJaNein(
+  value: boolean | null | undefined
+): string {
   if (value === undefined || value === null) return "-";
   return value ? "Ja" : "Nein";
 }

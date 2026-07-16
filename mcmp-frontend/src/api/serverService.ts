@@ -2,15 +2,11 @@ import type { Page } from "@/types/Page";
 import type { ServerAutocomplete } from "@/types/ServerAutocomplete.ts";
 import type { ServerList } from "@/types/ServerList";
 import type { ServerListExtended } from "@/types/ServerListExtended";
-import type { UserAutocomplete } from "@/types/UserAutocomplete.ts";
 import type { Ref } from "vue";
 
-
-
 import { apiFetch, defaultResponseHandler, getConfig } from "@/api/fetch-utils";
-import { getApiBase, SERVER_BASE, USER_BASE } from "@/constants";
+import { getApiBase, SERVER_BASE } from "@/constants";
 import Server from "@/types/Server";
-
 
 export default {
   getVisibleServers(
@@ -31,7 +27,7 @@ export default {
       sortOrder: sortOrder,
       status: status.join(","),
       os: os,
-      favorites: favorites.toString()
+      favorites: favorites.toString(),
     });
 
     const trimmedSearch = search?.trim();
@@ -115,7 +111,7 @@ export default {
     );
   },
 
-addServerToFavorites(serverId: number): Promise<void> {
+  addServerToFavorites(serverId: number): Promise<void> {
     return apiFetch(
       `${getApiBase()}${SERVER_BASE}/${serverId}/favorite`,
       { method: "PUT" },
@@ -129,5 +125,5 @@ addServerToFavorites(serverId: number): Promise<void> {
       { method: "DELETE" },
       {} // Leeres Objekt verhindert Lade-Ringe auf allen Zeilen
     );
-  }
+  },
 };

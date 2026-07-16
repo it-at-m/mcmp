@@ -1,13 +1,13 @@
 <template>
-  <CommonDialog
+  <common-dialog
     v-model="dialog"
     :loading="loading"
     title="Loadbalancer Bestellung"
     max-width="1200"
+    submit-activated
+    show-change-warning
+    :check-for-enabled-actions="['LOADBALANCER_F5']"
     @dialog-cancel="close"
-    submitActivated
-    showChangeWarning
-    :checkForEnabledActions="['LOADBALANCER_F5']"
   >
     <template #activator="{ props }">
       <v-btn
@@ -22,41 +22,41 @@
       :items="pages"
       class="pa-4"
     >
-      <template v-slot:item.1>
-        <LoadbalancerOrder_General
-          :ldbl-order="LoadbalancerOrderProp"
-          :hasServers="hasServers"
+      <template #item.1>
+        <loadbalancer-order-general
           :ref="(el) => (stepRefs[1] = el)"
+          :ldbl-order="LoadbalancerOrderProp"
+          :has-servers="hasServers"
           @validation-change="(val) => (stepValidity[1] = val)"
         />
       </template>
-      <template v-slot:item.2>
-        <LoadbalancerOrder_ServerPools
+      <template #item.2>
+        <loadbalancer-order-server-pools
+          :ref="(el) => (stepRefs[2] = el)"
           v-model:protocol="protocol"
           :ldbl-order="LoadbalancerOrderProp"
           :servers="servers"
-          :ref="(el) => (stepRefs[2] = el)"
           @validation-change="(val) => (stepValidity[2] = val)"
         />
       </template>
-      <template v-slot:item.3>
-        <LoadbalancerOrder_Listener
+      <template #item.3>
+        <loadbalancer-order-listener
+          :ref="(el) => (stepRefs[3] = el)"
           :ldbl-order="LoadbalancerOrderProp"
           :protocol="protocol"
-          :ref="(el) => (stepRefs[3] = el)"
           @validation-change="(val) => (stepValidity[3] = val)"
         />
       </template>
-      <template v-slot:item.4>
-        <LoadbalancerOrder_Summary
+      <template #item.4>
+        <loadbalancer-order-summary
+          :ref="(el) => (stepRefs[4] = el)"
           :ldbl-order="LoadbalancerOrderProp"
           :protocol="protocol"
-          :ref="(el) => (stepRefs[4] = el)"
           @validation-change="(val) => (stepValidity[4] = val)"
         />
       </template>
 
-      <template v-slot:actions="{ next, prev }">
+      <template #actions="{ next, prev }">
         <div class="d-flex justify-space-between w-100 mt-4 mb-4 px-4">
           <v-btn
             :prepend-icon="mdiArrowLeft"
@@ -64,8 +64,8 @@
             variant="outlined"
             rounded="xl"
             class="action-btn cancel-btn"
-            @click="prev"
             :disabled="step == 1"
+            @click="prev"
             >Zurück
           </v-btn>
           <v-btn
@@ -76,15 +76,15 @@
             rounded="xl"
             class="action-btn confirm-btn"
             :loading="isValidating"
-            @click="onNext"
             :disabled="!stepValidity[step]"
+            @click="onNext"
           >
             {{ step === pages.length ? "Bestellen" : "Weiter" }}
           </v-btn>
         </div>
       </template>
     </v-stepper>
-  </CommonDialog>
+  </common-dialog>
 </template>
 
 <script setup lang="ts">
@@ -94,10 +94,10 @@ import { inject, ref, watch } from "vue";
 import jobService from "@/api/jobService.ts";
 import serverService from "@/api/serverService.ts";
 import CommonDialog from "@/components/common/CommonDialog.vue";
-import LoadbalancerOrder_General from "@/components/Loadbalancer/LoadbalancerOrder_General.vue";
-import LoadbalancerOrder_Listener from "@/components/Loadbalancer/LoadbalancerOrder_Listener.vue";
-import LoadbalancerOrder_ServerPools from "@/components/Loadbalancer/LoadbalancerOrder_ServerPools.vue";
-import LoadbalancerOrder_Summary from "@/components/Loadbalancer/LoadbalancerOrder_Summary.vue";
+import LoadbalancerOrderGeneral from "@/components/Loadbalancer/LoadbalancerOrderGeneral.vue";
+import LoadbalancerOrderListener from "@/components/Loadbalancer/LoadbalancerOrderListener.vue";
+import LoadbalancerOrderServerPools from "@/components/Loadbalancer/LoadbalancerOrderServerPools.vue";
+import LoadbalancerOrderSummary from "@/components/Loadbalancer/LoadbalancerOrderSummary.vue";
 import LoadbalancerOrder from "@/types/LoadbalancerOrder.ts";
 
 const registerOpenDialog = inject<() => void>("registerOpenDialog");
@@ -107,11 +107,11 @@ const LoadbalancerOrderProp = ref<LoadbalancerOrder>(
   createDefaultLoadbalancerOrder()
 );
 
-type member = {
+interface member {
   name: string;
   ip: string;
   ports: number[];
-};
+}
 
 const dialog = ref(false);
 const loading = ref(false);

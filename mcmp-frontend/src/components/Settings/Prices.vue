@@ -1,7 +1,7 @@
 <template>
-  <CommonCard title="Preise verwalten">
+  <common-card title="Preise verwalten">
     <template #toolbar-actions>
-      <PriceAddEdit
+      <price-add-edit
         title="Preis hinzufügen"
         :icon="mdiPlus"
         @save="saveAction"
@@ -16,8 +16,8 @@
       no-data-text="Keine Preise gefunden"
       :sort-by="sortBy"
     >
-      <template v-slot:item.edit="{ item }">
-        <PriceAddEdit
+      <template #item.edit="{ item }">
+        <price-add-edit
           title="Preis bearbeiten"
           :icon="mdiPencil"
           :price="item"
@@ -25,14 +25,14 @@
         />
         <v-btn
           icon
-          @click="askDeletePermission(item)"
           :aria-label="`Preis ${item.name} löschen`"
+          @click="askDeletePermission(item)"
         >
           <v-icon>{{ mdiDelete }}</v-icon>
         </v-btn>
       </template>
     </v-data-table>
-  </CommonCard>
+  </common-card>
   <v-dialog
     v-model="deleteDialog"
     max-width="500px"

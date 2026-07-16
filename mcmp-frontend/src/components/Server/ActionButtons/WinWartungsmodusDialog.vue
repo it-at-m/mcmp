@@ -1,19 +1,19 @@
 <template>
-  <CommonDialog
+  <common-dialog
     v-model="dialog"
     :title="title"
     :max-width="title === 'Wartungsmodus setzen' ? 800 : 600"
     :icon="mdiTools"
     show-actions
-    :submitActivated="validated"
-    @dialog-cancel="close"
-    @dialog-confirm="save"
-    showChangeWarning
-    :checkForEnabledActions="
+    :submit-activated="validated"
+    show-change-warning
+    :check-for-enabled-actions="
       title === 'Wartungsmodus setzen'
         ? ['WINDOWS_MAINTENANCE_MODE']
         : ['WINDOWS_MAINTENANCE_MODE_END']
     "
+    @dialog-cancel="close"
+    @dialog-confirm="save"
   >
     <template #activator="{ props }">
       <v-list-item-title
@@ -23,10 +23,10 @@
       </v-list-item-title>
     </template>
     <v-form
-      ref="form"
       v-if="title === 'Wartungsmodus setzen'"
+      ref="form"
     >
-      <CommonWarning
+      <common-warning
         color="notice_red"
         class="mb-3"
       >
@@ -35,12 +35,13 @@
         beenden des Wartungsmodus neugestartet.<br />
         Die automatische Beendigung des Wartungsmodus läuft zur vollen und zur
         halben Stunde.
-      </CommonWarning>
+      </common-warning>
       <v-row justify="center">
         <v-col cols="6">
-          <CommonTimePicker
-            lableText="End"
-            :timeRules="[
+          <common-time-picker
+            v-model:raw-date-in="rawEndDate"
+            lable-text="End"
+            :time-rules="[
               validationRules.notEmptyRule(
                 'Endzeitpunkt darf nicht leer sein.'
               ),
@@ -52,24 +53,23 @@
               getDifferenceInMinutes(new Date(), rawEndDate) < 20160 ||
                 'Wartungsmodus darf nicht länger als 2 Wochen dauern.',
             ]"
-            v-model:rawDateIn="rawEndDate"
             round
-            withButtons
+            with-buttons
           />
         </v-col>
       </v-row>
     </v-form>
 
     <v-form
-      ref="form"
       v-if="title === 'Wartungsmodus vorzeitig beenden'"
+      ref="form"
     >
-      <CommonWarning color="notice_red">
+      <common-warning color="notice_red">
         <h4>Hinweis:</h4>
         Der Server wird beim Beenden des Wartungsmodus neugestartet.
-      </CommonWarning>
+      </common-warning>
     </v-form>
-  </CommonDialog>
+  </common-dialog>
 </template>
 
 <script setup lang="ts">
@@ -89,9 +89,7 @@ const props = defineProps<{
   title: string;
 }>();
 
-const emit = defineEmits<{
-  (e: "save", save: boolean): boolean;
-}>();
+const emit = defineEmits<(e: "save", save: boolean) => boolean>();
 
 const validationRules = useRules();
 
@@ -130,11 +128,14 @@ function save() {
           "WINDOWS_MAINTENANCE_MODE",
           props.server.id,
           {
-            wartungsmodus_ende: `${rawEndDate.value.toLocaleDateString('de-DE', {
-              year: 'numeric',
-              month: '2-digit',
-              day: '2-digit',
-            })} ${rawEndDate.value.toLocaleTimeString('de-DE')}`,
+            wartungsmodus_ende: `${rawEndDate.value.toLocaleDateString(
+              "de-DE",
+              {
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+              }
+            )} ${rawEndDate.value.toLocaleTimeString("de-DE")}`,
           }
         );
       }

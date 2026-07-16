@@ -49,9 +49,9 @@
     >
       <v-radio
         v-for="os in OsType"
+        :key="os"
         :value="os"
         :label="os"
-        :key="os"
       />
     </v-radio-group>
 
@@ -59,10 +59,10 @@
       >Betriebssystem Version*</strong
     >
     <v-radio-group
+      v-if="instlServerDetails.osType != null"
       v-model="instlServerDetails.osVersion"
       aria-label="Betriebssystem Version auswählen"
       inline
-      v-if="instlServerDetails.osType != null"
       @change="
         instlServerDetails.categoryType = null;
         instlServerDetails.category = null;
@@ -80,10 +80,10 @@
 
     <strong v-if="instlServerDetails.osVersion != null">Server Typ*</strong>
     <v-radio-group
+      v-if="instlServerDetails.osVersion != null"
       v-model="instlServerDetails.categoryType"
       aria-label="Server Typ auswählen"
       inline
-      v-if="instlServerDetails.osVersion != null"
       @change="instlServerDetails.category = null"
     >
       <template
@@ -92,7 +92,8 @@
       >
         <v-radio
           v-if="type === categoryType.Standard || wouldHaveOptions(type)"
-          :label="categoryTypeLabels[type] || type" :value="type"
+          :label="categoryTypeLabels[type] || type"
+          :value="type"
         />
       </template>
     </v-radio-group>
@@ -111,7 +112,7 @@
       class="mt-2"
       :menu-props="{ persistent: true, closeOnContentClick: true }"
     />
-    <CommonAlert
+    <common-alert
       v-if="
         (instlServerDetails.categoryType == categoryType.DB ||
           instlServerDetails.categoryType == categoryType.Mixed) &&
@@ -121,7 +122,7 @@
       color="_red"
       >Standard ist PostgreSQL. Sie haben mit
       {{ instlServerDetails.category?.label }} ein alternatives DB-System
-      ausgewählt.</CommonAlert
+      ausgewählt.</common-alert
     >
 
     <strong
@@ -142,7 +143,6 @@
       label="Middleware User anlegen"
     ></v-checkbox>
     <v-radio-group
-      class="mt-6"
       v-if="
         (instlServerDetails.categoryType == categoryType.DB ||
           instlServerDetails.categoryType == categoryType.Mixed) &&
@@ -150,6 +150,7 @@
         !instlServerDetails.category?.label.match(/PostgreSQL/)
       "
       v-model="nonPostgresOption"
+      class="mt-6"
     >
       <v-radio
         label="Lifecycle-Maßnahme (Upgrade, Migration, technische Fortführung)"
@@ -173,7 +174,6 @@
       Fachliche Einordnung: <br />
     </strong>
     <span
-      class="fontsize-085"
       v-if="
         nonPostgresOption !== null &&
         (instlServerDetails.categoryType == categoryType.DB ||
@@ -181,6 +181,7 @@
         instlServerDetails.category != null &&
         !instlServerDetails.category?.label.match(/PostgreSQL/)
       "
+      class="fontsize-085"
     >
       Kurze Begründung für den Einsatz eines anderen Datenbanksystems als
       PostgreSQL. <br />Bitte angeben, warum PostgreSQL nicht eingesetzt werden
@@ -247,9 +248,7 @@
       </ul>
     </div>
 
-        <div class="text-caption text-grey-darken-1">
-          * Pflichtfeld
-        </div>
+    <div class="text-caption text-grey-darken-1">* Pflichtfeld</div>
   </div>
 </template>
 

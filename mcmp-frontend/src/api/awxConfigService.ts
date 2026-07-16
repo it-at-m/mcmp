@@ -8,7 +8,7 @@ import {
   postConfig,
   putConfig,
 } from "@/api/fetch-utils";
-import { getApiBase, AWX_BASE } from "@/constants";
+import { AWX_BASE, getApiBase } from "@/constants";
 
 export default {
   getAwxConfigs(loading: Ref<boolean>): Promise<AwxConfig[]> {
@@ -52,7 +52,7 @@ export default {
   },
   updateConfig(awxConfig: AwxConfig, loading: Ref<boolean>): Promise<void> {
     loading.value = true;
-    if(awxConfig.apiPassword == null){
+    if (awxConfig.apiPassword == null) {
       awxConfig.apiPassword = undefined;
     }
     return fetch(`${getApiBase()}${AWX_BASE}`, putConfig(awxConfig))

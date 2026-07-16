@@ -4,9 +4,26 @@
     class="links"
   >
     <common-card
-      title="Zugeordnete Server"
-      top-margin="0"
-    >
+          title="Zugeordnete Server"
+          top-margin="0"
+        >
+          <template #append>
+            <v-tooltip
+              v-if="anyServerHasWarnings"
+              location="top"
+              text="Handlungsbedarf an mind. einem Server"
+            >
+              <template #activator="{ props: tooltipProps }">
+                <v-icon
+                  v-bind="tooltipProps"
+                  :icon="mdiAlert"
+                  color="orange"
+                  size="22"
+                  class="mr-2"
+                />
+              </template>
+            </v-tooltip>
+          </template>
       <template #toolbar-actions>
         <div class="action-buttons">
           <add-snapshot
@@ -560,6 +577,12 @@ const powerStopTooltip = computed(() => {
   if (selectedServers.value.length === 0) return noSelectionTooltip;
   if (!allSelectedDataLoaded()) return "Wird geladen...";
   return allSelectedServersEligibleToStop.value ? "Stop" : "Nicht möglich";
+});
+
+const anyServerHasWarnings = computed(() => {
+  return (props.selectedAppservice?.servers || []).some(
+    (server: any) => server.hasWarnings
+  );
 });
 
 const powerRestartTooltip = computed(() => {

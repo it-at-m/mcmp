@@ -160,20 +160,22 @@
                     {{ server.name }}
                   </router-link>
                 </span>
-                <!-- Tooltip & Icon für die Warnung (Handlung erforderlich) -->
+                <!-- Tooltip & Icon für die Warnung (verlinkt auf denselben Server) -->
                 <v-tooltip
                   v-if="server.hasWarnings"
                   location="top"
                   text="Handlung erforderlich"
                 >
                   <template #activator="{ props: tooltipProps }">
-                    <v-icon
-                      v-bind="tooltipProps"
-                      :icon="mdiAlert"
-                      color="orange"
-                      size="20"
-                      class="ml-1"
-                    />
+                    <router-link :to="`/server/${server.id}`" class="d-flex align-center text-decoration-none">
+                      <v-icon
+                        v-bind="tooltipProps"
+                        :icon="mdiAlert"
+                        color="orange"
+                        size="20"
+                        class="ml-1"
+                      />
+                    </router-link>
                   </template>
                 </v-tooltip>
               </div>

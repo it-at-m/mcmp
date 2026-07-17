@@ -598,7 +598,7 @@ public class OntapImportService {
             }
         }
 
-        if (isNew || hasVolumeChanges(volume, volumeData, exportPolicy)) {
+        if (isNew || hasVolumeChanges(volume, volumeData, exportPolicy, context)) {
             updateVolumeFromData(volume, volumeData, exportPolicy, context);
             volumesToSave.add(volume);
         }
@@ -1082,10 +1082,14 @@ public class OntapImportService {
      * @param data the volume data from DTO
      * @return true if there are changes, false otherwise
      */
-    private boolean hasVolumeParentDataChanges(final OntapVolume volume, final OntapDTO.VolumeData data) {
-        return !Objects.equals(safeUuid(volume.getParentVolume() != null ? volume.getParentVolume().getVolumeUuid() : null), data.parentVolumeUuid()) ||
-                !Objects.equals(safeUuid(volume.getParentSnapshot() != null ? volume.getParentSnapshot().getSnapshotUuid() : null), data.parentSnapshotUuid()) ||
-                !Objects.equals(safeUuid(volume.getParentSvm() != null ? volume.getParentSvm().getSwmUuid() : null), data.parentSvmUuid());
+    private boolean hasVolumeParentDataChanges(final OntapVolume volume, final OntapDTO.VolumeData data,
+                                               final ClusterDataContext context) {
+        final OntapVolume parentVolume = data.parentVolumeUuid() != null ? context.existingVolumes.get(data.parentVolumeUuid()) : null;
+        final OntapSnapshot parentSnapshot = data.parentSnapshotUuid() != null ? context.existingSnapshots.get(data.parentSnapshotUuid()) : null;
+        final OntapSvm parentSvm = data.parentSvmUuid() != null ? context.existingSvms.get(data.parentSvmUuid()) : null;
+        return !Objects.equals(volume.getParentVolumeId(), parentVolume != null ? parentVolume.getId() : null) ||
+                !Objects.equals(volume.getParentSnapshotId(), parentSnapshot != null ? parentSnapshot.getId() : null) ||
+                !Objects.equals(volume.getParentSvmId(), parentSvm != null ? parentSvm.getId() : null);
     }
 
     /**
@@ -1097,7 +1101,7 @@ public class OntapImportService {
      * @return true if there are changes, false otherwise
      */
     private boolean hasVolumeChanges(final OntapVolume volume, final OntapDTO.VolumeData data,
-                                     final OntapExportPolicy exportPolicy) {
+                                     final OntapExportPolicy exportPolicy, final ClusterDataContext context) {
         return !Objects.equals(volume.getName(), data.name()) ||
                 !Objects.equals(volume.getSize(), data.size()) ||
                 !Objects.equals(volume.getState(), data.state()) ||
@@ -1111,7 +1115,7 @@ public class OntapImportService {
                 !Objects.equals(volume.getExportPolicy(), exportPolicy) ||
                 hasSpaceDataChanges(volume, data.space()) ||
                 hasSnaplockChanges(volume, data.snaplock()) ||
-                hasVolumeParentDataChanges(volume, data);
+                hasVolumeParentDataChanges(volume, data, context);
     }
 
     /**
@@ -1595,10 +1599,6 @@ public class OntapImportService {
     }
 
     // --- Helper Methods ---
-
-    private String safeUuid(final UUID uuid) {
-        return uuid != null ? uuid.toString() : null;
-    }
 
     /**
      * Extracts sorted client matches from a rule for consistent key calculation.

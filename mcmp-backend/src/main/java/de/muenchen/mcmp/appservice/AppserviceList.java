@@ -7,5 +7,6 @@ public interface AppserviceList {
     String getName();
     Boolean getHasServers();
     EnvironmentType getEnvironment();
+    Boolean getIsFavorite();
 }
 

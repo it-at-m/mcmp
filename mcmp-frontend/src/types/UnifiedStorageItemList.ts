@@ -6,4 +6,5 @@ export interface UnifiedStorageItemList {
   storageCategory?: string;
   protocol: string;
   appserviceNames?: string;
+  isFavorite: boolean;
 }

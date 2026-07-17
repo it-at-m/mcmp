@@ -26,7 +26,7 @@ public class LoadbalancerService {
 
     public Page<LbVirtualServerListDTO> getVisibleLoadbalancers(
             final int offset, final int limit,
-            final String sortBy, final String sortOrder, final String search) {
+            final String sortBy, final String sortOrder, final String search, final boolean favorites) {
         final Pageable pageable = (limit == -1) ? Pageable.unpaged() : new OffsetBasedPageRequest(offset, limit);
         final UserRoles userRoles = AuthUtils.getCurrentUserRoles();
         String cleanedSearch = null;
@@ -45,6 +45,7 @@ public class LoadbalancerService {
                 userRoles.hasNetworkRole(),
                 userRoles.hasLoadbalancerRole(),
                 cleanedSearch,
+                favorites,
                 sortBy,
                 sortOrder,
                 pageable
@@ -55,7 +56,18 @@ public class LoadbalancerService {
                 .listen(proj.getListen())
                 .port(proj.getPort())
                 .appserviceName(proj.getAppserviceName())
+                .isFavorite(Boolean.TRUE.equals(proj.getIsFavorite()))
                 .build());
+    }
+
+    @Transactional
+    public void addLoadbalancerToFavorites(final Long lbVirtualServerId) {
+        repository.addLoadbalancerToFavorites(lbVirtualServerId, AuthUtils.getUsername());
+    }
+
+    @Transactional
+    public void removeLoadbalancerFromFavorites(final Long lbVirtualServerId) {
+        repository.removeLoadbalancerFromFavorites(lbVirtualServerId, AuthUtils.getUsername());
     }
 
     @Transactional(readOnly = true)

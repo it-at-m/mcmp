@@ -16,6 +16,22 @@
       @row-click="onRowClick"
       @load-more="onLoadMore"
     >
+      <template #[`item.name`]="{ item }">
+        <div class="appservice-name-cell">
+          <v-btn
+            icon
+            variant="text"
+            density="compact"
+            :color="item.isFavorite ? 'warning' : 'grey-lighten-1'"
+            class="mr-1"
+            @click.stop="toggleFavorite(item)"
+          >
+            <v-icon>{{ item.isFavorite ? mdiStar : mdiStarOutline }}</v-icon>
+          </v-btn>
+          <span>{{ item.name }}</span>
+        </div>
+      </template>
+
       <template #no-data>
         <v-row>
           <v-col>
@@ -59,6 +75,7 @@
 import type AppserviceList from "@/types/AppserviceList.ts";
 import type { DataTableHeader } from "vuetify";
 
+import { mdiStar, mdiStarOutline } from "@mdi/js";
 import { nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 
 import appserviceService from "@/api/appserviceService.ts";
@@ -142,6 +159,31 @@ function onRowClick(item: AppserviceList) {
   emit("appserviceSelected", item.id);
 }
 
+function sortByFavorite() {
+  appservicesItems.value = [...appservicesItems.value].sort((a, b) => {
+    const favDiff = (b.isFavorite ? 1 : 0) - (a.isFavorite ? 1 : 0);
+    if (favDiff !== 0) return favDiff;
+    return a.name.localeCompare(b.name);
+  });
+}
+
+async function toggleFavorite(item: AppserviceList) {
+  const originalState = item.isFavorite;
+  item.isFavorite = !item.isFavorite;
+  sortByFavorite();
+
+  try {
+    if (originalState) {
+      await appserviceService.removeAppserviceFromFavorites(item.id);
+    } else {
+      await appserviceService.addAppserviceToFavorites(item.id);
+    }
+  } catch {
+    item.isFavorite = originalState;
+    sortByFavorite();
+  }
+}
+
 async function onLoadMore() {
   await loadAppservices();
   await nextTick();
@@ -161,9 +203,11 @@ async function loadAppservices() {
     itemsAvailableToLoad.value = res.page.totalElements;
     const newItems = res.content
       .slice()
-      .sort((a: AppserviceList, b: AppserviceList) =>
-        a.name.localeCompare(b.name)
-      );
+      .sort((a: AppserviceList, b: AppserviceList) => {
+        const favDiff = (b.isFavorite ? 1 : 0) - (a.isFavorite ? 1 : 0);
+        if (favDiff !== 0) return favDiff;
+        return a.name.localeCompare(b.name);
+      });
 
     if (curOffset.value === 0) {
       appservicesItems.value = newItems;
@@ -212,6 +256,11 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   min-height: 0;
+}
+.appservice-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 .links a,
 .links a:visited,

@@ -30,6 +30,7 @@ public class UnifiedStorageService {
     private final StorageGridBucketRepository storageGridBucketRepository;
     private final OntapVolumeServerMountRepository ontapVolumeServerMountRepository;
     private final OntapQtreeServerMountRepository ontapQtreeServerMountRepository;
+    private final UserFavoriteStorageRepository userFavoriteStorageRepository;
 
     @Transactional(readOnly = true)
     public UnifiedStorageItemDto getUnifiedStorageItem(String uuid, StorageType type) {
@@ -216,7 +217,7 @@ public class UnifiedStorageService {
     }
 
     @Transactional(readOnly = true)
-    public Page<UnifiedStorageItemListDto> getUnifiedStorage(String search, List<String> categories, Pageable pageable) {
+    public Page<UnifiedStorageItemListDto> getUnifiedStorage(String search, List<String> categories, boolean favorites, Pageable pageable) {
         final UserRoles userRoles = AuthUtils.getCurrentUserRoles();
         String username = userRoles.getUsername();
         boolean isAdmin = userRoles.hasAdminRole();
@@ -334,6 +335,12 @@ public class UnifiedStorageService {
                     .collect(Collectors.toList());
         }
 
+        applyFavorites(allItems, username);
+
+        if (favorites) {
+            allItems = allItems.stream().filter(UnifiedStorageItemListDto::isFavorite).collect(Collectors.toList());
+        }
+
         // 5. Global Sorting
         Sort sort = pageable.getSort();
         if (sort.isSorted()) {
@@ -362,6 +369,9 @@ public class UnifiedStorageService {
         } else {
             allItems.sort(Comparator.comparing(this::effectiveName, String.CASE_INSENSITIVE_ORDER));
         }
+
+        // Favorites always float to the top, regardless of the active column sort.
+        allItems.sort(Comparator.comparing(dto -> dto.isFavorite() ? 0 : 1));
 
         // 6. Pagination in Memory
         int start = (int) pageable.getOffset();
@@ -468,9 +478,33 @@ public class UnifiedStorageService {
                     .build());
         }
 
+        applyFavorites(allItems, username);
         allItems.sort(Comparator.comparing(this::effectiveName, String.CASE_INSENSITIVE_ORDER));
 
         return allItems;
+    }
+
+    /**
+     * Annotates each item's isFavorite flag from the user's favorites, keyed by (type, uuid)
+     * since storage items span several unrelated backing tables with no shared id space.
+     */
+    private void applyFavorites(final List<UnifiedStorageItemListDto> items, final String username) {
+        final Set<String> favoriteKeys = userFavoriteStorageRepository.findFavoritesByUsername(username).stream()
+                .map(f -> f.getStorageType() + ":" + f.getStorageUuid())
+                .collect(Collectors.toSet());
+        for (final UnifiedStorageItemListDto item : items) {
+            item.setFavorite(favoriteKeys.contains(item.getType() + ":" + item.getUuid()));
+        }
+    }
+
+    @Transactional
+    public void addStorageToFavorites(final String uuid, final StorageType type) {
+        userFavoriteStorageRepository.addStorageToFavorites(type.toString(), uuid, AuthUtils.getUsername());
+    }
+
+    @Transactional
+    public void removeStorageFromFavorites(final String uuid, final StorageType type) {
+        userFavoriteStorageRepository.removeStorageFromFavorites(type.toString(), uuid, AuthUtils.getUsername());
     }
 
     @Transactional(readOnly = true)

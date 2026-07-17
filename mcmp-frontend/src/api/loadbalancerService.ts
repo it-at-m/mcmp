@@ -14,13 +14,15 @@ export default {
     limit: number,
     sortBy: string,
     sortOrder: string,
-    search?: string
+    search?: string,
+    favorites = false
   ): Promise<Page<LoadbalancerListItem>> {
     const params = new URLSearchParams({
       offset: offset.toString(),
       limit: limit.toString(),
       sortBy,
       sortOrder,
+      favorites: favorites.toString(),
     });
     if (search?.trim()) {
       params.append("search", search.trim());
@@ -29,6 +31,22 @@ export default {
       `${getApiBase()}${LOADBALANCER_BASE}?${params.toString()}`,
       {},
       loading
+    );
+  },
+
+  addLoadbalancerToFavorites(lbVirtualServerId: number): Promise<void> {
+    return apiFetch(
+      `${getApiBase()}${LOADBALANCER_BASE}/${lbVirtualServerId}/favorite`,
+      { method: "PUT" },
+      undefined
+    );
+  },
+
+  removeLoadbalancerFromFavorites(lbVirtualServerId: number): Promise<void> {
+    return apiFetch(
+      `${getApiBase()}${LOADBALANCER_BASE}/${lbVirtualServerId}/favorite`,
+      { method: "DELETE" },
+      undefined
     );
   },
 

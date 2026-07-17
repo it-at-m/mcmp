@@ -3,11 +3,8 @@ import type AppserviceList from "@/types/AppserviceList.ts";
 import type { Page } from "@/types/Page";
 import type { Ref } from "vue";
 
-
-
-import { defaultResponseHandler, getConfig } from "@/api/fetch-utils";
+import { apiFetch, defaultResponseHandler, getConfig } from "@/api/fetch-utils";
 import { APPSERVICE_BASE, getApiBase } from "@/constants";
-
 
 export default {
   getAppservices(
@@ -15,12 +12,13 @@ export default {
     offset: number,
     limit: number,
     sortOrder: string,
-    search: string | null
+    search: string | null,
+    favorites = false
   ): Promise<Page<AppserviceList>> {
     loading.value = true;
     const encodedSearch = search ? encodeURIComponent(search) : "";
     return fetch(
-      `${getApiBase()}${APPSERVICE_BASE}?offset=${offset}&limit=${limit}&sortOrder=${sortOrder}&search=${encodedSearch}`,
+      `${getApiBase()}${APPSERVICE_BASE}?offset=${offset}&limit=${limit}&sortOrder=${sortOrder}&search=${encodedSearch}&favorites=${favorites}`,
       getConfig()
     )
       .then((response) => {
@@ -42,5 +40,21 @@ export default {
       .finally(() => {
         loading.value = false;
       });
+  },
+
+  addAppserviceToFavorites(appserviceId: number): Promise<void> {
+    return apiFetch(
+      `${getApiBase()}${APPSERVICE_BASE}/${appserviceId}/favorite`,
+      { method: "PUT" },
+      undefined
+    );
+  },
+
+  removeAppserviceFromFavorites(appserviceId: number): Promise<void> {
+    return apiFetch(
+      `${getApiBase()}${APPSERVICE_BASE}/${appserviceId}/favorite`,
+      { method: "DELETE" },
+      undefined
+    );
   },
 };

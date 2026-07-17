@@ -3,6 +3,7 @@ package de.muenchen.mcmp.loadbalancer;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -11,7 +12,7 @@ import java.util.List;
 public interface LbVirtualServerRepository extends JpaRepository<LbVirtualServer, Long> {
 
     @Query(value = """
-    SELECT id, name, listen, port, appserviceName, firstDomain
+    SELECT id, name, listen, port, appserviceName, firstDomain, "isFavorite"
     FROM (
         SELECT DISTINCT
             lvs.id          AS id,
@@ -26,7 +27,12 @@ public interface LbVirtualServerRepository extends JpaRepository<LbVirtualServer
                 ORDER BY a.name
                 LIMIT 1
             ) AS appserviceName,
-            lvs.domains->>0 AS firstDomain
+            lvs.domains->>0 AS firstDomain,
+            EXISTS (
+                SELECT 1 FROM cmp.user_favorite_lb_virtual_server uflvs
+                JOIN cmp.user u_fav ON uflvs.user_id = u_fav.id
+                WHERE uflvs.lb_virtual_server_id = lvs.id AND u_fav.username = :username
+            ) AS "isFavorite"
         FROM cmp.lb_virtual_server lvs
         WHERE (
             :isAdmin
@@ -54,8 +60,14 @@ public interface LbVirtualServerRepository extends JpaRepository<LbVirtualServer
                 WHERE d ILIKE CONCAT('%', :search, '%')
             )
         )
+        AND (:favorites = FALSE OR EXISTS (
+            SELECT 1 FROM cmp.user_favorite_lb_virtual_server uflvs
+            JOIN cmp.user u_fav ON uflvs.user_id = u_fav.id
+            WHERE uflvs.lb_virtual_server_id = lvs.id AND u_fav.username = :username
+        ))
     ) AS filtered
     ORDER BY
+        CASE WHEN "isFavorite" THEN 0 ELSE 1 END ASC,
         CASE WHEN :sortOrder = 'desc' AND :sortBy = 'domain' THEN firstDomain END DESC NULLS LAST,
         CASE WHEN :sortOrder = 'asc'  AND :sortBy = 'domain' THEN firstDomain END ASC NULLS LAST,
         CASE WHEN :sortOrder = 'desc' AND :sortBy = 'name' THEN name END DESC,
@@ -90,6 +102,11 @@ public interface LbVirtualServerRepository extends JpaRepository<LbVirtualServer
             WHERE d ILIKE CONCAT('%', :search, '%')
         )
     )
+    AND (:favorites = FALSE OR EXISTS (
+        SELECT 1 FROM cmp.user_favorite_lb_virtual_server uflvs
+        JOIN cmp.user u_fav ON uflvs.user_id = u_fav.id
+        WHERE uflvs.lb_virtual_server_id = lvs.id AND u_fav.username = :username
+    ))
     """, nativeQuery = true)
     Page<LbVirtualServerList> findVisibleLoadbalancers(
             @Param("username") String username,
@@ -100,9 +117,26 @@ public interface LbVirtualServerRepository extends JpaRepository<LbVirtualServer
             @Param("isNetwork") boolean isNetwork,
             @Param("isLoadbalancer") boolean isLoadbalancer,
             @Param("search") String search,
+            @Param("favorites") boolean favorites,
             @Param("sortBy") String sortBy,
             @Param("sortOrder") String sortOrder,
             Pageable pageable);
+
+    @Modifying
+    @Query(value = """
+        INSERT INTO cmp.user_favorite_lb_virtual_server (user_id, lb_virtual_server_id)
+        SELECT u.id, :lbVirtualServerId FROM cmp.user u WHERE u.username = :username
+        ON CONFLICT DO NOTHING
+    """, nativeQuery = true)
+    void addLoadbalancerToFavorites(@Param("lbVirtualServerId") Long lbVirtualServerId, @Param("username") String username);
+
+    @Modifying
+    @Query(value = """
+        DELETE FROM cmp.user_favorite_lb_virtual_server uflvs
+        WHERE uflvs.lb_virtual_server_id = :lbVirtualServerId
+          AND uflvs.user_id = (SELECT u.id FROM cmp.user u WHERE u.username = :username)
+    """, nativeQuery = true)
+    void removeLoadbalancerFromFavorites(@Param("lbVirtualServerId") Long lbVirtualServerId, @Param("username") String username);
 
     @Query(value = """
     SELECT DISTINCT

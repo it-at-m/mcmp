@@ -70,18 +70,30 @@
       </template>
 
       <template #[`item.storageCategory`]="{ item }">
-        <v-tooltip>
-          <template #activator="{ props: tooltipProps }">
-            <v-icon
-              v-bind="tooltipProps"
-              size="x-large"
-              :color="switchColor(item.type)"
-            >
-              {{ switchType(item.type) }}
-            </v-icon>
-          </template>
-          {{ formatStorageCategory(item.storageCategory) }}
-        </v-tooltip>
+        <div class="storage-category-cell">
+          <v-btn
+            icon
+            variant="text"
+            density="compact"
+            :color="item.isFavorite ? 'warning' : 'grey-lighten-1'"
+            class="mr-1 ml-2"
+            @click.stop="toggleFavorite(item)"
+          >
+            <v-icon>{{ item.isFavorite ? mdiStar : mdiStarOutline }}</v-icon>
+          </v-btn>
+          <v-tooltip>
+            <template #activator="{ props: tooltipProps }">
+              <v-icon
+                v-bind="tooltipProps"
+                size="x-large"
+                :color="switchColor(item.type)"
+              >
+                {{ switchType(item.type) }}
+              </v-icon>
+            </template>
+            {{ formatStorageCategory(item.storageCategory) }}
+          </v-tooltip>
+        </div>
       </template>
       <template #no-data>
         <v-row />
@@ -127,6 +139,8 @@ import {
   mdiFolderNetworkOutline,
   mdiFolderOutline,
   mdiHarddisk,
+  mdiStar,
+  mdiStarOutline,
 } from "@mdi/js";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 
@@ -183,7 +197,7 @@ const selectedId = computed(() =>
 const tableRef = ref<{ triggerObserveScroll: () => void } | null>(null);
 
 const headers = ref<DataTableHeader[]>([
-  { title: "Typ", key: "storageCategory", sortable: false, width: "52px" },
+  { title: "Typ", key: "storageCategory", sortable: false, width: "88px" },
   { title: "Name", key: "name", sortable: true },
 ]);
 
@@ -250,6 +264,28 @@ function switchColor(type: string) {
       return "orange";
     default:
       return "grey";
+  }
+}
+
+async function toggleFavorite(item: TableItem) {
+  const source = items.value.find(
+    (i) => i.uuid === item.uuid && i.type === item.type
+  );
+  if (!source) return;
+  const originalState = source.isFavorite;
+  source.isFavorite = !source.isFavorite;
+  items.value = [...items.value].sort(
+    (a, b) => (b.isFavorite ? 1 : 0) - (a.isFavorite ? 1 : 0)
+  );
+
+  try {
+    if (originalState) {
+      await storageService.removeStorageFromFavorites(source.type, source.uuid);
+    } else {
+      await storageService.addStorageToFavorites(source.type, source.uuid);
+    }
+  } catch {
+    source.isFavorite = originalState;
   }
 }
 
@@ -385,6 +421,12 @@ onMounted(async () => {
   flex-direction: column;
 }
 
+.storage-category-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .header-container {
   display: flex;
   align-items: center;
@@ -404,9 +446,9 @@ onMounted(async () => {
 
 :deep(td:first-child),
 :deep(th:first-child) {
-  width: 52px !important;
-  min-width: 52px !important;
-  max-width: 52px !important;
+  width: 76px !important;
+  min-width: 76px !important;
+  max-width: 76px !important;
   padding-left: 8px !important;
   padding-right: 4px !important;
 }

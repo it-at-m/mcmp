@@ -9,5 +9,6 @@ public record LbVirtualServerListDTO(
         String domain,
         String listen,
         int port,
-        String appserviceName
+        String appserviceName,
+        boolean isFavorite
 ) {}

@@ -4,26 +4,26 @@
     class="links"
   >
     <common-card
-          title="Zugeordnete Server"
-          top-margin="0"
+      title="Zugeordnete Server"
+      top-margin="0"
+    >
+      <template #append-title>
+        <v-tooltip
+          v-if="anyServerHasWarnings"
+          location="top"
+          text="Handlungsbedarf an mind. einem Server"
         >
-          <template #append-title>
-            <v-tooltip
-              v-if="anyServerHasWarnings"
-              location="top"
-              text="Handlungsbedarf an mind. einem Server"
-            >
-              <template #activator="{ props: tooltipProps }">
-                <v-icon
-                  v-bind="tooltipProps"
-                  :icon="mdiAlert"
-                  color="orange"
-                  size="22"
-                  class="ml-2"
-                />
-              </template>
-            </v-tooltip>
+          <template #activator="{ props: tooltipProps }">
+            <v-icon
+              v-bind="tooltipProps"
+              :icon="mdiAlert"
+              color="orange"
+              size="22"
+              class="ml-2"
+            />
           </template>
+        </v-tooltip>
+      </template>
       <template #toolbar-actions>
         <div class="action-buttons">
           <add-snapshot
@@ -184,7 +184,10 @@
                   text="Handlung erforderlich"
                 >
                   <template #activator="{ props: tooltipProps }">
-                    <router-link :to="`/server/${server.id}`" class="d-flex align-center text-decoration-none">
+                    <router-link
+                      :to="`/server/${server.id}`"
+                      class="d-flex align-center text-decoration-none"
+                    >
                       <v-icon
                         v-bind="tooltipProps"
                         :icon="mdiAlert"

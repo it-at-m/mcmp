@@ -16,15 +16,26 @@ public class AppserviceController {
             @RequestParam(name = "offset") final int offset,
             @RequestParam(name = "limit") final int limit,
             @RequestParam(name = "sortOrder") final String sortOrder,
-            @RequestParam(name = "search", required = false) final String search
+            @RequestParam(name = "search", required = false) final String search,
+            @RequestParam(name = "favorites", required = false, defaultValue = "false") final boolean favorites
     ) {
         return appserviceService.getVisibleAppservices(
-                offset, limit, sortOrder, search
+                offset, limit, sortOrder, search, favorites
         );
     }
 
     @GetMapping("/{id}")
     public AppserviceDTO getAppservice(@PathVariable("id") final Long id) {
         return appserviceService.getVisibleAppservice(id);
+    }
+
+    @PutMapping("/{id}/favorite")
+    public void addAppserviceToFavorites(@PathVariable("id") final Long id) {
+        appserviceService.addAppserviceToFavorites(id);
+    }
+
+    @DeleteMapping("/{id}/favorite")
+    public void removeAppserviceFromFavorites(@PathVariable("id") final Long id) {
+        appserviceService.removeAppserviceFromFavorites(id);
     }
 }

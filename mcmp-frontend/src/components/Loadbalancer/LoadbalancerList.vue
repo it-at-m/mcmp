@@ -18,6 +18,16 @@
     >
       <template #item.domain="{ item }">
         <div class="domain-header">
+          <v-btn
+            icon
+            variant="text"
+            density="compact"
+            :color="item.isFavorite ? 'warning' : 'grey-lighten-1'"
+            class="mr-1"
+            @click.stop="toggleFavorite(item)"
+          >
+            <v-icon>{{ item.isFavorite ? mdiStar : mdiStarOutline }}</v-icon>
+          </v-btn>
           <v-tooltip>
             <template #activator="{ props: tooltipProps }">
               <img
@@ -72,6 +82,7 @@
 import type { LoadbalancerListItem } from "@/types/LoadbalancerListItem.ts";
 import type { DataTableHeader } from "vuetify";
 
+import { mdiStar, mdiStarOutline } from "@mdi/js";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 
 import loadbalancerService from "@/api/loadbalancerService";
@@ -149,6 +160,26 @@ function selectItem(item: LoadbalancerListItem) {
   selected.value = [item];
   emit("update:selected", item);
   emit("update:modelValue", [item]);
+}
+
+async function toggleFavorite(item: TableItem) {
+  const source = items.value.find((i) => i.id === item.id);
+  if (!source) return;
+  const originalState = source.isFavorite;
+  source.isFavorite = !source.isFavorite;
+  items.value = [...items.value].sort((a, b) => {
+    return (b.isFavorite ? 1 : 0) - (a.isFavorite ? 1 : 0);
+  });
+
+  try {
+    if (originalState) {
+      await loadbalancerService.removeLoadbalancerFromFavorites(source.id);
+    } else {
+      await loadbalancerService.addLoadbalancerToFavorites(source.id);
+    }
+  } catch {
+    source.isFavorite = originalState;
+  }
 }
 
 async function loadItems(page = 1) {
@@ -263,12 +294,13 @@ onMounted(async () => {
 .domain-header {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .domain-header-icon {
-  width: 16px;
-  height: 16px;
+  width: 24px;
+  height: 24px;
   object-fit: contain;
+  margin-right: 8px;
 }
 </style>

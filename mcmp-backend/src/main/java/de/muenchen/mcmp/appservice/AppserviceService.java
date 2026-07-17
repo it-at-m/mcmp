@@ -7,6 +7,7 @@ import de.muenchen.mcmp.server.ServerService;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -45,7 +46,7 @@ public class AppserviceService {
     }
 
     public Page<AppserviceListDTO> getVisibleAppservices(
-            final int offset, int limit, final String sortOrder, final String search) {
+            final int offset, int limit, final String sortOrder, final String search, final boolean favorites) {
         final int MAX_PAGE_SIZE = 10000;
         if (limit == -1 || limit > MAX_PAGE_SIZE) {
             limit = MAX_PAGE_SIZE;
@@ -76,6 +77,7 @@ public class AppserviceService {
                 AuthUtils.getCurrentUserRoles().hasNetworkRole(),
                 searchLowerCase,
                 terms,
+                favorites,
                 safeSortOrder,
                 new OffsetBasedPageRequest(offset, limit)
         );
@@ -88,7 +90,18 @@ public class AppserviceService {
                 .name(appserviceList.getName())
                 .hasServers(appserviceList.getHasServers())
                 .environment(appserviceList.getEnvironment())
+                .isFavorite(Boolean.TRUE.equals(appserviceList.getIsFavorite()))
                 .build();
+    }
+
+    @Transactional
+    public void addAppserviceToFavorites(final Long appserviceId) {
+        repository.addAppserviceToFavorites(appserviceId, AuthUtils.getUsername());
+    }
+
+    @Transactional
+    public void removeAppserviceFromFavorites(final Long appserviceId) {
+        repository.removeAppserviceFromFavorites(appserviceId, AuthUtils.getUsername());
     }
 
     public List<AppserviceNameAndSysId> getAppservicesByServerId(final Long serverId) {

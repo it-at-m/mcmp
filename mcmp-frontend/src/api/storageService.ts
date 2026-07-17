@@ -16,12 +16,14 @@ export default {
     sortBy: string,
     sortOrder: string,
     search?: string,
-    categories?: string[]
+    categories?: string[],
+    favorites = false
   ): Promise<Page<UnifiedStorageItemList>> {
     const params = new URLSearchParams({
       page: page.toString(),
       size: size.toString(),
       sort: sortBy ? `${sortBy},${sortOrder}` : "",
+      favorites: favorites.toString(),
     });
 
     if (search) {
@@ -36,6 +38,22 @@ export default {
       `${getApiBase()}${STORAGE_BASE}/unified?${params.toString()}`,
       {},
       loading
+    );
+  },
+
+  addStorageToFavorites(type: string, uuid: string): Promise<void> {
+    return apiFetch(
+      `${getApiBase()}${STORAGE_BASE}/unified/${type}/${uuid}/favorite`,
+      { method: "PUT" },
+      undefined
+    );
+  },
+
+  removeStorageFromFavorites(type: string, uuid: string): Promise<void> {
+    return apiFetch(
+      `${getApiBase()}${STORAGE_BASE}/unified/${type}/${uuid}/favorite`,
+      { method: "DELETE" },
+      undefined
     );
   },
 

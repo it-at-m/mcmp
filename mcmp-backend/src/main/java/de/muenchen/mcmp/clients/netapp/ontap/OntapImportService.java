@@ -261,6 +261,18 @@ public class OntapImportService {
         final List<SvmVolumePair> volumePairs = collectSvmsAndVolumes(ontapDTO, cluster, context, svmsToSave);
         collectSnapshots(volumePairs, context, snapshotsToSave);
 
+        // Save new snapshots immediately so they're persistent (have a real id) before Phase 3 runs.
+        // Phase 3 touches lazy associations/collections on EXISTING, already-managed volumes (e.g.
+        // volume.getOntapAggregates() in processOrCreateVolume) for volumes processed later in the
+        // same loop as one whose parentSnapshot was just set to a new OntapSnapshot. Initializing a
+        // lazy proxy issues a SELECT, and Hibernate's FlushMode.AUTO auto-flushes pending dirty state
+        // first - which would try to insert that dirty volume while its snapshot reference is still
+        // transient, throwing TransientObjectException. Persisting snapshots here closes that window
+        // regardless of what else in Phase 3 triggers a lazy load.
+        if (!snapshotsToSave.isEmpty()) {
+            snapshotRepository.saveAll(snapshotsToSave);
+        }
+
         // Phase 3: Process Volumes in topological order along with their dependent data
         processVolumesInDependencyOrder(volumePairs, cluster, policyMap, aggregateMap, context, volumesToSave, sharesToSave, aclsToSave, qtreesToSave, aggregatesToSave);
 
@@ -1493,12 +1505,20 @@ public class OntapImportService {
                 .toList();
         if (!toDelete.isEmpty()) {
             final Set<OntapSnapshot> toDeleteSet = new HashSet<>(toDelete);
+            final Set<Long> toDeleteIds = toDelete.stream().map(OntapSnapshot::getId).collect(Collectors.toSet());
 
-            // Remove snapshot from all Volume.ontapSnapshots collections that are still in the session
-            // so Hibernate doesn't try to cascade the transient snapshot during commit flush
-            // (OntapVolume is owner side of ManyToMany relationship ontap_snapshot_has_volumes)
+            // Remove snapshot from all Volume.ontapSnapshots collections, and null out any
+            // Volume.parentSnapshot scalar FK pointing at one of these (e.g. a FlexClone's source
+            // snapshot that NetApp no longer reports under any volume's own snapshot list), so
+            // Hibernate doesn't retain a Java-side reference to an entity we're about to delete -
+            // a later flush would otherwise throw TransientObjectException for that now-removed
+            // instance. Compared via the shadow parentSnapshotId column (not getParentSnapshot())
+            // to avoid initializing the lazy proxy and forcing an unwanted auto-flush.
             for (final OntapVolume volume : context.existingVolumes.values()) {
                 volume.getOntapSnapshots().removeIf(toDeleteSet::contains);
+                if (volume.getParentSnapshotId() != null && toDeleteIds.contains(volume.getParentSnapshotId())) {
+                    volume.setParentSnapshot(null);
+                }
             }
             entityManager.flush();
 

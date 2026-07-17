@@ -168,7 +168,9 @@ async function toggleFavorite(item: TableItem) {
   const originalState = source.isFavorite;
   source.isFavorite = !source.isFavorite;
   items.value = [...items.value].sort((a, b) => {
-    return (b.isFavorite ? 1 : 0) - (a.isFavorite ? 1 : 0);
+    const favDiff = (b.isFavorite ? 1 : 0) - (a.isFavorite ? 1 : 0);
+    if (favDiff !== 0) return favDiff;
+    return (a.domain ?? a.name).localeCompare(b.domain ?? b.name);
   });
 
   try {

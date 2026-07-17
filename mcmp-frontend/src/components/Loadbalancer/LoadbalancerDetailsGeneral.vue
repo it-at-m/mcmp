@@ -32,14 +32,6 @@
         class="pt-0 links"
       >
         <p>{{ lb.name }}</p>
-        <a
-          v-if="lb.tenantRepositoryUrl"
-          :href="lb.tenantRepositoryUrl"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Repository
-        </a>
       </v-col>
       <v-col
         cols="3"
@@ -95,9 +87,9 @@
             </li>
           </ul>
         </div>
-        <p v-else-if="lb.appservices && lb.appservices.length === 1">
-          <router-link :to="`/appservice/${lb.appservices[0].id}`">
-            {{ lb.appservices[0].name }}
+        <p v-else-if="firstAppservice">
+          <router-link :to="`/appservice/${firstAppservice.id}`">
+            {{ firstAppservice.name }}
           </router-link>
         </p>
         <p v-else>-</p>
@@ -191,6 +183,12 @@
         </h3>
       </v-col>
       <v-col
+        v-if="lb.tenantRepositoryUrl"
+        cols="3"
+      >
+        <h3>Gitlab-Repository</h3></v-col
+      >
+      <v-col
         v-if="lb.wafEnabled"
         cols="3"
       >
@@ -221,6 +219,19 @@
         <p>{{ formatter.formatBooleanToJaNein(lb.redirect80) }}</p>
       </v-col>
       <v-col
+        cols="3"
+        class="links"
+      >
+        <a
+          v-if="lb.tenantRepositoryUrl"
+          :href="lb.tenantRepositoryUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Config
+        </a>
+      </v-col>
+      <v-col
         v-if="lb.wafEnabled"
         cols="3"
         class="pt-0"
@@ -234,15 +245,19 @@
 <script setup lang="ts">
 import type { LoadbalancerDetail } from "@/types/LoadbalancerDetail";
 
+import { computed } from "vue";
+
 import CommonCard from "@/components/common/CommonCard.vue";
 import InfoTooltip from "@/components/common/InfoTooltip.vue";
 import { useFormatter } from "@/composables/formatter.ts";
 
-defineProps<{
+const props = defineProps<{
   lb: LoadbalancerDetail;
 }>();
 
 const formatter = useFormatter();
+
+const firstAppservice = computed(() => props.lb.appservices?.[0] ?? null);
 </script>
 <style scoped>
 .links a,

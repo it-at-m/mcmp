@@ -111,6 +111,7 @@ function openDialog() {
 }
 
 function close() {
+  description.value = "";
   dialog.value = false;
 }
 

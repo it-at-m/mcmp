@@ -31,7 +31,7 @@
         </v-col>
         <v-col
           cols="4"
-          class="d-flex justify-end"
+          class="d-flex justify-end pa-0"
         >
           <storage-change-nfs-export-policy
             v-if="rule.clients && rule.clients.length > 0"
@@ -83,6 +83,7 @@
           <storage-change-cifs-permissions
             :selected-storage="selectedStorageItem"
             :selected-a-d="acllist.userOrGroup"
+            :selected-permission="acllist.permission"
           />
         </v-col>
       </v-row>

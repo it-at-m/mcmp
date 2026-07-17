@@ -82,6 +82,7 @@
 <script setup lang="ts">
 import type { UnifiedStorageItem } from "@/types/Storage";
 import type { UnifiedStorageSnapshotItem } from "@/types/UnifiedStorageSnapshotItem";
+import type { DataTableHeader } from "vuetify/framework";
 
 import { mdiDelete } from "@mdi/js";
 import { computed, ref } from "vue";
@@ -103,7 +104,7 @@ const backupLoading = ref(false);
 const confirmDeleteDialog = ref(false);
 const snapshotToDelete = ref<string | null>(null);
 
-const headers: any[] = [
+const headers: DataTableHeader[] = [
   { title: "Name", key: "name" },
   { title: "Erstellt am", key: "createTime" },
   { title: "Aktion", key: "actions", sortable: false },

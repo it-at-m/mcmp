@@ -25,10 +25,10 @@
       title="Berechtigung bearbeiten"
       max-width="600"
       show-actions
-      :submit-activated="canSubmit"
       :icon="mdiPencil"
       show-change-warning
       :check-for-enabled-actions="['STORAGE_CHANGE_CIFS_PERMISSIONS']"
+      submit-activated
       @dialog-cancel="close"
       @dialog-confirm="save"
     >
@@ -42,7 +42,7 @@
         <v-row>
           <v-col cols="12">
             <v-select
-              v-model="selectedPermission"
+              v-model="localPermission"
               label="Berechtigungen"
               variant="outlined"
               :items="permissionOptions"
@@ -65,7 +65,7 @@
 import type { UnifiedStorageItem } from "@/types/Storage.ts";
 
 import { mdiPencil } from "@mdi/js";
-import { computed, ref, watch } from "vue";
+import { computed, ref } from "vue";
 
 import jobService from "@/api/jobService.ts";
 import CommonDialog from "@/components/common/CommonDialog.vue";
@@ -74,20 +74,13 @@ import { useRules } from "@/composables/rules.ts";
 const props = defineProps<{
   selectedStorage: UnifiedStorageItem;
   selectedAD: string;
+  selectedPermission: string;
 }>();
 const dialog = ref(false);
 const loading = ref(false);
+const localPermission = ref(props.selectedPermission);
 const rules = useRules(); // Selected
-const selectedADObject = ref<string>("");
-const selectedPermission = ref<string>("");
-const searchText = ref(""); // Derive available AD entries from cifs_share_acl_list
-const availableAD = computed(
-  () => props.selectedStorage.cifs_share_acl_list ?? []
-);
-watch(selectedADObject, (newAd) => {
-  const entry = availableAD.value.find((e) => e.userOrGroup === newAd);
-  selectedPermission.value = entry?.permission ?? "";
-});
+
 const permissionOptions = [
   { label: "Vollzugriff", value: "full_control" },
   { label: "Changezugriff", value: "change" },
@@ -100,28 +93,20 @@ const isAllowedShare = computed(
     props.selectedStorage.storageCategory == "CIFS_CLONE" ||
     props.selectedStorage.storageCategory == "CIFS_WORM"
 );
-const canSubmit = computed(() =>
-  Boolean(selectedADObject.value && selectedPermission.value)
-);
 function openDialog() {
+  localPermission.value = props.selectedPermission;
   dialog.value = true;
 }
-function reset() {
-  selectedADObject.value = "";
-  selectedPermission.value = "";
-  searchText.value = "";
-}
+
 function close() {
-  reset();
   dialog.value = false;
 }
 function save() {
-  if (!canSubmit.value) return;
   jobService
     .startJob(loading, "STORAGE_CHANGE_CIFS_PERMISSIONS", -1, {
       uuid: props.selectedStorage.uuid,
-      ad: selectedADObject.value,
-      permission: selectedPermission.value,
+      ad: props.selectedAD,
+      permission: localPermission.value,
     })
     .then(() => {
       close();

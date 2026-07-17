@@ -66,6 +66,12 @@ const formatter = useFormatter();
 
 const bytesPerGb = 1024 * 1024 * 1024;
 
+interface TooltipFormatterParam {
+  marker: string;
+  seriesName: string;
+  value: number;
+}
+
 function clampToPositive(value?: number): number {
   return Math.max(value ?? 0, 0);
 }
@@ -118,7 +124,7 @@ function getChartOption(data: { value: number; name: string }[]) {
     },
     tooltip: {
       trigger: "item",
-      formatter: (params: any) => {
+      formatter: (params: TooltipFormatterParam) => {
         const percent =
           total > 0 ? ((params.value / total) * 100).toFixed(1) : "0";
         return `${params.marker}${params.seriesName} ${formatter.formatBytesSmart(params.value)} (${percent}%)`;

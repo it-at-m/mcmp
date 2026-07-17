@@ -21,7 +21,7 @@ type VirtualServerConfig struct {
 
 // PoolRef represents a pool reference within a virtual server's pool map.
 type PoolRef struct {
-	Default bool     `json:"default"`
+	Default *bool    `json:"default,omitempty"`
 	Hosts   []string `json:"hosts,omitempty"`
 	Paths   []string `json:"paths,omitempty"`
 }

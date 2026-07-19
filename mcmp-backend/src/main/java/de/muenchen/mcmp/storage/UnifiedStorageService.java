@@ -30,6 +30,7 @@ public class UnifiedStorageService {
     private final StorageGridBucketRepository storageGridBucketRepository;
     private final OntapVolumeServerMountRepository ontapVolumeServerMountRepository;
     private final OntapQtreeServerMountRepository ontapQtreeServerMountRepository;
+    private final UserFavoriteStorageRepository userFavoriteStorageRepository;
 
     @Transactional(readOnly = true)
     public UnifiedStorageItemDto getUnifiedStorageItem(String uuid, StorageType type) {
@@ -216,7 +217,7 @@ public class UnifiedStorageService {
     }
 
     @Transactional(readOnly = true)
-    public Page<UnifiedStorageItemListDto> getUnifiedStorage(String search, List<String> categories, Pageable pageable) {
+    public Page<UnifiedStorageItemListDto> getUnifiedStorage(String search, List<String> categories, boolean favorites, Pageable pageable) {
         final UserRoles userRoles = AuthUtils.getCurrentUserRoles();
         String username = userRoles.getUsername();
         boolean isAdmin = userRoles.hasAdminRole();
@@ -334,6 +335,12 @@ public class UnifiedStorageService {
                     .collect(Collectors.toList());
         }
 
+        applyFavorites(allItems, username);
+
+        if (favorites) {
+            allItems = allItems.stream().filter(UnifiedStorageItemListDto::isFavorite).collect(Collectors.toList());
+        }
+
         // 5. Global Sorting
         Sort sort = pageable.getSort();
         if (sort.isSorted()) {
@@ -363,6 +370,9 @@ public class UnifiedStorageService {
             allItems.sort(Comparator.comparing(this::effectiveName, String.CASE_INSENSITIVE_ORDER));
         }
 
+        // Favorites always float to the top, regardless of the active column sort.
+        allItems.sort(Comparator.comparing(dto -> dto.isFavorite() ? 0 : 1));
+
         // 6. Pagination in Memory
         int start = (int) pageable.getOffset();
         int end = Math.min((start + pageable.getPageSize()), allItems.size());
@@ -375,6 +385,126 @@ public class UnifiedStorageService {
         }
 
         return new PageImpl<>(pagedItems, pageable, allItems.size());
+    }
+
+    @Transactional(readOnly = true)
+    public List<UnifiedStorageItemListDto> getUnifiedStorageByAppserviceId(Long appserviceId) {
+        final UserRoles userRoles = AuthUtils.getCurrentUserRoles();
+        String username = userRoles.getUsername();
+        boolean isAdmin = userRoles.hasAdminRole();
+        boolean isReadonly = userRoles.hasReadonlyRole();
+        boolean isStorage = userRoles.hasStorageRole();
+        boolean isOperator = userRoles.hasOperatorRole();
+
+        List<UnifiedStorageItemListDto> allItems = new ArrayList<>();
+
+        List<Object[]> nfsItems = ontapVolumeRepository.findNfsVolumeListItemsByAppserviceId(appserviceId, username, isAdmin, isReadonly, isStorage, isOperator);
+        List<UUID> nfsVolumeUuids = nfsItems.stream().map(row -> (UUID) row[0]).toList();
+        Map<String, String> nfsAppserviceNames = loadVolumeAppserviceNames(nfsVolumeUuids);
+
+        for (Object[] row : nfsItems) {
+            String uuidStr = row[0].toString();
+            String svmName = (String) row[2];
+            String protocol = determineProtocolFromSvmName(svmName);
+            if (protocol == null) {
+                protocol = "NFS";
+            }
+            allItems.add(UnifiedStorageItemListDto.builder()
+                    .uuid(uuidStr)
+                    .name((String) row[1])
+                    .type(StorageType.NFS)
+                    .storageCategory(row[3] != null ? StorageCategory.valueOf(row[3].toString()) : null)
+                    .protocol(protocol)
+                    .appserviceNames(nfsAppserviceNames.get(uuidStr))
+                    .build());
+        }
+
+        List<Object[]> cifsItems = ontapVolumeRepository.findCifsVolumeListItemsByAppserviceId(appserviceId, username, isAdmin, isReadonly, isStorage, isOperator);
+        List<UUID> cifsVolumeUuids = cifsItems.stream().map(row -> (UUID) row[0]).toList();
+        Map<String, String> cifsAppserviceNames = loadVolumeAppserviceNames(cifsVolumeUuids);
+
+        for (Object[] row : cifsItems) {
+            String uuidStr = row[0].toString();
+            String svmName = (String) row[2];
+            String protocol = determineProtocolFromSvmName(svmName);
+            if (protocol == null) {
+                protocol = "CIFS";
+            }
+            allItems.add(UnifiedStorageItemListDto.builder()
+                    .uuid(uuidStr)
+                    .name((String) row[1])
+                    .type(StorageType.CIFS)
+                    .storageCategory(row[3] != null ? StorageCategory.valueOf(row[3].toString()) : null)
+                    .protocol(protocol)
+                    .appserviceNames(cifsAppserviceNames.get(uuidStr))
+                    .build());
+        }
+
+        List<Object[]> qtreeItems = ontapQtreeRepository.findNfsQtreeListItemsByAppserviceId(appserviceId, username, isAdmin, isReadonly, isStorage, isOperator);
+        List<Long> qtreeIds = qtreeItems.stream().map(row -> (Long) row[0]).toList();
+        Map<String, String> qtreeAppserviceNames = loadQtreeAppserviceNames(qtreeIds);
+
+        for (Object[] row : qtreeItems) {
+            String idStr = row[0].toString();
+            String svmName = (String) row[2];
+            String protocol = determineProtocolFromSvmName(svmName);
+            if (protocol == null) {
+                protocol = "NFS";
+            }
+            allItems.add(UnifiedStorageItemListDto.builder()
+                    .uuid(idStr)
+                    .name((String) row[1])
+                    .path(row[3] != null ? ((String) row[3]).replaceFirst("^/", "") : null)
+                    .type(StorageType.QTREE)
+                    .storageCategory(row[4] != null ? StorageCategory.valueOf(row[4].toString()) : null)
+                    .protocol(protocol)
+                    .appserviceNames(qtreeAppserviceNames.get(idStr))
+                    .build());
+        }
+
+        List<Object[]> bucketItems = storageGridBucketRepository.findBucketListItemsByAppserviceId(appserviceId, username, isAdmin, isReadonly, isStorage, isOperator);
+        List<Long> bucketIds = bucketItems.stream().map(row -> (Long) row[0]).toList();
+        Map<String, String> bucketAppserviceNames = loadBucketAppserviceNames(bucketIds);
+
+        for (Object[] row : bucketItems) {
+            String idStr = row[0].toString();
+            allItems.add(UnifiedStorageItemListDto.builder()
+                    .uuid(idStr)
+                    .name((String) row[1])
+                    .type(StorageType.S3)
+                    .storageCategory(row[2] != null ? StorageCategory.valueOf(row[2].toString()) : null)
+                    .protocol("S3")
+                    .appserviceNames(bucketAppserviceNames.get(idStr))
+                    .build());
+        }
+
+        applyFavorites(allItems, username);
+        allItems.sort(Comparator.comparing(this::effectiveName, String.CASE_INSENSITIVE_ORDER));
+
+        return allItems;
+    }
+
+    /**
+     * Annotates each item's isFavorite flag from the user's favorites, keyed by (type, uuid)
+     * since storage items span several unrelated backing tables with no shared id space.
+     */
+    private void applyFavorites(final List<UnifiedStorageItemListDto> items, final String username) {
+        final Set<String> favoriteKeys = userFavoriteStorageRepository.findFavoritesByUsername(username).stream()
+                .map(f -> f.getStorageType() + ":" + f.getStorageUuid())
+                .collect(Collectors.toSet());
+        for (final UnifiedStorageItemListDto item : items) {
+            item.setFavorite(favoriteKeys.contains(item.getType() + ":" + item.getUuid()));
+        }
+    }
+
+    @Transactional
+    public void addStorageToFavorites(final String uuid, final StorageType type) {
+        userFavoriteStorageRepository.addStorageToFavorites(type.toString(), uuid, AuthUtils.getUsername());
+    }
+
+    @Transactional
+    public void removeStorageFromFavorites(final String uuid, final StorageType type) {
+        userFavoriteStorageRepository.removeStorageFromFavorites(type.toString(), uuid, AuthUtils.getUsername());
     }
 
     @Transactional(readOnly = true)

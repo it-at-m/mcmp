@@ -1,10 +1,11 @@
 <template>
   <v-form ref="form">
-    <CommonAlert isSnowChange />
+    <common-alert is-snow-change />
     <br />
-    <CommonTimePicker
-      lableText="Abbau"
-      :timeRules="[
+    <common-time-picker
+      v-model:raw-date-in="rawDate"
+      lable-text="Abbau"
+      :time-rules="[
         validationRules.notEmptyRule('Abbauzeitpunkt darf nicht leer sein.'),
         validationRules.isNotPastTime(
           nowPlusOne,
@@ -18,7 +19,6 @@
           'Abbauzeitpunkt darf nicht mehr als 2 Wochen in der Zukunft liegen.'
         ),
       ]"
-      v-model:rawDateIn="rawDate"
     />
   </v-form>
 </template>
@@ -39,7 +39,7 @@ const form = ref<HTMLFormElement>();
 const validated = ref(false);
 const rawDate = ref<Date>(new Date());
 const nowPlusOne = computed(() => {
-  let date = new Date();
+  const date = new Date();
   date.setHours(date.getHours() + 1);
   return date;
 });

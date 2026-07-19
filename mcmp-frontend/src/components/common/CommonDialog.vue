@@ -13,9 +13,9 @@
       />
     </template>
     <v-card
+      v-if="showMainCard"
       class="modern-card"
       elevation="24"
-      v-if="showMainCard"
     >
       <v-toolbar
         class="dialog-header"
@@ -24,8 +24,8 @@
         <v-toolbar-title>
           <div class="header-content">
             <div
-              class="header-icon"
               v-if="icon"
+              class="header-icon"
             >
               <v-icon
                 :icon="icon"
@@ -46,16 +46,16 @@
         />
       </v-toolbar>
       <v-card-text class="dialog-content">
-        <CommonAlert
-          isSnowChange
+        <common-alert
           v-if="showChangeWarning"
+          is-snow-change
         />
         <br />
         <slot />
       </v-card-text>
       <v-card-actions
-        class="dialog-actions"
         v-if="showActions"
+        class="dialog-actions"
       >
         <slot name="actions">
           <v-spacer />
@@ -65,8 +65,8 @@
             color="cancel"
             size="large"
             class="action-btn cancel-btn"
-            @click="onDialogCancel"
             rounded="xl"
+            @click="onDialogCancel"
           >
             Abbrechen
           </v-btn>
@@ -76,9 +76,9 @@
             color="do"
             size="large"
             class="action-btn confirm-btn"
-            @click="onDialogConfirm"
             rounded="xl"
             :disabled="!submitActivated"
+            @click="onDialogConfirm"
           >
             Bestätigen
           </v-btn>
@@ -86,9 +86,9 @@
       </v-card-actions>
     </v-card>
     <v-card
+      v-else-if="!showMainCard"
       class="modern-card"
       elevation="24"
-      v-else-if="!showMainCard"
     >
       <v-toolbar
         class="dialog-header"
@@ -97,8 +97,8 @@
         <v-toolbar-title>
           <div class="header-content">
             <div
-              class="header-icon"
               v-if="icon"
+              class="header-icon"
             >
               <v-icon
                 :icon="icon"
@@ -119,7 +119,7 @@
         />
       </v-toolbar>
       <v-card-text class="dialog-content">
-        <CommonAlert color="error">
+        <common-alert color="error">
           <div
             v-for="(enabled, action) in actionsEnabled"
             :key="action"
@@ -139,7 +139,7 @@
             Installation deaktiviert ist, nicht aber die Linux Server
             Installation.)
           </div>
-        </CommonAlert>
+        </common-alert>
       </v-card-text>
       <v-card-actions class="dialog-actions">
         <v-spacer />
@@ -149,8 +149,8 @@
           color="cancel"
           size="large"
           class="action-btn cancel-btn"
-          @click="onDialogCancel"
           rounded="xl"
+          @click="onDialogCancel"
         >
           Abbrechen
         </v-btn>
@@ -160,7 +160,6 @@
           color="do"
           size="large"
           class="action-btn confirm-btn"
-          @click="acknowledgedActionDisabled = true"
           rounded="xl"
           :disabled="
             (actionsEnabled.value &&
@@ -169,6 +168,7 @@
               )) ||
             acknowledgedActionDisabled
           "
+          @click="acknowledgedActionDisabled = true"
         >
           Weiter
         </v-btn>
@@ -267,10 +267,12 @@ function onDialogCancel() {
 .modern-card {
   border-radius: 16px !important;
   overflow: hidden;
+  /* noinspection CssUnresolvedCustomProperty */
   background: rgb(var(--v-theme-bg));
 }
 
 .dialog-header {
+  /* noinspection CssUnresolvedCustomProperty */
   background: rgb(var(--v-theme-bg_light));
   padding: 20px 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -279,9 +281,11 @@ function onDialogCancel() {
 .header-icon {
   width: 48px;
   height: 48px;
+  /* noinspection CssUnresolvedCustomProperty */
   background: rgb(var(--v-theme-bg));
   border-radius: 12px;
   backdrop-filter: blur(10px);
+  /* noinspection CssUnresolvedCustomProperty */
   border: 1px solid rgb(var(--v-theme-bg_dark));
   display: flex;
   align-items: center;
@@ -289,6 +293,7 @@ function onDialogCancel() {
 }
 
 .dialog-title {
+  /* noinspection CssUnresolvedCustomProperty */
   color: rgb(var(--v-theme-text));
   font-size: 1.375rem;
   margin: 0;
@@ -331,10 +336,12 @@ function onDialogCancel() {
 
 .cancel-btn {
   border: 2px solid #90a4ae;
+  /* noinspection CssUnresolvedCustomProperty */
   color: rgb(var(--v-theme-cancel));
 }
 
 .cancel-btn:hover {
+  /* noinspection CssUnresolvedCustomProperty */
   background: rgb(var(--v-theme-bg_light));
   border-color: #90a4ae;
   transform: translateY(-1px);

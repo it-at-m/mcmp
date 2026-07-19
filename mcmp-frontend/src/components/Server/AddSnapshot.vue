@@ -62,7 +62,9 @@
       <v-text-field
         v-model="description"
         :maxlength="50"
-        :rules="[validationRules.maxLengthRule(50, 'Maximal 50 Zeichen erlaubt.')]"
+        :rules="[
+          validationRules.maxLengthRule(50, 'Maximal 50 Zeichen erlaubt.'),
+        ]"
         :counter="50"
       />
       <common-alert

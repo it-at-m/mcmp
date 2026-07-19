@@ -3,6 +3,7 @@ package de.muenchen.mcmp.appservice;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -36,7 +37,12 @@ public interface AppserviceRepository extends JpaRepository<Appservice, Long> {
                     WHERE gm.group_id = a.change_group_id AND u.username = :username
                 )
             )
-        ) AS has_servers
+        ) AS has_servers,
+        EXISTS (
+            SELECT 1 FROM cmp.user_favorite_appservice ufa
+            JOIN cmp."user" u_fav ON ufa.user_id = u_fav.id
+            WHERE ufa.appservice_id = a.id AND u_fav.username = :username
+        ) AS "isFavorite"
     FROM cmp.appservice a
     WHERE (
         :isAdmin
@@ -63,7 +69,17 @@ public interface AppserviceRepository extends JpaRepository<Appservice, Long> {
         OR lower(a.name) LIKE ALL (CAST(:terms AS text[]))
         OR lower(a.number) LIKE ALL (CAST(:terms AS text[]))
     )
+    AND (:favorites = FALSE OR EXISTS (
+        SELECT 1 FROM cmp.user_favorite_appservice ufa
+        JOIN cmp."user" u_fav ON ufa.user_id = u_fav.id
+        WHERE ufa.appservice_id = a.id AND u_fav.username = :username
+    ))
     ORDER BY
+        CASE WHEN EXISTS (
+            SELECT 1 FROM cmp.user_favorite_appservice ufa
+            JOIN cmp."user" u_fav ON ufa.user_id = u_fav.id
+            WHERE ufa.appservice_id = a.id AND u_fav.username = :username
+        ) THEN 0 ELSE 1 END ASC,
         CASE WHEN :sortOrder = 'asc' THEN a.name END ASC,
         CASE WHEN :sortOrder = 'desc' THEN a.name END DESC;
     """, countQuery = """
@@ -94,6 +110,11 @@ public interface AppserviceRepository extends JpaRepository<Appservice, Long> {
             OR lower(a.name) LIKE ALL (CAST(:terms AS text[]))
             OR lower(a.number) LIKE ALL (CAST(:terms AS text[]))
         )
+        AND (:favorites = FALSE OR EXISTS (
+            SELECT 1 FROM cmp.user_favorite_appservice ufa
+            JOIN cmp."user" u_fav ON ufa.user_id = u_fav.id
+            WHERE ufa.appservice_id = a.id AND u_fav.username = :username
+        ))
     """, nativeQuery = true)
     Page<AppserviceList> findVisibleAppservices(@Param("username") String username,
                                                 @Param("isAdmin") boolean isAdmin,
@@ -107,8 +128,25 @@ public interface AppserviceRepository extends JpaRepository<Appservice, Long> {
                                                 @Param("hasNetworkRole") boolean hasNetworkRole,
                                                 @Param("search") String search,
                                                 @Param("terms") String[] terms,
+                                                @Param("favorites") boolean favorites,
                                                 @Param("sortOrder") String sortOrder,
                                                 Pageable pageable);
+
+    @Modifying
+    @Query(value = """
+        INSERT INTO cmp.user_favorite_appservice (user_id, appservice_id)
+        SELECT u.id, :appserviceId FROM cmp."user" u WHERE u.username = :username
+        ON CONFLICT DO NOTHING
+    """, nativeQuery = true)
+    void addAppserviceToFavorites(@Param("appserviceId") Long appserviceId, @Param("username") String username);
+
+    @Modifying
+    @Query(value = """
+        DELETE FROM cmp.user_favorite_appservice ufa
+        WHERE ufa.appservice_id = :appserviceId
+          AND ufa.user_id = (SELECT u.id FROM cmp."user" u WHERE u.username = :username)
+    """, nativeQuery = true)
+    void removeAppserviceFromFavorites(@Param("appserviceId") Long appserviceId, @Param("username") String username);
 
     @Query(value = """
             SELECT a.*

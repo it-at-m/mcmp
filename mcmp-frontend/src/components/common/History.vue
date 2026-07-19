@@ -3,8 +3,8 @@
     <template #toolbar-actions>
       <v-btn
         v-if="showRefresh"
-        @click="$emit('refresh')"
         :icon="refreshIcon"
+        @click="$emit('refresh')"
       />
     </template>
     <slot />
@@ -30,8 +30,6 @@
             :key="header.key"
           >
             <span
-              @click="setSort(header.key)"
-              @keyup.space="setSort(header.key)"
               :aria-label="'sortiere nach ' + header.key"
               style="cursor: pointer; display: flex; align-items: center"
               tabindex="0"
@@ -42,6 +40,8 @@
                     : 'ascending'
                   : 'none'
               "
+              @click="setSort(header.key)"
+              @keyup.space="setSort(header.key)"
             >
               {{ header.title }}
               <v-icon
@@ -105,15 +105,15 @@
                       }}</span>
                     </div>
                     <div
-                      class="detail-row"
                       v-if="item.userName"
+                      class="detail-row"
                     >
                       <span class="detail-label">Durchgeführt von:</span>
                       <span class="detail-value">{{ item.userName }}</span>
                     </div>
                     <div
-                      class="detail-row"
                       v-if="item.serverId"
+                      class="detail-row"
                     >
                       <span class="detail-label">Server:</span>
                       <span class="detail-value">
@@ -123,8 +123,8 @@
                       </span>
                     </div>
                     <div
-                      class="detail-row"
                       v-if="item.appServiceId"
+                      class="detail-row"
                     >
                       <span class="detail-label">Anwendungsservice:</span>
                       <span class="detail-value">
@@ -135,8 +135,8 @@
                     </div>
                     <!-- Incidents Tabelle -->
                     <div
-                      class="detail-row"
                       v-if="jobIncidents[item.id]?.length"
+                      class="detail-row"
                       style="align-items: center"
                     >
                       <span class="detail-label">Incidents:</span>
@@ -197,8 +197,8 @@
                   </template>
                   <div class="detail-content">
                     <div
-                      class="detail-row"
                       v-if="item.changeStartDate"
+                      class="detail-row"
                     >
                       <span class="detail-label">geplante Startzeit:</span>
                       <span class="detail-value">{{
@@ -230,8 +230,8 @@
                       }}</span>
                     </div>
                     <div
-                      class="detail-row"
                       v-if="item.changeError"
+                      class="detail-row"
                     >
                       <span class="detail-label">Fehlermeldung:</span>
                       <span class="detail-value">{{ item.changeError }}</span>
@@ -253,8 +253,8 @@
                     />
                   </template>
                   <div
-                    class="detail-content"
                     v-if="item.awxTemplateType === 'template'"
+                    class="detail-content"
                   >
                     <div class="detail-row">
                       <span class="detail-label">AWX:</span>
@@ -295,8 +295,8 @@
                       </span>
                     </div>
                     <div
-                      class="detail-row"
                       v-if="item.awxStartDate"
+                      class="detail-row"
                     >
                       <span class="detail-label">AWX-Startzeit:</span>
                       <span class="detail-value">{{
@@ -304,8 +304,8 @@
                       }}</span>
                     </div>
                     <div
-                      class="detail-row"
                       v-if="item.awxEndDate"
+                      class="detail-row"
                     >
                       <span class="detail-label">AWX-Endzeit:</span>
                       <span class="detail-value">{{
@@ -313,8 +313,8 @@
                       }}</span>
                     </div>
                     <div
-                      class="detail-row"
                       v-if="item.awxJobDuration"
+                      class="detail-row"
                     >
                       <span class="detail-label">AWX-Laufzeit:</span>
                       <span class="detail-value">{{
@@ -322,15 +322,15 @@
                       }}</span>
                     </div>
                     <div
-                      class="detail-row"
                       v-if="item.awxError"
+                      class="detail-row"
                     >
                       <span class="detail-label">Fehlermeldung:</span>
                       <span class="detail-value">{{ item.awxError }}</span>
                     </div>
                     <div
-                      class="detail-row"
                       v-if="item.awxJobOrg"
+                      class="detail-row"
                     >
                       <span class="detail-label">AWX Organisation:</span>
                       <span class="detail-value">{{ item.awxJobOrg }}</span>
@@ -342,8 +342,8 @@
                       </div>
                     </div>
                     <div
-                      class="detail-row"
                       v-if="item.awxJobStatus"
+                      class="detail-row"
                     >
                       <span class="detail-label">AWX Job Status:</span>
                       <div class="detail-value">
@@ -351,15 +351,15 @@
                       </div>
                     </div>
                     <div
-                      class="detail-row"
                       v-if="item.awxJobFailed !== null"
+                      class="detail-row"
                     >
                       <span class="detail-label">Failed:</span>
                       <span class="detail-value">{{ item.awxJobFailed }} </span>
                     </div>
                     <div
-                      class="detail-row"
                       v-if="item.awxJobReturnCompleted !== null"
+                      class="detail-row"
                     >
                       <span class="detail-label">Job Result Completed:</span>
                       <span class="detail-value"
@@ -367,8 +367,8 @@
                       </span>
                     </div>
                     <div
-                      class="detail-row"
                       v-if="item.awxJobReturnMessage"
+                      class="detail-row"
                     >
                       <span class="detail-label">Job Result Message:</span>
                       <pre class="detail-value description-text">{{
@@ -376,8 +376,8 @@
                       }}</pre>
                     </div>
                     <div
-                      class="detail-row"
                       v-if="item.awxJobReturnData"
+                      class="detail-row"
                     >
                       <span class="detail-label">Job Result Data:</span>
                       <pre class="detail-value description-text">{{
@@ -385,8 +385,8 @@
                       }}</pre>
                     </div>
                     <div
-                      class="detail-row"
                       v-if="item.awxJobErrorMessage"
+                      class="detail-row"
                     >
                       <span class="detail-label">AWX Fehlermeldung:</span>
                       <pre class="detail-value description-text">{{
@@ -394,8 +394,8 @@
                       }}</pre>
                     </div>
                     <div
-                      class="detail-row"
                       v-if="item.awxVariables"
+                      class="detail-row"
                     >
                       <span class="detail-label">AWX Launch Request:</span>
                       <pre class="detail-value description-text">{{
@@ -403,8 +403,8 @@
                       }}</pre>
                     </div>
                     <div
-                      class="detail-row"
                       v-if="!item.awxVariables && item.awxExtraVars"
+                      class="detail-row"
                     >
                       <span class="detail-label">AWX ExtraVars:</span>
                       <span class="detail-value description-text">
@@ -412,8 +412,8 @@
                       </span>
                     </div>
                     <div
-                      class="detail-row"
                       v-if="item.awxJobArtifacts"
+                      class="detail-row"
                     >
                       <span class="detail-label">Artifacts:</span>
                       <pre class="detail-value description-text">{{
@@ -562,8 +562,8 @@
                           <td :colspan="nodeColumns.length">
                             <div class="pa-4 node-details-expanded">
                               <div
-                                class="detail-row"
                                 v-if="node.awxDescription"
+                                class="detail-row"
                               >
                                 <span class="detail-label">AWX:</span>
                                 <span class="detail-value">{{
@@ -621,8 +621,8 @@
                                 }}</span>
                               </div>
                               <div
-                                class="detail-row"
                                 v-if="node.jobDepth === 0"
+                                class="detail-row"
                               >
                                 <span class="detail-label"
                                   >AWX Gesamtstatus:</span
@@ -664,8 +664,8 @@
                                 }}</pre>
                               </div>
                               <div
-                                class="detail-row"
                                 v-if="node.jobErrorMessage"
+                                class="detail-row"
                               >
                                 <span class="detail-label">Error:</span>
                                 <pre class="description-text">{{
@@ -686,13 +686,13 @@
                                 }}</pre>
                               </div>
                               <div
-                                class="detail-row"
                                 v-if="
                                   node.jobExtraVars &&
                                   ((node.jobDepth === 0 &&
                                     !node.awxLaunchRequest) ||
                                     (node.jobDepth ?? 0) > 0)
                                 "
+                                class="detail-row"
                               >
                                 <span class="detail-label">ExtraVars:</span>
                                 <pre class="description-text">{{
@@ -700,8 +700,8 @@
                                 }}</pre>
                               </div>
                               <div
-                                class="detail-row"
                                 v-if="node.jobArtifacts"
+                                class="detail-row"
                               >
                                 <span class="detail-label">Artifacts:</span>
                                 <pre class="description-text">{{
@@ -745,8 +745,8 @@
                       /></span>
                     </div>
                     <div
-                      class="detail-row"
                       v-if="item.quickdiscoveryError"
+                      class="detail-row"
                     >
                       <span class="detail-label">Fehlermeldung:</span>
                       <pre class="detail-value">{{
@@ -795,8 +795,8 @@
                       /></span>
                     </div>
                     <div
-                      class="detail-row"
                       v-if="item.taggingError"
+                      class="detail-row"
                     >
                       <span class="detail-label">Fehlermeldung:</span>
                       <pre class="detail-value">{{ item.taggingError }}</pre>

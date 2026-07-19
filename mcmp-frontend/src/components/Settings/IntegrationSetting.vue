@@ -1,13 +1,13 @@
 <template>
   <common-card
     :title="title"
-    :topMargin="title == 'AWX' ? '4' : '0'"
+    :top-margin="title == 'AWX' ? '4' : '0'"
   >
     <template #toolbar-actions>
       <v-btn
         :icon="mdiPlus"
-        @click="addItem(title)"
         :aria-label="'Neuen ' + title + ' Eintrag hinzufügen'"
+        @click="addItem(title)"
       />
     </template>
     <v-data-table
@@ -20,7 +20,7 @@
       :items-per-page="-1"
       hide-default-footer
     >
-      <template v-slot:[`item.enabled`]="{ item }">
+      <template #[`item.enabled`]="{ item }">
         <v-chip
           v-if="hasEnabled(item)"
           :color="item.enabled ? '_green' : '_red'"
@@ -30,16 +30,16 @@
         </v-chip>
       </template>
 
-      <template v-slot:[`item.edit`]="{ item }">
+      <template #[`item.edit`]="{ item }">
         <v-btn
           :icon="mdiPencil"
-          @click="editItem(item)"
           :aria-label="`Eintrag ${item.apiDescription} bearbeiten`"
+          @click="editItem(item)"
         />
         <v-btn
           :icon="mdiDelete"
-          @click="askDeleteItem(item)"
           :aria-label="`Eintrag ${item.apiDescription} löschen`"
+          @click="askDeleteItem(item)"
         />
       </template>
     </v-data-table>
@@ -49,8 +49,8 @@
     max-width="500px"
   >
     <integration-setting-edit
-      :toEdit="toEdit"
-      @editDialog="(dialog: boolean) => (editDialog = dialog)"
+      :to-edit="toEdit"
+      @edit-dialog="(dialog: boolean) => (editDialog = dialog)"
       @edit="(item: Config) => updateItem(item, 'edit')"
     />
   </v-dialog>
@@ -98,11 +98,7 @@ import CommonCard from "@/components/common/CommonCard.vue";
 import IntegrationSettingEdit from "@/components/Settings/IntegrationSettingEdit.vue";
 
 export type Config =
-  | SnowConfig
-  | AwxConfig
-  | InfobloxConfig
-  | BaasConfig
-  | Cloud;
+  SnowConfig | AwxConfig | InfobloxConfig | BaasConfig | Cloud;
 
 const props = defineProps<{
   title: string;

@@ -11,6 +11,7 @@ import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
+import java.time.OffsetDateTime;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -175,5 +176,17 @@ public class OntapVolume extends AbstractEntity {
     @ManyToMany
     @JoinTable(name = "ontap_snapshot_has_volumes", joinColumns = {@JoinColumn(name = "ontap_volume_id")}, inverseJoinColumns = {@JoinColumn(name = "ontap_snapshot_id")})
     private Set<OntapSnapshot> ontapSnapshots = new LinkedHashSet<>();
+
+    @Column(name = "snow_name", length = Integer.MAX_VALUE)
+    private String snowName;
+
+    @Column(name = "snow_sys_id", length = Integer.MAX_VALUE)
+    private String snowSysId;
+
+    @Column(name = "snow_sys_class", length = Integer.MAX_VALUE)
+    private String snowSysClass;
+
+    @Column(name = "snow_last_discovered")
+    private OffsetDateTime snowLastDiscovered;
 
 }

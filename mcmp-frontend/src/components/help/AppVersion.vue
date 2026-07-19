@@ -1,5 +1,5 @@
 <template>
-  <CommonCard title="Version">
+  <common-card title="MCMP">
     <v-alert
       v-if="versionError"
       type="error"
@@ -29,7 +29,7 @@
       hide-default-header
       density="comfortable"
     >
-      <template v-slot:[`item.value`]="{ item, value }">
+      <template #[`item.value`]="{ item, value }">
         <span :class="{ 'version-mono': item.mono }">
           <template
             v-if="item.key === 'gitCommitIdFull' && value && value !== '—'"
@@ -43,14 +43,24 @@
               {{ value }}
             </a>
           </template>
+          <template v-else-if="item.key === 'repo' && value">
+            <a
+              class="links"
+              :href="value"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {{ value }}
+            </a>
+          </template>
           <template v-else>
             {{ value ?? "—" }}
           </template>
         </span>
       </template>
     </v-data-table>
-  </CommonCard>
-  <CommonCard
+  </common-card>
+  <common-card
     title="Verwendete Technologien"
     class="mt-4"
   >
@@ -64,7 +74,7 @@
       hide-default-header
       density="comfortable"
     >
-      <template v-slot:[`item.value`]="{ value }">
+      <template #[`item.value`]="{ value }">
         <a
           class="links d-inline-flex align-center"
           :href="value"
@@ -80,10 +90,12 @@
         </a>
       </template>
     </v-data-table>
-  </CommonCard>
+  </common-card>
 </template>
 
 <script setup lang="ts">
+
+
 import type { AppVersion } from "@/types/AppVersion.ts";
 import type { DataTableHeader } from "vuetify/framework";
 
@@ -100,12 +112,12 @@ const props = defineProps({
   },
 });
 
-type VersionRow = {
+interface VersionRow {
   key: string;
   label: string;
   value: string;
   mono?: boolean;
-};
+}
 
 const version = ref<AppVersion | null>(null);
 const versionLoading = ref(false);
@@ -120,7 +132,12 @@ const rows = computed<VersionRow[]>(() => {
   const v = version.value;
 
   const allRows: VersionRow[] = [
-    { key: "appVersion", label: "App-Version", value: v?.version ?? "—" },
+    {
+      key: "repo",
+      label: "Repository",
+      value: "https://github.com/it-at-m/mcmp",
+    },
+    { key: "appVersion", label: "Version", value: v?.version ?? "—" },
     {
       key: "buildTime",
       label: "Build-Zeit",
@@ -155,7 +172,7 @@ const rows = computed<VersionRow[]>(() => {
     return allRows;
   }
 
-  const adminOnlyKeys = ["gitCommitIdFull", "buildTime", "gitCommitTime"];
+  const adminOnlyKeys = ["gitDirty"];
   return allRows.filter((row) => !adminOnlyKeys.includes(row.key));
 });
 
@@ -234,6 +251,7 @@ onMounted(() => {
 :deep(a.links:visited),
 :deep(a.links:hover),
 :deep(a.links:active) {
+  /* noinspection CssUnresolvedCustomProperty */
   color: rgb(var(--v-theme-link));
   text-decoration: none;
 }

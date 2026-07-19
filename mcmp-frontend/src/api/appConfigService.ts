@@ -8,7 +8,12 @@ const BASE_URL = () => `${getApiBase()}${APP_CONFIG_BASE}`;
 
 export default {
   getSystemStatus(loading: Ref<boolean>): Promise<SystemStatus> {
-    return apiFetch<SystemStatus>(`${BASE_URL()}/system-status`, {}, loading, true);
+    return apiFetch<SystemStatus>(
+      `${BASE_URL()}/system-status`,
+      {},
+      loading,
+      true
+    );
   },
 
   updateSystemStatus(

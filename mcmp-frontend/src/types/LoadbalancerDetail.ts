@@ -38,6 +38,11 @@ export interface LbIrule {
   content: string | null;
 }
 
+export interface LbAppserviceRef {
+  id: number;
+  name: string;
+}
+
 export interface LoadbalancerDetail {
   id: number;
   name: string;
@@ -50,7 +55,8 @@ export interface LoadbalancerDetail {
   redirect80: boolean;
   addresses: string[];
   domains: string[];
-  appserviceNames: string[];
+  appservices: LbAppserviceRef[];
+  tenantRepositoryUrl: string | null;
   pools: LoadbalancerPool[];
   irules: LbIrule[];
 }

@@ -1,15 +1,15 @@
 <template>
-  <CommonDialog
+  <common-dialog
     v-model="dialog"
     title="Oracle Backup erstellen"
     :icon="mdiPencil"
     max-width="600"
     show-actions
-    submitActivated
+    submit-activated
+    show-change-warning
+    :check-for-enabled-actions="['DB_ORACLE_CREATE_BACKUP']"
     @dialog-cancel="close"
     @dialog-confirm="save"
-    showChangeWarning
-    :checkForEnabledActions="['DB_ORACLE_CREATE_BACKUP']"
   >
     <template #activator="{ props }">
       <v-list-item-title
@@ -19,12 +19,12 @@
       </v-list-item-title>
     </template>
     <v-form
-      ref="oracleRef"
       v-if="props.type == 'Oracle'"
+      ref="oracleRef"
     >
-      <CommonAlert
-        color="info"
+      <common-alert
         v-if="selectedBackupType == 'inkrementelle_Sicherung'"
+        color="info"
       >
         <h4>Info:</h4>
         Bei der inkrementellen Sicherung (online Archivelog-Sicherung mit
@@ -34,10 +34,10 @@
         bei der Wiederherstellung jedoch etwas länger, da sie auf der letzten
         Vollsicherung aufsetzt und danach kommende inkrementelle Sicherungen
         nachzieht.
-      </CommonAlert>
-      <CommonAlert
-        color="info"
+      </common-alert>
+      <common-alert
         v-if="selectedBackupType == 'volle_Sicherung'"
+        color="info"
       >
         <h4>Info:</h4>
         Bei der vollen Sicherung werden alle Daten der Datenbank gesichert. Dies
@@ -46,10 +46,10 @@
         Zeit beim Sichern im Vergleich zu einer inkrementellen Sicherung
         (Durchsatz 20-35GB/min abhängig von Auslastung
         Infrastruktur/VM/Datenbank).
-      </CommonAlert>
-      <CommonAlert
-        color="notice_red"
+      </common-alert>
+      <common-alert
         v-if="selectedBackupType == 'offline_Sicherung'"
+        color="notice_red"
       >
         <h4>Hinweis:</h4>
         Bei der offline Sicherung wird die Oracle Datenbank heruntergefahren und
@@ -59,18 +59,18 @@
         Datenbanksicherung abgeschlossen ist.<br />
         Wenn die Archivierung einer Datenbank deaktiviert ist
         ("No-Archive-Mode"), ist dies die einzige konsistente Sicherungsmethode.
-      </CommonAlert>
+      </common-alert>
       <br />
       <v-select
-        label="Backup Typ"
         v-model="selectedBackupType"
+        label="Backup Typ"
         :items="oracleBackupType"
         item-title="key"
         item-value="value"
         :menu-props="{ persistent: true, closeOnContentClick: true }"
       />
     </v-form>
-  </CommonDialog>
+  </common-dialog>
 </template>
 <script setup lang="ts">
 import type Server from "@/types/Server.ts";
@@ -86,9 +86,7 @@ const props = defineProps<{
   type: string;
   server: Server;
 }>();
-const emit = defineEmits<{
-  (e: "save", value: boolean): void;
-}>();
+const emit = defineEmits<(e: "save", value: boolean) => void>();
 const dialog = ref(false);
 const oracleRef = ref<HTMLFormElement>();
 const loading = ref<boolean>(false);

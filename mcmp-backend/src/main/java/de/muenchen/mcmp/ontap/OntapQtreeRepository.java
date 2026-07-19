@@ -54,6 +54,25 @@ public interface OntapQtreeRepository extends JpaRepository<OntapQtree, Long> {
             "WHERE q.id IN :ids")
     List<OntapQtree> findByIdsWithAppservices(@Param("ids") List<Long> ids);
 
+    @Query("SELECT q.id, q.name, s.name, q.path, q.storageCategory FROM OntapQtree q " +
+            "JOIN q.volume v " +
+            "JOIN v.svm s " +
+            "JOIN q.appservices aq " +
+            "WHERE aq.id = :appserviceId " +
+            "AND LOWER(s.name) LIKE '%dcn' " +
+            "AND v.ontapCifsShares IS EMPTY " +
+            "AND q.storageCategory IS NOT NULL " +
+            "AND (" +
+            "   :isAdmin = TRUE OR :isReadonly = TRUE OR :isStorage = TRUE OR :isOperator = TRUE OR " +
+            "   EXISTS (SELECT 1 FROM q.appservices a JOIN a.changeGroup g JOIN g.users u WHERE u.username = :username)" +
+            ")")
+    List<Object[]> findNfsQtreeListItemsByAppserviceId(@Param("appserviceId") Long appserviceId,
+                                                       @Param("username") String username,
+                                                       @Param("isAdmin") boolean isAdmin,
+                                                       @Param("isReadonly") boolean isReadonly,
+                                                       @Param("isStorage") boolean isStorage,
+                                                       @Param("isOperator") boolean isOperator);
+
     @Query("SELECT CASE WHEN :isAdmin = TRUE OR :isStorage = TRUE OR EXISTS (" +
             "SELECT 1 FROM OntapQtree q " +
             "JOIN q.volume v " +

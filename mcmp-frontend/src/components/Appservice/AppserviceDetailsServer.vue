@@ -3,7 +3,27 @@
     v-if="props.selectedAppservice?.servers?.length"
     class="links"
   >
-    <common-card title="Zugeordnete Server" top-margin="0">
+    <common-card
+      title="Zugeordnete Server"
+      top-margin="0"
+    >
+      <template #append-title>
+        <v-tooltip
+          v-if="anyServerHasWarnings"
+          location="top"
+          text="Handlungsbedarf an mind. einem Server"
+        >
+          <template #activator="{ props: tooltipProps }">
+            <v-icon
+              v-bind="tooltipProps"
+              :icon="mdiAlert"
+              color="orange"
+              size="22"
+              class="ml-2"
+            />
+          </template>
+        </v-tooltip>
+      </template>
       <template #toolbar-actions>
         <div class="action-buttons">
           <add-snapshot
@@ -84,7 +104,9 @@
             title="Downtime setzen"
             :is-batch-operation="true"
             :selected-server-ids="selectedServers"
-            :parent-all-selected-servers-eligible="allSelectedServersEligibleForDowntime"
+            :parent-all-selected-servers-eligible="
+              allSelectedServersEligibleForDowntime
+            "
             :parent-disabled-tooltip="downtimeDisabledTooltip"
             @save="onBatchOrderCompleteDone"
           />
@@ -149,11 +171,34 @@
               </v-tooltip>
             </td>
             <td>
-              <span class="font-weight-bold">
-                <router-link :to="`/server/${server.id}`">
-                  {{ server.name }}
-                </router-link>
-              </span>
+              <div class="d-flex align-center">
+                <span class="font-weight-bold">
+                  <router-link :to="`/server/${server.id}`">
+                    {{ server.name }}
+                  </router-link>
+                </span>
+                <!-- Tooltip & Icon für die Warnung (verlinkt auf denselben Server) -->
+                <v-tooltip
+                  v-if="server.hasWarnings"
+                  location="top"
+                  text="Handlung erforderlich"
+                >
+                  <template #activator="{ props: tooltipProps }">
+                    <router-link
+                      :to="`/server/${server.id}`"
+                      class="d-flex align-center text-decoration-none"
+                    >
+                      <v-icon
+                        v-bind="tooltipProps"
+                        :icon="mdiAlert"
+                        color="orange"
+                        size="20"
+                        class="ml-1"
+                      />
+                    </router-link>
+                  </template>
+                </v-tooltip>
+              </div>
             </td>
             <td>
               <div class="d-flex align-center">
@@ -245,6 +290,7 @@ import type Appservice from "@/types/Appservice.ts";
 import type Server from "@/types/Server.ts";
 
 import {
+  mdiAlert,
   mdiCloud,
   mdiKeyChain,
   mdiPauseCircle,
@@ -259,14 +305,13 @@ import { computed, ref, watch } from "vue";
 
 import serverService from "@/api/serverService";
 import snapshotService from "@/api/snapshotService";
+import CommonCard from "@/components/common/CommonCard.vue";
 import ActionButton from "@/components/Server/ActionButtons/ActionButton.vue";
 import CheckMkDialog from "@/components/Server/ActionButtons/CheckMkDialog.vue";
 import RootAdminRechteBtn from "@/components/Server/ActionButtons/RootAdminRechteBtn.vue";
 import AddSnapshot from "@/components/Server/AddSnapshot.vue";
 import OsCell from "@/components/Server/OsCell.vue";
-import CommonCard from "@/components/common/CommonCard.vue";
 import { useFormatter } from "@/composables/formatter.ts";
-import { useRules } from "@/composables/rules.ts";
 import { useUserStore } from "@/stores/user.ts";
 
 const props = defineProps<{
@@ -504,7 +549,10 @@ const noSelectionTooltip = "Keine Server ausgewählt.";
 const snapshotDisabledTooltip = computed(() => {
   if (allSelectedServersEligibleForSnapshot.value) return "";
   if (selectedServers.value.length === 0) return noSelectionTooltip;
-  if (Array.from(fullServerCache.value.keys()).length < selectedServers.value.length) {
+  if (
+    Array.from(fullServerCache.value.keys()).length <
+    selectedServers.value.length
+  ) {
     return "Serverdaten werden geladen. Bitte warten.";
   }
   return "Nur auf virtuellen Servern mit Bestellberechtigung und ohne bestehenden Snapshot können Snapshots erstellt werden.";
@@ -513,7 +561,10 @@ const snapshotDisabledTooltip = computed(() => {
 const downtimeDisabledTooltip = computed(() => {
   if (allSelectedServersEligibleForDowntime.value) return "";
   if (selectedServers.value.length === 0) return noSelectionTooltip;
-  if (Array.from(fullServerCache.value.keys()).length < selectedServers.value.length) {
+  if (
+    Array.from(fullServerCache.value.keys()).length <
+    selectedServers.value.length
+  ) {
     return "Serverdaten werden geladen. Bitte warten.";
   }
   return "Nur auf Servern mit Bestellberechtigung kann eine Downtime gesetzt werden.";
@@ -529,6 +580,12 @@ const powerStopTooltip = computed(() => {
   if (selectedServers.value.length === 0) return noSelectionTooltip;
   if (!allSelectedDataLoaded()) return "Wird geladen...";
   return allSelectedServersEligibleToStop.value ? "Stop" : "Nicht möglich";
+});
+
+const anyServerHasWarnings = computed(() => {
+  return (props.selectedAppservice?.servers || []).some(
+    (server: any) => server.hasWarnings
+  );
 });
 
 const powerRestartTooltip = computed(() => {

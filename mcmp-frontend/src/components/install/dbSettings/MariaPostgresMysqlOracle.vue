@@ -160,12 +160,12 @@
           instlServerDetails.dbParams!.mariaPostgresMysqlOracle.conn_app_server
         "
         label="Anwendungsserver Verbindung erlauben"
+        rounded
         @click="
           getServers();
           instlServerDetails.dbParams!.mariaPostgresMysqlOracle.customer_app_server =
             [];
         "
-        rounded
       />
     </v-col>
   </v-row>
@@ -211,8 +211,7 @@ const validationRules = useRules();
 
 const dbVersionItems = computed<string[]>(() => {
   const map = props.instlServerDetails.category?.allowedDBVersions as
-    | Record<string, string[]>
-    | undefined;
+    Record<string, string[]> | undefined;
   const os = props.instlServerDetails.osVersion;
   if (!map || !os) return [];
   if (Array.isArray(os)) {

@@ -1,12 +1,12 @@
 <template>
-  <v-container>
+  <v-container class="pa-0">
     <v-chart
       v-if="
         (selectedStorageItem.type == 'NFS' ||
           selectedStorageItem.type == 'CIFS') &&
         !selectedStorageItem.isWorm
       "
-      style="width: 100%; height: clamp(250px, 40vh, 400px)"
+      style="width: 100%; height: clamp(80px, 12vh, 110px)"
       :option="nfsCifsChartOption"
       autoresize
     />
@@ -17,13 +17,13 @@
           selectedStorageItem.type == 'CIFS') &&
           selectedStorageItem.isWorm)
       "
-      style="width: 100%; height: clamp(250px, 40vh, 400px)"
+      style="width: 100%; height: clamp(80px, 12vh, 110px)"
       :option="qtreeChartOption"
       autoresize
     />
     <v-chart
       v-else-if="selectedStorageItem.type == 'S3'"
-      style="width: 100%; height: clamp(250px, 40vh, 400px)"
+      style="width: 100%; height: clamp(80px, 12vh, 110px)"
       :option="s3ChartOption"
       autoresize
     />
@@ -32,8 +32,9 @@
 <script setup lang="ts">
 import type { UnifiedStorageItem } from "@/types/Storage.ts";
 
-import { PieChart } from "echarts/charts";
+import { BarChart } from "echarts/charts";
 import {
+  GridComponent,
   LegendComponent,
   TitleComponent,
   TooltipComponent,
@@ -50,7 +51,8 @@ use([
   TitleComponent,
   TooltipComponent,
   LegendComponent,
-  PieChart,
+  GridComponent,
+  BarChart,
   CanvasRenderer,
 ]);
 
@@ -63,6 +65,12 @@ const theme = useTheme();
 const formatter = useFormatter();
 
 const bytesPerGb = 1024 * 1024 * 1024;
+
+interface TooltipFormatterParam {
+  marker: string;
+  seriesName: string;
+  value: number;
+}
 
 function clampToPositive(value?: number): number {
   return Math.max(value ?? 0, 0);
@@ -94,12 +102,32 @@ const snapshotReserveBytes = computed(() => {
 function getChartOption(data: { value: number; name: string }[]) {
   const isDark = theme.global.current.value.dark;
   const textColor = isDark ? "#ffffff" : "#000000";
+  const total = data.reduce((sum, d) => sum + d.value, 0);
 
   return {
+    grid: {
+      left: 0,
+      right: 16,
+      top: 2,
+      bottom: 28,
+    },
+    xAxis: {
+      type: "value",
+      min: 0,
+      max: total > 0 ? total : 1,
+      show: false,
+    },
+    yAxis: {
+      type: "category",
+      data: ["Ressourcen"],
+      show: false,
+    },
     tooltip: {
       trigger: "item",
-      formatter: (params: any) => {
-        return `${params.marker}${params.name} ${formatter.formatBytesSmart(params.value)} (${params.percent}%)`;
+      formatter: (params: TooltipFormatterParam) => {
+        const percent =
+          total > 0 ? ((params.value / total) * 100).toFixed(1) : "0";
+        return `${params.marker}${params.seriesName} ${formatter.formatBytesSmart(params.value)} (${percent}%)`;
       },
     },
     legend: {
@@ -108,26 +136,27 @@ function getChartOption(data: { value: number; name: string }[]) {
       left: "center",
       textStyle: { color: textColor },
       selectedMode: false,
+      formatter: (name: string) => {
+        const item = data.find((d) => d.name === name);
+        return item
+          ? `${name}: ${formatter.formatBytesSmart(item.value)}`
+          : name;
+      },
     },
-    series: [
-      {
-        name: "Ressourcen",
-        type: "pie",
-        radius: "65%",
-        center: ["50%", "45%"],
-        label: {
-          color: textColor,
-        },
-        data: data,
-        emphasis: {
-          itemStyle: {
-            shadowBlur: 10,
-            shadowOffsetX: 0,
-            shadowColor: "rgba(0, 0, 0, 0.5)",
-          },
+    series: data.map((d) => ({
+      name: d.name,
+      type: "bar",
+      stack: "total",
+      barWidth: 32,
+      data: [d.value],
+      emphasis: {
+        itemStyle: {
+          shadowBlur: 10,
+          shadowOffsetX: 0,
+          shadowColor: "rgba(0, 0, 0, 0.5)",
         },
       },
-    ],
+    })),
   };
 }
 
@@ -157,16 +186,8 @@ const nfsCifsChartOption = computed(() => {
 
   return getChartOption([
     {
-      value: Math.max(reserveSize - snapshotUsed, 0),
-      name: "Snapshotreservierung: frei",
-    },
-    {
-      value: Math.min(snapshotUsed, reserveSize),
-      name: "Snapshotreservierung: belegt",
-    },
-    {
-      value: snapshotOverflowIntoAfs,
-      name: "Aktives Dateisystem: belegt durch Snapshots",
+      value: logicalUsedByAfs,
+      name: "Aktives Dateisystem: regulär belegt",
     },
     {
       value: Math.max(
@@ -179,8 +200,16 @@ const nfsCifsChartOption = computed(() => {
       name: "Aktives Dateisystem: frei",
     },
     {
-      value: logicalUsedByAfs,
-      name: "Aktives Dateisystem: regulär belegt",
+      value: Math.max(reserveSize - snapshotUsed, 0),
+      name: "Snapshotreservierung: frei",
+    },
+    {
+      value: Math.min(snapshotUsed, reserveSize),
+      name: "Snapshotreservierung: belegt",
+    },
+    {
+      value: snapshotOverflowIntoAfs,
+      name: "Aktives Dateisystem: belegt durch Snapshots",
     },
   ]);
 });

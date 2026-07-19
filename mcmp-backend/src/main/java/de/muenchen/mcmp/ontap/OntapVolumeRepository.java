@@ -79,6 +79,43 @@ public interface OntapVolumeRepository extends JpaRepository<OntapVolume, Long> 
             "WHERE v.volumeUuid IN :uuids")
     List<OntapVolume> findByVolumeUuidsWithAppservices(@Param("uuids") List<UUID> uuids);
 
+    @Query("SELECT v.volumeUuid, v.name, s.name, v.storageCategory FROM OntapVolume v " +
+            "JOIN v.svm s " +
+            "JOIN v.appservices av " +
+            "WHERE av.id = :appserviceId " +
+            "AND (LOWER(s.name) LIKE '%dcn' OR LOWER(s.name) LIKE '%dcc') " +
+            "AND v.ontapCifsShares IS EMPTY " +
+            "AND v.ontapQtrees IS EMPTY " +
+            "AND v.storageCategory IS NOT NULL " +
+            "AND (" +
+            "   :isAdmin = TRUE OR :isReadonly = TRUE OR :isStorage = TRUE OR :isOperator = TRUE OR " +
+            "   EXISTS (SELECT 1 FROM v.appservices a JOIN a.changeGroup g JOIN g.users u WHERE u.username = :username)" +
+            ")")
+    List<Object[]> findNfsVolumeListItemsByAppserviceId(@Param("appserviceId") Long appserviceId,
+                                                        @Param("username") String username,
+                                                        @Param("isAdmin") boolean isAdmin,
+                                                        @Param("isReadonly") boolean isReadonly,
+                                                        @Param("isStorage") boolean isStorage,
+                                                        @Param("isOperator") boolean isOperator);
+
+    @Query("SELECT v.volumeUuid, v.name, s.name, v.storageCategory FROM OntapVolume v " +
+            "JOIN v.svm s " +
+            "JOIN v.ontapCifsShares cs " +
+            "JOIN v.appservices av " +
+            "WHERE av.id = :appserviceId " +
+            "AND v.storageCategory IS NOT NULL " +
+            "AND (" +
+            "   :isAdmin = TRUE OR :isReadonly = TRUE OR :isStorage = TRUE OR :isOperator = TRUE OR " +
+            "   EXISTS (SELECT 1 FROM v.appservices a JOIN a.changeGroup g JOIN g.users u WHERE u.username = :username)" +
+            ") " +
+            "GROUP BY v.id, v.volumeUuid, v.name, s.name, v.storageCategory")
+    List<Object[]> findCifsVolumeListItemsByAppserviceId(@Param("appserviceId") Long appserviceId,
+                                                         @Param("username") String username,
+                                                         @Param("isAdmin") boolean isAdmin,
+                                                         @Param("isReadonly") boolean isReadonly,
+                                                         @Param("isStorage") boolean isStorage,
+                                                         @Param("isOperator") boolean isOperator);
+
     @Query("SELECT CASE WHEN :isAdmin = TRUE OR :isStorage = TRUE OR EXISTS (" +
             "SELECT 1 FROM OntapVolume v " +
             "JOIN v.appservices a " +

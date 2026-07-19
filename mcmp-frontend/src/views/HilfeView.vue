@@ -23,12 +23,12 @@
         v-if="isAdmin"
         value="faqCategories"
       >
-        <HelpFaqCategories v-if="activeTab === 'faqCategories'" />
+        <help-faq-categories v-if="activeTab === 'faqCategories'" />
       </v-window-item>
 
       <!-- FAQ Tab -->
       <v-window-item value="faq">
-        <HelpFaq
+        <help-faq
           v-if="activeTab === 'faq'"
           :is-admin="isAdmin"
         />
@@ -36,7 +36,7 @@
 
       <!-- Changelog Tab -->
       <v-window-item value="changelog">
-        <HelpChangelog
+        <help-changelog
           v-if="activeTab === 'changelog'"
           :is-admin="isAdmin"
         />
@@ -44,7 +44,7 @@
 
       <!-- Version Tab -->
       <v-window-item value="version">
-        <AppVersion
+        <app-version
           v-if="activeTab === 'version'"
           :is-admin="isAdmin"
         />
@@ -53,7 +53,7 @@
   </v-container>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, ref } from "vue";
 
 import AppVersion from "@/components/help/AppVersion.vue";

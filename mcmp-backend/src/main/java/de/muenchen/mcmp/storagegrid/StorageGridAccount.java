@@ -11,7 +11,6 @@ import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Set;
 
 @Getter
@@ -75,5 +74,12 @@ public class StorageGridAccount extends AbstractEntity {
     @JoinTable(name = "storagegrid_accounts_has_appservices", joinColumns = {@JoinColumn(name = "storagegrid_accounts_id")}, inverseJoinColumns = {@JoinColumn(name = "appservice_id")})
     private Set<Appservice> appservices = new LinkedHashSet<>();
 
+    @Column(name = "snow_name", length = Integer.MAX_VALUE)
+    private String snowName;
 
+    @Column(name = "snow_sys_id", length = Integer.MAX_VALUE)
+    private String snowSysId;
+
+    @Column(name = "snow_sys_class", length = Integer.MAX_VALUE)
+    private String snowSysClass;
 }

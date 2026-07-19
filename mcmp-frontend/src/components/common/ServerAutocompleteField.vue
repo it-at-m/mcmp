@@ -40,9 +40,7 @@ interface Props {
   loading?: boolean; // Global loading state from the parent component
 }
 
-interface Emits {
-  (e: "update:modelValue", value: ServerAutocomplete | null): void;
-}
+type Emits = (e: "update:modelValue", value: ServerAutocomplete | null) => void;
 
 defineEmits<Emits>();
 

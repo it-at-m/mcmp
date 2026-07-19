@@ -21,9 +21,7 @@ const props = defineProps<{
   maxSizeInGB: number;
 }>();
 
-const emit = defineEmits<{
-  (e: "update:modelValue", value: number): void;
-}>();
+const emit = defineEmits<(e: "update:modelValue", value: number) => void>();
 
 const innerValue = computed<number>({
   get: () => props.modelValue,

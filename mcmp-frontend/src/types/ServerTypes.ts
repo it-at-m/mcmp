@@ -11,8 +11,8 @@ export interface ServerCategoryType {
 }
 
 export const categorys: {
-  linux: { [key: string]: ServerCategoryType };
-  windows: { [key: string]: ServerCategoryType };
+  linux: Record<string, ServerCategoryType>;
+  windows: Record<string, ServerCategoryType>;
 } = {
   linux: {
     apache: {

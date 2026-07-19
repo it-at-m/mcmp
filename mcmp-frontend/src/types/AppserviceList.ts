@@ -5,6 +5,7 @@ export default class AppserviceList {
     public id: number,
     public name: string,
     public hasServers: boolean,
-    public environment: EnvironmentType
+    public environment: EnvironmentType,
+    public isFavorite = false
   ) {}
 }

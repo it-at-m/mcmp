@@ -1,13 +1,13 @@
 <template>
   <v-container>
-    <CommonAlert isSnowChange />
+    <common-alert is-snow-change />
     <v-checkbox
       v-if="
         userStore.getUser?.authorities?.includes('ROLE_LINUX') &&
         instlServerDetails.osType == OsType.Linux
       "
-      label="Custom Linux Server (nur nach absprache mit Andy/Sebi verwenden!)"
       v-model="instlServerDetails.isLinuxCustom"
+      label="Custom Linux Server (nur nach absprache mit Andy/Sebi verwenden!)"
     ></v-checkbox>
     <div v-if="!instlServerDetails.isLinuxCustom">
       <br />

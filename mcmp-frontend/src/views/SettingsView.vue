@@ -9,8 +9,8 @@
             align-tabs="start"
           >
             <v-tab
-              value="Actions"
               v-if="isAdmin"
+              value="Actions"
             >
               Actions
               <template #prepend>
@@ -19,8 +19,8 @@
             </v-tab>
 
             <v-tab
-              value="Integration"
               v-if="isAdmin"
+              value="Integration"
             >
               Integration
               <template #prepend>
@@ -29,8 +29,8 @@
             </v-tab>
 
             <v-tab
-              value="Admin"
               v-if="isAdmin"
+              value="Admin"
             >
               Admin
               <template #prepend>
@@ -39,8 +39,8 @@
             </v-tab>
 
             <v-tab
-              value="Price"
               v-if="isAdmin"
+              value="Price"
             >
               Preise
               <template #prepend>
@@ -49,8 +49,8 @@
             </v-tab>
 
             <v-tab
-              value="Netzwerkgruppen"
               v-if="isNetwork || isAdmin"
+              value="Netzwerkgruppen"
             >
               Netzwerkgruppen
               <template #prepend>
@@ -59,8 +59,8 @@
             </v-tab>
 
             <v-tab
-              value="Patchnight"
               v-if="isAdmin || isOtherRole"
+              value="Patchnight"
             >
               Patchnight Status
               <template #prepend>
@@ -69,8 +69,8 @@
             </v-tab>
 
             <v-tab
-              value="JobStatistics"
               v-if="isAdmin"
+              value="JobStatistics"
             >
               Job Statistics
               <template #prepend>
@@ -79,8 +79,8 @@
             </v-tab>
 
             <v-tab
-              value="History"
               v-if="isAdmin || isOtherRole"
+              value="History"
             >
               <template #prepend>
                 <v-icon size="x-large">{{ mdiHistory }}</v-icon>
@@ -89,8 +89,8 @@
             </v-tab>
 
             <v-tab
-              value="AppConfig"
               v-if="isAdmin"
+              value="AppConfig"
             >
               Status & Health
               <template #prepend>
@@ -102,64 +102,64 @@
 
         <v-tabs-window v-model="tab">
           <v-tabs-window-item
+            v-if="isAdmin"
             value="Actions"
-            v-if="isAdmin"
           >
-            <Actions />
+            <actions />
           </v-tabs-window-item>
 
           <v-tabs-window-item
+            v-if="isAdmin"
             value="Integration"
-            v-if="isAdmin"
           >
-            <integrationSettings />
+            <integration-settings />
           </v-tabs-window-item>
 
           <v-tabs-window-item
+            v-if="isAdmin"
             value="Admin"
-            v-if="isAdmin"
           >
-            <adminUsers />
+            <admin-users />
           </v-tabs-window-item>
 
           <v-tabs-window-item
+            v-if="isAdmin"
             value="Price"
-            v-if="isAdmin"
           >
-            <Prices />
+            <prices />
           </v-tabs-window-item>
 
           <v-tabs-window-item
-            value="Netzwerkgruppen"
             v-if="isNetwork || isAdmin"
+            value="Netzwerkgruppen"
           >
-            <NetworkGroup />
+            <network-group />
           </v-tabs-window-item>
 
           <v-tabs-window-item
+            v-if="isAdmin || isOtherRole"
             value="Patchnight"
-            v-if="isAdmin || isOtherRole"
           >
-            <PatchnightStatus />
+            <patchnight-status />
           </v-tabs-window-item>
 
           <v-tabs-window-item
+            v-if="isAdmin"
             value="JobStatistics"
-            v-if="isAdmin"
           >
-            <JobStatistics />
+            <job-statistics />
           </v-tabs-window-item>
 
           <v-tabs-window-item
-            value="History"
             v-if="isAdmin || isOtherRole"
+            value="History"
           >
-            <AdminHistory :key="historyKey" />
+            <admin-history :key="historyKey" />
           </v-tabs-window-item>
 
           <v-tabs-window-item
-            value="AppConfig"
             v-if="isAdmin"
+            value="AppConfig"
           >
             <app-config />
           </v-tabs-window-item>
@@ -170,7 +170,17 @@
 </template>
 
 <script setup lang="ts">
-import { mdiAccountCog, mdiChartBar, mdiCogOutline, mdiCurrencyEur, mdiHeartPulse, mdiHistory, mdiNetwork, mdiPuzzle, mdiRocketLaunch, mdiServer } from "@mdi/js";
+import {
+  mdiAccountCog,
+  mdiChartBar,
+  mdiCogOutline,
+  mdiCurrencyEur,
+  mdiHeartPulse,
+  mdiHistory,
+  mdiNetwork,
+  mdiPuzzle,
+  mdiRocketLaunch,
+} from "@mdi/js";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 

@@ -1,5 +1,5 @@
 <template>
-  <CommonDialog
+  <common-dialog
     v-model="internalValue"
     :title="'Persönliche Einstellungen'"
     :icon="mdiCog"
@@ -68,7 +68,7 @@
         Schließen
       </v-btn>
     </template>
-  </CommonDialog>
+  </common-dialog>
 </template>
 
 <script setup lang="ts">

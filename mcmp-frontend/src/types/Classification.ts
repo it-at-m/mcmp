@@ -5,7 +5,7 @@ export default class Classification {
   ) {}
 }
 
-export const classifications: { [key: string]: Classification } = {
+export const classifications: Record<string, Classification> = {
   vCenterC: { kenner: "c", vCenter: "c" },
   vCenterK: { kenner: "k", vCenter: "k" },
 };

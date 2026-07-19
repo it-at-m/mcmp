@@ -5,6 +5,6 @@ export default class MountPoint {
     public capacityInBytes: number,
     public freeSpaceInBytes: number,
     public source: string,
-    public editable: boolean,
+    public editable: boolean
   ) {}
 }

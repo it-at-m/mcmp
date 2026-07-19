@@ -16,6 +16,33 @@
       @row-click="onRowClick"
       @load-more="onLoadMore"
     >
+      <template #item.domain="{ item }">
+        <div class="domain-header">
+          <v-btn
+            icon
+            variant="text"
+            density="compact"
+            :color="item.isFavorite ? 'warning' : 'grey-lighten-1'"
+            class="mr-1"
+            @click.stop="toggleFavorite(item)"
+          >
+            <v-icon>{{ item.isFavorite ? mdiStar : mdiStarOutline }}</v-icon>
+          </v-btn>
+          <v-tooltip>
+            <template #activator="{ props: tooltipProps }">
+              <img
+                class="domain-header-icon"
+                v-bind="tooltipProps"
+                src="https://monitoring.muenchen.de/lhmmon/check_mk/images/icons/f5.png"
+                alt="Loadbalancer icon"
+                aria-hidden="true"
+              />
+            </template>
+            F5 Loadbalancer
+          </v-tooltip>
+          <span>{{ item.domain }}</span>
+        </div>
+      </template>
       <template #no-data>
         <v-row />
         <v-row>
@@ -55,6 +82,7 @@
 import type { LoadbalancerListItem } from "@/types/LoadbalancerListItem.ts";
 import type { DataTableHeader } from "vuetify";
 
+import { mdiStar, mdiStarOutline } from "@mdi/js";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 
 import loadbalancerService from "@/api/loadbalancerService";
@@ -132,6 +160,28 @@ function selectItem(item: LoadbalancerListItem) {
   selected.value = [item];
   emit("update:selected", item);
   emit("update:modelValue", [item]);
+}
+
+async function toggleFavorite(item: TableItem) {
+  const source = items.value.find((i) => i.id === item.id);
+  if (!source) return;
+  const originalState = source.isFavorite;
+  source.isFavorite = !source.isFavorite;
+  items.value = [...items.value].sort((a, b) => {
+    const favDiff = (b.isFavorite ? 1 : 0) - (a.isFavorite ? 1 : 0);
+    if (favDiff !== 0) return favDiff;
+    return (a.domain ?? a.name).localeCompare(b.domain ?? b.name);
+  });
+
+  try {
+    if (originalState) {
+      await loadbalancerService.removeLoadbalancerFromFavorites(source.id);
+    } else {
+      await loadbalancerService.addLoadbalancerToFavorites(source.id);
+    }
+  } catch {
+    source.isFavorite = originalState;
+  }
 }
 
 async function loadItems(page = 1) {
@@ -241,5 +291,18 @@ onMounted(async () => {
   /* noinspection CssUnresolvedCustomProperty */
   color: rgb(var(--v-theme-link));
   text-decoration: none;
+}
+
+.domain-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.domain-header-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  margin-right: 8px;
 }
 </style>

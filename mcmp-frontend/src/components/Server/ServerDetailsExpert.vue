@@ -1,7 +1,7 @@
 <template>
-  <CommonCard
-    title="Hardware Informationen"
+  <common-card
     v-if="props.selectedServer.serverKind === 'HARDWARE'"
+    title="Hardware Informationen"
   >
     <v-row>
       <v-col cols="3">
@@ -49,10 +49,10 @@
         </p>
       </v-col>
     </v-row>
-  </CommonCard>
-  <CommonCard
-    title="Administration"
+  </common-card>
+  <common-card
     v-if="props.selectedServer.serverKind === 'HARDWARE'"
+    title="Administration"
   >
     <v-row>
       <v-col cols="3">
@@ -60,18 +60,18 @@
           <template
             v-if="props.selectedServer.cloud?.cloudType === 'UCS_MANAGER'"
           >
-            UCSM<InfoTooltip text="Cisco UCS Manager" />
+            UCSM<info-tooltip text="Cisco UCS Manager" />
           </template>
           <template
             v-else-if="props.selectedServer.cloud?.cloudType === 'UCS_CIMC'"
           >
-            CIMC<InfoTooltip text="Cisco Integrated Management Controller" />
+            CIMC<info-tooltip text="Cisco Integrated Management Controller" />
           </template>
         </h3>
       </v-col>
       <v-col
-        cols="3"
         v-if="props.selectedServer.cloud?.cloudType === 'UCS_MANAGER'"
+        cols="3"
       >
         <h3>Einbauort</h3>
       </v-col>
@@ -91,13 +91,13 @@
             rel="noopener noreferrer"
             >{{ props.selectedServer.cloud?.fqdn }}</a
           >
-          <InfoTooltip text="Nur im Admin-Netz aufrufbar!" />
+          <info-tooltip text="Nur im Admin-Netz aufrufbar!" />
         </div>
       </v-col>
       <v-col
+        v-if="props.selectedServer.cloud?.cloudType === 'UCS_MANAGER'"
         cols="3"
         class="pt-0"
-        v-if="props.selectedServer.cloud?.cloudType === 'UCS_MANAGER'"
       >
         <template v-if="props.selectedServer.serverType === 'CISCO_BLADE'">
           Chassis
@@ -115,10 +115,10 @@
         </template>
       </v-col>
     </v-row>
-  </CommonCard>
-  <CommonCard
-    title="Host Informationen"
+  </common-card>
+  <common-card
     v-if="props.selectedServer.serverKind === 'VIRTUAL'"
+    title="Host Informationen"
   >
     <v-row>
       <v-col cols="3">
@@ -176,11 +176,11 @@
         </p>
       </v-col>
     </v-row>
-  </CommonCard>
-  <CommonCard
-    title="Technische Informationen"
-    topMargin="0"
+  </common-card>
+  <common-card
     v-if="props.selectedServer.serverType === 'VM_VCENTER'"
+    title="Technische Informationen"
+    top-margin="0"
   >
     <v-row>
       <v-col cols="3">
@@ -216,8 +216,8 @@
         <v-row class="ml-0 mt-0">
           <p>{{ props.selectedServer.vmxVersion }}</p>
           <v-tooltip
-            text="Version aktuell"
             v-if="Number(props.selectedServer.vmxVersion) > VMX_VERSION_MINIMUM"
+            text="Version aktuell"
           >
             <template #activator="{ props: tooltipProps }">
               <v-icon
@@ -228,8 +228,8 @@
             </template>
           </v-tooltip>
           <v-tooltip
-            text="Version veraltet"
             v-else
+            text="Version veraltet"
           >
             <template #activator="{ props: tooltipProps }">
               <v-icon
@@ -284,46 +284,46 @@
         cols="3"
         class="pt-0"
       >
-          <p>{{ cpuTopology }}</p>
-          <v-icon
-            v-if="props.selectedServer.cpuTopology !== 'Assigned at power on'"
-            color="_red"
-            >{{ mdiAlertCircle }}</v-icon
-          >
+        <p>{{ cpuTopology }}</p>
+        <v-icon
+          v-if="props.selectedServer.cpuTopology !== 'Assigned at power on'"
+          color="_red"
+          >{{ mdiAlertCircle }}</v-icon
+        >
       </v-col>
       <v-col
         cols="3"
         class="pt-0"
       >
-          <p>
-            {{
-              formatter.formatBooleanToGerman(
-                props.selectedServer.cpuHotAddEnabled
-              )
-            }}
-          </p>
-          <v-icon
-            v-if="!props.selectedServer.cpuHotAddEnabled"
-            color="_red"
-            >{{ mdiAlertCircle }}</v-icon
-          >
+        <p>
+          {{
+            formatter.formatBooleanToGerman(
+              props.selectedServer.cpuHotAddEnabled
+            )
+          }}
+        </p>
+        <v-icon
+          v-if="!props.selectedServer.cpuHotAddEnabled"
+          color="_red"
+          >{{ mdiAlertCircle }}</v-icon
+        >
       </v-col>
       <v-col
         cols="3"
         class="pt-0"
       >
-          <p>
-            {{
-              formatter.formatBooleanToGerman(
-                props.selectedServer.memoryHotAddEnabled
-              )
-            }}
-          </p>
-          <v-icon
-            v-if="!props.selectedServer.memoryHotAddEnabled"
-            color="_red"
-            >{{ mdiAlertCircle }}</v-icon
-          >
+        <p>
+          {{
+            formatter.formatBooleanToGerman(
+              props.selectedServer.memoryHotAddEnabled
+            )
+          }}
+        </p>
+        <v-icon
+          v-if="!props.selectedServer.memoryHotAddEnabled"
+          color="_red"
+          >{{ mdiAlertCircle }}</v-icon
+        >
       </v-col>
       <v-col
         cols="3"
@@ -332,7 +332,7 @@
         <p>{{ uptime }}</p>
       </v-col>
     </v-row>
-  </CommonCard>
+  </common-card>
 </template>
 
 <script setup lang="ts">

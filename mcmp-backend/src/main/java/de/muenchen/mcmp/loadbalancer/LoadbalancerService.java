@@ -15,6 +15,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @AllArgsConstructor
@@ -25,7 +26,7 @@ public class LoadbalancerService {
 
     public Page<LbVirtualServerListDTO> getVisibleLoadbalancers(
             final int offset, final int limit,
-            final String sortBy, final String sortOrder, final String search) {
+            final String sortBy, final String sortOrder, final String search, final boolean favorites) {
         final Pageable pageable = (limit == -1) ? Pageable.unpaged() : new OffsetBasedPageRequest(offset, limit);
         final UserRoles userRoles = AuthUtils.getCurrentUserRoles();
         String cleanedSearch = null;
@@ -44,6 +45,7 @@ public class LoadbalancerService {
                 userRoles.hasNetworkRole(),
                 userRoles.hasLoadbalancerRole(),
                 cleanedSearch,
+                favorites,
                 sortBy,
                 sortOrder,
                 pageable
@@ -54,7 +56,18 @@ public class LoadbalancerService {
                 .listen(proj.getListen())
                 .port(proj.getPort())
                 .appserviceName(proj.getAppserviceName())
+                .isFavorite(Boolean.TRUE.equals(proj.getIsFavorite()))
                 .build());
+    }
+
+    @Transactional
+    public void addLoadbalancerToFavorites(final Long lbVirtualServerId) {
+        repository.addLoadbalancerToFavorites(lbVirtualServerId, AuthUtils.getUsername());
+    }
+
+    @Transactional
+    public void removeLoadbalancerFromFavorites(final Long lbVirtualServerId) {
+        repository.removeLoadbalancerFromFavorites(lbVirtualServerId, AuthUtils.getUsername());
     }
 
     @Transactional(readOnly = true)
@@ -101,15 +114,40 @@ public class LoadbalancerService {
                 .redirect80(lvs.isRedirect80())
                 .addresses(lvs.getAddresses())
                 .domains(lvs.getDomains())
-                .appserviceNames(lvs.getAppservices().stream()
-                        .map(Appservice::getName)
-                        .collect(Collectors.toSet()))
+                .appservices(lvs.getAppservices().stream()
+                        .map(a -> new LbAppserviceRefDTO(a.getId(), a.getName()))
+                        .sorted(Comparator.comparing(LbAppserviceRefDTO::name))
+                        .collect(Collectors.toList()))
+                .tenantRepositoryUrl(buildTenantRepositoryUrl(lvs))
                 .pools(poolDTOs)
                 .irules(lvs.getIrules().stream()
                         .map(i -> new LbIruleDTO(i.getName(), i.getContent()))
                         .sorted(Comparator.comparing(LbIruleDTO::name))
                         .collect(Collectors.toList()))
                 .build();
+    }
+
+    public List<LbVirtualServerListDTO> getLoadbalancersByAppserviceId(final Long appserviceId) {
+        final UserRoles userRoles = AuthUtils.getCurrentUserRoles();
+        return repository.findByAppserviceId(
+                appserviceId,
+                userRoles.getUsername(),
+                userRoles.hasAdminRole(),
+                userRoles.hasReadonlyRole(),
+                userRoles.hasSecurityRole(),
+                userRoles.hasOperatorRole(),
+                userRoles.hasNetworkRole(),
+                userRoles.hasLoadbalancerRole()
+        ).stream()
+                .map(proj -> LbVirtualServerListDTO.builder()
+                        .id(proj.getId())
+                        .name(proj.getName())
+                        .domain(extractDomain(proj.getName()))
+                        .listen(proj.getListen())
+                        .port(proj.getPort())
+                        .appserviceName(proj.getAppserviceName())
+                        .build())
+                .collect(Collectors.toList());
     }
 
     public List<LbServerMembershipDTO> getPoolMembershipsByServerId(final Long serverId) {
@@ -146,5 +184,36 @@ public class LoadbalancerService {
         final String lastSegment = name.contains("/") ? name.substring(name.lastIndexOf('/') + 1) : name;
         final String candidate = lastSegment.contains("_") ? lastSegment.substring(0, lastSegment.indexOf('_')) : lastSegment;
         return candidate.contains(".") ? candidate : null;
+    }
+
+    /**
+     * Builds the link to the tenant's config repo on git.muenchen.de, e.g. for a virtual server
+     * named "/eakte/eakte23/eakte.muenchen.de_https_vs" this resolves to
+     * ".../datacenter-prod/-/tree/main/tenants/eakte/eakte23?ref_type=heads".
+     * The repo (prod vs. test) is derived from the environment of the linked appservices
+     * (EnvironmentType.P = Produktion, everything else = Test); returns null if the tenant path
+     * can't be derived from the name or no linked appservice has an environment set.
+     */
+    private String buildTenantRepositoryUrl(final LbVirtualServer lvs) {
+        final String[] segments = lvs.getName().split("/");
+        final List<String> tenantSegments = Stream.of(segments)
+                .filter(s -> !s.isBlank())
+                .toList();
+        if (tenantSegments.size() < 2) {
+            return null;
+        }
+        final String tenantPath = String.join("/", tenantSegments.subList(0, tenantSegments.size() - 1));
+
+        final boolean isProd = lvs.getAppservices().stream()
+                .map(Appservice::getEnvironment)
+                .anyMatch(env -> env == de.muenchen.mcmp.types.EnvironmentType.P);
+        final boolean hasKnownEnvironment = isProd || lvs.getAppservices().stream()
+                .anyMatch(a -> a.getEnvironment() != null);
+        if (!hasKnownEnvironment) {
+            return null;
+        }
+        final String repo = isProd ? "datacenter-prod" : "datacenter-test";
+
+        return "https://git.muenchen.de/alg/" + repo + "/-/tree/main/tenants/" + tenantPath + "?ref_type=heads";
     }
 }

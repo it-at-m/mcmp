@@ -1,10 +1,6 @@
 import type { AwxConfig } from "@/types/AwxConfig";
 import type { SnowConfig } from "@/types/SnowConfig";
 
-
-
-
-
 export default class Action {
   [key: string]: any;
   constructor(

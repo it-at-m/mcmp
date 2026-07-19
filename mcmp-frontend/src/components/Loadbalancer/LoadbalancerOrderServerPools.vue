@@ -22,11 +22,11 @@
           multiple
           :menu-props="{ persistent: true, closeOnContentClick: true }"
         >
-          <template v-slot:selection="{ item }">
+          <template #selection="{ item }">
             <v-expansion-panels
+              :model-value="expandedIps.has(item.raw.ip) ? 0 : undefined"
               @click.stop
               @mousedown.stop
-              :model-value="expandedIps.has(item.raw.ip) ? 0 : undefined"
             >
               <v-expansion-panel
                 class="ma-1"
@@ -53,14 +53,14 @@
                         <v-btn
                           :icon="mdiMinusCircle"
                           size="small"
-                          @click.stop="() => decreasePortCount(item)"
                           :disabled="(portCountByIp[item.raw.ip] || 1) <= 1"
+                          @click.stop="() => decreasePortCount(item)"
                         />
                         <v-btn
                           :icon="mdiPlusCircle"
                           size="small"
-                          @click.stop="() => increasePortCount(item)"
                           :disabled="(portCountByIp[item.raw.ip] || 1) >= 10"
+                          @click.stop="() => increasePortCount(item)"
                         />
                       </v-btn-group>
                     </v-col>
@@ -95,12 +95,12 @@
         </v-select>
       </v-col>
       <v-col cols="1">
-        <InlineTooltip marginTop="5">
+        <inline-tooltip margin-top="5">
           <p>
             Hier werden Server gelistet die mit dem ausgewählten
             Anwendungsservice verknüpft sind.
           </p>
-        </InlineTooltip>
+        </inline-tooltip>
       </v-col>
     </v-row>
     <v-row>
@@ -115,8 +115,8 @@
         />
       </v-col>
       <v-col cols="1">
-        <InlineTooltip
-          marginTop="3"
+        <inline-tooltip
+          margin-top="3"
           class="links"
         >
           <p>
@@ -131,7 +131,7 @@
             zum Einsatz <br />http: Server kommuniziert unverschlüsselt mit
             http<br />https: Server kommuniziert verschlüsselt mit http
           </p>
-        </InlineTooltip>
+        </inline-tooltip>
       </v-col>
       <v-col cols="5">
         <v-select
@@ -146,8 +146,8 @@
         />
       </v-col>
       <v-col cols="1">
-        <InlineTooltip
-          marginTop="3"
+        <inline-tooltip
+          margin-top="3"
           class="links"
         >
           <p>
@@ -158,13 +158,16 @@
               >load-balancing-algorithms</a
             >
           </p>
-        </InlineTooltip>
+        </inline-tooltip>
       </v-col>
     </v-row>
     <v-row>
       <v-col>
         <v-radio-group
+          v-model="monitors"
           inline
+          :rules="[(v: MonitorType) => !!v || 'Monitor Typ ist erforderlich']"
+          label="Monitor Typ*"
           @update:model-value="
             (val) => {
               if (val === 'tcp') {
@@ -187,9 +190,6 @@
               }
             }
           "
-          :rules="[(v: MonitorType) => !!v || 'Monitor Typ ist erforderlich']"
-          v-model="monitors"
-          label="Monitor Typ*"
         >
           <v-radio
             label="TCP Monitor"
@@ -208,8 +208,8 @@
         </v-radio-group>
       </v-col>
       <v-col cols="1">
-        <InlineTooltip
-          marginTop="5"
+        <inline-tooltip
+          margin-top="5"
           class="links"
         >
           <p>
@@ -224,7 +224,7 @@
             >
             verwendet
           </p>
-        </InlineTooltip>
+        </inline-tooltip>
       </v-col>
     </v-row>
     <div
@@ -251,13 +251,13 @@
           />
         </v-col>
         <v-col cols="1">
-          <InlineTooltip marginTop="5">
+          <inline-tooltip margin-top="5">
             <p>
               Der zu überwachende Anwendungspfad. <br />
               Oftmals gibt es hier eine Empfehlung des Softwareherstellers auf
               Nachfrage oder in der Dokumentation.
             </p>
-          </InlineTooltip>
+          </inline-tooltip>
         </v-col>
         <v-col cols="5">
           <v-text-field
@@ -269,8 +269,8 @@
           />
         </v-col>
         <v-col cols="1">
-          <InlineTooltip
-            marginTop="5"
+          <inline-tooltip
+            margin-top="5"
             class="links"
           >
             <p>
@@ -290,7 +290,7 @@
               >
               als auch auf Teile des Bodys (z.B. "running") geprüft werden.
             </p>
-          </InlineTooltip>
+          </inline-tooltip>
         </v-col>
       </v-row>
     </div>
@@ -307,11 +307,11 @@ import InlineTooltip from "@/components/common/InlineTooltip.vue";
 import { useRules } from "@/composables/rules.ts";
 import LoadbalancerOrder from "@/types/LoadbalancerOrder.ts";
 
-type member = {
+interface member {
   name: string;
   ip: string;
   ports: number[];
-};
+}
 
 const props = defineProps<{
   ldblOrder: LoadbalancerOrder;

@@ -18,6 +18,7 @@ public record ServerListExtendedDTO(
         ServerKind serverKind,
         ServerType serverType,
         Boolean managed,
-        Boolean canEdit
+        Boolean canEdit,
+        Boolean hasWarnings
 ) {
 }

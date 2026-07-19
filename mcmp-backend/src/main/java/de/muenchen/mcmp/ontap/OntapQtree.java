@@ -10,6 +10,7 @@ import lombok.Setter;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
+import java.time.OffsetDateTime;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -78,4 +79,16 @@ public class OntapQtree extends AbstractEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "storage_category")
     private StorageCategory storageCategory;
+
+    @Column(name = "snow_name", length = Integer.MAX_VALUE)
+    private String snowName;
+
+    @Column(name = "snow_sys_id", length = Integer.MAX_VALUE)
+    private String snowSysId;
+
+    @Column(name = "snow_sys_class", length = Integer.MAX_VALUE)
+    private String snowSysClass;
+
+    @Column(name = "snow_last_discovered")
+    private OffsetDateTime snowLastDiscovered;
 }

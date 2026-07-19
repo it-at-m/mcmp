@@ -1,12 +1,9 @@
 import type { Ref } from "vue";
 
-
-
 import { ApiError } from "@/api/ApiError";
 import { STATUS_INDICATORS } from "@/constants";
 import { useAppStore } from "@/stores/app";
 import { useSnackbarStore } from "@/stores/snackbar";
-
 
 /**
  * Sends an HTTP request to the specified URL with the given options and returns the parsed response.

@@ -11,7 +11,16 @@
         class="material-search-field"
         rounded
         clearable
-      />
+      >
+        <!-- Vuetify Tooltip wird nur gerendert, wenn der String übergeben wurde -->
+        <v-tooltip
+          v-if="searchTooltip"
+          activator="parent"
+          location="top"
+        >
+          {{ searchTooltip }}
+        </v-tooltip>
+      </v-text-field>
     </div>
 
     <div
@@ -95,6 +104,7 @@ const props = defineProps<{
   sortBy: { key: string; order: "asc" | "desc" }[];
   itemsPerPage?: number;
   searchLabel?: string;
+  searchTooltip?: string; // HIER: Das Prop für dein Tooltip registriert
   selectedId?: number | string | null;
   hasMore: boolean;
 }>();

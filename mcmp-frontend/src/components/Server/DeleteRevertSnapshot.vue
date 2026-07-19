@@ -15,30 +15,30 @@
       </v-btn>
     </template>
   </v-tooltip>
-  <CommonDialog
+  <common-dialog
     :model-value="dialog"
-    :maxWidth="650"
+    :max-width="650"
     :title="snapshotActions[props.action].title"
     :icon="snapshotActions[props.action].icon"
-    :showActions="true"
-    submitActivated
-    @dialog-cancel="close"
-    @dialog-confirm="save"
-    :checkForEnabledActions="
+    :show-actions="true"
+    submit-activated
+    :check-for-enabled-actions="
       action == 'revert'
         ? ['VMWARE_REVERT_SNAPSHOT']
         : ['VMWARE_DELETE_SNAPSHOT']
     "
+    @dialog-cancel="close"
+    @dialog-confirm="save"
   >
     <v-row
-      class="mb-2"
       v-if="action == 'revert'"
+      class="mb-2"
     >
-      <CommonAlert isSnowChange />
+      <common-alert is-snow-change />
     </v-row>
 
     {{ snapshotActions[props.action].infoText(props.snapshot) }}
-  </CommonDialog>
+  </common-dialog>
 </template>
 
 <script setup lang="ts">
@@ -55,14 +55,11 @@ const props = defineProps<{
   action: string;
 }>();
 
-const emit = defineEmits<{
-  (e: "save", save: boolean): void;
-}>();
+const emit = defineEmits<(e: "save", save: boolean) => void>();
 
 const registerOpenDialog = inject<() => void>("registerOpenDialog");
 const unregisterOpenDialog = inject<() => void>("unregisterOpenDialog");
 
-const form = ref<HTMLFormElement>();
 const dialog = ref(false);
 const days = ref(2);
 const description = ref("");

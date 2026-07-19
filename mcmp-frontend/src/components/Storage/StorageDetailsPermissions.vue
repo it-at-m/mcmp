@@ -31,7 +31,7 @@
         </v-col>
         <v-col
           cols="4"
-          class="d-flex justify-end"
+          class="d-flex justify-end pa-0"
         >
           <storage-change-nfs-export-policy
             v-if="rule.clients && rule.clients.length > 0"
@@ -76,6 +76,16 @@
         <v-col cols="3">
           {{ acllist.permission }}
         </v-col>
+        <v-col
+          cols="3"
+          class="d-flex justify-end pa-0"
+        >
+          <storage-change-cifs-permissions
+            :selected-storage="selectedStorageItem"
+            :selected-a-d="acllist.userOrGroup"
+            :selected-permission="acllist.permission"
+          />
+        </v-col>
       </v-row>
       <v-divider
         v-if="(selectedStorageItem.cifs_share_acl_list?.length || 0) > idx + 1"
@@ -87,6 +97,7 @@
 import type { UnifiedStorageItem } from "@/types/Storage";
 
 import CommonCard from "@/components/common/CommonCard.vue";
+import StorageChangeCifsPermissions from "@/components/Storage/StorageChangeCifsPermissions.vue";
 import StorageChangeNfsExportPolicy from "@/components/Storage/StorageChangeNfsExportPolicy.vue";
 
 defineProps<{

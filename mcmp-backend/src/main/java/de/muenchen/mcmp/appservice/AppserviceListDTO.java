@@ -9,6 +9,7 @@ public record AppserviceListDTO(
         @NotNull Long id,
         @NotNull String name,
         @NotNull Boolean hasServers,
-        EnvironmentType environment
+        EnvironmentType environment,
+        boolean isFavorite
 ) {
 }

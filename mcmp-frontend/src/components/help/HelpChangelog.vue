@@ -86,8 +86,8 @@
       <v-divider></v-divider>
       <v-card-text>
         <div
-          v-html="entry.contentHtml || entry.contentMarkdown"
           class="changelog-content"
+          v-html="entry.contentHtml || entry.contentMarkdown"
         ></div>
       </v-card-text>
     </v-card>
@@ -153,8 +153,8 @@
           >
           <v-btn
             color="primary"
-            @click="saveEntry"
             :loading="loading"
+            @click="saveEntry"
             >Speichern</v-btn
           >
         </v-card-actions>

@@ -6,4 +6,5 @@ public interface LbVirtualServerList {
     String getListen();
     Integer getPort();
     String getAppserviceName();
+    Boolean getIsFavorite();
 }

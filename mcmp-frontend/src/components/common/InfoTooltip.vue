@@ -12,6 +12,8 @@ const props = defineProps<{
   <v-tooltip
     location="top"
     content-class="text-left"
+    :open-delay="0"
+    :close-delay="200"
   >
     <template #activator="{ props: activatorProps }">
       <slot

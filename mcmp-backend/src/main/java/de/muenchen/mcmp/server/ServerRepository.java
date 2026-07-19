@@ -378,92 +378,110 @@ public interface ServerRepository extends JpaRepository<Server, Long> {
 
 
     @Query(value = """
-    SELECT DISTINCT s.id as id,
-           s.name as name,
-           s.power_state as powerState,
-           s.managed as managed,
-           s.num_cpu as numCpu,
-           s.memory_mb as memoryMb,
-           s.vdisks_capacity_in_bytes as vdisksCapacityInBytes,
-           CASE
-              WHEN s.operatingsystem IS NOT NULL AND s.operatingsystem <> '' THEN s.operatingsystem
-              WHEN s.guest_tools_full_name IS NOT NULL AND s.guest_tools_full_name <> '' THEN s.guest_tools_full_name
-              ELSE s.guest_config_full_name
-           END as os,
-           (
-             -- canEdit: unlocked and either single assignment or roles allow edit, and user has appropriate permissions
-             s.locked = false
+SELECT DISTINCT s.id as id,
+       s.name as name,
+       s.power_state as powerState,
+       s.managed as managed,
+       s.num_cpu as numCpu,
+       s.memory_mb as memoryMb,
+       s.vdisks_capacity_in_bytes as vdisksCapacityInBytes,
+       CASE
+          WHEN s.operatingsystem IS NOT NULL AND s.operatingsystem <> '' THEN s.operatingsystem
+          WHEN s.guest_tools_full_name IS NOT NULL AND s.guest_tools_full_name <> '' THEN s.guest_tools_full_name
+          ELSE s.guest_config_full_name
+       END as os,
+       (
+         -- canEdit: unlocked and either single assignment or roles allow edit, and user has appropriate permissions
+         s.locked = false
+         AND (
+           (SELECT count(*) FROM cmp.server_assignment sa_count WHERE sa_count.server_id = s.id) = 1
+           OR (
+             (SELECT count(*) FROM cmp.server_assignment sa_count WHERE sa_count.server_id = s.id) <> 1
              AND (
-               (SELECT count(*) FROM cmp.server_assignment sa_count WHERE sa_count.server_id = s.id) = 1
-               OR (
-                 (SELECT count(*) FROM cmp.server_assignment sa_count WHERE sa_count.server_id = s.id) <> 1
-                 AND (
-                   (:hasLinuxRole AND s.role_linux)
-                   OR (:hasWindowsRole AND s.role_windows)
-                 )
-               )
-             )
-             AND (
-               :isAdmin
-               OR (:hasLinuxRole AND s.role_linux)
+               (:hasLinuxRole AND s.role_linux)
                OR (:hasWindowsRole AND s.role_windows)
-               OR (:hasOracleRole AND s.role_oracle)
-               OR (:hasNonOracleRole AND s.role_non_oracle)
-               OR EXISTS (
-                 SELECT 1
-                 FROM cmp.server_assignment sa2
-                   JOIN cmp.appservice a2 ON sa2.appservice_id = a2.id
-                   JOIN cmp."group" g2 ON a2.change_group_id = g2.id
-                   JOIN cmp.group_membership gm2 ON g2.id = gm2.group_id
-                   JOIN cmp."user" u2 ON gm2.user_id = u2.id
-                 WHERE sa2.server_id = s.id
-                   AND u2.username = :username
-               )
              )
-           ) as canEdit,
-           STRING_AGG(DISTINCT a.name, '|' ORDER BY a.name) as appserviceNames,
-           s.server_kind,
-           s.server_type
-    FROM cmp.server s
-    INNER JOIN cmp.server_assignment sa ON s.id = sa.server_id
-    LEFT JOIN cmp.server_assignment sa_all ON s.id = sa_all.server_id
-    LEFT JOIN cmp.appservice a ON sa_all.appservice_id = a.id
-    WHERE sa.appservice_id = :appserviceId
-      AND (
-        :isAdmin
-        OR :isReadonly
-        OR (:hasLinuxRole AND s.role_linux)
-        OR (:hasWindowsRole AND s.role_windows)
-        OR (:hasOracleRole AND s.role_oracle)
-        OR (:hasNonOracleRole AND s.role_non_oracle)
-        OR :hasSecurityRole
-        OR :hasOperatorRole
-        OR :hasNetworkRole
-        OR EXISTS (
-          SELECT 1
-          FROM cmp.server_assignment sa2
-            JOIN cmp.appservice a2 ON sa2.appservice_id = a2.id
-            JOIN cmp."group" g2 ON a2.change_group_id = g2.id
-            JOIN cmp.group_membership gm2 ON g2.id = gm2.group_id
-            JOIN cmp."user" u2 ON gm2.user_id = u2.id
-          WHERE sa2.server_id = s.id
-            AND u2.username = :username
-        )
-      )
-    GROUP BY s.id, s.name, s.power_state, s.operatingsystem, s.guest_tools_full_name, s.guest_config_full_name, s.num_cpu, s.memory_mb, s.vdisks_capacity_in_bytes, s.server_kind, s.server_type, s.managed
-    ORDER BY s.name ASC
-    """, nativeQuery = true)
+           )
+         )
+         AND (
+           :isAdmin
+           OR (:hasLinuxRole AND s.role_linux)
+           OR (:hasWindowsRole AND s.role_windows)
+           OR (:hasOracleRole AND s.role_oracle)
+           OR (:hasNonOracleRole AND s.role_non_oracle)
+           OR EXISTS (
+             SELECT 1
+             FROM cmp.server_assignment sa2
+               JOIN cmp.appservice a2 ON sa2.appservice_id = a2.id
+               JOIN cmp."group" g2 ON a2.change_group_id = g2.id
+               JOIN cmp.group_membership gm2 ON g2.id = gm2.group_id
+               JOIN cmp."user" u2 ON gm2.user_id = u2.id
+             WHERE sa2.server_id = s.id
+               AND u2.username = :username
+           )
+         )
+       ) as canEdit,
+       (
+         (
+             s.num_cpu_rightsizing <> 'ok'
+             AND (
+                 s.num_cpu_change_date IS NULL
+                 OR s.num_cpu_change_date < CURRENT_TIMESTAMP - INTERVAL '14 days'
+             )
+         )
+         OR
+         (
+             s.memory_mb_rightsizing <> 'ok'
+             AND (
+                 s.memory_mb_change_date IS NULL
+                 OR s.memory_mb_change_date < CURRENT_TIMESTAMP - INTERVAL '14 days'
+             )
+         )
+         OR (s.patchnight_exitcode IS NOT NULL AND s.patchnight_exitcode <> 0)
+       ) as hasWarnings,
+       STRING_AGG(DISTINCT a.name, '|' ORDER BY a.name) as appserviceNames,
+       s.server_kind,
+       s.server_type
+FROM cmp.server s
+INNER JOIN cmp.server_assignment sa ON s.id = sa.server_id
+LEFT JOIN cmp.server_assignment sa_all ON s.id = sa_all.server_id
+LEFT JOIN cmp.appservice a ON sa_all.appservice_id = a.id
+WHERE sa.appservice_id = :appserviceId
+  AND (
+    :isAdmin
+    OR :isReadonly
+    OR (:hasLinuxRole AND s.role_linux)
+    OR (:hasWindowsRole AND s.role_windows)
+    OR (:hasOracleRole AND s.role_oracle)
+    OR (:hasNonOracleRole AND s.role_non_oracle)
+    OR :hasSecurityRole
+    OR :hasOperatorRole
+    OR :hasNetworkRole
+    OR EXISTS (
+      SELECT 1
+      FROM cmp.server_assignment sa2
+        JOIN cmp.appservice a2 ON sa2.appservice_id = a2.id
+        JOIN cmp."group" g2 ON a2.change_group_id = g2.id
+        JOIN cmp.group_membership gm2 ON g2.id = gm2.group_id
+        JOIN cmp."user" u2 ON gm2.user_id = u2.id
+      WHERE sa2.server_id = s.id
+        AND u2.username = :username
+    )
+  )
+GROUP BY s.id, s.name, s.power_state, s.operatingsystem, s.guest_tools_full_name, s.guest_config_full_name, s.num_cpu, s.memory_mb, s.vdisks_capacity_in_bytes, s.server_kind, s.server_type, s.managed
+ORDER BY s.name ASC
+""", nativeQuery = true)
     List<ServerListExtended> findServersByAppserviceId(@Param("appserviceId") Long appserviceId,
-                                               @Param("username") String username,
-                                               @Param("isAdmin") boolean isAdmin,
-                                               @Param("isReadonly") boolean isReadonly,
-                                               @Param("hasLinuxRole") boolean hasLinuxRole,
-                                               @Param("hasWindowsRole") boolean hasWindowsRole,
-                                               @Param("hasOracleRole") boolean hasOracleRole,
-                                               @Param("hasNonOracleRole") boolean hasNonOracleRole,
-                                               @Param("hasSecurityRole") boolean hasSecurityRole,
-                                               @Param("hasOperatorRole") boolean hasOperatorRole,
-                                               @Param("hasNetworkRole") boolean hasNetworkRole);
+                                                       @Param("username") String username,
+                                                       @Param("isAdmin") boolean isAdmin,
+                                                       @Param("isReadonly") boolean isReadonly,
+                                                       @Param("hasLinuxRole") boolean hasLinuxRole,
+                                                       @Param("hasWindowsRole") boolean hasWindowsRole,
+                                                       @Param("hasOracleRole") boolean hasOracleRole,
+                                                       @Param("hasNonOracleRole") boolean hasNonOracleRole,
+                                                       @Param("hasSecurityRole") boolean hasSecurityRole,
+                                                       @Param("hasOperatorRole") boolean hasOperatorRole,
+                                                       @Param("hasNetworkRole") boolean hasNetworkRole);
 
     @Query(value = """
             SELECT s.*,

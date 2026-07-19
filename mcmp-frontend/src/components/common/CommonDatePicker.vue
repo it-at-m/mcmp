@@ -60,9 +60,8 @@ const props = withDefaults(defineProps<Props>(), {
   textFieldClass: "mb-4",
 });
 
-const emit = defineEmits<{
-  (e: "update:modelValue", value: string | null): void;
-}>();
+const emit =
+  defineEmits<(e: "update:modelValue", value: string | null) => void>();
 
 const menu = ref(false);
 

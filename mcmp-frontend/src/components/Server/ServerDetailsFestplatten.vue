@@ -30,7 +30,7 @@
           selectedServer.canEdit &&
           selectedServer.cloud?.cloudType == 'VCENTER'
         "
-        :mount-points=[]
+        :mount-points="[]"
         :selected-server="props.selectedServer"
         :snapshot-on-server="snapshots.length > 0"
         :new-mountpoint="true"
@@ -107,9 +107,20 @@
       :items-per-page="-1"
       :sort-by="[{ key: 'diskPath', order: 'asc' }]"
       :loading="loading[1]"
-      class="elevation-1"
+      class="elevation-1 links"
       hide-default-footer
     >
+      <template #item.mountPoint="{ item }">
+        <router-link
+          v-if="item.uuid && item.type"
+          :to="`/storage/${item.type}/${item.uuid}`"
+        >
+          {{ item.mountPoint }}
+        </router-link>
+        <template v-else>
+          {{ item.mountPoint }}
+        </template>
+      </template>
       <template #item.size="{ item }">
         {{ formatter.formatBytesSmart(item.size) }}
       </template>
@@ -250,35 +261,47 @@ const shareMountHeaders = [
 
 const formatter = useFormatter();
 
-function editMountPoint(mountPoint: MountPoint, newCapacityGB: number, newVolumeGroup: string) {
+function editMountPoint(
+  mountPoint: MountPoint,
+  newCapacityGB: number,
+  newVolumeGroup: string
+) {
   if (
     props.selectedServer?.guestConfigFullName?.toLowerCase().includes("linux")
   ) {
-    jobService
-      .startJob(
-        jobLoading,
-        "LINUX_MOUNTPOINT_CHANGE",
-        props.selectedServer.id,
-        {
-          mountPoint: mountPoint.diskPath,
-          newSize: newCapacityGB,
-          volumeGroup: newVolumeGroup,
-        }
-      )
+    jobService.startJob(
+      jobLoading,
+      "LINUX_MOUNTPOINT_CHANGE",
+      props.selectedServer.id,
+      {
+        mountPoint: mountPoint.diskPath,
+        newSize: newCapacityGB,
+        volumeGroup: newVolumeGroup,
+      }
+    );
   }
   if (
     props.selectedServer?.guestConfigFullName?.toLowerCase().includes("windows")
   ) {
-    jobService
-      .startJob(
-        jobLoading,
-        "WINDOWS_PARTITION_CHANGE",
-        props.selectedServer.id,
-        {
-          partition: mountPoint.diskPath,
-          newSize: newCapacityGB,
-        }
-      )
+    jobService.startJob(
+      jobLoading,
+      "WINDOWS_PARTITION_CHANGE",
+      props.selectedServer.id,
+      {
+        partition: mountPoint.diskPath,
+        newSize: newCapacityGB,
+      }
+    );
   }
 }
 </script>
+<style scoped>
+.links a,
+.links a:visited,
+.links a:hover,
+.links a:active {
+  /* noinspection CssUnresolvedCustomProperty */
+  color: rgb(var(--v-theme-link));
+  text-decoration: none;
+}
+</style>

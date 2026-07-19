@@ -1,14 +1,14 @@
 <template>
-  <CommonDialog
+  <common-dialog
     v-model="dialog"
     title="Zeit für zukünftige Patchnight anpassen"
     max-width="800"
     :icon="mdiPencil"
     show-actions
-    submitActivated
+    submit-activated
+    :check-for-enabled-actions="['LINUX_PATCHNIGHT_TIME_CHANGE']"
     @dialog-cancel="close"
     @dialog-confirm="save"
-    :checkForEnabledActions="['LINUX_PATCHNIGHT_TIME_CHANGE']"
   >
     <template #activator="{ props }">
       <v-btn
@@ -35,7 +35,7 @@
               return '24:00';
             }
 
-            return ((hour % 24).toString().padStart(2, '0') + ':00');
+            return (hour % 24).toString().padStart(2, '0') + ':00';
           })"
           :key="time"
           :label="time"
@@ -43,7 +43,7 @@
         />
       </v-radio-group>
     </v-form>
-  </CommonDialog>
+  </common-dialog>
 </template>
 
 <script setup lang="ts">
@@ -61,9 +61,7 @@ const props = defineProps<{
   selectedServer: Server;
 }>();
 
-const emit = defineEmits<{
-  (e: "save", time: string): void;
-}>();
+const emit = defineEmits<(e: "save", time: string) => void>();
 
 const selectedTime = ref(props.selectedServer.patchnightTime);
 const kPatchnightStartTime = 15;

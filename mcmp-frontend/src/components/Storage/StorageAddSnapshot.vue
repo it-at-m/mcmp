@@ -103,7 +103,7 @@ const tooltipText = computed(() => {
 });
 
 const title = computed(() => {
-  return `Snapshot für ${props.selectedStorageItem.type == 'NFS' ? props.selectedStorageItem.nfs_mount_path : props.selectedStorageItem.cifs_mount_path} erstellen`;
+  return `Snapshot für ${props.selectedStorageItem.type == "NFS" ? props.selectedStorageItem.nfs_mount_path : props.selectedStorageItem.cifs_mount_path} erstellen`;
 });
 
 function openDialog() {
@@ -111,14 +111,15 @@ function openDialog() {
 }
 
 function close() {
+  description.value = "";
   dialog.value = false;
 }
 
 function save() {
-    if (validated.value) {
-      emits("save", description.value);
-      close();
-    }
+  if (validated.value) {
+    emits("save", description.value);
+    close();
+  }
 }
 
 watch([description], async () => {

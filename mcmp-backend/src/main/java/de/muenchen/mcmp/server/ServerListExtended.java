@@ -16,4 +16,5 @@ public interface ServerListExtended {
     ServerType getServerType();
     Boolean getManaged();
     Boolean getCanEdit();
+    Boolean getHasWarnings();
 }

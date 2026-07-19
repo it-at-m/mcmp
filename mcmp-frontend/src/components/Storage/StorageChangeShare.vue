@@ -11,14 +11,14 @@
     @dialog-cancel="close"
     @dialog-confirm="save"
   >
-    <template #activator="{ props }">
+    <template #activator="{ props: activatorProps }">
       <v-tooltip
         :text="editable ? 'Ressourcen bearbeiten' : 'Nicht bearbeitbar'"
         location="bottom"
       >
         <template #activator="{ props: tooltipProps }">
           <v-btn
-            v-bind="{ ...props, ...tooltipProps }"
+            v-bind="{ ...activatorProps, ...tooltipProps }"
             icon
             variant="flat"
             :disabled="!editable"
@@ -159,10 +159,13 @@ const props = defineProps<{
   selectedStorageItem: UnifiedStorageItem;
 }>();
 
-const emit = defineEmits<(
-    e: "save",
-    payload: { sizeGb: number; snapshotReservePercent: number }
-  ) => void>();
+const emit =
+  defineEmits<
+    (
+      e: "save",
+      payload: { sizeGb: number; snapshotReservePercent: number }
+    ) => void
+  >();
 
 const dialog = ref(false);
 const draftSizeGb = ref(0);

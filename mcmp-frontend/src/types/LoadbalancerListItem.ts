@@ -5,4 +5,5 @@ export interface LoadbalancerListItem {
   listen: string;
   port: number;
   appserviceName: string | null;
+  isFavorite: boolean;
 }

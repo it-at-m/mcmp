@@ -146,25 +146,35 @@ public class SnowService {
             return;
         }
 
-        // 1. Alle existierenden User aus der DB laden
+        // 1. Load all existing users and index them by username for efficient primary lookup
         final List<User> existingUsers = userRepository.findAll();
         final Map<String, User> existingUserMap = existingUsers.stream()
                 .collect(Collectors.toMap(user -> user.getUsername().toLowerCase(), Function.identity()));
 
-        // 2. Set der Usernames aus dem Import für später
+        // 2. Collect all usernames from the import for subsequent cleanup logic
         final Set<String> importedUsernames = users.stream()
                 .map(SnowDataRequestDTO.UserDTO::userId)
                 .collect(Collectors.toSet());
 
-        // 3. User aus Import verarbeiten (erstellen oder aktualisieren)
+        // 3. Process imported users (create new or update existing records)
         for (final SnowDataRequestDTO.UserDTO userDTO : users) {
             if (userDTO.userId() == null || userDTO.userId().isBlank()) {
                 continue;
             }
-            final User existingUser = existingUserMap.get(userDTO.userId().toLowerCase());
+            User existingUser = existingUserMap.get(userDTO.userId().toLowerCase());
+
+            // Fallback: If no match found by username, check via sys_id to handle identity stability
+            // during username changes (e.g. name change due to marriage).
+            if (existingUser == null && userDTO.sysId() != null && !userDTO.sysId().isBlank()) {
+                existingUser = userRepository.findBySysId(userDTO.sysId());
+                if (existingUser != null) {
+                    log.info("Username change detected for sys_id {}: old='{}', new='{}'",
+                            userDTO.sysId(), existingUser.getUsername(), userDTO.userId());
+                }
+            }
 
             if (existingUser != null) {
-                // User existiert - prüfen ob Update nötig ist
+                // User found - check if attributes have changed and trigger update if necessary
                 if (hasUserChanged(existingUser, userDTO)) {
                     final User freshUser = userRepository.findById(existingUser.getId()).orElse(null);
                     if (freshUser != null) {
@@ -180,7 +190,7 @@ public class SnowService {
                     }
                 }
             } else {
-                // Neuen User erstellen
+                // Identity is unknown (neither username nor sys_id matched) - create new user
                 final User newUser = createNewUser(userDTO);
                 try {
                     userRepository.save(newUser);
@@ -191,7 +201,8 @@ public class SnowService {
             }
         }
 
-        // 4. User löschen
+        // 4. Remove users that are no longer present in the ServiceNow import
+        // Note: Repository query filters out special/admin users to prevent accidental deletion.
         List<User> usersToDelete = userRepository.findNonSpecialUsersNotInUsernames(importedUsernames);
 
         if (!usersToDelete.isEmpty()) {

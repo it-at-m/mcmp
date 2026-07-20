@@ -1,6 +1,7 @@
 package de.muenchen.mcmp.storagegrid;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -85,4 +86,33 @@ public interface StorageGridBucketRepository extends JpaRepository<StorageGridBu
             ") THEN TRUE ELSE FALSE END")
     Boolean canUserEditBucket(@Param("id") Long id, @Param("username") String username,
                               @Param("isAdmin") boolean isAdmin, @Param("isStorage") boolean isStorage);
+
+    @Modifying
+    @Query(value = "UPDATE storagegrid_buckets SET snow_name = :snowName, snow_sys_id = :snowSysId, snow_sys_class = :snowSysClass, updated_at = CURRENT_TIMESTAMP WHERE id = :id", nativeQuery = true)
+    void updateSnowFields(@Param("id") Long id, @Param("snowName") String snowName, @Param("snowSysId") String snowSysId, @Param("snowSysClass") String snowSysClass);
+
+    @Modifying
+    @Query(value = "DELETE FROM storagegrid_buckets_has_appservices WHERE storagegrid_bucket_id = :bucketId", nativeQuery = true)
+    void deleteAppServiceAssociations(@Param("bucketId") Long bucketId);
+
+    @Modifying
+    @Query(value = "INSERT INTO storagegrid_buckets_has_appservices (storagegrid_bucket_id, appservice_id) " +
+            "SELECT :bucketId, a.id FROM appservice a WHERE a.number IN :appServiceNumbers " +
+            "ON CONFLICT DO NOTHING", nativeQuery = true)
+    void addAppServiceAssociations(@Param("bucketId") Long bucketId, @Param("appServiceNumbers") List<String> appServiceNumbers);
+
+    @Modifying
+    @Query(value = "DELETE FROM storagegrid_buckets_has_appservices bha " +
+            "WHERE bha.storagegrid_bucket_id = :bucketId " +
+            "AND bha.appservice_id NOT IN (" +
+            "    SELECT a.id FROM appservice a " +
+            "    WHERE a.number IN :appServiceNumbers" +
+            ")", nativeQuery = true)
+    void deleteObsoleteAppServiceAssociations(@Param("bucketId") Long bucketId, @Param("appServiceNumbers") List<String> appServiceNumbers);
+
+    @Query("SELECT DISTINCT b FROM StorageGridBucket b " +
+            "LEFT JOIN FETCH b.appservices " +
+            "LEFT JOIN FETCH b.storageGridAccount")
+    List<StorageGridBucket> findAllBuckets();
+
 }

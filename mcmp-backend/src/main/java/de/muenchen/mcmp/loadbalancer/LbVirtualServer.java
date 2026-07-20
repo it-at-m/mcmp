@@ -79,15 +79,6 @@ public class LbVirtualServer extends AbstractEntity {
     )
     private Set<LbIrule> irules = new LinkedHashSet<>();
 
-    @Column(name = "snow_name", length = Integer.MAX_VALUE)
-    private String snowName;
-
-    @Column(name = "snow_sys_id", length = Integer.MAX_VALUE)
-    private String snowSysId;
-
-    @Column(name = "snow_sys_class", length = Integer.MAX_VALUE)
-    private String snowSysClass;
-
-    @Column(name = "snow_last_discovered")
-    private OffsetDateTime snowLastDiscovered;
+    @OneToMany(mappedBy = "lbVirtualServer", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<LbVirtualServerCi> snowCis = new ArrayList<>();
 }

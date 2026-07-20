@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 public interface LbVirtualServerRepository extends JpaRepository<LbVirtualServer, Long> {
 
@@ -184,4 +186,12 @@ public interface LbVirtualServerRepository extends JpaRepository<LbVirtualServer
             @Param("isOperator") boolean isOperator,
             @Param("isNetwork") boolean isNetwork,
             @Param("isLoadbalancer") boolean isLoadbalancer);
+
+    Optional<LbVirtualServer> findByName(String name);
+
+    @Query("SELECT lvs FROM LbVirtualServer lvs WHERE :name LIKE CONCAT(lvs.name, '%')")
+    List<LbVirtualServer> findByNameStartingWith(@Param("name") String name);
+
+    @Query(value = "SELECT a.number FROM cmp.lb_virtual_server_has_appservices lbha JOIN cmp.appservice a ON lbha.appservice_id = a.id WHERE lbha.lb_virtual_server_id = :vsId", nativeQuery = true)
+    Set<String> findAppserviceNumbersByVsId(@Param("vsId") Long vsId);
 }

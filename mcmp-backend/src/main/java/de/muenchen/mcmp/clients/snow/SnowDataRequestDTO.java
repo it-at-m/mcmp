@@ -361,9 +361,10 @@ public record SnowDataRequestDTO(
             @JsonProperty("name") String name,
             @JsonProperty("sys_id") @NotNull String sysId,
             @JsonProperty("sys_class") String sysClass,
-            @JsonProperty("last_discovered") String last_discovered,
+            @JsonProperty("last_discovered") String lastDiscovered,
             @JsonProperty("k8s_uid") String k8sUid,
-            @JsonProperty("environment") String environment
+            @JsonProperty("environment") String environment,
+            @JsonProperty("app_service_number") List<String> appServiceNumber
     ) {}
 
 }

@@ -4,6 +4,10 @@ import de.muenchen.mcmp.appservice.Appservice;
 import de.muenchen.mcmp.appservice.AppserviceRepository;
 import de.muenchen.mcmp.group.Group;
 import de.muenchen.mcmp.group.GroupRepository;
+import de.muenchen.mcmp.kubernetes.KubernetesCluster;
+import de.muenchen.mcmp.kubernetes.KubernetesClusterRepository;
+import de.muenchen.mcmp.kubernetes.KubernetesNamespace;
+import de.muenchen.mcmp.kubernetes.KubernetesNamespaceRepository;
 import de.muenchen.mcmp.loadbalancer.LbVirtualServer;
 import de.muenchen.mcmp.loadbalancer.LbVirtualServerCi;
 import de.muenchen.mcmp.loadbalancer.LbVirtualServerCiRepository;
@@ -84,6 +88,8 @@ public class SnowService {
     private final StorageGridBucketRepository storageGridBucketRepository;
     private final LbVirtualServerRepository lbVirtualServerRepository;
     private final LbVirtualServerCiRepository lbVirtualServerCiRepository;
+    private final KubernetesClusterRepository kubernetesClusterRepository;
+    private final KubernetesNamespaceRepository kubernetesNamespaceRepository;
     private final SnowServerCache snowServerCache;
 
     @PersistenceContext
@@ -115,6 +121,7 @@ public class SnowService {
             self.processSnowStorageGridAccounts(data.storageAccounts());
             self.processSnowStorageGridBuckets(data.storageBuckets());
             self.processSnowLbServices(data.lbServices());
+            self.processSnowKubernetesClusters(data.kubernetesClusters());
             log.info("Successfully completed ServiceNow data processing");
         } catch (Exception e) {
             int users = data != null && data.users() != null ? data.users().size() : 0;
@@ -125,8 +132,9 @@ public class SnowService {
             int storageVolumes = data != null && data.storageVolumes() != null ? data.storageVolumes().size() : 0;
             int storageQTrees = data != null && data.storageQTrees() != null ? data.storageQTrees().size() : 0;
             int lbServices = data != null && data.lbServices() != null ? data.lbServices().size() : 0;
+            int kubernetesClusters = data != null && data.kubernetesClusters() != null ? data.kubernetesClusters().size() : 0;
 
-            log.error("ServiceNow import failed (users={}, groups={}, cis={}, appServices={}, storageServers={}, storageVolumes={}, storageQTrees={}, lbServices={})", users, groups, cis, apps, storage, storageVolumes, storageQTrees, lbServices, e);
+            log.error("ServiceNow import failed (users={}, groups={}, cis={}, appServices={}, storageServers={}, storageVolumes={}, storageQTrees={}, lbServices={}, kubernetesClusters={})", users, groups, cis, apps, storage, storageVolumes, storageQTrees, lbServices, kubernetesClusters, e);
 
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "ServiceNow import failed", e);
         }
@@ -1119,6 +1127,113 @@ public class SnowService {
                 storageGridBucketRepository.addAppServiceAssociations(bucketId, cleanIncoming);
             }
             log.debug("Synchronized AppService associations for bucket ID {}: {} incoming numbers", bucketId, cleanIncoming.size());
+        }
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    protected void processSnowKubernetesClusters(List<SnowDataRequestDTO.KubernetesClusterDTO> clusterDTOs) {
+        if (clusterDTOs == null || clusterDTOs.isEmpty()) {
+            return;
+        }
+
+        final List<KubernetesCluster> allClusters = kubernetesClusterRepository.findAll();
+        final Map<String, KubernetesCluster> clusterMap = allClusters.stream()
+                .collect(Collectors.toMap(KubernetesCluster::getSysId, Function.identity()));
+
+        final Set<String> importedClusterSysIds = new HashSet<>();
+
+        for (final SnowDataRequestDTO.KubernetesClusterDTO dto : clusterDTOs) {
+            if (dto.sysId() == null) continue;
+            importedClusterSysIds.add(dto.sysId());
+
+            KubernetesCluster cluster = clusterMap.get(dto.sysId());
+            if (cluster == null) {
+                cluster = new KubernetesCluster();
+                cluster.setSysId(dto.sysId());
+            }
+
+            updateKubernetesClusterFields(cluster, dto);
+            cluster = kubernetesClusterRepository.save(cluster);
+
+            processSnowKubernetesNamespaces(cluster, dto.kubernetesNamespaces());
+        }
+
+        // Cleanup Clusters
+        for (final KubernetesCluster cluster : allClusters) {
+            if (!importedClusterSysIds.contains(cluster.getSysId())) {
+                kubernetesClusterRepository.delete(cluster);
+                log.debug("Deleted KubernetesCluster (not in import): {}", cluster.getName());
+            }
+        }
+    }
+
+    private void updateKubernetesClusterFields(KubernetesCluster cluster, SnowDataRequestDTO.KubernetesClusterDTO dto) {
+        cluster.setName(dto.name());
+        cluster.setSysClass(dto.sysClass());
+        cluster.setLastDiscovered(dto.lastDiscovered() != null ? Date.from(parseSnowDateTime(dto.lastDiscovered()).toInstant()) : null);
+        cluster.setK8sUid(dto.k8sUid());
+        cluster.setEnvironment(parseEnvironmentType(dto.environment()));
+    }
+
+    private void processSnowKubernetesNamespaces(KubernetesCluster cluster, List<SnowDataRequestDTO.KubernetesNamespaceDTO> namespaceDTOs) {
+        final List<KubernetesNamespace> existingNamespaces = kubernetesNamespaceRepository.findAllByClusterIdWithAppservices(cluster.getId());
+        final Map<String, KubernetesNamespace> namespaceMap = existingNamespaces.stream()
+                .collect(Collectors.toMap(KubernetesNamespace::getSysId, Function.identity()));
+
+        final Set<String> importedNamespaceSysIds = new HashSet<>();
+
+        if (namespaceDTOs != null) {
+            for (final SnowDataRequestDTO.KubernetesNamespaceDTO dto : namespaceDTOs) {
+                if (dto.sysId() == null) continue;
+                importedNamespaceSysIds.add(dto.sysId());
+
+                KubernetesNamespace namespace = namespaceMap.get(dto.sysId());
+                if (namespace == null) {
+                    namespace = new KubernetesNamespace();
+                    namespace.setSysId(dto.sysId());
+                    namespace.setCluster(cluster);
+                }
+
+                updateKubernetesNamespaceFields(namespace, dto);
+                namespace = kubernetesNamespaceRepository.save(namespace);
+
+                // Update AppService Associations
+                Set<String> currentAppServiceNumbers = namespace.getAppservices().stream()
+                        .map(Appservice::getNumber)
+                        .collect(Collectors.toSet());
+                updateNamespaceAppServiceAssociations(namespace.getId(), dto.appServiceNumber(), currentAppServiceNumbers);
+            }
+        }
+
+        // Cleanup Namespaces for this Cluster
+        for (final KubernetesNamespace namespace : existingNamespaces) {
+            if (!importedNamespaceSysIds.contains(namespace.getSysId())) {
+                kubernetesNamespaceRepository.delete(namespace);
+                log.debug("Deleted KubernetesNamespace (not in import for cluster {}): {}", cluster.getName(), namespace.getName());
+            }
+        }
+    }
+
+    private void updateKubernetesNamespaceFields(KubernetesNamespace namespace, SnowDataRequestDTO.KubernetesNamespaceDTO dto) {
+        namespace.setName(dto.name());
+        namespace.setSysClass(dto.sysClass());
+        namespace.setLastDiscovered(dto.lastDiscovered() != null ? Date.from(parseSnowDateTime(dto.lastDiscovered()).toInstant()) : null);
+        namespace.setK8sUid(dto.k8sUid());
+        namespace.setEnvironment(parseEnvironmentType(dto.environment()));
+    }
+
+    private void updateNamespaceAppServiceAssociations(Long namespaceId, List<String> incomingNumbers, Set<String> currentNumbers) {
+        final List<String> cleanIncoming = incomingNumbers != null ? incomingNumbers : Collections.emptyList();
+        final Set<String> incomingSet = new HashSet<>(cleanIncoming);
+
+        if (!currentNumbers.equals(incomingSet)) {
+            if (cleanIncoming.isEmpty()) {
+                kubernetesNamespaceRepository.deleteAppServiceAssociations(namespaceId);
+            } else {
+                kubernetesNamespaceRepository.deleteObsoleteAppServiceAssociations(namespaceId, cleanIncoming);
+                kubernetesNamespaceRepository.addAppServiceAssociations(namespaceId, cleanIncoming);
+            }
+            log.debug("Synchronized AppService associations for namespace ID {}: {} incoming numbers", namespaceId, cleanIncoming.size());
         }
     }
 

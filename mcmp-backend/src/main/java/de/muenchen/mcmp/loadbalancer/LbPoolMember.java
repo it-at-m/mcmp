@@ -4,6 +4,7 @@ import de.muenchen.mcmp.common.AbstractEntity;
 import de.muenchen.mcmp.server.Server;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 
 import java.util.List;
 
@@ -34,5 +35,6 @@ public class LbPoolMember extends AbstractEntity {
     private String monitorCondition;
 
     @OneToMany(mappedBy = "poolMember", cascade = CascadeType.ALL, orphanRemoval = true)
+    @BatchSize(size = 100)
     private List<LbPoolMonitor> monitors;
 }

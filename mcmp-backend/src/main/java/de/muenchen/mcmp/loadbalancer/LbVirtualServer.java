@@ -4,10 +4,10 @@ import de.muenchen.mcmp.appservice.Appservice;
 import de.muenchen.mcmp.common.AbstractEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -59,6 +59,7 @@ public class LbVirtualServer extends AbstractEntity {
     private List<String> domains;
 
     @OneToMany(mappedBy = "virtualServer", cascade = CascadeType.ALL, orphanRemoval = true)
+    @BatchSize(size = 100)
     private List<LbVirtualServerPoolRef> poolRefs = new ArrayList<>();
 
     @ManyToMany
@@ -77,6 +78,7 @@ public class LbVirtualServer extends AbstractEntity {
             joinColumns = {@JoinColumn(name = "lb_virtual_server_id")},
             inverseJoinColumns = {@JoinColumn(name = "lb_irule_id")}
     )
+    @BatchSize(size = 100)
     private Set<LbIrule> irules = new LinkedHashSet<>();
 
     @OneToMany(mappedBy = "lbVirtualServer", cascade = CascadeType.ALL, orphanRemoval = true)

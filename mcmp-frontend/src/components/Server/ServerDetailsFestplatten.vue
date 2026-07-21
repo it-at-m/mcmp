@@ -25,7 +25,7 @@
     <template #toolbar-actions>
       <edit-mountpoint
         v-if="
-          selectedServer.guestToolsFullName.includes('Linux 10') &&
+          selectedServer.guestToolsFullName?.includes('Linux 10') &&
           selectedServer.managed &&
           selectedServer.canEdit &&
           selectedServer.cloud?.cloudType == 'VCENTER'

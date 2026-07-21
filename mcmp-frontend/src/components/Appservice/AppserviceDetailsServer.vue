@@ -70,7 +70,6 @@
             extra-sure-checkbox-text="Mir ist bewusst, dass durch das Stoppen der VM eine Serviceunterbrechung entsteht."
             @change="onBatchOrderCompleteDone"
           />
-          <!-- NEU: Pause Batch Button -->
           <pause-server-btn
             :icon="mdiPause"
             :tooltip="powerPauseTooltip"
@@ -519,7 +518,6 @@ const allSelectedServersEligibleToStop = computed(() =>
   )
 );
 
-// Eligibility für geplante Downtime / Pausieren (muss eingeschaltet, editierbar & VCENTER sein)
 const allSelectedServersEligibleToPause = computed(() =>
   allSelectedPass(
     (s: any) =>
@@ -529,15 +527,14 @@ const allSelectedServersEligibleToPause = computed(() =>
   )
 );
 
+// Nur noch "poweredOn" erlaubt:
 const allSelectedServersEligibleToRestart = computed(() =>
-  allSelectedPass((s: any) => {
-    const ps = (s as any).powerState;
-    return (
+  allSelectedPass(
+    (s: any) =>
       (s as any).canEdit &&
       (s as any).cloud?.cloudType === "VCENTER" &&
-      (ps === "poweredOn" || ps === "poweredOff")
-    );
-  })
+      (s as any).powerState === "poweredOn"
+  )
 );
 
 const allSelectedServersEligibleForDowntime = computed(() =>

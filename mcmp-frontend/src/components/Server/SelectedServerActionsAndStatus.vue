@@ -89,6 +89,7 @@
               :icon="mdiRestart"
               tooltip="Server neustarten"
               :server="selectedServer"
+              :disabled="!isRunning"
               job-to-call="VMWARE_RESTART_SERVER"
               show-confirm-dialog
               confirm-dialog-title="VM Neustarten"

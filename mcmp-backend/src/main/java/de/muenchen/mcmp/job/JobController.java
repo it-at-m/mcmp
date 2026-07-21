@@ -1606,6 +1606,15 @@ public class JobController {
             throw new AccessDeniedException("You are not allowed to create a job for this NFS share.");
         }
 
+        boolean fqdnAlreadyInExportPolicy = storageItem.getNfs_export_policy() != null
+                && storageItem.getNfs_export_policy().getOntapExportPolicyRules() != null
+                && storageItem.getNfs_export_policy().getOntapExportPolicyRules().stream()
+                        .anyMatch(rule -> rule.getClients() != null && rule.getClients().contains(fqdn));
+        if (!fqdnAlreadyInExportPolicy) {
+            log.info("FQDN provided by user: {} for serverId: {} is not part of the existing export policy.", AuthUtils.getUsername(), serverId);
+            throw new IllegalArgumentException("FQDN is not part of the existing export policy.");
+        }
+
         logCreatedJob(STORAGE_CHANGE_NFS_EXPORT_POLICY, serverId);
         jobService.storageChangeNfsExportPolicy(storageItem, fqdn, permission);
     }
@@ -1678,8 +1687,8 @@ public class JobController {
             throw new MissingFormatArgumentException(storageLabel + " UUID and newPolicy must be provided.");
         }
 
-        String newPolicy = newPolicyObj.toString();
-        if (!newPolicy.equals("dcc-6h") && !newPolicy.equals("dcc-24h") && !newPolicy.equals("dcc-24h4d") && !newPolicy.equals("dcc-24h7d") && !newPolicy.equals("none")) {
+        String newPolicy = String.valueOf(newPolicyObj);
+        if (!"none".equals(newPolicy) && !newPolicy.matches("dc[cn]-(6h|24h|24h4d|24h7d)")) {
             log.info("Invalid newPolicy provided by user: {} for serverId: {} for job {}", AuthUtils.getUsername(), serverId, jobIdentifier);
             throw new IllegalArgumentException("Snapshot policy must be a valid predefined value.");
         }

@@ -1,5 +1,5 @@
 <template>
-  <template v-if="isAllowedShare">
+  <template v-if="isAllowedShare && isEditMode">
     <v-tooltip
       location="bottom"
       :text="
@@ -52,7 +52,7 @@
               :label="isEditMode ? 'Server' : 'Server auswählen'"
               variant="outlined"
               item-title="name"
-              item-value="fqdn"
+              item-value="name"
               :clearable="!isEditMode"
               :disabled="isEditMode"
               :rules="[
@@ -108,7 +108,7 @@ const rules = useRules();
 const selectedServer = ref("");
 const selectedPermission = ref("");
 const searchText = ref("");
-const serverList = ref<Pick<ServerList, "name" | "fqdn">[]>([]);
+const serverList = ref<Pick<ServerList, "name">[]>([]);
 const requestedAlready = ref(false);
 
 const permissionOptions = [
@@ -156,7 +156,7 @@ const availableServers = computed(() => {
   if (!selectedServer.value) {
     return [];
   }
-  return [{ name: selectedServer.value, fqdn: selectedServer.value }];
+  return [{ name: selectedServer.value }];
 });
 
 // Simple check if a value looks like an IPv4 address, CIDR or an IP range (e.g. 192.168.0.1-192.168.0.10)

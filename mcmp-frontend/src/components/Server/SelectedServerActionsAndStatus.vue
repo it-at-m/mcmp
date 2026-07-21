@@ -78,6 +78,12 @@
               use-extra-sure-dialog
               extra-sure-checkbox-text="Mir ist bewusst, dass durch das Stoppen der VM eine Serviceunterbrechung entsteht."
             />
+            <pause-server-btn
+              :server="selectedServer"
+              :disabled="!isRunning"
+              :icon="mdiPause"
+              @change="$emit('change')"
+            />
             <action-button
               color="btn_red"
               :icon="mdiRestart"
@@ -183,6 +189,7 @@
         </div>
       </v-col>
     </v-row>
+
     <v-row v-if="selectedServer.runningJobsCount > 0">
       <v-col
         cols="12"
@@ -197,6 +204,7 @@
         </div>
       </v-col>
     </v-row>
+
     <v-row
       v-if="
         selectedServer.runningJobsCount > 0 &&
@@ -206,9 +214,11 @@
       <v-col
         cols="12"
         class="pt-0 pb-0"
-        ><div></div
-      ></v-col>
+      >
+        <div></div>
+      </v-col>
     </v-row>
+
     <v-row v-if="selectedServer.runningGreenItCount > 0">
       <v-col
         cols="12"
@@ -240,6 +250,7 @@
         </div>
       </v-col>
     </v-row>
+
     <v-row>
       <v-col class="ml-4 pa-0">
         <v-chip-group
@@ -356,6 +367,7 @@ import type Server from "@/types/Server";
 import {
   mdiDelete,
   mdiKeyChain,
+  mdiPause,
   mdiPauseCircle,
   mdiPlay,
   mdiPlayCircle,
@@ -369,6 +381,7 @@ import { useTheme } from "vuetify";
 import StatusChip from "@/components/common/StatusChip.vue";
 import ActionButton from "@/components/Server/ActionButtons/ActionButton.vue";
 import CheckmkMenu from "@/components/Server/ActionButtons/CheckmkMenu.vue";
+import PauseServerBtn from "@/components/Server/ActionButtons/PauseServerBtn.vue";
 import RootAdminRechteBtn from "@/components/Server/ActionButtons/RootAdminRechteBtn.vue";
 import WinWartungsModusMenu from "@/components/Server/ActionButtons/WinWartungsModusMenu.vue";
 import { useAppStore } from "@/stores/app";
@@ -379,8 +392,10 @@ const props = defineProps<{
   selectedServer: Server;
   loadingServerDetails: boolean;
 }>();
+
 const appStore = useAppStore();
 const userStore = useUserStore();
+
 const isOperator = computed(() =>
   userStore.getUser?.authorities.includes("ROLE_OPERATOR")
 );
@@ -389,9 +404,10 @@ const canExecuteOperatorActions = computed(() => {
   return isOperator.value && !appStore.isReadOnly;
 });
 
-defineEmits<{
+const emit = defineEmits<{
   (e: "navigateToHistory"): void;
   (e: "navigateToPatchnight"): void;
+  (e: "change"): void;
 }>();
 
 const theme = useTheme();
@@ -602,7 +618,7 @@ const greenItBannerIntroText = computed(() => {
   }
 
   :global(.v-container) {
-    padding-top: 20px !important; /* Schafft Platz zum oberen Seitenrand */
+    padding-top: 20px !important;
     margin-top: 0 !important;
   }
 
@@ -611,7 +627,7 @@ const greenItBannerIntroText = computed(() => {
   }
 
   .v-col {
-    padding-top: 10px !important; /* Verhindert das Abschneiden der Überschrift */
+    padding-top: 10px !important;
     padding-bottom: 10px !important;
   }
 

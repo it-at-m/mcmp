@@ -70,6 +70,18 @@
             extra-sure-checkbox-text="Mir ist bewusst, dass durch das Stoppen der VM eine Serviceunterbrechung entsteht."
             @change="onBatchOrderCompleteDone"
           />
+          <!-- NEU: Pause Batch Button -->
+          <pause-server-btn
+            :icon="mdiPause"
+            :tooltip="powerPauseTooltip"
+            :is-batch-operation="true"
+            :selected-server-ids="selectedServers"
+            :selected-servers="serversForBatch"
+            :parent-all-selected-servers-eligible="
+              allSelectedServersEligibleToPause
+            "
+            @change="onBatchOrderCompleteDone"
+          />
           <action-button
             color="btn_red"
             :icon="mdiRestart"
@@ -177,7 +189,6 @@
                     {{ server.name }}
                   </router-link>
                 </span>
-                <!-- Tooltip & Icon für die Warnung (verlinkt auf denselben Server) -->
                 <v-tooltip
                   v-if="server.hasWarnings"
                   location="top"
@@ -293,6 +304,7 @@ import {
   mdiAlert,
   mdiCloud,
   mdiKeyChain,
+  mdiPause,
   mdiPauseCircle,
   mdiPlay,
   mdiPlayCircle,
@@ -308,6 +320,7 @@ import snapshotService from "@/api/snapshotService";
 import CommonCard from "@/components/common/CommonCard.vue";
 import ActionButton from "@/components/Server/ActionButtons/ActionButton.vue";
 import CheckMkDialog from "@/components/Server/ActionButtons/CheckMkDialog.vue";
+import PauseServerBtn from "@/components/Server/ActionButtons/PauseServerBtn.vue";
 import RootAdminRechteBtn from "@/components/Server/ActionButtons/RootAdminRechteBtn.vue";
 import AddSnapshot from "@/components/Server/AddSnapshot.vue";
 import OsCell from "@/components/Server/OsCell.vue";
@@ -324,7 +337,6 @@ const isOperator = computed(() =>
   userStore.getUser?.authorities.includes("ROLE_OPERATOR")
 );
 
-// helper: map serverKind to tooltip text and icon (used by template)
 const serverKindText = (kind?: string | null) => {
   if (!kind) return "";
   switch (String(kind).toUpperCase()) {
@@ -349,33 +361,24 @@ const serverKindIcon = (kind?: string | null) => {
   }
 };
 
-// store numeric server IDs to match Server.id type
 const selectedServers = ref<number[]>([]);
-
-// cache for loaded full server details: Map<id, Server|null> (null = failed to load)
 const fullServerCache = ref<Map<number, Server | null>>(new Map());
-// cache for snapshot counts: Map<id, number|null> (null = failed to load)
 const snapshotCountCache = ref<Map<number, number | null>>(new Map());
 
-// helper to load full server details and cache them
 const loadFullServer = async (id: number) => {
   const numId = Number(id);
-  if (fullServerCache.value.has(numId)) return; // already loaded or attempted
+  if (fullServerCache.value.has(numId)) return;
   const loading = ref(false);
   try {
     const server = await serverService.getServerById(loading, numId);
     fullServerCache.value.set(numId, server as Server);
-    // also load snapshot count for this server asynchronously
     loadSnapshotCount(numId);
   } catch (e) {
-    // mark as null so we don't retry immediately; could implement retry logic
     fullServerCache.value.set(numId, null);
-    // still attempt to load snapshot count
     loadSnapshotCount(numId);
   }
 };
 
-// preload full servers for an array of ids (used for select-all)
 const preloadFullServers = (ids: number[]) => {
   ids.forEach((id) => {
     loadFullServer(id);
@@ -383,29 +386,23 @@ const preloadFullServers = (ids: number[]) => {
   });
 };
 
-// load snapshot count for server and cache result
 const loadSnapshotCount = async (id: number) => {
   const numId = Number(id);
-  if (snapshotCountCache.value.has(numId)) return; // already loaded or attempted
+  if (snapshotCountCache.value.has(numId)) return;
   const loading = ref(false);
   try {
     const snaps = await snapshotService.getSnapshotsByServerId(loading, numId);
     snapshotCountCache.value.set(numId, snaps?.length ?? 0);
   } catch (e) {
-    // mark as null to indicate failure
     snapshotCountCache.value.set(numId, null);
   }
 };
 
-// serversForBatch: return selected servers using partial data (from selectedAppservice.servers)
-// overlaid with full server objects from fullServerCache when available.
 const serversForBatch = computed(() => {
   return selectedServers.value
     .map((id) => {
-      // try full cache first
       const full = fullServerCache.value.get(Number(id));
       if (full) return full;
-      // fallback: lookup in parent-provided partial server list
       const partial = (props.selectedAppservice?.servers || []).find(
         (s: any) => Number(s.id) === Number(id)
       );
@@ -414,7 +411,6 @@ const serversForBatch = computed(() => {
     .filter((s): s is Server => !!s);
 });
 
-// reset selection when the appservice changes to avoid stale selection/dash state
 watch(
   () => props.selectedAppservice?.id,
   () => {
@@ -444,21 +440,18 @@ const toggleAllServers = (value: boolean | null) => {
       Number(s.id)
     );
     selectedServers.value = allIds;
-    // preload full servers for eligibility checks
     preloadFullServers(allIds);
   } else {
     selectedServers.value = [];
   }
 };
 
-// value indicates checkbox state; serverId is numeric or string - coerce to Number
 const toggleServerSelection = (serverId: any, value: boolean | null) => {
   const id = Number(serverId);
   const shouldSelect = !!value;
   const index = selectedServers.value.indexOf(id);
   if (shouldSelect) {
     if (index === -1) selectedServers.value.push(id);
-    // load full server details when selected so eligibility can be evaluated
     loadFullServer(id);
   } else {
     if (index > -1) selectedServers.value.splice(index, 1);
@@ -466,17 +459,14 @@ const toggleServerSelection = (serverId: any, value: boolean | null) => {
 };
 
 const onBatchOrderCompleteDone = () => {
-  // callback wenn RootAdminRechteBtn die batch-Operation abgeschlossen hat
   selectedServers.value = [];
 };
 
-// helper: ensure all selected servers loaded
 const allSelectedDataLoaded = () =>
   selectedServers.value.length > 0 &&
   Array.from(fullServerCache.value.keys()).length >=
     selectedServers.value.length;
 
-// generic all-selected checker
 const allSelectedPass = (check: (s: any, id: number) => boolean) => {
   if (selectedServers.value.length === 0) return false;
   if (!allSelectedDataLoaded()) return false;
@@ -521,6 +511,16 @@ const allSelectedServersEligibleToStart = computed(() =>
 );
 
 const allSelectedServersEligibleToStop = computed(() =>
+  allSelectedPass(
+    (s: any) =>
+      (s as any).canEdit &&
+      (s as any).cloud?.cloudType === "VCENTER" &&
+      (s as any).powerState === "poweredOn"
+  )
+);
+
+// Eligibility für geplante Downtime / Pausieren (muss eingeschaltet, editierbar & VCENTER sein)
+const allSelectedServersEligibleToPause = computed(() =>
   allSelectedPass(
     (s: any) =>
       (s as any).canEdit &&
@@ -582,6 +582,12 @@ const powerStopTooltip = computed(() => {
   return allSelectedServersEligibleToStop.value ? "Stop" : "Nicht möglich";
 });
 
+const powerPauseTooltip = computed(() => {
+  if (selectedServers.value.length === 0) return noSelectionTooltip;
+  if (!allSelectedDataLoaded()) return "Wird geladen...";
+  return allSelectedServersEligibleToPause.value ? "Pausieren / Geplante Downtime" : "Nicht möglich";
+});
+
 const anyServerHasWarnings = computed(() => {
   return (props.selectedAppservice?.servers || []).some(
     (server: any) => server.hasWarnings
@@ -596,11 +602,9 @@ const powerRestartTooltip = computed(() => {
     : "Nicht möglich";
 });
 
-// tooltip text for RootAdminRechteBtn to explain disabled reasons (similar style as AddSnapshot)
 const rootAdminTooltip = computed(() => {
   if (selectedServers.value.length === 0) return noSelectionTooltip;
 
-  // if not all full servers are loaded yet -> inform user
   if (
     Array.from(fullServerCache.value.keys()).length <
     selectedServers.value.length
@@ -612,7 +616,6 @@ const rootAdminTooltip = computed(() => {
     return `Root/Admin-Rechte für ${selectedServers.value.length} Server bestellen`;
   }
 
-  // compute specific failure reasons
   const notManaged: string[] = [];
   const noPermission: string[] = [];
   const unknownOs: string[] = [];
@@ -620,7 +623,7 @@ const rootAdminTooltip = computed(() => {
   selectedServers.value.forEach((id) => {
     const s = fullServerCache.value.get(Number(id));
     const name = (s && (s as any).name) || `Server ${id}`;
-    if (!s) return; // already handled by loading message above
+    if (!s) return;
     if (!(s as any).managed) {
       notManaged.push(name);
       return;

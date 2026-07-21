@@ -1,6 +1,6 @@
 <template>
   <v-tooltip
-    text="Geplante Downtime (Ausschalten & Wiederhochfahren)"
+    :text="tooltipText"
     location="bottom"
   >
     <template #activator="{ props: tooltipProps }">
@@ -10,7 +10,7 @@
         style="display: inline-flex"
       >
         <v-btn
-          :disabled="disabled || loading"
+          :disabled="computedDisabled || loading"
           color="accent"
           :loading="loading"
           class="material-action-btn"
@@ -37,15 +37,54 @@
     @dialog-cancel="onDialogCancel"
   >
     <common-alert
-      v-if="server"
+      v-if="server || (props.isBatchOperation && props.selectedServerIds?.length)"
       color="accent"
     >
-      <div class="server-info-label">Ausgewählter Server:</div>
-      <div class="server-name">{{ server.name }}</div>
+      <div
+        v-if="server"
+        class="server-info-label"
+      >
+        Ausgewählter Server:
+      </div>
+      <div
+        v-if="server"
+        class="server-name"
+      >
+        {{ server.name }}
+      </div>
+
+      <div
+        v-else-if="props.isBatchOperation"
+        class="server-info-label"
+      >
+        Ausgewählte Server:
+      </div>
+      <div
+        v-else-if="props.isBatchOperation"
+        class="server-name"
+      >
+        {{ props.selectedServerIds?.length }} Server
+      </div>
+
+      <div
+        v-if="props.isBatchOperation && props.selectedServers?.length"
+        class="mt-2"
+      >
+        <ul class="pl-4">
+          <li
+            v-for="s in props.selectedServers.filter((x) =>
+              props.selectedServerIds?.includes(x.id)
+            )"
+            :key="s.id"
+          >
+            {{ s.name }}
+          </li>
+        </ul>
+      </div>
     </common-alert>
 
     <div class="mt-3 mb-2">
-      Legen Sie fest, wann die VM heruntergefahren und wann sie automatisch wieder gestartet werden soll:
+      Legen Sie fest, wann die VM(s) heruntergefahren und wann sie automatisch wieder gestartet werden soll(en):
     </div>
 
     <v-form ref="form">
@@ -95,9 +134,15 @@ import { useRules } from "@/composables/rules";
 import type Server from "@/types/Server";
 
 const props = defineProps<{
-  server: Server;
+  server?: Server;
   disabled?: boolean;
   icon?: string;
+  tooltip?: string;
+  // Batch Support Props
+  isBatchOperation?: boolean;
+  selectedServerIds?: number[];
+  selectedServers?: Server[];
+  parentAllSelectedServersEligible?: boolean;
 }>();
 
 const emit = defineEmits<(e: "change") => void>();
@@ -110,16 +155,27 @@ const dialog = ref(false);
 const validated = ref(true);
 const form = ref<HTMLFormElement>();
 
-// Standardwerte: Stop in 10 min, Start in 2 Std.
 const stopDate = ref<Date>(new Date(Date.now() + 10 * 60 * 1000));
 const startDate = ref<Date>(new Date(Date.now() + 2 * 60 * 60 * 1000));
 
 const validationRules = useRules();
 
-// Prüft strikt, dass Start NACH Stop liegt
 const isStartAfterStop = computed(() => {
   if (!startDate.value || !stopDate.value) return false;
   return startDate.value.getTime() > stopDate.value.getTime();
+});
+
+const computedDisabled = computed(() => {
+  if (props.isBatchOperation) {
+    if (!props.parentAllSelectedServersEligible) return true;
+    const ids = props.selectedServerIds ?? [];
+    return ids.length === 0;
+  }
+  return props.disabled ?? false;
+});
+
+const tooltipText = computed(() => {
+  return props.tooltip || "Geplante Downtime (Ausschalten & Wiederhochfahren)";
 });
 
 function onBtnClick() {
@@ -139,26 +195,32 @@ async function onDialogConfirm() {
   dialog.value = false;
   unregisterOpenDialog?.();
 
-  if (!props.server) return;
-
   loading.value = true;
 
   try {
-    // 1. Stopp-Job mit geplanter Zeit senden
-    await jobService.startJob(
-      loading,
-      "VMWARE_STOP_SERVER",
-      props.server.id,
-      { scheduleTime: stopDate.value.toISOString() }
-    );
+    if (props.isBatchOperation) {
+      const ids =
+        props.selectedServerIds ?? props.selectedServers?.map((s) => s.id) ?? [];
+      if (ids.length === 0 || !props.parentAllSelectedServersEligible) return;
 
-    // 2. Start-Job mit geplanter Zeit senden
-    await jobService.startJob(
-      loading,
-      "VMWARE_START_SERVER",
-      props.server.id,
-      { scheduleTime: startDate.value.toISOString() }
-    );
+      const promises = ids.flatMap((id) => [
+        jobService.startJob(loading, "VMWARE_STOP_SERVER", id, {
+          scheduleTime: stopDate.value.toISOString(),
+        }),
+        jobService.startJob(loading, "VMWARE_START_SERVER", id, {
+          scheduleTime: startDate.value.toISOString(),
+        }),
+      ]);
+
+      await Promise.all(promises);
+    } else if (props.server) {
+      await jobService.startJob(loading, "VMWARE_STOP_SERVER", props.server.id, {
+        scheduleTime: stopDate.value.toISOString(),
+      });
+      await jobService.startJob(loading, "VMWARE_START_SERVER", props.server.id, {
+        scheduleTime: startDate.value.toISOString(),
+      });
+    }
 
     emit("change");
   } catch (err) {
@@ -168,7 +230,6 @@ async function onDialogConfirm() {
   }
 }
 
-// Sobald sich eine der beiden Zeiten ändert, Formular neu evaluieren
 watch([stopDate, startDate], () => {
   form.value?.validate().then((validation: { valid: boolean }) => {
     validated.value = validation.valid;

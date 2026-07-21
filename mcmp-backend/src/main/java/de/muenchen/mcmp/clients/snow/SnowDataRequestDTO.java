@@ -124,7 +124,7 @@ public record SnowDataRequestDTO(
             @JsonProperty("serial_number")
             String serialNumber,
 
-            @JsonProperty("sys_class_name")
+            @JsonProperty("sys_class")
             String sysClassName,
 
             @JsonProperty("ip_address")
@@ -202,7 +202,7 @@ public record SnowDataRequestDTO(
             @JsonProperty("business_service_numbers")
             List<String> businessServiceNumbers,
 
-            @JsonProperty("cis")
+            @JsonProperty("server_cis")
             List<String> cis
     ) {
     }

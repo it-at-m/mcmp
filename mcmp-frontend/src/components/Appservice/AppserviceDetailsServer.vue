@@ -6,6 +6,7 @@
     <common-card
       title="Zugeordnete Server"
       top-margin="0"
+      :is-default-expanded="false"
     >
       <template #append-title>
         <v-tooltip
@@ -582,7 +583,9 @@ const powerStopTooltip = computed(() => {
 const powerPauseTooltip = computed(() => {
   if (selectedServers.value.length === 0) return noSelectionTooltip;
   if (!allSelectedDataLoaded()) return "Wird geladen...";
-  return allSelectedServersEligibleToPause.value ? "Pausieren / Geplante Downtime" : "Nicht möglich";
+  return allSelectedServersEligibleToPause.value
+    ? "Pausieren / Geplante Downtime"
+    : "Nicht möglich";
 });
 
 const anyServerHasWarnings = computed(() => {

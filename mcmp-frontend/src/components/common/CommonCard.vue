@@ -19,7 +19,11 @@
         >
           <slot name="prepend-title" />
         </div>
-        <v-toolbar-title class="text-h6">
+        <v-toolbar-title
+          class="text-h6"
+          :style="!disableExpansion ? 'cursor: pointer' : undefined"
+          @click="!disableExpansion && (expanded = !expanded)"
+        >
           <div class="d-flex align-center">
             {{ title }}
             <slot name="append-title" />

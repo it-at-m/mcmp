@@ -4,6 +4,7 @@
     title="Loadbalancer"
     :loading="loading"
     top-margin="0"
+    :is-default-expanded="false"
   >
     <v-data-table
       :loading="loading"

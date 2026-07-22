@@ -1,7 +1,7 @@
 <template>
   <common-card
     v-if="testing && storages.length"
-    title="Storage"
+    :title="cardTitle"
     top-margin="0"
     :is-default-expanded="false"
   >
@@ -29,7 +29,7 @@
 import type Appservice from "@/types/Appservice";
 import type { UnifiedStorageItemList } from "@/types/UnifiedStorageItemList";
 
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 
 import storageService from "@/api/storageService";
 import testenvService from "@/api/testenvService";
@@ -47,6 +47,8 @@ testenvService.getTestEnabled(loadingTestEnv).then((enabled) => {
 
 const storages = ref<UnifiedStorageItemList[]>([]);
 const loading = ref(false);
+
+const cardTitle = computed(() => `Storage (${storages.value.length})`);
 
 const headers = [
   { title: "Name", key: "name" },

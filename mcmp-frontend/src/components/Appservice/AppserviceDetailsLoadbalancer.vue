@@ -1,7 +1,7 @@
 <template>
   <common-card
     v-if="testing && loadbalancers.length"
-    title="Loadbalancer"
+    :title="cardTitle"
     top-margin="0"
     :is-default-expanded="false"
   >
@@ -29,7 +29,7 @@
 import type Appservice from "@/types/Appservice";
 import type { LoadbalancerListItem } from "@/types/LoadbalancerListItem";
 
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 
 import loadbalancerService from "@/api/loadbalancerService";
 import testenvService from "@/api/testenvService";
@@ -47,6 +47,10 @@ testenvService.getTestEnabled(loadingTestEnv).then((enabled) => {
 
 const loadbalancers = ref<LoadbalancerListItem[]>([]);
 const loading = ref(false);
+
+const cardTitle = computed(
+  () => `Loadbalancer (${loadbalancers.value.length})`
+);
 
 const headers = [
   { title: "Name", key: "name" },

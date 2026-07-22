@@ -4,7 +4,7 @@
     class="links"
   >
     <common-card
-      title="Zugeordnete Server"
+      :title="cardTitle"
       top-margin="0"
       :is-default-expanded="false"
     >
@@ -335,6 +335,10 @@ const formatter = useFormatter();
 const userStore = useUserStore();
 const isOperator = computed(() =>
   userStore.getUser?.authorities.includes("ROLE_OPERATOR")
+);
+
+const cardTitle = computed(
+  () => `Zugeordnete Server (${props.selectedAppservice?.servers?.length ?? 0})`
 );
 
 const serverKindText = (kind?: string | null) => {

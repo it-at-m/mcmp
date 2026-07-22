@@ -34,7 +34,7 @@
         :items="snapshots"
         :headers="headers"
         :loading="loading || backupLoading"
-        :sort-by="[{ key: 'createTime', order: 'asc' }]"
+        :sort-by="[{ key: 'createTime', order: 'desc' }]"
         density="compact"
       >
         <template #[`item.createTime`]="{ item }">
@@ -105,11 +105,23 @@ const backupLoading = ref(false);
 const confirmDeleteDialog = ref(false);
 const snapshotToDelete = ref<string | null>(null);
 
-const headers: DataTableHeader[] = [
-  { title: "Name", key: "name" },
-  { title: "Erstellt am", key: "createTime" },
-  { title: "Aktion", key: "actions", sortable: false },
-];
+const hasActions = computed(() => {
+  return (
+    canManageSnapshots.value &&
+    props.snapshots.some((item) => item.name?.startsWith("ms."))
+  );
+});
+
+const headers = computed<DataTableHeader[]>(() => {
+  const baseHeaders: DataTableHeader[] = [
+    { title: "Name", key: "name" },
+    { title: "Erstellt am", key: "createTime" },
+  ];
+  if (hasActions.value) {
+    baseHeaders.push({ title: "Aktion", key: "actions", sortable: false });
+  }
+  return baseHeaders;
+});
 
 const policyPrefix = computed<"dcc" | "dcn">(() => {
   const cat = props.selectedStorageItem?.storageCategory ?? "";

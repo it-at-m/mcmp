@@ -62,7 +62,7 @@
           <div class="right-panel-sticky">
             <v-row>
               <v-col>
-                <h2 class="ml-2">
+                <h2 class="ml-2 mt-6">
                   {{ getTitle() }}
                 </h2>
               </v-col>

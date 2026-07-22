@@ -1,4 +1,24 @@
 <template>
+  <v-tooltip
+    v-if="isBatchOperation && !asMenuItem"
+    location="bottom"
+    :text="tooltip"
+    :open-on-hover="true"
+  >
+    <template #activator="{ props: tooltipProps }">
+      <span v-bind="tooltipProps">
+        <v-btn
+          class="material-action-btn"
+          variant="flat"
+          :icon="mdiTools"
+          size="small"
+          :disabled="isBatchDisabled"
+          :aria-label="title"
+          @click="openDialog"
+        />
+      </span>
+    </template>
+  </v-tooltip>
   <common-dialog
     v-model="dialog"
     :title="title"
@@ -15,12 +35,15 @@
     @dialog-cancel="close"
     @dialog-confirm="save"
   >
-    <template #activator="{ props }">
-      <v-list-item-title
-        v-bind="props"
-        style="cursor: pointer"
-        >{{ title }}
-      </v-list-item-title>
+    <template
+      v-if="!isBatchOperation || asMenuItem"
+      #activator="{ props: activatorProps }"
+    >
+      <v-list-item
+        v-bind="activatorProps"
+        :disabled="isBatchOperation && isBatchDisabled"
+        :title="title"
+      />
     </template>
     <v-form
       v-if="title === 'Wartungsmodus setzen'"
@@ -76,7 +99,7 @@
 import type Server from "@/types/Server.ts";
 
 import { mdiTools } from "@mdi/js";
-import { inject, ref, watch } from "vue";
+import { computed, inject, ref, watch } from "vue";
 
 import jobService from "@/api/jobService";
 import CommonWarning from "@/components/common/CommonAlert.vue";
@@ -85,8 +108,13 @@ import CommonTimePicker from "@/components/common/CommonTimePicker.vue";
 import { useRules } from "@/composables/rules";
 
 const props = defineProps<{
-  server: Server;
+  server?: Server;
   title: string;
+  isBatchOperation?: boolean;
+  asMenuItem?: boolean;
+  selectedServerIds?: number[];
+  parentAllSelectedServersEligible?: boolean;
+  parentDisabledTooltip?: string;
 }>();
 
 const emit = defineEmits<(e: "save", save: boolean) => boolean>();
@@ -101,6 +129,31 @@ const validated =
 
 const registerOpenDialog = inject<() => void>("registerOpenDialog");
 const unregisterOpenDialog = inject<() => void>("unregisterOpenDialog");
+
+const isBatchDisabled = computed(() => {
+  if (!props.isBatchOperation) return false;
+  if (!props.parentAllSelectedServersEligible) return true;
+  return (props.selectedServerIds ?? []).length === 0;
+});
+
+const tooltip = computed(() => {
+  if (!props.isBatchOperation) return props.title;
+  if ((props.selectedServerIds ?? []).length === 0) {
+    return "Keine Server ausgewählt.";
+  }
+  if (!props.parentAllSelectedServersEligible) {
+    return (
+      props.parentDisabledTooltip ||
+      "Nicht berechtigt oder Server nicht verwaltet."
+    );
+  }
+  return props.title;
+});
+
+function openDialog() {
+  if (props.isBatchOperation && isBatchDisabled.value) return;
+  dialog.value = true;
+}
 
 // Endzeit
 const rawEndDate = ref<Date>(new Date());
@@ -122,30 +175,32 @@ function close() {
 function save() {
   form.value?.validate().then((validation: { valid: boolean }) => {
     if (validation.valid) {
+      const targetIds = props.isBatchOperation
+        ? (props.selectedServerIds ?? [])
+        : props.server
+          ? [props.server.id]
+          : [];
+
       if (props.title === "Wartungsmodus setzen") {
-        jobService.startJob(
-          loading,
-          "WINDOWS_MAINTENANCE_MODE",
-          props.server.id,
+        const wartungsmodusEnde = `${rawEndDate.value.toLocaleDateString(
+          "de-DE",
           {
-            wartungsmodus_ende: `${rawEndDate.value.toLocaleDateString(
-              "de-DE",
-              {
-                year: "numeric",
-                month: "2-digit",
-                day: "2-digit",
-              }
-            )} ${rawEndDate.value.toLocaleTimeString("de-DE")}`,
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
           }
-        );
+        )} ${rawEndDate.value.toLocaleTimeString("de-DE")}`;
+        targetIds.forEach((id) => {
+          jobService.startJob(loading, "WINDOWS_MAINTENANCE_MODE", id, {
+            wartungsmodus_ende: wartungsmodusEnde,
+          });
+        });
       }
 
       if (props.title == "Wartungsmodus vorzeitig beenden") {
-        jobService.startJob(
-          loading,
-          "WINDOWS_MAINTENANCE_MODE_END",
-          props.server.id
-        );
+        targetIds.forEach((id) => {
+          jobService.startJob(loading, "WINDOWS_MAINTENANCE_MODE_END", id);
+        });
       }
 
       dialog.value = false;
@@ -166,3 +221,24 @@ watch(dialog, (newValue) => {
   else unregisterOpenDialog?.();
 });
 </script>
+
+<style scoped>
+.material-action-btn {
+  border-radius: 50% !important;
+  margin: 0 4px;
+  width: 33.35px !important;
+  height: 33.35px !important;
+  box-shadow:
+    0 3px 1px -2px rgba(0, 0, 0, 0.2),
+    0 2px 2px 0 rgba(0, 0, 0, 0.14),
+    0 1px 5px 0 rgba(0, 0, 0, 0.12);
+  transition: box-shadow 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.material-action-btn:hover {
+  box-shadow:
+    0 2px 4px -1px rgba(0, 0, 0, 0.2),
+    0 4px 5px 0 rgba(0, 0, 0, 0.14),
+    0 1px 10px 0 rgba(0, 0, 0, 0.12);
+}
+</style>

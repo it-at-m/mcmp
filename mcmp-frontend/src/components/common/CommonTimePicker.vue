@@ -55,8 +55,8 @@ const props = defineProps<{
   timeRules?: any[];
   dateRules?: any[];
   rawDateIn: Date;
-  round?: false;
-  withButtons?: false;
+  round?: boolean;
+  withButtons?: boolean;
 }>();
 
 const emit = defineEmits(["update:rawDateIn"]);

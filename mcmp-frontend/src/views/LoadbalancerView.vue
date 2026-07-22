@@ -61,7 +61,7 @@
           <div class="right-panel-sticky">
             <v-row>
               <v-col>
-                <h2 class="ml-2">{{ selectedDetail.name }}</h2>
+                <h2 class="ml-2 mt-6">{{ selectedDetail.name }}</h2>
               </v-col>
             </v-row>
             <v-row>

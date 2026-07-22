@@ -122,6 +122,14 @@
             :parent-disabled-tooltip="downtimeDisabledTooltip"
             @save="onBatchOrderCompleteDone"
           />
+          <win-wartungs-modus-batch-menu
+            :selected-server-ids="selectedServers"
+            :parent-all-selected-servers-eligible="
+              allSelectedServersEligibleForWindowsMaintenance
+            "
+            :parent-disabled-tooltip="windowsMaintenanceDisabledTooltip"
+            @save="onBatchOrderCompleteDone"
+          />
         </div>
       </template>
       <v-table
@@ -322,6 +330,7 @@ import ActionButton from "@/components/Server/ActionButtons/ActionButton.vue";
 import CheckMkDialog from "@/components/Server/ActionButtons/CheckMkDialog.vue";
 import PauseServerBtn from "@/components/Server/ActionButtons/PauseServerBtn.vue";
 import RootAdminRechteBtn from "@/components/Server/ActionButtons/RootAdminRechteBtn.vue";
+import WinWartungsModusBatchMenu from "@/components/Server/ActionButtons/WinWartungsModusBatchMenu.vue";
 import AddSnapshot from "@/components/Server/AddSnapshot.vue";
 import OsCell from "@/components/Server/OsCell.vue";
 import { useFormatter } from "@/composables/formatter.ts";
@@ -546,6 +555,12 @@ const allSelectedServersEligibleForDowntime = computed(() =>
   allSelectedPass((s: any) => !!s.canEdit)
 );
 
+const allSelectedServersEligibleForWindowsMaintenance = computed(() =>
+  allSelectedPass(
+    (s: any) => !!(s as any).roleWindows && s.canEdit && s.managed
+  )
+);
+
 const noSelectionTooltip = "Keine Server ausgewählt.";
 
 const snapshotDisabledTooltip = computed(() => {
@@ -570,6 +585,18 @@ const downtimeDisabledTooltip = computed(() => {
     return "Serverdaten werden geladen. Bitte warten.";
   }
   return "Nur auf Servern mit Bestellberechtigung kann eine Downtime gesetzt werden.";
+});
+
+const windowsMaintenanceDisabledTooltip = computed(() => {
+  if (allSelectedServersEligibleForWindowsMaintenance.value) return "";
+  if (selectedServers.value.length === 0) return noSelectionTooltip;
+  if (
+    Array.from(fullServerCache.value.keys()).length <
+    selectedServers.value.length
+  ) {
+    return "Serverdaten werden geladen. Bitte warten.";
+  }
+  return "Nur auf verwalteten Windows-Servern mit Bestellberechtigung kann der Wartungsmodus gesetzt werden.";
 });
 
 const powerStartTooltip = computed(() => {

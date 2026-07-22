@@ -259,7 +259,10 @@
         </h3>
       </v-col>
       <v-col
-        v-if="props.selectedServer.serverType === 'VM_VCENTER'"
+        v-if="
+          props.selectedServer.serverType === 'VM_VCENTER' ||
+          props.selectedServer.serverType === 'VM_PROXMOX'
+        "
         cols="3"
       >
         <h3>Festplattengröße</h3>
@@ -293,7 +296,10 @@
         <p v-else>Checkmk RAM-Metriken nicht verfügbar</p>
       </v-col>
       <v-col
-        v-if="props.selectedServer.serverType === 'VM_VCENTER'"
+        v-if="
+          props.selectedServer.serverType === 'VM_VCENTER' ||
+          props.selectedServer.serverType === 'VM_PROXMOX'
+        "
         cols="3"
         class="pt-0"
       >
@@ -311,7 +317,12 @@
         cols="3"
         class="pt-0"
       >
-        <p v-if="props.selectedServer.serverType === 'VM_VCENTER'">
+        <p
+          v-if="
+            props.selectedServer.serverType === 'VM_VCENTER' ||
+            props.selectedServer.serverType === 'VM_PROXMOX'
+          "
+        >
           {{ props.selectedServer.numCpu }} CPUs
         </p>
         <p
@@ -331,7 +342,12 @@
         cols="3"
         class="pt-0"
       >
-        <p v-if="props.selectedServer.serverType === 'VM_VCENTER'">
+        <p
+          v-if="
+            props.selectedServer.serverType === 'VM_VCENTER' ||
+            props.selectedServer.serverType === 'VM_PROXMOX'
+          "
+        >
           {{ formatter.formatMBtoGB(props.selectedServer.memoryMb) }} GB
         </p>
         <p

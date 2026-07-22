@@ -224,10 +224,10 @@ async function onOpenedCheckActions() {
 const showMainCard = computed(() => {
   return (
     !props.checkForEnabledActions ||
-    (actionsChecked.value &&
-      Object.values(actionsEnabled.value ?? {}).every((enabled) =>
-        Boolean(enabled)
-      )) ||
+    !actionsChecked.value ||
+    Object.values(actionsEnabled.value ?? {}).every((enabled) =>
+      Boolean(enabled)
+    ) ||
     acknowledgedActionDisabled.value
   );
 });

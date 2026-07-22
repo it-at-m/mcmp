@@ -43,11 +43,10 @@
       v-if="!isBatchOperation"
       #activator="{ props }"
     >
-      <v-list-item-title
+      <v-list-item
         v-bind="props"
-        style="cursor: pointer"
-        >{{ title }}
-      </v-list-item-title>
+        :title="title"
+      />
     </template>
     <v-form
       v-if="title === 'Downtime setzen'"

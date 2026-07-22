@@ -289,7 +289,10 @@
               </v-col>
             </v-row>
           </div>
-          <div class="right-panel-scroll">
+          <div
+            class="right-panel-scroll"
+            tabindex="-1"
+          >
             <v-row>
               <v-col v-if="selectedServer.length > 0">
                 <v-tabs-window v-model="tab">

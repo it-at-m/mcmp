@@ -22,7 +22,7 @@
         <v-toolbar-title
           class="text-h6"
           :style="!disableExpansion ? 'cursor: pointer' : undefined"
-          @click="!disableExpansion && (expanded = !expanded)"
+          @click.stop="!disableExpansion && (expanded = !expanded)"
         >
           <div class="d-flex align-center">
             {{ title }}
@@ -39,7 +39,7 @@
               v-bind="tooltipProps"
               :icon="expanded ? mdiChevronUp : mdiChevronDown"
               variant="text"
-              @click="expanded = !expanded"
+              @click.stop="expanded = !expanded"
             ></v-btn>
           </template>
           <span>{{ expanded ? "einklappen" : "aufklappen" }}</span>

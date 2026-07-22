@@ -5,14 +5,9 @@ import type {
   ServerTypeMixed,
 } from "@/types/ServerTypes.ts";
 
-
-
 import type NetworkGroup from "./NetworkGroup";
 
-
-
 import NewServername from "@/types/NewServername.ts";
-
 
 export enum OsType {
   Linux = "Linux",

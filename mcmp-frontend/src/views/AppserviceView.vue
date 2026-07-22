@@ -80,7 +80,10 @@
               />
             </div>
           </div>
-          <div class="right-panel-scroll">
+          <div
+            class="right-panel-scroll"
+            tabindex="-1"
+          >
             <v-tabs-window v-model="tabAppservices">
               <v-tabs-window-item value="Allgemeines">
                 <appservice-details-allgemein

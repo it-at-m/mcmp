@@ -15,6 +15,7 @@
       @update:search="onSearchUpdate"
       @row-click="onRowClick"
       @load-more="onLoadMore"
+      @row-keydown="onRowKeydown"
     >
       <template #[`header.name`]="{ column, toggleSort }">
         <div
@@ -202,6 +203,8 @@
             density="compact"
             :color="item.isFavorite ? 'warning' : 'grey-lighten-1'"
             class="mr-1"
+            tabindex="-1"
+            title="Favorit (Taste F, wenn Zeile fokussiert)"
             @click.stop="toggleFavorite(item)"
           >
             <v-icon>{{ item.isFavorite ? mdiStar : mdiStarOutline }}</v-icon>
@@ -378,6 +381,12 @@ function removeIfBeyondLoadedRange(server: any) {
   const beyondRange = order * server.name.localeCompare(lastName) > 0;
   if (beyondRange) {
     servers.value = servers.value.filter((s) => s.id !== server.id);
+  }
+}
+
+function onRowKeydown({ key, item }: { key: string; item: any }) {
+  if (key === "f" || key === "F") {
+    toggleFavorite(item);
   }
 }
 

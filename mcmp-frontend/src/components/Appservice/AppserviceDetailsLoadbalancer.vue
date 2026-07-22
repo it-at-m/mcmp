@@ -2,7 +2,6 @@
   <common-card
     v-if="testing && loadbalancers.length"
     title="Loadbalancer"
-    :loading="loading"
     top-margin="0"
     :is-default-expanded="false"
   >

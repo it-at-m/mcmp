@@ -8,7 +8,9 @@
         <h3>Domains</h3>
       </v-col>
       <v-col cols="3">
-        <h3 v-if="lb.tenantRepositoryUrl">Gitlab-Repository</h3></v-col
+        <h3 v-if="lb.tenantRepositoryUrl && !lb.wafEnabled">
+          Gitlab-Repository
+        </h3></v-col
       >
       <v-col cols="3">
         <h3>
@@ -59,7 +61,7 @@
         class="links pt-0"
       >
         <a
-          v-if="lb.tenantRepositoryUrl"
+          v-if="lb.tenantRepositoryUrl && !lb.wafEnabled"
           :href="lb.tenantRepositoryUrl"
           target="_blank"
           rel="noopener noreferrer"

@@ -2,7 +2,6 @@
   <common-card
     v-if="testing && storages.length"
     title="Storage"
-    :loading="loading"
     top-margin="0"
     :is-default-expanded="false"
   >

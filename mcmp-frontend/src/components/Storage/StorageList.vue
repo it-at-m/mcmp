@@ -15,6 +15,7 @@
       @update:search="onSearchUpdate"
       @row-click="onRowClick"
       @load-more="onLoadMore"
+      @row-keydown="onRowKeydown"
     >
       <template #[`header.storageCategory`]>
         <div class="header-container">
@@ -77,6 +78,8 @@
             density="compact"
             :color="item.isFavorite ? 'warning' : 'grey-lighten-1'"
             class="mr-1 ml-2"
+            tabindex="-1"
+            title="Favorit (Taste F, wenn Zeile fokussiert)"
             @click.stop="toggleFavorite(item)"
           >
             <v-icon>{{ item.isFavorite ? mdiStar : mdiStarOutline }}</v-icon>
@@ -264,6 +267,12 @@ function switchColor(type: string) {
       return "orange";
     default:
       return "grey";
+  }
+}
+
+function onRowKeydown({ key, item }: { key: string; item: TableItem }) {
+  if (key === "f" || key === "F") {
+    toggleFavorite(item);
   }
 }
 

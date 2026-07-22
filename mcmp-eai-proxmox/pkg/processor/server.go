@@ -37,10 +37,6 @@ type Server struct {
 	// Name of the server on the hypervisor.
 	Name string `json:"name,omitempty"`
 
-	// FQDN of the server. This is used to map the server entry to
-	// other systems such as Foreman.
-	Fqdn string `json:"fqdn,omitempty"`
-
 	Cluster    string     `json:"cluster,omitempty"`     // Cluster the VM is hosted in.
 	Host       string     `json:"host,omitempty"`        // Host/Node the VM is hosted on.
 	PowerState PowerState `json:"power_state,omitempty"` // Must be "poweredOn" or "poweredOff"
@@ -57,17 +53,14 @@ func (p *Processor) ProcessServer(vm *pdm.Resource) *Server {
 		ServerType: ServerTypeProxmox,
 	}
 
+	server.Name = vm.Name
+
 	// obviously not a real UUID, but neither are the "UUID"s of
 	// UCS servers. this value only really has to be unique within
 	// the cloud instance, which it is.
 	VMID := strconv.FormatUint(vm.VMID, 10)
 	server.UUID = VMID
 	server.VMID = VMID
-
-	// assert that every VM should be named after the FQDN of
-	// the guest. this should be true for any server installed via
-	// the MCMP.
-	server.Fqdn = vm.Name
 
 	// ID schema: remote/<remote>/guest/<vmid>
 	ps := strings.Split(vm.ID, "/")

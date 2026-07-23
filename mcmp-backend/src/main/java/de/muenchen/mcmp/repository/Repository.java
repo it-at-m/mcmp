@@ -36,6 +36,12 @@ public class Repository extends AbstractEntity {
     @Column(name = "snow_last_discovered")
     private OffsetDateTime snowLastDiscovered;
 
+    @Column(name = "locked", nullable = false)
+    private boolean locked = true;
+
+    @Column(name = "repository_url")
+    private String repositoryUrl;
+
     @ManyToMany
     @JoinTable(
             name = "repository_assignment",

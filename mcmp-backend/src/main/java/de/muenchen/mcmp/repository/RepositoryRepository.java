@@ -14,6 +14,21 @@ public interface RepositoryRepository extends JpaRepository<Repository, Long> {
     Optional<Repository> findByName(String name);
     List<Repository> findAllByServersId(Long serverId);
 
+    @Query(value = "SELECT name, id FROM cmp.repository", nativeQuery = true)
+    List<RepositoryIdByName> findAllIdsByName();
+
+    @Query(value = "SELECT id FROM cmp.repository WHERE name = :name", nativeQuery = true)
+    Optional<Long> findIdByName(@Param("name") String name);
+
+    @Modifying
+    @Transactional
+    @Query(value = """
+            INSERT INTO cmp.repository (name, locked)
+            VALUES (:name, TRUE)
+            ON CONFLICT (name) DO NOTHING
+            """, nativeQuery = true)
+    void insertIfNotExists(@Param("name") String name);
+
     @Modifying
     @Transactional
     @Query(value = "DELETE FROM cmp.repository_assignment WHERE server_id = :serverId", nativeQuery = true)

@@ -324,8 +324,75 @@ public interface JobRepository extends JpaRepository<Job, Long> {
     AND (CAST(:serverId AS bigint) IS NULL OR j.server_id = :serverId)
     """, nativeQuery = true)
     Page<JobListBasic> findAllJobsBasic(Pageable pageable,
-                                              @Param("userId") Long userId,
-                                              @Param("serverId") Long serverId);
+                                        @Param("userId") Long userId,
+                                        @Param("serverId") Long serverId);
+
+    @Query(value = """
+        SELECT
+           a.id as appServiceId,
+           a.name as appServiceName,
+           ca.api_description as awxApiDescription,
+           j.awx_end_date as awxEndDate,
+           j.awx_error as awxError,
+           j.awx_extra_vars as awxExtraVars,
+           j.awx_job_enabled as awxJobEnabled,
+           j.awx_job_id as awxJobId,
+           j.awx_job_link as awxJobLink,
+           j.awx_start_date as awxStartDate,
+           j.awx_status as awxStatus,
+           j.awx_template_id as awxTemplateId,
+           j.awx_template_type as awxTemplateType,
+           j.awx_variables as awxVariables,
+           j.change_error as changeError,
+           j.change_link as changeLink,
+           j.change_number as changeNumber,
+           j.change_required as changeRequired,
+           j.change_start_date as changeStartDate,
+           j.change_status as changeStatus,
+           j.created_at as createdAt,
+           j.description as description,
+           j.hostname as hostname,
+           j.id as id,
+           j.ip as ip,
+           j.quickdiscovery as quickdiscovery,
+           j.quickdiscovery_ci_name as quickdiscoveryCiName,
+           j.quickdiscovery_ci_sysid as quickdiscoveryCiSysid,
+           j.quickdiscovery_error as quickdiscoveryError,
+           j.quickdiscovery_error_counter as quickdiscoveryErrorCounter,
+           j.quickdiscovery_status as quickdiscoveryStatus,
+           s.id as serverId,
+           j.server_installation as serverInstallation,
+           s.name as serverName,
+           cs.api_description as snowApiDescription,
+           j.status as status,
+           j.tagging_error as taggingError,
+           j.tagging_status as taggingStatus,
+           j.title as title,
+           u.name as userName,
+           j.awx_job_error_message as awxJobErrorMessage,
+           j.awx_job_artifacts as awxJobArtifacts,
+           j.awx_job_org as awxJobOrg,
+           j.awx_job_return_data as awxJobReturnData,
+           j.awx_job_return_message as awxJobReturnMessage,
+           j.awx_job_return_completed as awxJobReturnCompleted,
+           j.awx_job_failed as awxJobFailed,
+           j.awx_job_status as awxJobStatus,
+           EXTRACT(EPOCH FROM j.awx_duration)::bigint as awxJobDuration,
+           j.awx_template_link as awxTemplateLink
+    FROM cmp.job j
+    LEFT JOIN cmp.user u ON j.user_id = u.id
+    LEFT JOIN cmp.server s ON j.server_id = s.id
+    LEFT JOIN cmp.config_snow cs on j.snow_id = cs.id
+    LEFT JOIN cmp.config_awx ca on j.awx_id = ca.id
+    LEFT JOIN cmp.appservice a on j.appservice_id = a.id
+    WHERE j.appservice_id = :appServiceId
+    """,
+            countQuery = """
+    SELECT COUNT(*)
+    FROM cmp.job j
+    WHERE j.appservice_id = :appServiceId
+    """, nativeQuery = true)
+    Page<JobListBasic> findJobsByAppServiceId(Pageable pageable, @Param("appServiceId") Long appServiceId);
 
     @Query(value = "SELECT DISTINCT j.action_identifier FROM cmp.job j ORDER BY j.action_identifier ASC", nativeQuery = true)
     List<String> findAllActionIdentifiers();

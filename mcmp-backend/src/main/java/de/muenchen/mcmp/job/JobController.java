@@ -175,6 +175,24 @@ public class JobController {
     }
 
     @HasUserOrSpecialRole
+    @GetMapping("/appservice/{appserviceId}")
+    public Page<? extends JobListBasic> getJobsByAppServiceId(
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "itemsPerPage", defaultValue = "10") int itemsPerPage,
+            @RequestParam(value = "sortBy", required = false) final String sortBy,
+            @RequestParam(value = "sortDesc", defaultValue = "false") final boolean sortDesc,
+            @PathVariable("appserviceId") final Long appserviceId
+    ) {
+        if (page < 1) {
+            page = 1;
+        }
+        if (itemsPerPage < 1 || itemsPerPage > 100) {
+            itemsPerPage = 10;
+        }
+        return jobService.findAllJobsByRole(page, itemsPerPage, sortBy, sortDesc, null, null, null, null, null, null, null, null, appserviceId, null, null, null);
+    }
+
+    @HasUserOrSpecialRole
     @GetMapping("/user")
     public Page<? extends JobListBasic> getJobsByUser(
             @RequestParam(value = "page", defaultValue = "1") int page,

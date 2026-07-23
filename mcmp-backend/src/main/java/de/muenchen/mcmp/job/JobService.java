@@ -146,6 +146,26 @@ public class JobService {
         return jobRepository.findAllJobsBasic(pageable, userId, serverId);
     }
 
+    public Page<JobListBasic> getJobsByAppServiceId(
+            final int page,
+            final int itemsPerPage,
+            final String sortBy,
+            final boolean sortDesc,
+            final Long appServiceId
+    ) {
+        final Sort sort;
+        if (sortBy != null && !sortBy.isBlank()) {
+            String actualSortBy = SORT_MAPPINGS.getOrDefault(sortBy, sortBy);
+            sort = Sort.by(sortDesc ? Sort.Direction.DESC : Sort.Direction.ASC, actualSortBy);
+        } else {
+            sort = Sort.by(Sort.Direction.DESC, "id");
+        }
+        int offset = (page - 1) * itemsPerPage;
+        final Pageable pageable = new OffsetBasedPageRequest(offset, itemsPerPage, sort);
+
+        return jobRepository.findJobsByAppServiceId(pageable, appServiceId);
+    }
+
     public void createJob(final String actionIdentifier, Server server, Map<String, Object> awxExtraVars, Map<String, Object> guiVars){
         createJob(actionIdentifier, server, awxExtraVars, guiVars, null, null);
     }
@@ -585,10 +605,10 @@ public class JobService {
         params.put("db_type", server.getDbMssql() ? "mssql" : "none");
         params.put("application_service_environment",
                 server.getAppservices().stream()
-                .findFirst()
-                .map(Appservice::getEnvironment)
-                .map(Enum::name)
-                .orElse("none"));
+                        .findFirst()
+                        .map(Appservice::getEnvironment)
+                        .map(Enum::name)
+                        .orElse("none"));
 
         if(scheduleTime != null){
             createJob(delete_server_identifier, server, params, new HashMap<>(), scheduleTime,null,null);
@@ -1241,11 +1261,11 @@ public class JobService {
             return null;
         }
         try {
-        // Beispiel: "17.09.2025 13:48:00"
-        java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
-        java.time.LocalDateTime startDateTime = java.time.LocalDateTime.parse(startDate, formatter);
-        java.time.LocalDateTime endDateTime = startDateTime.plusMinutes(durationInMinutes);
-        return endDateTime.format(formatter);
+            // Beispiel: "17.09.2025 13:48:00"
+            java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
+            java.time.LocalDateTime startDateTime = java.time.LocalDateTime.parse(startDate, formatter);
+            java.time.LocalDateTime endDateTime = startDateTime.plusMinutes(durationInMinutes);
+            return endDateTime.format(formatter);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

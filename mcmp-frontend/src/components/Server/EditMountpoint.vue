@@ -63,16 +63,24 @@
           <common-alert color="notice_red">
             <div class="links">
               <h4>Hinweis:</h4>
-              Zur Ressourcenerweiterung über den maximalen Wert von 2000 GB
-              bitte
+              Für Ressourcenerweiterung >2000 GB
+              bitte ein Ticket bei
               <a
-                href="https://it-services.muenchen.de/sp?id=sc_cat_item&sys_id=f2385ce61b76a050e52dfddacd4bcb3e"
+                href="https://it-services.muenchen.de/sp?id=sc_cat_item&sys_id=73fd83e11bde1094588efddacd4bcb92"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                Ticket
+                IBS48 Linux-Server
               </a>
-              an IBS48 Linux-Server oder IBS49 Windows-Server
+              oder
+              <a
+                href="https://it-services.muenchen.de/sp?id=sc_cat_item&sys_id=1539a307c3e843d0d130f1fb050131a9"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                IBS49 Windows-Server
+              </a>
+              eröffnen.
             </div>
           </common-alert>
         </v-col>

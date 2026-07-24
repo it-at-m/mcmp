@@ -48,7 +48,7 @@
             :parent-all-selected-servers-eligible="
               allSelectedServersEligibleToStart
             "
-            job-to-call="VMWARE_START_SERVER"
+            job-to-call="START_SERVER"
             show-confirm-dialog
             confirm-dialog-title="VM Starten"
             confirm-dialog-text="Wollen Sie diese VMs wirklich starten?"
@@ -64,7 +64,7 @@
             :parent-all-selected-servers-eligible="
               allSelectedServersEligibleToStop
             "
-            job-to-call="VMWARE_STOP_SERVER"
+            job-to-call="STOP_SERVER"
             show-confirm-dialog
             confirm-dialog-title="VM Stoppen"
             confirm-dialog-text="Wollen Sie diese VMs wirklich stoppen?"
@@ -93,7 +93,7 @@
             :parent-all-selected-servers-eligible="
               allSelectedServersEligibleToRestart
             "
-            job-to-call="VMWARE_RESTART_SERVER"
+            job-to-call="RESTART_SERVER"
             show-confirm-dialog
             confirm-dialog-title="VM Neustarten"
             confirm-dialog-text="Wollen Sie diese VMs wirklich neustarten?"

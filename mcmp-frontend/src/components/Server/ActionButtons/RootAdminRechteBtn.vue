@@ -84,20 +84,6 @@
       </div>
     </common-alert>
 
-    <!-- One-time hint for single-server dialog -->
-    <common-alert
-      v-if="showBatchHint && !isBatchOperation"
-      color="accent"
-      class="mt-2"
-    >
-      <h4>Tipp:</h4>
-      <div>
-        Es können jetzt auch mehrere Root/Admin-Rechte gleichzeitig bestellt
-        werden. Gehen Sie dazu auf einen Anwendungsservice und wählen Sie die
-        gewünschten Server aus der Liste unten aus.
-      </div>
-    </common-alert>
-
     <br />
     {{ confirmDialogText || "Wollen Sie die Aktion ausführen?" }}
 
@@ -217,10 +203,6 @@ const form = ref<HTMLFormElement>();
 const validated = ref(true);
 const rules = useRules();
 
-// one-time hint state
-const BATCH_HINT_KEY = "mcmp_root_admin_batch_hint_v1";
-const showBatchHint = ref(false);
-
 function tryValidation() {
   if (!isOtherUser.value) {
     validated.value = true;
@@ -233,20 +215,6 @@ function tryValidation() {
 
 function onBtnClick() {
   if (props.showConfirmDialog) {
-    // show one-time hint for single-server dialogs
-    if (!props.isBatchOperation && props.server) {
-      const shown = localStorage.getItem(BATCH_HINT_KEY);
-      if (!shown) {
-        showBatchHint.value = true;
-        // mark as shown so it is not displayed again
-        try {
-          localStorage.setItem(BATCH_HINT_KEY, "1");
-        } catch (e) {
-          /* ignore */
-        }
-      }
-    }
-
     dialog.value = true;
     registerOpenDialog?.();
   } else {

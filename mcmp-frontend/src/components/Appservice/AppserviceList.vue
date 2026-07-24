@@ -10,6 +10,7 @@
       :items-per-page="itemsPerPage"
       :has-more="curOffset < itemsAvailableToLoad"
       :selected-id="selectedId"
+      :search="search"
       search-label="Anwendungsservice suchen"
       search-tooltip="Name oder SNSVC des Anwendungsservice"
       @update:search="onSearchUpdate"
@@ -85,8 +86,27 @@ import appserviceService from "@/api/appserviceService.ts";
 import ScrollableListTable from "@/components/common/ScrollableListTable.vue";
 import { APPSERVICE_EXPLAIN_URL } from "@/constants.ts";
 
+const props = withDefaults(
+  defineProps<{
+    selected?: AppserviceList[];
+    unActivateAppserviceRow?: boolean;
+    urlParamsId?: string | string[];
+    initialSearch?: string;
+  }>(),
+  {
+    selected: () => [],
+  }
+);
+
+const emit = defineEmits<{
+  (e: "update:selected", selected: AppserviceList[]): void;
+  (e: "resetUnActivateAppserviceRow"): void;
+  (e: "appserviceSelected", appserviceId: number): void;
+  (e: "update:search", val: string): void;
+}>();
+
 const loading = ref(false);
-const search = ref("");
+const search = ref(props.initialSearch ?? "");
 const curOffset = ref(0);
 const itemsAvailableToLoad = ref(0);
 const appservicesItems = ref<AppserviceList[]>([]);
@@ -99,23 +119,6 @@ const tableRef = ref<{
 } | null>(null);
 
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
-
-const props = withDefaults(
-  defineProps<{
-    selected?: AppserviceList[];
-    unActivateAppserviceRow?: boolean;
-    urlParamsId?: string | string[];
-  }>(),
-  {
-    selected: () => [],
-  }
-);
-
-const emit = defineEmits<{
-  (e: "update:selected", selected: AppserviceList[]): void;
-  (e: "resetUnActivateAppserviceRow"): void;
-  (e: "appserviceSelected", appserviceId: number): void;
-}>();
 
 const headers: DataTableHeader[] = [
   { title: "Anwendungsservice", key: "name", align: "start", sortable: true },
@@ -145,9 +148,17 @@ function onSearchUpdate(val: string) {
   search.value = val ?? "";
 }
 
+watch(
+  () => props.initialSearch,
+  (val) => {
+    if (val !== undefined && val !== search.value) search.value = val;
+  }
+);
+
 watch(search, () => {
   if (searchTimeout) clearTimeout(searchTimeout);
   searchTimeout = setTimeout(async () => {
+    emit("update:search", search.value);
     curOffset.value = 0;
     appservicesItems.value = [];
     await loadAppservices();

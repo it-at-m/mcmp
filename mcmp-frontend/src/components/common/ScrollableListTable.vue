@@ -107,6 +107,7 @@ const props = defineProps<{
   searchTooltip?: string; // HIER: Das Prop für dein Tooltip registriert
   selectedId?: number | string | null;
   hasMore: boolean;
+  search?: string;
 }>();
 
 const emit = defineEmits<{
@@ -120,9 +121,15 @@ const emit = defineEmits<{
 
 // ── Search ────────────────────────────────────────────────────────────────────
 
-const searchModel = ref("");
+const searchModel = ref(props.search ?? "");
 
 watch(searchModel, (val) => emit("update:search", val));
+watch(
+  () => props.search,
+  (val) => {
+    if (val !== undefined && val !== searchModel.value) searchModel.value = val;
+  }
+);
 
 // ── Keyboard / Focus ──────────────────────────────────────────────────────────
 

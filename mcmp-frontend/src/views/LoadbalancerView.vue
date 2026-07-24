@@ -35,7 +35,9 @@
         <loadbalancer-list
           :model-value="selectedItems"
           :url-params-id="route.params.id"
+          :initial-search="loadbalancerSearch"
           @update:selected="onLoadbalancerSelected"
+          @update:search="loadbalancerSearch = $event"
         />
       </div>
 
@@ -59,11 +61,13 @@
           class="right-panel-inner"
         >
           <div class="right-panel-sticky">
-            <v-row>
-              <v-col>
-                <h2 class="ml-2 mt-6">{{ selectedDetail.name }}</h2>
-              </v-col>
-            </v-row>
+            <breadcrumb-nav
+              :appservice-id="selectedDetail.appservices?.[0]?.id ?? null"
+              :appservice-name="selectedDetail.appservices?.[0]?.name ?? null"
+              :appservice-count="selectedDetail.appservices?.length ?? 0"
+              :current-icon="mdiSitemap"
+              :current-label="selectedDetail.name"
+            />
             <v-row>
               <v-col class="d-flex align-center">
                 <v-tabs
@@ -114,6 +118,7 @@
             </v-row>
           </div>
           <div
+            ref="scrollContainer"
             class="right-panel-scroll"
             tabindex="-1"
           >
@@ -161,19 +166,28 @@
 import type { LoadbalancerDetail } from "@/types/LoadbalancerDetail";
 import type { LoadbalancerListItem } from "@/types/LoadbalancerListItem";
 
-import { mdiCallSplit, mdiClose, mdiHome, mdiScriptText } from "@mdi/js";
+import {
+  mdiCallSplit,
+  mdiClose,
+  mdiHome,
+  mdiScriptText,
+  mdiSitemap,
+} from "@mdi/js";
 import { onMounted, onUnmounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 import loadbalancerService from "@/api/loadbalancerService";
 import testenvService from "@/api/testenvService.ts";
 import commingSoon from "@/assets/commingSoon.png";
+import BreadcrumbNav from "@/components/common/BreadcrumbNav.vue";
 import CollapseAllCardsButton from "@/components/common/CollapseAllCardsButton.vue";
 import LoadbalancerDetailsGeneral from "@/components/Loadbalancer/LoadbalancerDetailsGeneral.vue";
 import LoadbalancerDetailsIrules from "@/components/Loadbalancer/LoadbalancerDetailsIrules.vue";
 import LoadbalancerDetailsPool from "@/components/Loadbalancer/LoadbalancerDetailsPool.vue";
 import LoadbalancerList from "@/components/Loadbalancer/LoadbalancerList.vue";
 import { useCollapsibleCards } from "@/composables/useCollapsibleCards";
+import { useScrollRestoration } from "@/composables/useScrollRestoration";
+import { useTabQuerySync } from "@/composables/useTabQuerySync";
 
 const leftPanelWidth = ref(400);
 const isResizing = ref(false);
@@ -183,9 +197,14 @@ const maxWidthPercent = 0.35;
 const selectedItems = ref<LoadbalancerListItem[]>([]);
 const selectedDetail = ref<LoadbalancerDetail | null>(null);
 const tab = ref("Allgemeines");
+const loadbalancerSearch = ref("");
 const loadingDetails = ref(false);
+const scrollContainer = ref<HTMLElement | null>(null);
 
 const { allCardsExpanded, toggleAllCards } = useCollapsibleCards(tab);
+useTabQuerySync(tab);
+useTabQuerySync(loadbalancerSearch, "search");
+useScrollRestoration(scrollContainer);
 const testing = ref(false);
 const showBanner = ref(true);
 const loadingTestEnv = ref(false);
@@ -202,7 +221,7 @@ async function onLoadbalancerSelected(item: LoadbalancerListItem | null) {
   selectedItems.value = [item];
   const targetPath = `/loadbalancer/${item.id}`;
   if (route.path !== targetPath) {
-    router.push(targetPath);
+    router.push({ path: targetPath, query: route.query });
   }
 }
 

@@ -35,8 +35,10 @@
         <storage-list
           :model-value="selectedStorage"
           :url-params-id="route.params.id"
+          :initial-search="storageSearch"
           @update:selected="onStorageSelected"
           @update:total-items="onStorageTotalItemsUpdate"
+          @update:search="storageSearch = $event"
         />
       </div>
 
@@ -60,13 +62,17 @@
           class="right-panel-inner"
         >
           <div class="right-panel-sticky">
-            <v-row>
-              <v-col>
-                <h2 class="ml-2 mt-6">
-                  {{ getTitle() }}
-                </h2>
-              </v-col>
-            </v-row>
+            <breadcrumb-nav
+              :appservice-id="
+                selectedStorageDetail.appservices?.[0]?.id ?? null
+              "
+              :appservice-name="
+                selectedStorageDetail.appservices?.[0]?.name ?? null
+              "
+              :appservice-count="selectedStorageDetail.appservices?.length ?? 0"
+              :current-icon="mdiHarddisk"
+              :current-label="getTitle()"
+            />
             <v-row>
               <v-col class="d-flex align-center">
                 <v-tabs
@@ -117,6 +123,7 @@
             </v-row>
           </div>
           <div
+            ref="scrollContainer"
             class="right-panel-scroll"
             tabindex="-1"
           >
@@ -183,19 +190,28 @@ import type { UnifiedStorageItem } from "@/types/Storage";
 import type { UnifiedStorageItemList } from "@/types/UnifiedStorageItemList";
 import type { UnifiedStorageSnapshotItem } from "@/types/UnifiedStorageSnapshotItem";
 
-import { mdiAccountCog, mdiClose, mdiDatabase, mdiHome } from "@mdi/js";
+import {
+  mdiAccountCog,
+  mdiClose,
+  mdiDatabase,
+  mdiHarddisk,
+  mdiHome,
+} from "@mdi/js";
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 import storageService from "@/api/storageService";
 import testenvService from "@/api/testenvService.ts";
 import commingSoon from "@/assets/commingSoon.png";
+import BreadcrumbNav from "@/components/common/BreadcrumbNav.vue";
 import CollapseAllCardsButton from "@/components/common/CollapseAllCardsButton.vue";
 import StorageDetailsBackup from "@/components/Storage/StorageDetailsBackup.vue";
 import StorageDetailsGeneral from "@/components/Storage/StorageDetailsGeneral.vue";
 import StorageDetailsPermissions from "@/components/Storage/StorageDetailsPermissions.vue";
 import StorageList from "@/components/Storage/StorageList.vue";
 import { useCollapsibleCards } from "@/composables/useCollapsibleCards";
+import { useScrollRestoration } from "@/composables/useScrollRestoration";
+import { useTabQuerySync } from "@/composables/useTabQuerySync";
 
 const leftPanelWidth = ref(400);
 const isResizing = ref(false);
@@ -205,9 +221,14 @@ const maxWidthPercent = 0.35; // Maximum width in % of window width
 const selectedStorage = ref<UnifiedStorageItemList[]>([]);
 const selectedStorageDetail = ref<UnifiedStorageItem | null>(null);
 const tab = ref("Allgemeines");
+const storageSearch = ref("");
 const loadingDetails = ref(false);
+const scrollContainer = ref<HTMLElement | null>(null);
 
 const { allCardsExpanded, toggleAllCards } = useCollapsibleCards(tab);
+useTabQuerySync(tab);
+useTabQuerySync(storageSearch, "search");
+useScrollRestoration(scrollContainer);
 const loadingSnapshots = ref(false);
 const snapshots = ref<UnifiedStorageSnapshotItem[]>([]);
 const testing = ref<boolean>(false); // Only show view in test env
@@ -246,7 +267,7 @@ const onStorageSelected = (item: UnifiedStorageItemList | null) => {
 
   const targetPath = `/storage/${item.type}/${item.uuid}`;
   if (route.path !== targetPath) {
-    router.push(targetPath);
+    router.push({ path: targetPath, query: route.query });
   }
 };
 
@@ -288,7 +309,7 @@ async function syncSelectionFromRoute(
     ];
     const canonicalPath = `/storage/${matchedStorage.type}/${matchedStorage.uuid}`;
     if (route.path !== canonicalPath) {
-      await router.push(canonicalPath);
+      await router.push({ path: canonicalPath, query: route.query });
     }
 
     loadTabData(tab.value, true);

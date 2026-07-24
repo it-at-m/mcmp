@@ -14,7 +14,9 @@
         <appservice-list
           :selected="selectedAppserviceRows"
           :url-params-id="route.params.appId"
+          :initial-search="appserviceSearch"
           @update:selected="onAppserviceSelected"
+          @update:search="appserviceSearch = $event"
         />
       </div>
 
@@ -58,7 +60,10 @@
           class="right-panel-inner"
         >
           <div class="right-panel-sticky">
-            <appservice-status :selected-appservice="selectedAppservice" />
+            <breadcrumb-nav
+              :appservice-id="selectedAppservice.id"
+              :appservice-name="selectedAppservice.name"
+            />
             <div class="d-flex align-center">
               <v-tabs
                 v-model="tabAppservices"
@@ -87,6 +92,7 @@
             </div>
           </div>
           <div
+            ref="scrollContainer"
             class="right-panel-scroll"
             tabindex="-1"
           >
@@ -152,15 +158,19 @@ import AppserviceDetailsOpenshift from "@/components/Appservice/AppserviceDetail
 import AppserviceDetailsServer from "@/components/Appservice/AppserviceDetailsServer.vue";
 import AppserviceDetailsStorage from "@/components/Appservice/AppserviceDetailsStorage.vue";
 import AppserviceList from "@/components/Appservice/AppserviceList.vue";
-import AppserviceStatus from "@/components/Appservice/AppserviceStatus.vue";
+import BreadcrumbNav from "@/components/common/BreadcrumbNav.vue";
 import CollapseAllCardsButton from "@/components/common/CollapseAllCardsButton.vue";
 import CommonAlert from "@/components/common/CommonAlert.vue";
 import { useCollapsibleCards } from "@/composables/useCollapsibleCards";
+import { useScrollRestoration } from "@/composables/useScrollRestoration";
+import { useTabQuerySync } from "@/composables/useTabQuerySync";
 
 const selectedAppserviceRows = ref<AppserviceListItem[]>([]);
 const selectedAppservice = ref<Appservice | null>(null);
 const tabAppservices = ref("Allgemeines");
+const appserviceSearch = ref("");
 const loadingDetails = ref(false);
+const scrollContainer = ref<HTMLElement | null>(null);
 
 // History State
 const history = ref<Page<JobList> | null>(null);
@@ -172,6 +182,9 @@ const currentSortDesc = ref(false);
 
 const { allCardsExpanded, toggleAllCards } =
   useCollapsibleCards(tabAppservices);
+useTabQuerySync(tabAppservices);
+useTabQuerySync(appserviceSearch, "search");
+useScrollRestoration(scrollContainer);
 
 const notFound = ref(false);
 const notFoundId = ref<number | null>(null);
@@ -187,13 +200,13 @@ const maxWidthPercent = 0.35;
 function onAppserviceSelected(rows: AppserviceListItem[]) {
   const id = rows[0]?.id;
   if (!id) {
-    void router.push("/appservice");
+    void router.push({ path: "/appservice", query: route.query });
     return;
   }
 
   const targetPath = `/appservice/${id}`;
   if (route.path !== targetPath) {
-    void router.push(targetPath);
+    void router.push({ path: targetPath, query: route.query });
   }
 }
 

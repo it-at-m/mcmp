@@ -10,6 +10,7 @@
       :items-per-page="itemsPerPage"
       :has-more="hasMore"
       :selected-id="selectedId"
+      :search="search"
       search-label="Loadbalancer suchen..."
       @update:sort-by="updateSortBy"
       @update:search="onSearchUpdate"
@@ -102,11 +103,13 @@ type TableItem = LoadbalancerListItem & { id: number };
 const props = defineProps<{
   modelValue?: LoadbalancerListItem[];
   urlParamsId?: string | string[];
+  initialSearch?: string;
 }>();
 
 const emit = defineEmits<{
   (e: "update:modelValue", selected: LoadbalancerListItem[]): void;
   (e: "update:selected", selected: LoadbalancerListItem | null): void;
+  (e: "update:search", val: string): void;
 }>();
 
 const loading = ref(false);
@@ -117,7 +120,7 @@ const currentPage = ref(1);
 const sortBy = ref<SortByEntry[]>([{ key: "domain", order: "asc" }]);
 const selected = ref<LoadbalancerListItem[]>([]);
 const hasMore = ref(true);
-const search = ref("");
+const search = ref(props.initialSearch ?? "");
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const tableRef = ref<{ triggerObserveScroll: () => void } | null>(null);
@@ -246,6 +249,13 @@ function onSearchUpdate(val: string) {
   search.value = val;
 }
 
+watch(
+  () => props.initialSearch,
+  (val) => {
+    if (val !== undefined && val !== search.value) search.value = val;
+  }
+);
+
 function onRowClick(item: TableItem) {
   if (!item) return;
   selectItem(item);
@@ -262,6 +272,7 @@ async function onLoadMore() {
 watch(search, () => {
   if (searchTimeout) clearTimeout(searchTimeout);
   searchTimeout = setTimeout(async () => {
+    emit("update:search", search.value);
     currentPage.value = 1;
     await loadItems(1);
     await nextTick();

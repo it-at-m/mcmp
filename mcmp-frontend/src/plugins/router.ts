@@ -5,6 +5,7 @@ import {
   handleHotUpdate,
 } from "vue-router/auto-routes";
 
+import { useUserStore } from "@/stores/user";
 import AppserviceView from "@/views/AppserviceView.vue";
 import HilfeView from "@/views/HilfeView.vue";
 import HistoryView from "@/views/HistoryView.vue";
@@ -14,8 +15,6 @@ import ServerView from "@/views/ServerView.vue";
 import SettingsView from "@/views/SettingsView.vue";
 import StorageView from "@/views/StorageView.vue";
 import UnauthorizedView from "@/views/UnauthorizedView.vue";
-
-import { useUserStore } from "@/stores/user";
 
 const manualRoutes = [
   {

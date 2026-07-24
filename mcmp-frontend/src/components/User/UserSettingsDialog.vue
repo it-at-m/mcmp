@@ -36,10 +36,14 @@
     <!-- Startseite Konfiguration -->
     <div class="text-subtitle-1 font-weight-bold mb-2">Startseite</div>
     <div class="text-caption text-disabled mb-2">
-      Legen Sie fest, welche Seite beim Aufruf der Anwendung als Erstes angezeigt werden soll.
+      Legen Sie fest, welche Seite beim Aufruf der Anwendung als Erstes
+      angezeigt werden soll.
     </div>
 
-    <v-menu location="bottom" :close-on-content-click="true">
+    <v-menu
+      location="bottom"
+      :close-on-content-click="true"
+    >
       <template v-slot:activator="{ props }">
         <v-text-field
           v-bind="props"
@@ -168,7 +172,9 @@ watch(
 
 // Titel für das Eingabefeld ermitteln
 const selectedPageTitle = computed(() => {
-  const match = availableStartPages.find((p) => p.path === selectedLoginPage.value);
+  const match = availableStartPages.find(
+    (p) => p.path === selectedLoginPage.value
+  );
   return match ? match.title : selectedLoginPage.value;
 });
 
@@ -179,7 +185,8 @@ const selectLoginPage = (newPath: string) => {
   selectedLoginPage.value = newPath;
 
   // Der userService kümmert sich über pageLoading (Ref) um den Spinner im TextField
-  userService.setLoginPage(newPath, pageLoading)
+  userService
+    .setLoginPage(newPath, pageLoading)
     .then(() => {
       const currentUser = userStore.getUser;
       if (currentUser) {

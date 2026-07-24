@@ -58,22 +58,83 @@
       </v-col>
     </v-row>
     <v-row>
-      <v-col cols="6">
-        <h3>CMDB</h3>
+      <v-col cols="3">
+        <h3>
+          Anwendungsservice<info-tooltip>
+            <div class="pa-1">
+              <strong
+                >Logische Geschäftsanwendung (Anwendungsservice-Sicht)</strong
+              >
+              <p class="text-caption mt-2 mb-1">
+                Repräsentiert die Gruppierung aller CIs, die für einen Dienst
+                zusammenarbeiten.
+              </p>
+              <ul
+                class="mt-2 text-body-2"
+                style="padding-left: 1.2rem"
+              >
+                <li>
+                  <strong>Zweck:</strong> Verknüpft die IT-Infrastruktur
+                  (Server, DBs) mit einem konkreten Business-Nutzen.
+                </li>
+                <li>
+                  <strong>Impact:</strong> Hilft bei der Analyse, welche Dienste
+                  bei einem Serverausfall betroffen sind.
+                </li>
+                <li>
+                  <strong>Eigentumsverantwortung:</strong> Hier sind
+                  Verantwortlichkeiten (Owner), Support-Gruppen und SLAs
+                  hinterlegt.
+                </li>
+              </ul>
+            </div>
+          </info-tooltip>
+        </h3>
       </v-col>
-      <v-col cols="6">
+      <v-col cols="3">
+        <h3>
+          Anwendungsservice Map<info-tooltip>
+            <div class="pa-1">
+              <strong>Service-Abhängigkeiten (Top-Down Map)</strong>
+              <p class="text-caption mt-2 mb-1">
+                Visualisiert die hierarchische Struktur und Beziehungen des
+                Dienstes.
+              </p>
+              <ul
+                class="mt-2 text-body-2"
+                style="padding-left: 1.2rem"
+              >
+                <li>
+                  <strong>Visualisierung:</strong> Grafische Darstellung aller
+                  Komponenten (Server, DBs, LB), die den Service bilden.
+                </li>
+                <li>
+                  <strong>Beziehungen:</strong> Zeigt direkt, welche
+                  Infrastruktur-CIs miteinander kommunizieren oder voneinander
+                  abhängen.
+                </li>
+                <li>
+                  <strong>Fehlersuche:</strong> Ideal zur Identifikation von
+                  "Single Points of Failure" innerhalb der Service-Architektur.
+                </li>
+              </ul>
+            </div>
+          </info-tooltip>
+        </h3>
+      </v-col>
+      <v-col cols="3">
         <h3>Change-Gruppe</h3>
       </v-col>
     </v-row>
     <v-row>
       <v-col
-        cols="6"
+        cols="3"
         class="pt-0"
       >
         <p>
           <a
             v-if="props.selectedAppservice?.sysId"
-            :href="`https://it-services.muenchen.de/nav_to.do?uri=cmdb_ci_service_discovered.do?sys_id=${props.selectedAppservice.sysId}%26sysparm_view=EAM`"
+            :href="`https://it-services.muenchen.de/now/workspace/dpm/list/params/list-id/5b35b707eb7501108684f8bdb552283d/sub/service-details/cmdb_ci_service_auto/${props.selectedAppservice.sysId}`"
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -83,7 +144,23 @@
         </p>
       </v-col>
       <v-col
-        cols="6"
+        cols="3"
+        class="pt-0"
+      >
+        <p>
+          <a
+            v-if="props.selectedAppservice?.sysId"
+            :href="`https://it-services.muenchen.de/now/sgw/record/cmdb_ci_service/${props.selectedAppservice.sysId}/sub/unifiedmap/params/root-node/${props.selectedAppservice.sysId}/`"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {{ props.selectedAppservice.name }}
+          </a>
+          <span v-else>-</span>
+        </p>
+      </v-col>
+      <v-col
+        cols="3"
         class="pt-0"
       >
         <p>
@@ -154,6 +231,7 @@ import type Appservice from "@/types/Appservice.ts";
 import { mdiAlertCircle, mdiCheckCircle } from "@mdi/js";
 
 import CommonCard from "@/components/common/CommonCard.vue";
+import InfoTooltip from "@/components/common/InfoTooltip.vue";
 import { useFormatter } from "@/composables/formatter.ts";
 
 const props = defineProps<{

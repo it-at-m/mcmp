@@ -12,7 +12,7 @@
       </v-col>
       <v-col cols="3">
         <h3>
-          MCMP-Anwendungsservice{{
+          Anwendungsservice{{
             namespace.appservices && namespace.appservices.length > 1 ? "s" : ""
           }}
         </h3>

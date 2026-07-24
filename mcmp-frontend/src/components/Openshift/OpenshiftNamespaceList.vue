@@ -10,6 +10,7 @@
       :items-per-page="itemsPerPage"
       :has-more="hasMore"
       :selected-id="selectedId"
+      :search="search"
       search-label="Namespace suchen..."
       @update:sort-by="updateSortBy"
       @update:search="onSearchUpdate"
@@ -76,11 +77,13 @@ interface SortByEntry {
 const props = defineProps<{
   modelValue?: OpenshiftNamespaceListItem[];
   urlParamsId?: string | string[];
+  initialSearch?: string;
 }>();
 
 const emit = defineEmits<{
   (e: "update:modelValue", selected: OpenshiftNamespaceListItem[]): void;
   (e: "update:selected", selected: OpenshiftNamespaceListItem | null): void;
+  (e: "update:search", val: string): void;
 }>();
 
 const loading = ref(false);
@@ -91,7 +94,7 @@ const currentPage = ref(1);
 const sortBy = ref<SortByEntry[]>([{ key: "name", order: "asc" }]);
 const selected = ref<OpenshiftNamespaceListItem[]>([]);
 const hasMore = ref(true);
-const search = ref("");
+const search = ref(props.initialSearch ?? "");
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const tableRef = ref<{ triggerObserveScroll: () => void } | null>(null);
@@ -207,6 +210,13 @@ function onSearchUpdate(val: string) {
   search.value = val;
 }
 
+watch(
+  () => props.initialSearch,
+  (val) => {
+    if (val !== undefined && val !== search.value) search.value = val;
+  }
+);
+
 function onRowClick(item: OpenshiftNamespaceListItem) {
   if (!item) return;
   selectItem(item);
@@ -223,6 +233,7 @@ async function onLoadMore() {
 watch(search, () => {
   if (searchTimeout) clearTimeout(searchTimeout);
   searchTimeout = setTimeout(async () => {
+    emit("update:search", search.value);
     currentPage.value = 1;
     await loadItems(1);
     await nextTick();

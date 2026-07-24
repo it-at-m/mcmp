@@ -14,7 +14,7 @@
       >
       <v-col cols="3">
         <h3>
-          MCMP-Anwendungsservice{{
+          Anwendungsservice{{
             lb.appservices && lb.appservices.length > 1 ? "s" : ""
           }}<info-tooltip>
             <div class="pa-1">

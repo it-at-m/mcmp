@@ -63,8 +63,7 @@
           <common-alert color="notice_red">
             <div class="links">
               <h4>Hinweis:</h4>
-              Für Ressourcenerweiterung >2000 GB
-              bitte ein Ticket bei
+              Für Ressourcenerweiterung >2000 GB bitte ein Ticket bei
               <a
                 href="https://it-services.muenchen.de/sp?id=sc_cat_item&sys_id=73fd83e11bde1094588efddacd4bcb92"
                 target="_blank"

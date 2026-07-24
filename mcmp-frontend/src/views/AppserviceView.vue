@@ -104,6 +104,9 @@
                 <appservice-details-loadbalancer
                   :selected-appservice="selectedAppservice"
                 />
+                <appservice-details-openshift
+                  :selected-appservice="selectedAppservice"
+                />
               </v-tabs-window-item>
 
               <v-tabs-window-item value="History">
@@ -142,12 +145,12 @@ import { useRoute, useRouter } from "vue-router";
 
 import appserviceService from "@/api/appserviceService";
 import jobService from "@/api/jobService";
+import AppServiceDetailHistory from "@/components/Appservice/AppServiceDetailHistory.vue";
 import AppserviceDetailsAllgemein from "@/components/Appservice/AppserviceDetailsAllgemein.vue";
-
 import AppserviceDetailsLoadbalancer from "@/components/Appservice/AppserviceDetailsLoadbalancer.vue";
+import AppserviceDetailsOpenshift from "@/components/Appservice/AppserviceDetailsOpenshift.vue";
 import AppserviceDetailsServer from "@/components/Appservice/AppserviceDetailsServer.vue";
 import AppserviceDetailsStorage from "@/components/Appservice/AppserviceDetailsStorage.vue";
-import AppServiceDetailHistory from "@/components/Appservice/AppServiceDetailHistory.vue";
 import AppserviceList from "@/components/Appservice/AppserviceList.vue";
 import AppserviceStatus from "@/components/Appservice/AppserviceStatus.vue";
 import CollapseAllCardsButton from "@/components/common/CollapseAllCardsButton.vue";

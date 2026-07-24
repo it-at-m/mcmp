@@ -208,3 +208,11 @@ export function formatDuration(
 
   return `${h}:${m}:${s}`;
 }
+
+export function formatOpenshiftClusterName(
+  clusterName: string | null | undefined
+): string {
+  if (!clusterName) return "-";
+  const match = clusterName.match(/cap([a-z])/i);
+  return match ? `CAP ${match[1].toUpperCase()}` : clusterName;
+}

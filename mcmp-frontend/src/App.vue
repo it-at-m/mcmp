@@ -226,6 +226,7 @@ import {
   mdiHarddisk,
   mdiHelpCircleOutline,
   mdiHistory,
+  mdiKubernetes,
   mdiLockAlert,
   mdiMenu,
   mdiMenuOpen,
@@ -242,6 +243,7 @@ import { useTheme } from "vuetify";
 
 import appVersionService from "@/api/appVersionService.ts";
 import jobService from "@/api/jobService";
+import testenvService from "@/api/testenvService.ts";
 import { getUser } from "@/api/user-client";
 import userService from "@/api/userService";
 import Shop from "@/components/shop/Shop.vue";
@@ -253,6 +255,8 @@ import User, { UserLocalDevelopment } from "@/types/User";
 import UnauthorizedView from "@/views/UnauthorizedView.vue";
 
 const userLoaded = ref(false);
+const testing = ref(false);
+const loadingTestEnv = ref(false);
 
 const appStore = useAppStore();
 const userStore = useUserStore();
@@ -285,6 +289,9 @@ onMounted(() => {
   loadThemePreference();
   loadVersion();
   loadMaintenanceData();
+  testenvService.getTestEnabled(loadingTestEnv).then((enabled) => {
+    testing.value = enabled;
+  });
 
   setInterval(() => loadUser(), 1000 * 60 * 5);
   setInterval(() => appStore.fetchSystemStatus(), 1000 * 60);
@@ -421,7 +428,7 @@ const buttonsRight = computed(() => [
   },
 ]);
 
-const buttonsCenter = [
+const buttonsCenter = computed(() => [
   { text: "Server", icon: mdiServer, path: "/server" },
   {
     text: "Anwendungsservice",
@@ -430,7 +437,10 @@ const buttonsCenter = [
   },
   { text: "Storage", icon: mdiHarddisk, path: "/storage" },
   { text: "Loadbalancer", icon: mdiSitemap, path: "/loadbalancer" },
-];
+  ...(testing.value
+    ? [{ text: "Openshift", icon: mdiKubernetes, path: "/openshift" }]
+    : []),
+]);
 
 function isCenterNavActive(path: string): boolean {
   return route.path === path || route.path.startsWith(`${path}/`);

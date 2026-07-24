@@ -9,6 +9,7 @@ import AppserviceView from "@/views/AppserviceView.vue";
 import HilfeView from "@/views/HilfeView.vue";
 import HistoryView from "@/views/HistoryView.vue";
 import LoadbalancerView from "@/views/LoadbalancerView.vue";
+import OpenshiftView from "@/views/OpenshiftView.vue";
 import ServerView from "@/views/ServerView.vue";
 import SettingsView from "@/views/SettingsView.vue";
 import StorageView from "@/views/StorageView.vue";
@@ -57,6 +58,16 @@ const manualRoutes = [
     path: "/loadbalancer/:id",
     name: "LoadbalancerDetail",
     component: LoadbalancerView,
+  },
+  {
+    path: "/openshift",
+    name: "Openshift",
+    component: OpenshiftView,
+  },
+  {
+    path: "/openshift/:id",
+    name: "OpenshiftDetail",
+    component: OpenshiftView,
   },
   {
     path: "/help",

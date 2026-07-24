@@ -2,7 +2,9 @@ package processor
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"sync"
 )
 
 type CloudType = string
@@ -22,6 +24,10 @@ type Cloud struct {
 }
 
 // ProcessCloud aggregates data for the Processor's Cloud instance.
+//
+// If processing fails, this function may still return a Cloud object,
+// but without the VMs that caused issues, in addition to a composite
+// error object.
 func (p *Processor) ProcessCloud(ctx context.Context) (*Cloud, error) {
 	cloud := &Cloud{
 		Cloud:     p.Name,
@@ -33,18 +39,42 @@ func (p *Processor) ProcessCloud(ctx context.Context) (*Cloud, error) {
 		return nil, fmt.Errorf("failed to get resources: %w", err)
 	}
 
+	wg := &sync.WaitGroup{}
+	srvChan := make(chan *Server, p.cfg.MaxConns)
+	errChan := make(chan error)
 	for _, res := range resources {
-		// Skip:
-		//  - Resources that are not VMs
-		//  - VMs that are templates
-		if res.Type != "pve-qemu" || res.Template {
-			continue
-		}
+		wg.Go(func() {
+			// Skip:
+			//  - Resources that are not VMs
+			//  - VMs that are templates
+			if res.Type != "pve-qemu" || res.Template {
+				return
+			}
 
-		server := p.ProcessServer(res)
+			server, err := p.ProcessServer(ctx, res)
+			if err != nil {
+				errChan <- err
+				return
+			}
 
+			srvChan <- server
+		})
+	}
+
+	go func() {
+		wg.Wait()
+		close(srvChan)
+		close(errChan)
+	}()
+
+	for server := range srvChan {
 		cloud.Servers = append(cloud.Servers, server)
 	}
 
-	return cloud, nil
+	err = nil
+	for e := range errChan {
+		err = errors.Join(err, e)
+	}
+
+	return cloud, err
 }

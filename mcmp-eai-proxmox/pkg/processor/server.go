@@ -1,6 +1,8 @@
 package processor
 
 import (
+	"context"
+	"fmt"
 	"mcmp-eai-proxmox/pkg/clients/pdm"
 	"strconv"
 	"strings"
@@ -23,70 +25,91 @@ const (
 // A Server represents a single virtualized server accepted by the MCMP
 // backend's cloud import API.
 type Server struct {
-	ServerKind ServerKind `json:"server_kind,omitempty"` // Must be "VIRTUAL"
-	ServerType ServerType `json:"server_type,omitempty"` // Must be "VM_PROXMOX"
-
-	// "UUID" of the server. Doesn't have to be an actual UUID, but is
-	// used to determine identity in the backend, so it must be unique
-	// for this Cloud instance.
-	UUID string `json:"uuid,omitempty"`
-
-	// Numeric ID of the server on the hypervisor.
-	VMID string `json:"vm_id,omitempty"`
-
-	// Name of the server on the hypervisor.
-	Name string `json:"name,omitempty"`
-
-	Cluster    string     `json:"cluster,omitempty"`     // Cluster the VM is hosted in.
-	Host       string     `json:"host,omitempty"`        // Host/Node the VM is hosted on.
-	PowerState PowerState `json:"power_state,omitempty"` // Must be "poweredOn" or "poweredOff"
-	MemoryMB   uint64     `json:"memory_mb,omitempty"`   // Available memory in MiB.
-	NumCpu     uint32     `json:"num_cpu,omitempty"`     // Number of CPUs.
-	BootTime   *time.Time `json:"boot_time,omitempty"`   // Time of last boot.
+	ServerKind          ServerKind `json:"server_kind,omitempty"`            // Must be "VIRTUAL"
+	ServerType          ServerType `json:"server_type,omitempty"`            // Must be "VM_PROXMOX"
+	Name                string     `json:"name,omitempty"`                   // Name of the server on the hypervisor.
+	VMID                string     `json:"vm_id,omitempty"`                  // Sequential ID of the server on the hypervisor.
+	UUID                string     `json:"uuid,omitempty"`                   // Unique UUID for the server.
+	InstanceUUID        string     `json:"instance_uuid,omitempty"`          // UUID of the VM instance.
+	Cluster             string     `json:"cluster,omitempty"`                // Cluster the VM is hosted in.
+	Host                string     `json:"host,omitempty"`                   // Host/Node the VM is hosted on.
+	PowerState          PowerState `json:"power_state,omitempty"`            // Must be "poweredOn" or "poweredOff"
+	MemoryMB            uint64     `json:"memory_mb,omitempty"`              // Available memory in MiB.
+	NumCpu              uint32     `json:"num_cpu,omitempty"`                // Number of CPUs.
+	NumCoresPerSocket   uint32     `json:"num_cores_per_socket,omitempty"`   // Cores per socket.
+	MemoryHotAddEnabled bool       `json:"memory_hot_add_enabled,omitempty"` // If memory hotplug is enabled.
+	CPUHotAddEnabled    bool       `json:"cpu_hot_add_enabled,omitempty"`    // If CPU hot-add is enabled.
+	BootTime            *time.Time `json:"boot_time,omitempty"`              // Time of last boot.
+	GuestConfigID       string     `json:"guest_config_id,omitempty"`        // Identifier of the configured operating system.
 }
 
 // ProcessServer processes a single server based on a pdm.Resource
-// record.
-func (p *Processor) ProcessServer(vm *pdm.Resource) *Server {
+// record. It queries PDM for additional config data, so parallel
+// execution is recommended.
+//
+// Processing may fail if the VM config can not be retrieved from PDM,
+// as the config is required to determine a useful server UUID.
+func (p *Processor) ProcessServer(ctx context.Context, res *pdm.Resource) (*Server, error) {
 	server := &Server{
 		ServerKind: ServerKindVirtual,
 		ServerType: ServerTypeProxmox,
 	}
 
-	server.Name = vm.Name
+	server.Name = res.Name
+	server.VMID = strconv.FormatUint(res.VMID, 10)
 
-	// obviously not a real UUID, but neither are the "UUID"s of
-	// UCS servers. this value only really has to be unique within
-	// the cloud instance, which it is.
-	VMID := strconv.FormatUint(vm.VMID, 10)
-	server.UUID = VMID
-	server.VMID = VMID
+	nodeFQDN, ok := p.nodeFQDNs[res.Node]
+	if !ok {
+		return nil, fmt.Errorf("failed to process vm %d: failed to determine node FQDN of %s", res.VMID, res.Node)
+	}
+
+	server.Host = nodeFQDN
+	// obviously not a real UUID, but this value only really needs to be
+	// unique so we can import all servers.
+	server.UUID = fmt.Sprintf("%s:%d", nodeFQDN, res.VMID)
 
 	// ID schema: remote/<remote>/guest/<vmid>
-	ps := strings.Split(vm.ID, "/")
+	ps := strings.Split(res.ID, "/")
 	if len(ps) > 1 {
 		server.Cluster = ps[1]
 	}
 
-	if nodeFQDN, ok := p.nodeFQDNs[vm.Node]; ok {
-		server.Host = nodeFQDN
-	} else {
-		server.Host = vm.Node
+	cfg, err := p.client.VMConfig(ctx, server.Cluster, res.VMID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch VM config: %w", err)
 	}
 
-	server.NumCpu = uint32(vm.MaxCPU)
-	server.MemoryMB = vm.MaxMem / (1024 * 1024) // B->MiB
+	// since proxmox does not assign UUIDs to server objects, we use
+	// the SMBIOS/DMI UUID instead
+	for _, attr := range strings.Split(cfg.SMBIOS1, ",") {
+		k, v, ok := strings.Cut(attr, "=")
+		if !ok {
+			server.InstanceUUID = attr
+		} else if k == "uuid" {
+			server.InstanceUUID = v
+		}
+	}
 
-	bootTime := time.Now().Add(time.Duration(-vm.Uptime) * time.Second)
+	server.NumCpu = uint32(res.MaxCPU)
+	server.NumCoresPerSocket = cfg.Cores
+	server.CPUHotAddEnabled = strings.Contains(cfg.Hotplug, "cpu")
+	// hot removal of CPUs requires guest OS cooperation, so assume
+	// it's not supported
+	server.MemoryMB = res.MaxMem / (1024 * 1024) // B->MiB
+	server.MemoryHotAddEnabled = strings.Contains(cfg.Hotplug, "memory")
+
+	bootTime := time.Now().Add(time.Duration(-res.Uptime) * time.Second)
 	server.BootTime = &bootTime
 
 	// impersonate VMware
-	switch vm.Status {
+	switch res.Status {
 	case "running":
 		server.PowerState = PowerStatePoweredOn
 	case "stopped":
 		server.PowerState = PowerStatePoweredOff
 	}
 
-	return server
+	server.GuestConfigID = cfg.OSType
+
+	return server, nil
 }

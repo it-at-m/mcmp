@@ -22,8 +22,9 @@ import (
 type Processor struct {
 	Name string // Name of the processed Cloud.
 
-	client *pdm.Client    // PDM API client.
-	logger logging.Logger // Logger.
+	client *pdm.Client             // PDM API client.
+	logger logging.Logger          // Logger.
+	cfg    config.DatacenterConfig // Configuration.
 
 	nodeFQDNs map[string]string // Map of node shortnames to FQDNs.
 }
@@ -45,6 +46,7 @@ func NewProcessor(cfg config.DatacenterConfig, logger logging.Logger) (*Processo
 		Name:   parsedURL.Hostname(),
 		client: client,
 		logger: logger,
+		cfg:    cfg,
 	}, nil
 }
 

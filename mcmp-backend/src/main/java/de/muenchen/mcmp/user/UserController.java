@@ -99,6 +99,23 @@ public class UserController {
         return userService.getDarkMode(username);
     }
 
+    @IsAuthenticated
+    @PutMapping("/loginpage")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void setLoginPage(@RequestParam String loginPage) {
+        final String username = AuthUtils.getUsername();
+        log.info("User {} sets login page to {}", username, loginPage);
+        userService.updateLoginPage(username, loginPage);
+    }
+
+    @IsAuthenticated
+    @GetMapping("/loginpage")
+    public String getLoginPage() {
+        final String username = AuthUtils.getUsername();
+        return userService.getLoginPage(username);
+    }
+
+
     @HasSpecialRole
     @GetMapping("/autocomplete")
     public List<UserAutocompleteDTO> getUsersForAutocomplete(@RequestParam(required = false) String query) {

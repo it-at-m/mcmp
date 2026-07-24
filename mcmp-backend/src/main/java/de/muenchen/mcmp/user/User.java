@@ -56,4 +56,8 @@ public class User extends AbstractEntity {
     @ColumnDefault("false")
     @Column(name = "special_role", nullable = false)
     private Boolean specialRole = false;
+
+    @Size(max = 255)
+    @Column(name = "login_page", nullable = true, length = 255)
+    private String loginPage;
 }

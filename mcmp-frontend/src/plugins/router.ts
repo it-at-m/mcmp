@@ -15,7 +15,14 @@ import SettingsView from "@/views/SettingsView.vue";
 import StorageView from "@/views/StorageView.vue";
 import UnauthorizedView from "@/views/UnauthorizedView.vue";
 
+import { useUserStore } from "@/stores/user";
+
 const manualRoutes = [
+  {
+    path: "/",
+    name: "Root",
+    component: AppserviceView, // Platzhalter für den ersten Aufruf von "/"
+  },
   {
     path: "/server/:id",
     name: "serverWithId",
@@ -76,7 +83,7 @@ const manualRoutes = [
   },
   {
     path: "/help/:faqId?",
-    name: "Hilfe",
+    name: "HilfeProps",
     component: HilfeView,
     props: true,
   },
@@ -114,6 +121,26 @@ const router = createRouter({
       left: 0,
     };
   },
+});
+
+router.beforeEach(async (to, from, next) => {
+  const userStore = useUserStore();
+
+  if (to.path === "/") {
+    if (userStore.getLoginPage === null) {
+      await userStore.fetchLoginPage();
+    }
+
+    // Eventuelle Anführungszeichen vom Spring-Backend trimmen
+    const target = userStore.getLoginPage?.replace(/^"|"$/g, "").trim();
+
+    if (target && target !== "/") {
+      return next(target);
+    }
+    return next("/appservice"); // Fallback, falls keine Custom-Seite gesetzt ist
+  }
+
+  next();
 });
 
 if (import.meta.hot) {

@@ -9,6 +9,7 @@
       :is-default-expanded="false"
     >
       <template #append-title>
+        <count-badge :count="serverCount" />
         <v-tooltip
           v-if="anyServerHasWarnings"
           location="top"
@@ -326,6 +327,7 @@ import { computed, ref, watch } from "vue";
 import serverService from "@/api/serverService";
 import snapshotService from "@/api/snapshotService";
 import CommonCard from "@/components/common/CommonCard.vue";
+import CountBadge from "@/components/common/CountBadge.vue";
 import ActionButton from "@/components/Server/ActionButtons/ActionButton.vue";
 import CheckMkDialog from "@/components/Server/ActionButtons/CheckMkDialog.vue";
 import PauseServerBtn from "@/components/Server/ActionButtons/PauseServerBtn.vue";
@@ -346,8 +348,9 @@ const isOperator = computed(() =>
   userStore.getUser?.authorities.includes("ROLE_OPERATOR")
 );
 
-const cardTitle = computed(
-  () => `Zugeordnete Server (${props.selectedAppservice?.servers?.length ?? 0})`
+const cardTitle = computed(() => "Zugeordnete Server");
+const serverCount = computed(
+  () => props.selectedAppservice?.servers?.length ?? 0
 );
 
 const serverKindText = (kind?: string | null) => {

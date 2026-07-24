@@ -5,6 +5,9 @@
     top-margin="0"
     :is-default-expanded="false"
   >
+    <template #append-title>
+      <count-badge :count="namespaceCount" />
+    </template>
     <v-data-table
       :loading="loading"
       :headers="headers"
@@ -37,6 +40,7 @@ import { computed, ref, watch } from "vue";
 import openshiftService from "@/api/openshiftService";
 import testenvService from "@/api/testenvService";
 import CommonCard from "@/components/common/CommonCard.vue";
+import CountBadge from "@/components/common/CountBadge.vue";
 import { useFormatter } from "@/composables/formatter.ts";
 
 const props = defineProps<{
@@ -54,9 +58,8 @@ testenvService.getTestEnabled(loadingTestEnv).then((enabled) => {
 const namespaces = ref<OpenshiftNamespaceRef[]>([]);
 const loading = ref(false);
 
-const cardTitle = computed(
-  () => `Openshift Namespaces (${namespaces.value.length})`
-);
+const cardTitle = computed(() => "Openshift Namespaces");
+const namespaceCount = computed(() => namespaces.value.length);
 
 const headers = [
   { title: "Name", key: "name" },

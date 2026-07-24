@@ -5,6 +5,9 @@
     top-margin="0"
     :is-default-expanded="false"
   >
+    <template #append-title>
+      <count-badge :count="loadbalancerCount" />
+    </template>
     <v-data-table
       :loading="loading"
       :headers="headers"
@@ -34,6 +37,7 @@ import { computed, ref, watch } from "vue";
 import loadbalancerService from "@/api/loadbalancerService";
 import testenvService from "@/api/testenvService";
 import CommonCard from "@/components/common/CommonCard.vue";
+import CountBadge from "@/components/common/CountBadge.vue";
 
 const props = defineProps<{
   selectedAppservice: Appservice | null;
@@ -48,9 +52,8 @@ testenvService.getTestEnabled(loadingTestEnv).then((enabled) => {
 const loadbalancers = ref<LoadbalancerListItem[]>([]);
 const loading = ref(false);
 
-const cardTitle = computed(
-  () => `Loadbalancer (${loadbalancers.value.length})`
-);
+const cardTitle = computed(() => "Loadbalancer");
+const loadbalancerCount = computed(() => loadbalancers.value.length);
 
 const headers = [
   { title: "Name", key: "name" },

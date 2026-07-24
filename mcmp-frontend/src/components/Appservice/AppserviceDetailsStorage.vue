@@ -5,6 +5,9 @@
     top-margin="0"
     :is-default-expanded="false"
   >
+    <template #append-title>
+      <count-badge :count="storageCount" />
+    </template>
     <v-data-table
       :loading="loading"
       :headers="headers"
@@ -34,6 +37,7 @@ import { computed, ref, watch } from "vue";
 import storageService from "@/api/storageService";
 import testenvService from "@/api/testenvService";
 import CommonCard from "@/components/common/CommonCard.vue";
+import CountBadge from "@/components/common/CountBadge.vue";
 
 const props = defineProps<{
   selectedAppservice: Appservice | null;
@@ -48,7 +52,8 @@ testenvService.getTestEnabled(loadingTestEnv).then((enabled) => {
 const storages = ref<UnifiedStorageItemList[]>([]);
 const loading = ref(false);
 
-const cardTitle = computed(() => `Storage (${storages.value.length})`);
+const cardTitle = computed(() => "Storage");
+const storageCount = computed(() => storages.value.length);
 
 const headers = [
   { title: "Name", key: "name" },

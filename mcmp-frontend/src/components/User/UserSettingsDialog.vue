@@ -155,6 +155,7 @@ const availableStartPages = [
   { title: "Server", path: "/server" },
   { title: "Loadbalancer", path: "/loadbalancer" },
   { title: "Storage", path: "/storage" },
+  { title: "Openshift", path: "/openshift" },
 ];
 
 // Initialen Wert aus dem User-Store lesen

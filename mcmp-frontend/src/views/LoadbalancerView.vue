@@ -1,28 +1,8 @@
 <template>
   <v-container
-    v-if="testing"
     fluid
     class="split-container"
   >
-    <v-banner
-      v-if="showBanner"
-      bg-color="red"
-      rounded
-    >
-      <h2>Diese Ansicht ist nur in der Testumgebung verfügbar.</h2>
-      <template #actions>
-        <v-btn
-          icon
-          variant="outlined"
-          aria-label="Schließen"
-          class="mb-7"
-          @click="showBanner = false"
-        >
-          <v-icon>{{ mdiClose }}</v-icon>
-        </v-btn>
-      </template>
-    </v-banner>
-
     <div
       class="split-view"
       :class="{ resizing: isResizing }"
@@ -146,39 +126,17 @@
       </div>
     </div>
   </v-container>
-  <v-container v-else>
-    <v-row>
-      <v-col
-        cols="12"
-        class="d-flex align-center justify-center"
-      >
-        <img
-          :src="commingSoon"
-          alt="Comming Soon"
-          height="400"
-        />
-      </v-col>
-    </v-row>
-  </v-container>
 </template>
 
 <script setup lang="ts">
 import type { LoadbalancerDetail } from "@/types/LoadbalancerDetail";
 import type { LoadbalancerListItem } from "@/types/LoadbalancerListItem";
 
-import {
-  mdiCallSplit,
-  mdiClose,
-  mdiHome,
-  mdiScriptText,
-  mdiSitemap,
-} from "@mdi/js";
+import { mdiCallSplit, mdiHome, mdiScriptText, mdiSitemap } from "@mdi/js";
 import { onMounted, onUnmounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 import loadbalancerService from "@/api/loadbalancerService";
-import testenvService from "@/api/testenvService.ts";
-import commingSoon from "@/assets/commingSoon.png";
 import BreadcrumbNav from "@/components/common/BreadcrumbNav.vue";
 import CollapseAllCardsButton from "@/components/common/CollapseAllCardsButton.vue";
 import LoadbalancerDetailsGeneral from "@/components/Loadbalancer/LoadbalancerDetailsGeneral.vue";
@@ -205,9 +163,6 @@ const { allCardsExpanded, toggleAllCards } = useCollapsibleCards(tab);
 useTabQuerySync(tab);
 useTabQuerySync(loadbalancerSearch, "search");
 useScrollRestoration(scrollContainer);
-const testing = ref(false);
-const showBanner = ref(true);
-const loadingTestEnv = ref(false);
 
 const route = useRoute();
 const router = useRouter();
@@ -275,9 +230,6 @@ watch(
 );
 
 onMounted(() => {
-  testenvService.getTestEnabled(loadingTestEnv).then((enabled) => {
-    testing.value = enabled;
-  });
   syncSelectionFromRoute(route.params.id);
 });
 

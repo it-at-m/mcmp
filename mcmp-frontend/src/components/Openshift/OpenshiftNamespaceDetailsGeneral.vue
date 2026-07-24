@@ -95,7 +95,7 @@
             :href="snowUrl"
             target="_blank"
             rel="noopener noreferrer"
-            >{{ namespace.sysId }}</a
+            >{{ namespace.name }}</a
           >
         </p>
         <p v-else>-</p>

@@ -1,6 +1,6 @@
 <template>
   <common-card
-    v-if="testing && namespaces.length"
+    v-if="namespaces.length"
     :title="cardTitle"
     top-margin="0"
     :is-default-expanded="false"
@@ -9,7 +9,6 @@
       <count-badge :count="namespaceCount" />
     </template>
     <v-data-table
-      :loading="loading"
       :headers="headers"
       :items="namespaces"
       :items-per-page="-1"
@@ -38,7 +37,6 @@ import type { OpenshiftNamespaceRef } from "@/types/OpenshiftNamespaceListItem";
 import { computed, ref, watch } from "vue";
 
 import openshiftService from "@/api/openshiftService";
-import testenvService from "@/api/testenvService";
 import CommonCard from "@/components/common/CommonCard.vue";
 import CountBadge from "@/components/common/CountBadge.vue";
 import { useFormatter } from "@/composables/formatter.ts";
@@ -48,12 +46,6 @@ const props = defineProps<{
 }>();
 
 const formatter = useFormatter();
-
-const testing = ref(false);
-const loadingTestEnv = ref(false);
-testenvService.getTestEnabled(loadingTestEnv).then((enabled) => {
-  testing.value = enabled;
-});
 
 const namespaces = ref<OpenshiftNamespaceRef[]>([]);
 const loading = ref(false);
@@ -67,7 +59,7 @@ const headers = [
 ];
 
 async function loadNamespaces(appservice: Appservice | null) {
-  if (!testing.value || !appservice) {
+  if (!appservice) {
     namespaces.value = [];
     return;
   }
@@ -84,10 +76,6 @@ watch(
   },
   { immediate: true }
 );
-
-watch(testing, () => {
-  void loadNamespaces(props.selectedAppservice);
-});
 </script>
 
 <!--suppress CssUnresolvedCustomProperty -->

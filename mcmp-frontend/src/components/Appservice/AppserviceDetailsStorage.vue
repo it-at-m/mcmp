@@ -9,7 +9,6 @@
       <count-badge :count="storageCount" />
     </template>
     <v-data-table
-      :loading="loading"
       :headers="headers"
       :items="storages"
       :items-per-page="-1"

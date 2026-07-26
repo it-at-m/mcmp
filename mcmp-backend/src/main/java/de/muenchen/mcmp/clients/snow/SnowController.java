@@ -51,11 +51,12 @@ public class SnowController {
     @PostMapping("/snowData")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public void processSnowData(@Valid @RequestBody final SnowDataRequestDTO snowDataRequestDTO) {
-        log.debug("ServiceNow request received: users='{}', groups='{}', cmdbCIs='{}', appServices='{}'",
+        log.debug("ServiceNow request received: users='{}', groups='{}', cmdbCIs='{}', appServices='{}', storageServers='{}'",
                 snowDataRequestDTO.users(),
                 snowDataRequestDTO.groups(),
                 snowDataRequestDTO.cmdbCIs(),
-                snowDataRequestDTO.appServices());
+                snowDataRequestDTO.appServices(),
+                snowDataRequestDTO.storageServers());
         try {
             snowService.importAsync(snowDataRequestDTO);
             log.debug("ServiceNow task successfully submitted to background queue. Task is now pending in the execution queue.");

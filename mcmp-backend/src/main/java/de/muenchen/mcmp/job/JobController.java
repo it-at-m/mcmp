@@ -48,13 +48,13 @@ public class JobController {
     private final UnifiedStorageService unifiedStorageService;
     private final UserService userService;
 
-    public static final String VMWARE_START_SERVER = "VMWARE_START_SERVER";
-    public static final String VMWARE_STOP_SERVER = "VMWARE_STOP_SERVER";
-    public static final String VMWARE_RESTART_SERVER = "VMWARE_RESTART_SERVER";
-    public static final String VMWARE_CHANGE_CPU_RAM = "VMWARE_CHANGE_CPU_RAM";
-    public static final String VMWARE_CREATE_SNAPSHOT = "VMWARE_CREATE_SNAPSHOT";
-    public static final String VMWARE_DELETE_SNAPSHOT = "VMWARE_DELETE_SNAPSHOT";
-    public static final String VMWARE_REVERT_SNAPSHOT = "VMWARE_REVERT_SNAPSHOT";
+    public static final String START_SERVER = "START_SERVER";
+    public static final String STOP_SERVER = "STOP_SERVER";
+    public static final String RESTART_SERVER = "RESTART_SERVER";
+    public static final String CHANGE_CPU_RAM = "CHANGE_CPU_RAM";
+    public static final String CREATE_SNAPSHOT = "CREATE_SNAPSHOT";
+    public static final String DELETE_SNAPSHOT = "DELETE_SNAPSHOT";
+    public static final String REVERT_SNAPSHOT = "REVERT_SNAPSHOT";
 
     public static final String CHECKMK_SET_DOWNTIME = "CHECKMK_SET_DOWNTIME";
     public static final String CHECKMK_SERVICE_DISCOVERY = "CHECKMK_SERVICE_DISCOVERY";
@@ -96,7 +96,6 @@ public class JobController {
     public static final String STORAGE_DELETE_SNAPSHOT_CIFS = "STORAGE_DELETE_SNAPSHOT_CIFS";
     public static final String STORAGE_CHANGE_SNAPSHOT_POLICY_NFS = "STORAGE_CHANGE_SNAPSHOT_POLICY_NFS";
     public static final String STORAGE_CHANGE_SNAPSHOT_POLICY_CIFS = "STORAGE_CHANGE_SNAPSHOT_POLICY_CIFS";
-
 
     @HasUserOrSpecialRole
     @GetMapping("/{jobId}/hierarchy")
@@ -175,6 +174,24 @@ public class JobController {
     }
 
     @HasUserOrSpecialRole
+    @GetMapping("/appservice/{appserviceId}")
+    public Page<? extends JobListBasic> getJobsByAppServiceId(
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "itemsPerPage", defaultValue = "10") int itemsPerPage,
+            @RequestParam(value = "sortBy", required = false) final String sortBy,
+            @RequestParam(value = "sortDesc", defaultValue = "false") final boolean sortDesc,
+            @PathVariable("appserviceId") final Long appserviceId
+    ) {
+        if (page < 1) {
+            page = 1;
+        }
+        if (itemsPerPage < 1 || itemsPerPage > 100) {
+            itemsPerPage = 10;
+        }
+        return jobService.findAllJobsByRole(page, itemsPerPage, sortBy, sortDesc, null, null, null, null, null, null, null, null, appserviceId, null, null, null);
+    }
+
+    @HasUserOrSpecialRole
     @GetMapping("/user")
     public Page<? extends JobListBasic> getJobsByUser(
             @RequestParam(value = "page", defaultValue = "1") int page,
@@ -218,13 +235,13 @@ public class JobController {
     }
 
     // -----------------------------------------------------------------------------------------------------------------
-    // VMWARE JOBs
+    // VM Operation JOBs
     // -----------------------------------------------------------------------------------------------------------------
-    @PostMapping("/create/" + VMWARE_START_SERVER)
-    public void vmwareStartServer(@RequestParam(name = "serverId") final Long serverId,
+    @PostMapping("/create/" + START_SERVER)
+    public void startServer(@RequestParam(name = "serverId") final Long serverId,
                                   @RequestBody final Map<String, Object> awxExtraVars) {
         if (!serverService.canUserEditServer(serverId)) {
-            logTriedToCreateJob(VMWARE_START_SERVER, serverId);
+            logTriedToCreateJob(START_SERVER, serverId);
             throw new AccessDeniedException("You are not allowed to create a job for this server.");
         }
 
@@ -236,15 +253,15 @@ public class JobController {
             scheduleTime = null;
         }
 
-        logCreatedJob(VMWARE_START_SERVER, serverId);
-        jobService.vmwareStartServer(serverId, VMWARE_START_SERVER, scheduleTime);
+        logCreatedJob(START_SERVER, serverId);
+        jobService.startServer(serverId, START_SERVER, scheduleTime);
     }
 
-    @PostMapping("/create/" + VMWARE_STOP_SERVER)
-    public void vmwareStopServer(@RequestParam(name = "serverId") final Long serverId,
+    @PostMapping("/create/" + STOP_SERVER)
+    public void stopServer(@RequestParam(name = "serverId") final Long serverId,
                                  @RequestBody final Map<String, Object> awxExtraVars) {
         if (!serverService.canUserEditServer(serverId)) {
-            logTriedToCreateJob(VMWARE_STOP_SERVER, serverId);
+            logTriedToCreateJob(STOP_SERVER, serverId);
             throw new AccessDeniedException("You are not allowed to create a job for this server.");
         }
 
@@ -256,16 +273,16 @@ public class JobController {
             scheduleTime = null;
         }
 
-        logCreatedJob(VMWARE_STOP_SERVER, serverId);
-        jobService.vmwareStopServer(serverId, VMWARE_STOP_SERVER, scheduleTime);
+        logCreatedJob(STOP_SERVER, serverId);
+        jobService.stopServer(serverId, STOP_SERVER, scheduleTime);
 
     }
 
-    @PostMapping("/create/" + VMWARE_RESTART_SERVER)
-    public void vmwareRestartServer(@RequestParam(name = "serverId") final Long serverId,
+    @PostMapping("/create/" + RESTART_SERVER)
+    public void restartServer(@RequestParam(name = "serverId") final Long serverId,
                                     @RequestBody final Map<String, Object> awxExtraVars) {
         if (!serverService.canUserEditServer(serverId)) {
-            logTriedToCreateJob(VMWARE_RESTART_SERVER, serverId);
+            logTriedToCreateJob(RESTART_SERVER, serverId);
             throw new AccessDeniedException("You are not allowed to create a job for this server.");
         }
 
@@ -277,15 +294,15 @@ public class JobController {
             scheduleTime = null;
         }
 
-        logCreatedJob(VMWARE_RESTART_SERVER, serverId);
-        jobService.vmwareRestartServer(serverId, VMWARE_RESTART_SERVER, scheduleTime);
+        logCreatedJob(RESTART_SERVER, serverId);
+        jobService.restartServer(serverId, RESTART_SERVER, scheduleTime);
     }
 
-    @PostMapping("/create/" + VMWARE_CHANGE_CPU_RAM)
-    public void vmwareChangeCpuRam(@RequestParam(name = "serverId") final Long serverId,
+    @PostMapping("/create/" + CHANGE_CPU_RAM)
+    public void changeCpuRam(@RequestParam(name = "serverId") final Long serverId,
                                    @RequestBody final Map<String, Object> awxExtraVars) {
         if (!serverService.canUserEditServer(serverId)) {
-            logTriedToCreateJob(VMWARE_CHANGE_CPU_RAM, serverId);
+            logTriedToCreateJob(CHANGE_CPU_RAM, serverId);
             throw new AccessDeniedException("You are not allowed to create a job for this server.");
         }
 
@@ -321,15 +338,15 @@ public class JobController {
             throw new IllegalArgumentException("CPU must be between 2 and 72, RAM must be between 4 and 100.");
         }
 
-        logCreatedJob(VMWARE_CHANGE_CPU_RAM, serverId);
-        jobService.vmwareChangeCpuRam(serverId, VMWARE_CHANGE_CPU_RAM, cpu, ram, scheduleTime, schedulePatchnight);
+        logCreatedJob(CHANGE_CPU_RAM, serverId);
+        jobService.changeCpuRam(serverId, CHANGE_CPU_RAM, cpu, ram, scheduleTime, schedulePatchnight);
     }
 
-    @PostMapping("/create/" + VMWARE_CREATE_SNAPSHOT)
-    public void vmwareCreateSnapshot(@RequestParam(name = "serverId") final Long serverId,
+    @PostMapping("/create/" + CREATE_SNAPSHOT)
+    public void createSnapshot(@RequestParam(name = "serverId") final Long serverId,
                                      @RequestBody final Map<String, Object> awxExtraVars){
         if (!serverService.canUserEditServer(serverId)) {
-            logTriedToCreateJob(VMWARE_CREATE_SNAPSHOT, serverId);
+            logTriedToCreateJob(CREATE_SNAPSHOT, serverId);
             throw new AccessDeniedException("You are not allowed to create a job for this server.");
         }
 
@@ -359,51 +376,55 @@ public class JobController {
             withShutdown = Boolean.parseBoolean(withShutdownObj.toString());
         }
 
-        logCreatedJob(VMWARE_CREATE_SNAPSHOT, serverId);
+        logCreatedJob(CREATE_SNAPSHOT, serverId);
 
-        jobService.vmwareCreateSnapshot(serverId, duration*24, description, withShutdown, VMWARE_CREATE_SNAPSHOT);
+        jobService.createSnapshot(serverId, duration*24, description, withShutdown, CREATE_SNAPSHOT);
     }
 
-    @PostMapping("/create/" + VMWARE_DELETE_SNAPSHOT)
-    public void vmwareDeleteSnapshot(@RequestParam(name = "serverId") final Long serverId,
+    @PostMapping("/create/" + DELETE_SNAPSHOT)
+    public void deleteSnapshot(@RequestParam(name = "serverId") final Long serverId,
                                      @RequestBody final Map<String, Object> awxExtraVars) {
         if (!serverService.canUserEditServer(serverId)) {
-            logTriedToCreateJob(VMWARE_DELETE_SNAPSHOT, serverId);
+            logTriedToCreateJob(DELETE_SNAPSHOT, serverId);
             throw new AccessDeniedException("You are not allowed to create a job for this server.");
         }
 
         // Validate awxExtraVars
         Object snapshotIdObj = awxExtraVars.get("snapshotId");
-        if (snapshotIdObj == null) {
-            log.info("Snapshot ID not provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
-            throw new MissingFormatArgumentException("Snapshot ID must be provided.");
+        Object snapshotNameObj = awxExtraVars.get("snapshotName");
+        if (snapshotIdObj == null && snapshotNameObj == null) {
+            log.info("Snapshot ID or Snapshot Name not provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
+            throw new MissingFormatArgumentException("Snapshot ID or Snapshot Name must be provided.");
         }
         long snapshotId = Long.parseLong(snapshotIdObj.toString());
+        String snapshotName = snapshotNameObj.toString();
 
-        logCreatedJob(VMWARE_DELETE_SNAPSHOT, serverId);
+        logCreatedJob(DELETE_SNAPSHOT, serverId);
 
-        jobService.vmwareDeleteSnapshot(serverId, snapshotId, VMWARE_DELETE_SNAPSHOT);
+        jobService.deleteSnapshot(serverId, snapshotId, snapshotName, DELETE_SNAPSHOT);
     }
 
-    @PostMapping("/create/" + VMWARE_REVERT_SNAPSHOT)
-    public void vmwareRevertSnapshot(@RequestParam(name = "serverId") final Long serverId,
+    @PostMapping("/create/" + REVERT_SNAPSHOT)
+    public void revertSnapshot(@RequestParam(name = "serverId") final Long serverId,
                                      @RequestBody final Map<String, Object> awxExtraVars) {
         if (!serverService.canUserEditServer(serverId)) {
-            logTriedToCreateJob(VMWARE_REVERT_SNAPSHOT, serverId);
+            logTriedToCreateJob(REVERT_SNAPSHOT, serverId);
             throw new AccessDeniedException("You are not allowed to create a job for this server.");
         }
 
         // Validate awxExtraVars
         Object snapshotIdObj = awxExtraVars.get("snapshotId");
-        if (snapshotIdObj == null) {
-            log.info("Snapshot ID not provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
-            throw new MissingFormatArgumentException("Snapshot ID must be provided.");
+        Object snapshotNameObj = awxExtraVars.get("snapshotName");
+        if (snapshotIdObj == null && snapshotNameObj == null) {
+            log.info("Snapshot ID or Snapshot Name not provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
+            throw new MissingFormatArgumentException("Snapshot ID or Snapshot Name must be provided.");
         }
         long snapshotId = Long.parseLong(snapshotIdObj.toString());
+        String snapshotName = snapshotNameObj.toString();
 
-        logCreatedJob(VMWARE_REVERT_SNAPSHOT, serverId);
+        logCreatedJob(REVERT_SNAPSHOT, serverId);
 
-        jobService.vmwareRevertSnapshot(serverId, snapshotId, VMWARE_REVERT_SNAPSHOT);
+        jobService.revertSnapshot(serverId, snapshotId, snapshotName, REVERT_SNAPSHOT);
     }
 
     // -----------------------------------------------------------------------------------------------------------------
@@ -413,7 +434,7 @@ public class JobController {
     public void checkmkSetDowntime(@RequestParam(name = "serverId") final Long serverId,
                                    @RequestBody final Map<String, Object> awxExtraVars){
         if (!serverService.canUserEditServer(serverId)) {
-            logTriedToCreateJob(VMWARE_CREATE_SNAPSHOT, serverId);
+            logTriedToCreateJob(CHECKMK_SET_DOWNTIME, serverId);
             throw new AccessDeniedException("You are not allowed to create a job for this server.");
         }
 
@@ -450,7 +471,7 @@ public class JobController {
     public void checkmkServiceDiscovery(@RequestParam(name = "serverId") final Long serverId,
                                         @RequestBody final Map<String, Object> awxExtraVars){
         if (!serverService.canUserEditServer(serverId)) {
-            logTriedToCreateJob(VMWARE_CREATE_SNAPSHOT, serverId);
+            logTriedToCreateJob(CHECKMK_SERVICE_DISCOVERY, serverId);
             throw new AccessDeniedException("You are not allowed to create a job for this server.");
         }
 
@@ -504,7 +525,7 @@ public class JobController {
     public void linuxDeleteServer(@RequestParam(name = "serverId") final Long serverId,
                                   @RequestBody final Map<String, Object> awxExtraVars) {
         if (!serverService.canUserEditServer(serverId)) {
-            logTriedToCreateJob(VMWARE_STOP_SERVER, serverId);
+            logTriedToCreateJob(LINUX_DELETE_SERVER, serverId);
             throw new AccessDeniedException("You are not allowed to create a job for this server.");
         }
 
@@ -766,7 +787,7 @@ public class JobController {
     public void windowsDeleteServer(@RequestParam(name = "serverId") final Long serverId,
                                     @RequestBody final Map<String, Object> awxExtraVars) {
         if (!serverService.canUserEditServer(serverId)) {
-            logTriedToCreateJob(VMWARE_STOP_SERVER, serverId);
+            logTriedToCreateJob(WINDOWS_DELETE_SERVER, serverId);
             throw new AccessDeniedException("You are not allowed to create a job for this server.");
         }
 
@@ -885,8 +906,8 @@ public class JobController {
     }
 
     // ==========================================
-// WINDOWS SERVER 2025
-// ==========================================
+    // WINDOWS SERVER 2025
+    // ==========================================
     @PostMapping("/create/" + WINDOWS_SERVER_2025)
     public void windowsServer2025(@RequestParam(name = "serverId") final Long serverId,
                                   @RequestBody final Map<String, Object> awxExtraVars) {
@@ -970,8 +991,8 @@ public class JobController {
     }
 
     // ==========================================
-// WINDOWS SERVER 2022
-// ==========================================
+    // WINDOWS SERVER 2022
+    // ==========================================
     @PostMapping("/create/" + WINDOWS_SERVER_2022)
     public void windowsServer2022(@RequestParam(name = "serverId") final Long serverId,
                                   @RequestBody final Map<String, Object> awxExtraVars) {
@@ -1132,7 +1153,6 @@ public class JobController {
     // -----------------------------------------------------------------------------------------------------------------
     // Loadbalancer JOBs
     // -----------------------------------------------------------------------------------------------------------------
-
     @PostMapping("/create/" + LOADBALANCER_F5)
     public void createLoadbalancer(@RequestParam(name = "serverId") final Long serverId,
                                    @RequestBody final Map<String, Object> awxExtraVars) {
@@ -1299,8 +1319,6 @@ public class JobController {
     // -----------------------------------------------------------------------------------------------------------------
     // Storage JOBs
     // -----------------------------------------------------------------------------------------------------------------
-
-
     @PostMapping("/create/" + STORAGE_MODIFY_NFS)
     public void storageModifyNfs(@RequestParam(name = "serverId") final Long serverId,
                                  @RequestBody final Map<String, Object> awxExtraVars) {
@@ -1606,6 +1624,15 @@ public class JobController {
             throw new AccessDeniedException("You are not allowed to create a job for this NFS share.");
         }
 
+        boolean fqdnAlreadyInExportPolicy = storageItem.getNfs_export_policy() != null
+                && storageItem.getNfs_export_policy().getOntapExportPolicyRules() != null
+                && storageItem.getNfs_export_policy().getOntapExportPolicyRules().stream()
+                        .anyMatch(rule -> rule.getClients() != null && rule.getClients().contains(fqdn));
+        if (!fqdnAlreadyInExportPolicy) {
+            log.info("FQDN provided by user: {} for serverId: {} is not part of the existing export policy.", AuthUtils.getUsername(), serverId);
+            throw new IllegalArgumentException("FQDN is not part of the existing export policy.");
+        }
+
         logCreatedJob(STORAGE_CHANGE_NFS_EXPORT_POLICY, serverId);
         jobService.storageChangeNfsExportPolicy(storageItem, fqdn, permission);
     }
@@ -1678,8 +1705,8 @@ public class JobController {
             throw new MissingFormatArgumentException(storageLabel + " UUID and newPolicy must be provided.");
         }
 
-        String newPolicy = newPolicyObj.toString();
-        if (!newPolicy.equals("dcc-6h") && !newPolicy.equals("dcc-24h") && !newPolicy.equals("dcc-24h4d") && !newPolicy.equals("dcc-24h7d") && !newPolicy.equals("none")) {
+        String newPolicy = String.valueOf(newPolicyObj);
+        if (!"none".equals(newPolicy) && !newPolicy.matches("dc[cn]-(6h|24h|24h4d|24h7d)")) {
             log.info("Invalid newPolicy provided by user: {} for serverId: {} for job {}", AuthUtils.getUsername(), serverId, jobIdentifier);
             throw new IllegalArgumentException("Snapshot policy must be a valid predefined value.");
         }
@@ -1714,7 +1741,6 @@ public class JobController {
     // -----------------------------------------------------------------------------------------------------------------
     // Helper Methods
     // -----------------------------------------------------------------------------------------------------------------
-
     private void validateWinDiskSizes(List<Map<String, Object>> disks) {
         for (Map<String, Object> disk : disks) {
             Object sizeObj = disk.get("size");

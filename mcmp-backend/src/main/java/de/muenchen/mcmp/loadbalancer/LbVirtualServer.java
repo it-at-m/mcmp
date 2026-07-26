@@ -4,10 +4,10 @@ import de.muenchen.mcmp.appservice.Appservice;
 import de.muenchen.mcmp.common.AbstractEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -59,6 +59,7 @@ public class LbVirtualServer extends AbstractEntity {
     private List<String> domains;
 
     @OneToMany(mappedBy = "virtualServer", cascade = CascadeType.ALL, orphanRemoval = true)
+    @BatchSize(size = 100)
     private List<LbVirtualServerPoolRef> poolRefs = new ArrayList<>();
 
     @ManyToMany
@@ -77,17 +78,9 @@ public class LbVirtualServer extends AbstractEntity {
             joinColumns = {@JoinColumn(name = "lb_virtual_server_id")},
             inverseJoinColumns = {@JoinColumn(name = "lb_irule_id")}
     )
+    @BatchSize(size = 100)
     private Set<LbIrule> irules = new LinkedHashSet<>();
 
-    @Column(name = "snow_name", length = Integer.MAX_VALUE)
-    private String snowName;
-
-    @Column(name = "snow_sys_id", length = Integer.MAX_VALUE)
-    private String snowSysId;
-
-    @Column(name = "snow_sys_class", length = Integer.MAX_VALUE)
-    private String snowSysClass;
-
-    @Column(name = "snow_last_discovered")
-    private OffsetDateTime snowLastDiscovered;
+    @OneToMany(mappedBy = "lbVirtualServer", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<LbVirtualServerCi> snowCis = new ArrayList<>();
 }

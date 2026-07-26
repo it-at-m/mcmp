@@ -78,6 +78,19 @@ public class UserService {
                 .map(User::getDarkMode)
                 .orElse(false);
     }
+    public void updateLoginPage(String username, String loginPage) {
+        User user = repository.findByUsername(username);
+        if (user == null) {
+            throw new RuntimeException("User not found: " + username);
+        }
+        user.setLoginPage(loginPage);
+        repository.save(user);
+    }
+
+    public String getLoginPage(String username) {
+        User user = repository.findByUsername(username);
+        return user != null ? user.getLoginPage() : null;
+    }
 
     public List<UserAutocompleteDTO> searchUsersForAutocomplete(final String query) {
         if (query == null || query.trim().isEmpty()) {

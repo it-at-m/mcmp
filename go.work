@@ -12,6 +12,7 @@ use (
 	./mcmp-eai-netapp-storagegrid
 	./mcmp-eai-olvm
 	./mcmp-eai-patchnight
+	./mcmp-eai-proxmox
 	./mcmp-eai-rightsizing
 	./mcmp-eai-scheduler
 	./mcmp-eai-snow

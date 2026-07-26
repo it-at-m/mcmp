@@ -10,9 +10,12 @@
       <v-col cols="3">
         <h3>Festplattentyp</h3>
       </v-col>
-      <v-col cols="3">
+      <v-col
+        cols="3"
+        class="links"
+      >
         <h3>
-          MCMP-Anwendungsservice{{
+          Anwendungsservice{{
             props.selectedStorageItem.appservices &&
             props.selectedStorageItem.appservices.length > 1
               ? "s"
@@ -420,3 +423,13 @@ function turnToDate(isoString: string | undefined): string {
   return result.trim() || "0 Sekunden";
 }
 </script>
+<style scoped>
+.links a,
+.links a:visited,
+.links a:hover,
+.links a:active {
+  /* noinspection CssUnresolvedCustomProperty */
+  color: rgb(var(--v-theme-link));
+  text-decoration: none;
+}
+</style>

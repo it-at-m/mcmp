@@ -5,6 +5,7 @@ import de.muenchen.mcmp.mountPoint.MountPoint;
 import de.muenchen.mcmp.mountPoint.MountPointRepository;
 import de.muenchen.mcmp.ontap.*;
 import de.muenchen.mcmp.repository.Repository;
+import de.muenchen.mcmp.repository.RepositoryIdByName;
 import de.muenchen.mcmp.repository.RepositoryRepository;
 import de.muenchen.mcmp.server.Server;
 import de.muenchen.mcmp.server.ServerRepository;
@@ -43,7 +44,10 @@ public class ForemanImportService {
      * Processes a single host in its own transaction.
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void processHostInNewTransaction(HostDTO hostDTO, Set<Long> processedServerIDs, List<ServerMatcher<HostDTO>> matchingStrategies) {
+    public void processHostInNewTransaction(HostDTO hostDTO,
+                                            Set<Long> processedServerIDs,
+                                            List<ServerMatcher<HostDTO>> matchingStrategies,
+                                            Map<String, Long> repositoryIdByName) {
         if (hostDTO == null) {
             return;
         }
@@ -66,7 +70,7 @@ public class ForemanImportService {
             if (server.getManaged() && !server.getRoleWindows()) {
                 processMountPointsWithFallback(server, hostDTO);
                 syncOntapServerMounts(server, hostDTO.mountpoints());
-                syncRepositories(server, hostDTO.repositories());
+                syncRepositories(server, hostDTO.repositories(), repositoryIdByName);
             } else {
                 // If server is unmanaged or Windows, ensure no repository assignments exist
                 if (repositoryRepository.existsAssignmentsByServerId(server.getId())) {
@@ -86,51 +90,52 @@ public class ForemanImportService {
      * @param hosts the list of hosts to process
      */
     @Transactional
-    public void ensureAllRepositoriesExist(final List<HostDTO> hosts) {
+    public Map<String, Long> ensureAllRepositoriesExist(final List<HostDTO> hosts) {
         log.info("Pre-processing repositories from {} hosts", hosts.size());
 
-        // 1) Collect all unique repository names from all hosts
         final Set<String> allRepoNames = hosts.stream()
                 .filter(host -> host.repositories() != null)
                 .flatMap(host -> host.repositories().stream())
                 .filter(name -> name != null && !name.isBlank())
                 .collect(Collectors.toSet());
 
+        final Map<String, Long> repositoryIdByName = repositoryRepository.findAllIdsByName().stream()
+                .collect(Collectors.toMap(
+                        RepositoryIdByName::getName,
+                        RepositoryIdByName::getId,
+                        (existing, replacement) -> existing
+                ));
+
         if (allRepoNames.isEmpty()) {
             log.debug("No repositories found in host data");
-            return;
+            return repositoryIdByName;
         }
 
         log.info("Found {} unique repositories across all hosts", allRepoNames.size());
 
-        // 2) Load existing repositories from database
-        final List<Repository> existingRepos = repositoryRepository.findAll();
-        final Set<String> existingRepoNames = existingRepos.stream()
-                .map(Repository::getName)
-                .collect(Collectors.toSet());
-
-        // 3) Identify missing repositories
         final Set<String> missingRepoNames = allRepoNames.stream()
-                .filter(name -> !existingRepoNames.contains(name))
+                .filter(name -> !repositoryIdByName.containsKey(name))
                 .collect(Collectors.toSet());
 
         if (missingRepoNames.isEmpty()) {
             log.debug("All repositories already exist in database");
-            return;
+            return repositoryIdByName;
         }
 
-        // 4) Create all missing repositories in batch
-        log.info("Creating {} new repositories", missingRepoNames.size());
-        final List<Repository> newRepos = missingRepoNames.stream()
-                .map(name -> {
-                    Repository repo = new Repository();
-                    repo.setName(name);
-                    return repo;
-                })
-                .toList();
+        log.info("Creating {} missing repositories if not already present", missingRepoNames.size());
 
-        repositoryRepository.saveAll(newRepos);
-        log.info("Successfully created {} new repositories", newRepos.size());
+        for (final String name : missingRepoNames) {
+            repositoryRepository.insertIfNotExists(name);
+        }
+
+        repositoryRepository.flush();
+
+        repositoryRepository.findAllIdsByName().forEach(repository ->
+                repositoryIdByName.put(repository.getName(), repository.getId())
+        );
+
+        log.info("Repository cache prepared with {} repositories", repositoryIdByName.size());
+        return repositoryIdByName;
     }
 
     /**
@@ -377,7 +382,11 @@ public class ForemanImportService {
      * - Adds new repository assignments to the server
      * - Removes assignments that no longer exist in Foreman
      */
-    private void syncRepositories(final Server server, final List<String> repositoryNames) {
+    private void syncRepositories(
+            final Server server,
+            final List<String> repositoryNames,
+            final Map<String, Long> repositoryIdByName
+    ) {
         if (server == null || server.getId() == null) {
             log.warn("Cannot sync repositories: server or server ID is null");
             return;
@@ -393,9 +402,8 @@ public class ForemanImportService {
         if (repositoryNames == null || repositoryNames.isEmpty()) {
             if (!currentRepos.isEmpty()) {
                 for (Repository repo : currentRepos) {
-                    repo.getServers().remove(server);
+                    repositoryRepository.deleteAssignment(repo.getId(), server.getId());
                 }
-                repositoryRepository.saveAll(currentRepos);
                 log.debug("Cleared all repository assignments for server {}", server.getName());
             }
             return;
@@ -426,10 +434,9 @@ public class ForemanImportService {
         // 5) Process additions
         if (!reposToAdd.isEmpty()) {
             for (String name : reposToAdd) {
-                Repository repository = getOrCreateRepositoryFromCache(name);
-                // Native check and insert to avoid loading/updating the Repository entity
-                if (!repositoryRepository.existsAssignment(repository.getId(), server.getId())) {
-                    repositoryRepository.insertAssignment(repository.getId(), server.getId());
+                final Long repositoryId = getOrCreateRepositoryId(name, repositoryIdByName);
+                if (!repositoryRepository.existsAssignment(repositoryId, server.getId())) {
+                    repositoryRepository.insertAssignment(repositoryId, server.getId());
                     changed = true;
                 }
             }
@@ -442,16 +449,36 @@ public class ForemanImportService {
     }
 
     /**
-     * Gets or creates a repository using an in-memory cache to avoid repeated DB lookups.
-     * This method should be called within a transaction-scoped cache.
+     * Gets or creates a repository id using the Foreman import repository cache.
+     *
+     * <p>Lookup order:</p>
+     * <ol>
+     *   <li>Import-local repository id cache by name</li>
+     *   <li>Database lookup, in case another application instance created it meanwhile</li>
+     *   <li>Insert with ON CONFLICT DO NOTHING</li>
+     *   <li>Database reload and cache update</li>
+     * </ol>
      */
-    private Repository getOrCreateRepositoryFromCache(final String name) {
-        return repositoryRepository.findByName(name)
-                .orElseGet(() -> {
-                    Repository newRepo = new Repository();
-                    newRepo.setName(name);
-                    return repositoryRepository.save(newRepo);
-                });
+    private Long getOrCreateRepositoryId(final String name, final Map<String, Long> repositoryIdByName) {
+        final Long cachedRepositoryId = repositoryIdByName.get(name);
+        if (cachedRepositoryId != null) {
+            return cachedRepositoryId;
+        }
+
+        final Optional<Long> existingRepositoryId = repositoryRepository.findIdByName(name);
+        if (existingRepositoryId.isPresent()) {
+            final Long repositoryId = existingRepositoryId.get();
+            repositoryIdByName.put(name, repositoryId);
+            return repositoryId;
+        }
+
+        repositoryRepository.insertIfNotExists(name);
+
+        final Long repositoryId = repositoryRepository.findIdByName(name)
+                .orElseThrow(() -> new IllegalStateException("Repository could not be created or found: " + name));
+
+        repositoryIdByName.put(name, repositoryId);
+        return repositoryId;
     }
 
     /**

@@ -2,52 +2,33 @@
   <v-container
     v-if="selectedServer"
     fluid
+    class="pb-0"
   >
-    <v-row>
-      <!-- LINKS: Icon + Servername -->
-      <v-col
-        cols="auto"
-        class="d-flex align-center"
-      >
-        <div class="status-circle">
-          <v-icon
-            size="30"
-            :color="
-              props.selectedServer.powerState === 'poweredOn'
-                ? 'btn_green'
-                : props.selectedServer.powerState === 'poweredOff'
-                  ? 'btn_red'
-                  : 'accent'
-            "
-            :aria-label="
-              props.selectedServer.powerState === 'poweredOn'
-                ? 'Eingeschaltet'
-                : props.selectedServer.powerState === 'poweredOff'
-                  ? 'Ausgeschaltet'
-                  : 'Suspended'
-            "
-          >
-            {{
-              props.selectedServer.powerState === "poweredOn"
-                ? mdiPlayCircle
-                : props.selectedServer.powerState === "poweredOff"
-                  ? mdiStopCircle
-                  : mdiPauseCircle
-            }}
-          </v-icon>
-        </div>
-
-        <h2 class="ml-2 text-truncate">
-          {{ selectedServer == null ? "" : selectedServer.name }}
-        </h2>
+    <v-row
+      class="flex-nowrap"
+      no-gutters
+    >
+      <v-col class="title-col d-flex align-center">
+        <breadcrumb-nav
+          :appservice-id="selectedServer.appservices?.[0]?.id ?? null"
+          :appservice-name="selectedServer.appservices?.[0]?.name ?? null"
+          :appservice-count="selectedServer.appservices?.length ?? 0"
+          :current-icon="powerStateIcon"
+          :current-icon-color="powerStateIconColor"
+          :current-label="
+            selectedServer.name
+              ? selectedServer.name.split('.')[0]
+              : selectedServer.fqdn
+          "
+        />
       </v-col>
 
-      <!-- RECHTS: Buttons -->
       <v-col
         v-if="hasActions"
-        class="d-flex justify-end"
+        cols="auto"
+        class="d-flex justify-end flex-shrink-0"
       >
-        <div class="action-button-group">
+        <div class="action-button-group mt-2">
           <div
             v-if="
               selectedServer.canEdit &&
@@ -60,7 +41,7 @@
               :disabled="isRunning"
               tooltip="Server starten"
               :server="selectedServer"
-              job-to-call="VMWARE_START_SERVER"
+              job-to-call="START_SERVER"
               show-confirm-dialog
               confirm-dialog-title="VM Starten"
               confirm-dialog-text="Wollen Sie diese VM wirklich starten?"
@@ -71,19 +52,26 @@
               :disabled="!isRunning"
               tooltip="Server stoppen"
               :server="selectedServer"
-              job-to-call="VMWARE_STOP_SERVER"
+              job-to-call="STOP_SERVER"
               show-confirm-dialog
               confirm-dialog-title="VM Stoppen"
               confirm-dialog-text="Wollen Sie diese VM wirklich stoppen?"
               use-extra-sure-dialog
               extra-sure-checkbox-text="Mir ist bewusst, dass durch das Stoppen der VM eine Serviceunterbrechung entsteht."
             />
+            <pause-server-btn
+              :server="selectedServer"
+              :disabled="!isRunning"
+              :icon="mdiPause"
+              @change="$emit('change')"
+            />
             <action-button
               color="btn_red"
               :icon="mdiRestart"
               tooltip="Server neustarten"
               :server="selectedServer"
-              job-to-call="VMWARE_RESTART_SERVER"
+              :disabled="!isRunning"
+              job-to-call="RESTART_SERVER"
               show-confirm-dialog
               confirm-dialog-title="VM Neustarten"
               confirm-dialog-text="Wollen Sie diese VM wirklich neustarten?"
@@ -183,6 +171,7 @@
         </div>
       </v-col>
     </v-row>
+
     <v-row v-if="selectedServer.runningJobsCount > 0">
       <v-col
         cols="12"
@@ -197,6 +186,7 @@
         </div>
       </v-col>
     </v-row>
+
     <v-row
       v-if="
         selectedServer.runningJobsCount > 0 &&
@@ -206,9 +196,11 @@
       <v-col
         cols="12"
         class="pt-0 pb-0"
-        ><div></div
-      ></v-col>
+      >
+        <div></div>
+      </v-col>
     </v-row>
+
     <v-row v-if="selectedServer.runningGreenItCount > 0">
       <v-col
         cols="12"
@@ -240,6 +232,7 @@
         </div>
       </v-col>
     </v-row>
+
     <v-row>
       <v-col class="ml-4 pa-0">
         <v-chip-group
@@ -356,6 +349,7 @@ import type Server from "@/types/Server";
 import {
   mdiDelete,
   mdiKeyChain,
+  mdiPause,
   mdiPauseCircle,
   mdiPlay,
   mdiPlayCircle,
@@ -366,9 +360,11 @@ import {
 import { computed } from "vue";
 import { useTheme } from "vuetify";
 
+import BreadcrumbNav from "@/components/common/BreadcrumbNav.vue";
 import StatusChip from "@/components/common/StatusChip.vue";
 import ActionButton from "@/components/Server/ActionButtons/ActionButton.vue";
 import CheckmkMenu from "@/components/Server/ActionButtons/CheckmkMenu.vue";
+import PauseServerBtn from "@/components/Server/ActionButtons/PauseServerBtn.vue";
 import RootAdminRechteBtn from "@/components/Server/ActionButtons/RootAdminRechteBtn.vue";
 import WinWartungsModusMenu from "@/components/Server/ActionButtons/WinWartungsModusMenu.vue";
 import { useAppStore } from "@/stores/app";
@@ -379,8 +375,32 @@ const props = defineProps<{
   selectedServer: Server;
   loadingServerDetails: boolean;
 }>();
+
 const appStore = useAppStore();
 const userStore = useUserStore();
+
+const powerStateIcon = computed(() => {
+  switch (props.selectedServer.powerState) {
+    case "poweredOn":
+      return mdiPlayCircle;
+    case "poweredOff":
+      return mdiStopCircle;
+    default:
+      return mdiPauseCircle;
+  }
+});
+
+const powerStateIconColor = computed(() => {
+  switch (props.selectedServer.powerState) {
+    case "poweredOn":
+      return "btn_green";
+    case "poweredOff":
+      return "btn_red";
+    default:
+      return "accent";
+  }
+});
+
 const isOperator = computed(() =>
   userStore.getUser?.authorities.includes("ROLE_OPERATOR")
 );
@@ -389,9 +409,10 @@ const canExecuteOperatorActions = computed(() => {
   return isOperator.value && !appStore.isReadOnly;
 });
 
-defineEmits<{
+const emit = defineEmits<{
   (e: "navigateToHistory"): void;
   (e: "navigateToPatchnight"): void;
+  (e: "change"): void;
 }>();
 
 const theme = useTheme();
@@ -419,7 +440,7 @@ const hasActions = computed(() => {
   const cloudType = s.cloud?.cloudType;
   const managed = s.managed;
   const locked = s.locked;
-  const hasVMWare = canEdit && cloudType === "VCENTER";
+  const hasVMOperations = canEdit && (cloudType === "VCENTER" || cloudType === "PROXMOX");
   const hasWinManaged = canEdit && isWindows.value && managed;
   const hasLinuxManaged =
     (canEdit || (isOperator.value && !locked)) && isLinux.value && managed;
@@ -430,7 +451,7 @@ const hasActions = computed(() => {
     cloudType === "VCENTER" &&
     (isWindows.value || isLinux.value);
   return (
-    hasVMWare || hasWinManaged || hasLinuxManaged || hasCheckmk || hasDelete
+    hasVMOperations || hasWinManaged || hasLinuxManaged || hasCheckmk || hasDelete
   );
 });
 
@@ -476,9 +497,15 @@ const greenItBannerIntroText = computed(() => {
 
 <!--suppress CssUnresolvedCustomProperty -->
 <style scoped>
+.title-col {
+  min-width: 0;
+}
+
 .action-button-group {
   display: flex;
   align-items: center;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
   background: rgb(var(--v-theme-bg_light));
   border-radius: 28px;
   padding: 4px 8px;
@@ -602,7 +629,7 @@ const greenItBannerIntroText = computed(() => {
   }
 
   :global(.v-container) {
-    padding-top: 20px !important; /* Schafft Platz zum oberen Seitenrand */
+    padding-top: 20px !important;
     margin-top: 0 !important;
   }
 
@@ -611,7 +638,7 @@ const greenItBannerIntroText = computed(() => {
   }
 
   .v-col {
-    padding-top: 10px !important; /* Verhindert das Abschneiden der Überschrift */
+    padding-top: 10px !important;
     padding-bottom: 10px !important;
   }
 
@@ -619,23 +646,5 @@ const greenItBannerIntroText = computed(() => {
     margin-top: 0 !important;
     line-height: 1.2 !important;
   }
-}
-
-.status-circle {
-  display: flex;
-  background-color: rgb(var(--v-theme-bg_icon));
-  align-items: center;
-  justify-content: center;
-  width: 20px !important;
-  height: 20px !important;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.text-truncate {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
 }
 </style>

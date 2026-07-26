@@ -10,11 +10,13 @@
       :items-per-page="itemsPerPage"
       :has-more="hasMore"
       :selected-id="selectedRow"
+      :search="search"
       search-label="Server suchen..."
       @update:sort-by="updateSortBy"
       @update:search="onSearchUpdate"
       @row-click="onRowClick"
       @load-more="onLoadMore"
+      @row-keydown="onRowKeydown"
     >
       <template #[`header.name`]="{ column, toggleSort }">
         <div
@@ -40,9 +42,9 @@
               @click.stop
             >
               <v-menu :close-on-content-click="false">
-                <template #activator="{ props }">
+                <template #activator="{ props: activatorProps }">
                   <v-btn
-                    v-bind="props"
+                    v-bind="activatorProps"
                     icon
                     size="x-small"
                     variant="text"
@@ -202,6 +204,8 @@
             density="compact"
             :color="item.isFavorite ? 'warning' : 'grey-lighten-1'"
             class="mr-1"
+            tabindex="-1"
+            title="Favorit (Taste F, wenn Zeile fokussiert)"
             @click.stop="toggleFavorite(item)"
           >
             <v-icon>{{ item.isFavorite ? mdiStar : mdiStarOutline }}</v-icon>
@@ -318,13 +322,21 @@ import ScrollableListTable from "@/components/common/ScrollableListTable.vue";
 import OsCell from "@/components/Server/OsCell.vue";
 import { APPSERVICE_EXPLAIN_URL } from "@/constants.ts";
 
+const props = defineProps<{
+  selected: ServerList[];
+  unActivateServerRow: boolean;
+  urlParamsId?: string | string[];
+  urlParamsAppId?: string | string[];
+  initialSearch?: string;
+}>();
+
 const favoritesFilter = ref(
   localStorage.getItem("mcmp_favorites_filter") === "true"
 );
 const loadingServer = ref(false);
 const servers = ref<ServerList[]>([]);
 const totalServers = ref(0);
-const search = ref("");
+const search = ref(props.initialSearch ?? "");
 const currentPage = ref(1);
 const itemsPerPage = ref(25);
 const hasMore = ref(true);
@@ -340,16 +352,10 @@ const statusFilter = ref<string[]>(
 const osFilter = ref<string>(localStorage.getItem("mcmp_os_filter") || "");
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
 
-const props = defineProps<{
-  selected: ServerList[];
-  unActivateServerRow: boolean;
-  urlParamsId?: string | string[];
-  urlParamsAppId?: string | string[];
-}>();
-
 const emit = defineEmits<{
   (e: "update:selected", selected: ServerList[]): void;
   (e: "resetUnActivateServerRow"): void;
+  (e: "update:search", val: string): void;
 }>();
 
 const headers = ref<DataTableHeader[]>([
@@ -378,6 +384,12 @@ function removeIfBeyondLoadedRange(server: any) {
   const beyondRange = order * server.name.localeCompare(lastName) > 0;
   if (beyondRange) {
     servers.value = servers.value.filter((s) => s.id !== server.id);
+  }
+}
+
+function onRowKeydown({ key, item }: { key: string; item: any }) {
+  if (key === "f" || key === "F") {
+    toggleFavorite(item);
   }
 }
 
@@ -450,6 +462,13 @@ function updateSortBy(newSortBy: { key: string; order: "asc" | "desc" }[]) {
 function onSearchUpdate(val: string) {
   search.value = val;
 }
+
+watch(
+  () => props.initialSearch,
+  (val) => {
+    if (val !== undefined && val !== search.value) search.value = val;
+  }
+);
 
 async function onLoadMore() {
   currentPage.value++;
@@ -526,6 +545,7 @@ function onRowClick(item: ServerList) {
 watch(search, () => {
   if (searchTimeout) clearTimeout(searchTimeout);
   searchTimeout = setTimeout(async () => {
+    emit("update:search", search.value);
     currentPage.value = 1;
     await loadServers(
       1,

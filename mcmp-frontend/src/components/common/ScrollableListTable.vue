@@ -26,8 +26,8 @@
     <div
       ref="tableWrapper"
       class="keyboard-table-wrapper"
-      tabindex="0"
-      @keyup="onTableKeyup"
+      :tabindex="wrapperTabindex"
+      @keydown="onTableKeydown"
       @focusin="onFocusIn"
       @focusout="onFocusOut"
     >
@@ -107,6 +107,7 @@ const props = defineProps<{
   searchTooltip?: string; // HIER: Das Prop für dein Tooltip registriert
   selectedId?: number | string | null;
   hasMore: boolean;
+  search?: string;
 }>();
 
 const emit = defineEmits<{
@@ -115,19 +116,35 @@ const emit = defineEmits<{
   (e: "rowClick", item: T): void;
   (e: "loadMore"): void;
   (e: "clearSelection"): void;
+  (e: "rowKeydown", val: { key: string; item: T }): void;
 }>();
 
 // ── Search ────────────────────────────────────────────────────────────────────
 
-const searchModel = ref("");
+const searchModel = ref(props.search ?? "");
 
 watch(searchModel, (val) => emit("update:search", val));
+watch(
+  () => props.search,
+  (val) => {
+    if (val !== undefined && val !== searchModel.value) searchModel.value = val;
+  }
+);
 
 // ── Keyboard / Focus ──────────────────────────────────────────────────────────
 
 const tableWrapper = ref<HTMLElement | null>(null);
 const focusedRowIndex = ref(0);
+const focusedItemId = ref<T["id"] | null>(null);
 const tableHasFocus = ref(false);
+
+const wrapperTabindex = ref(0);
+
+function updateWrapperTabindex() {
+  const el = getScrollContainer();
+  if (!el) return;
+  wrapperTabindex.value = el.scrollHeight > el.clientHeight + 4 ? -1 : 0;
+}
 
 function getRows(): Element[] {
   return Array.from(
@@ -135,6 +152,12 @@ function getRows(): Element[] {
       ".scrollable-list-table .v-data-table__tr"
     )
   );
+}
+
+function stripHeaderTabindex() {
+  tableWrapper.value
+    ?.querySelectorAll("th[tabindex]")
+    .forEach((th) => th.setAttribute("tabindex", "-1"));
 }
 
 function applyFocusHighlight(index: number) {
@@ -146,6 +169,9 @@ function applyFocusHighlight(index: number) {
 
 function onFocusIn() {
   tableHasFocus.value = true;
+  if (focusedItemId.value === null) {
+    focusedItemId.value = props.items[focusedRowIndex.value]?.id ?? null;
+  }
   applyFocusHighlight(focusedRowIndex.value);
 }
 
@@ -175,12 +201,13 @@ function moveFocusToIndex(index: number) {
   applyFocusHighlight(index);
 }
 
-function onTableKeyup(e: KeyboardEvent) {
+function onTableKeydown(e: KeyboardEvent) {
   if (!props.items.length) return;
 
   if (e.key === "ArrowDown") {
     if (focusedRowIndex.value < props.items.length - 1) {
       focusedRowIndex.value++;
+      focusedItemId.value = props.items[focusedRowIndex.value]?.id ?? null;
       moveFocusToIndex(focusedRowIndex.value);
       scrollToRow(focusedRowIndex.value);
       e.preventDefault();
@@ -188,6 +215,7 @@ function onTableKeyup(e: KeyboardEvent) {
   } else if (e.key === "ArrowUp") {
     if (focusedRowIndex.value > 0) {
       focusedRowIndex.value--;
+      focusedItemId.value = props.items[focusedRowIndex.value]?.id ?? null;
       moveFocusToIndex(focusedRowIndex.value);
       scrollToRow(focusedRowIndex.value);
       e.preventDefault();
@@ -195,6 +223,9 @@ function onTableKeyup(e: KeyboardEvent) {
   } else if (e.key === "Enter" || e.key === " ") {
     selectRowByIndex(focusedRowIndex.value);
     e.preventDefault();
+  } else {
+    const item = props.items[focusedRowIndex.value];
+    if (item) emit("rowKeydown", { key: e.key, item });
   }
 }
 
@@ -214,17 +245,38 @@ function onRowClick(_event: MouseEvent, { item }: { item: T }) {
 
   const rows = Array.from(getRows());
   const idx = rows.indexOf(cell as Element);
-  if (idx !== -1) focusedRowIndex.value = idx;
+  if (idx !== -1) {
+    focusedRowIndex.value = idx;
+    focusedItemId.value = props.items[idx]?.id ?? null;
+  }
+
+  tableWrapper.value?.focus();
 }
 
-// Reset focus highlight when items change
+// Keep focus on the same item when the list reorders (e.g. favorite toggle);
+// only reset to the top when the previously focused item is gone (new search/filter).
 watch(
   () => props.items,
   (newItems, oldItems) => {
-    if (newItems.length <= (oldItems?.length ?? 0)) {
-      focusedRowIndex.value = 0;
-      nextTick(() => scrollToRow(0));
+    if (newItems.length > (oldItems?.length ?? 0)) return;
+
+    if (focusedItemId.value !== null) {
+      const newIndex = newItems.findIndex(
+        (item) => item.id === focusedItemId.value
+      );
+      if (newIndex !== -1) {
+        focusedRowIndex.value = newIndex;
+        nextTick(() => {
+          moveFocusToIndex(newIndex);
+          scrollToRow(newIndex);
+        });
+        return;
+      }
     }
+
+    focusedRowIndex.value = 0;
+    focusedItemId.value = newItems[0]?.id ?? null;
+    nextTick(() => scrollToRow(0));
   }
 );
 
@@ -277,13 +329,38 @@ watch(scrollSentinel, (el) => {
   if (el) observeScroll();
 });
 
+let resizeObserver: ResizeObserver | null = null;
+
+function observeContainerResize() {
+  setTimeout(() => {
+    const el = getScrollContainer();
+    if (!el) return;
+    updateWrapperTabindex();
+    resizeObserver?.disconnect();
+    resizeObserver = new ResizeObserver(updateWrapperTabindex);
+    resizeObserver.observe(el);
+  }, 300);
+}
+
 onMounted(async () => {
   await nextTick();
   observeScroll();
+  stripHeaderTabindex();
+  observeContainerResize();
 });
+
+watch([() => props.headers, () => props.sortBy], () => {
+  nextTick(stripHeaderTabindex);
+});
+
+watch(
+  () => props.items,
+  () => nextTick(updateWrapperTabindex)
+);
 
 onUnmounted(() => {
   if (observer) observer.disconnect();
+  if (resizeObserver) resizeObserver.disconnect();
 });
 
 // ── Public API ────────────────────────────────────────────────────────────────
@@ -326,6 +403,12 @@ defineExpose({ resetSelection, triggerObserveScroll });
   overflow-x: auto;
   overflow-y: auto;
   display: flex;
+  outline: none !important;
+}
+
+.keyboard-table-wrapper:focus,
+.keyboard-table-wrapper:focus-visible {
+  outline: none !important;
 }
 
 .scrollable-list-table {

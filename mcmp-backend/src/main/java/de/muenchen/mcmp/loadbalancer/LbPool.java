@@ -3,6 +3,7 @@ package de.muenchen.mcmp.loadbalancer;
 import de.muenchen.mcmp.common.AbstractEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 
 import java.util.List;
 
@@ -29,8 +30,10 @@ public class LbPool extends AbstractEntity {
     private String monitorCondition;
 
     @OneToMany(mappedBy = "pool", cascade = CascadeType.ALL, orphanRemoval = true)
+    @BatchSize(size = 100)
     private List<LbPoolMonitor> monitors;
 
     @OneToMany(mappedBy = "pool", cascade = CascadeType.ALL, orphanRemoval = true)
+    @BatchSize(size = 100)
     private List<LbPoolMember> members;
 }

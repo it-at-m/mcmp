@@ -46,6 +46,22 @@ export default {
     );
   },
 
+  setLoginPage(loginPage: string, loading: Ref<boolean>): Promise<void> {
+    return apiFetch<void>(
+      `${getApiBase()}${USER_BASE}/loginpage?loginPage=${encodeURIComponent(loginPage)}`,
+      { method: "PUT" },
+      loading
+    );
+  }, // <-- HIER war wahrscheinlich das Komma verloren gegangen!
+
+  getLoginPage(loading: Ref<boolean>): Promise<string> {
+    return apiFetch<string>(
+      `${getApiBase()}${USER_BASE}/loginpage`,
+      {},
+      loading
+    );
+  },
+
   getUsersForAutocomplete(query: string | null): Promise<UserAutocomplete[]> {
     const params = query ? `?query=${encodeURIComponent(query)}` : "";
     return apiFetch<UserAutocomplete[]>(

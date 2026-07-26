@@ -94,8 +94,6 @@
 </template>
 
 <script setup lang="ts">
-
-
 import type { AppVersion } from "@/types/AppVersion.ts";
 import type { DataTableHeader } from "vuetify/framework";
 

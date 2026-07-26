@@ -33,18 +33,14 @@
       >
         <v-list-item-title>Host anschauen</v-list-item-title>
       </v-list-item>
-      <v-list-item>
-        <check-mk-dialog
-          title="Downtime setzen"
-          :server="server"
-        />
-      </v-list-item>
-      <v-list-item>
-        <check-mk-dialog
-          title="Service Discovery"
-          :server="server"
-        />
-      </v-list-item>
+      <check-mk-dialog
+        title="Downtime setzen"
+        :server="server"
+      />
+      <check-mk-dialog
+        title="Service Discovery"
+        :server="server"
+      />
     </v-list>
   </v-menu>
 </template>

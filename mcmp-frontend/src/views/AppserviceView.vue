@@ -14,7 +14,9 @@
         <appservice-list
           :selected="selectedAppserviceRows"
           :url-params-id="route.params.appId"
+          :initial-search="appserviceSearch"
           @update:selected="onAppserviceSelected"
+          @update:search="appserviceSearch = $event"
         />
       </div>
 
@@ -58,7 +60,10 @@
           class="right-panel-inner"
         >
           <div class="right-panel-sticky">
-            <appservice-status :selected-appservice="selectedAppservice" />
+            <breadcrumb-nav
+              :appservice-id="selectedAppservice.id"
+              :appservice-name="selectedAppservice.name"
+            />
             <div class="d-flex align-center">
               <v-tabs
                 v-model="tabAppservices"
@@ -72,6 +77,12 @@
                     <v-icon size="x-large">{{ mdiHome }}</v-icon>
                   </template>
                 </v-tab>
+                <v-tab value="History">
+                  History
+                  <template #prepend>
+                    <v-icon size="x-large">{{ mdiHistory }}</v-icon>
+                  </template>
+                </v-tab>
               </v-tabs>
 
               <collapse-all-cards-button
@@ -80,7 +91,11 @@
               />
             </div>
           </div>
-          <div class="right-panel-scroll">
+          <div
+            ref="scrollContainer"
+            class="right-panel-scroll"
+            tabindex="-1"
+          >
             <v-tabs-window v-model="tabAppservices">
               <v-tabs-window-item value="Allgemeines">
                 <appservice-details-allgemein
@@ -94,6 +109,22 @@
                 />
                 <appservice-details-loadbalancer
                   :selected-appservice="selectedAppservice"
+                />
+                <appservice-details-openshift
+                  :selected-appservice="selectedAppservice"
+                />
+              </v-tabs-window-item>
+
+              <v-tabs-window-item value="History">
+                <app-service-detail-history
+                  :history="history"
+                  :loading="loadingHistory"
+                  :page="currentPage"
+                  :items-per-page="currentItemsPerPage"
+                  @refresh-jobs="fetchHistory"
+                  @update:page="handlePageUpdate($event)"
+                  @update:items-per-page="handleItemsPerPageUpdate($event)"
+                  @update:sort="onSort"
                 />
               </v-tabs-window-item>
             </v-tabs-window>
@@ -111,29 +142,49 @@
 <script setup lang="ts">
 import type Appservice from "@/types/Appservice";
 import type AppserviceListItem from "@/types/AppserviceList";
+import type JobList from "@/types/JobList";
+import type { Page } from "@/types/Page";
 
-import { mdiHome } from "@mdi/js";
+import { mdiHistory, mdiHome } from "@mdi/js";
 import { onUnmounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 import appserviceService from "@/api/appserviceService";
+import jobService from "@/api/jobService";
+import AppServiceDetailHistory from "@/components/Appservice/AppServiceDetailHistory.vue";
 import AppserviceDetailsAllgemein from "@/components/Appservice/AppserviceDetailsAllgemein.vue";
 import AppserviceDetailsLoadbalancer from "@/components/Appservice/AppserviceDetailsLoadbalancer.vue";
+import AppserviceDetailsOpenshift from "@/components/Appservice/AppserviceDetailsOpenshift.vue";
 import AppserviceDetailsServer from "@/components/Appservice/AppserviceDetailsServer.vue";
 import AppserviceDetailsStorage from "@/components/Appservice/AppserviceDetailsStorage.vue";
 import AppserviceList from "@/components/Appservice/AppserviceList.vue";
-import AppserviceStatus from "@/components/Appservice/AppserviceStatus.vue";
+import BreadcrumbNav from "@/components/common/BreadcrumbNav.vue";
 import CollapseAllCardsButton from "@/components/common/CollapseAllCardsButton.vue";
 import CommonAlert from "@/components/common/CommonAlert.vue";
 import { useCollapsibleCards } from "@/composables/useCollapsibleCards";
+import { useScrollRestoration } from "@/composables/useScrollRestoration";
+import { useTabQuerySync } from "@/composables/useTabQuerySync";
 
 const selectedAppserviceRows = ref<AppserviceListItem[]>([]);
 const selectedAppservice = ref<Appservice | null>(null);
 const tabAppservices = ref("Allgemeines");
+const appserviceSearch = ref("");
 const loadingDetails = ref(false);
+const scrollContainer = ref<HTMLElement | null>(null);
+
+// History State
+const history = ref<Page<JobList> | null>(null);
+const loadingHistory = ref(false);
+const currentPage = ref(1);
+const currentItemsPerPage = ref(10);
+const currentSortBy = ref<string | null>(null);
+const currentSortDesc = ref(false);
 
 const { allCardsExpanded, toggleAllCards } =
   useCollapsibleCards(tabAppservices);
+useTabQuerySync(tabAppservices);
+useTabQuerySync(appserviceSearch, "search");
+useScrollRestoration(scrollContainer);
 
 const notFound = ref(false);
 const notFoundId = ref<number | null>(null);
@@ -149,13 +200,13 @@ const maxWidthPercent = 0.35;
 function onAppserviceSelected(rows: AppserviceListItem[]) {
   const id = rows[0]?.id;
   if (!id) {
-    void router.push("/appservice");
+    void router.push({ path: "/appservice", query: route.query });
     return;
   }
 
   const targetPath = `/appservice/${id}`;
   if (route.path !== targetPath) {
-    void router.push(targetPath);
+    void router.push({ path: targetPath, query: route.query });
   }
 }
 
@@ -175,6 +226,10 @@ async function loadSelectedAppservice(id: number) {
     ];
     notFound.value = false;
     notFoundId.value = null;
+
+    if (tabAppservices.value === "History") {
+      void fetchHistory();
+    }
   } catch {
     selectedAppservice.value = null;
     notFound.value = true;
@@ -209,6 +264,46 @@ async function syncSelectionFromRoute(
 
   selectedAppserviceRows.value = [{ id: routeAppId } as AppserviceListItem];
   await loadSelectedAppservice(routeAppId);
+}
+
+// History API Handler & Pagination
+function fetchHistory(silent = false) {
+  const appId = selectedAppservice.value?.id;
+  if (appId) {
+    const loadingRef = silent ? ref(false) : loadingHistory;
+    return jobService
+      .getJobsByAppServiceId(
+        loadingRef,
+        appId,
+        currentPage.value,
+        currentItemsPerPage.value,
+        currentSortBy.value,
+        currentSortDesc.value
+      )
+      .then((res) => {
+        history.value = res;
+      });
+  } else {
+    history.value = null;
+    return Promise.resolve();
+  }
+}
+
+function handlePageUpdate(page: number) {
+  currentPage.value = page;
+  void fetchHistory();
+}
+
+function handleItemsPerPageUpdate(items: number) {
+  currentItemsPerPage.value = items;
+  currentPage.value = 1;
+  void fetchHistory();
+}
+
+function onSort(sort: { by: string; desc: boolean }) {
+  currentSortBy.value = sort.by;
+  currentSortDesc.value = sort.desc;
+  void fetchHistory();
 }
 
 function startResize(event: MouseEvent | TouchEvent) {
@@ -282,6 +377,14 @@ watch(
   },
   { immediate: true }
 );
+
+watch(tabAppservices, (newTab) => {
+  if (selectedAppservice.value?.id && newTab === "History") {
+    currentPage.value = 1;
+    currentItemsPerPage.value = 10;
+    void fetchHistory();
+  }
+});
 </script>
 
 <style scoped>

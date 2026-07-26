@@ -5,14 +5,16 @@
         <h3>Name</h3>
       </v-col>
       <v-col cols="3">
-        <h3>Adressen</h3>
-      </v-col>
-      <v-col cols="3">
         <h3>Domains</h3>
       </v-col>
       <v-col cols="3">
+        <h3 v-if="lb.tenantRepositoryUrl && !lb.wafEnabled">
+          Gitlab-Repository
+        </h3></v-col
+      >
+      <v-col cols="3">
         <h3>
-          MCMP-Anwendungsservice{{
+          Anwendungsservice{{
             lb.appservices && lb.appservices.length > 1 ? "s" : ""
           }}<info-tooltip>
             <div class="pa-1">
@@ -35,22 +37,6 @@
       </v-col>
       <v-col
         cols="3"
-        class="pt-0"
-      >
-        <div v-if="lb.addresses && lb.addresses.length">
-          <ul style="padding-left: 0; list-style-position: inside">
-            <li
-              v-for="addr in lb.addresses"
-              :key="addr"
-            >
-              {{ addr }}
-            </li>
-          </ul>
-        </div>
-        <p v-else>-</p>
-      </v-col>
-      <v-col
-        cols="3"
         class="pt-0 links"
       >
         <div v-if="lb.domains && lb.domains.length">
@@ -69,6 +55,19 @@
           </ul>
         </div>
         <p v-else>-</p>
+      </v-col>
+      <v-col
+        cols="3"
+        class="links pt-0"
+      >
+        <a
+          v-if="lb.tenantRepositoryUrl && !lb.wafEnabled"
+          :href="lb.tenantRepositoryUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Config
+        </a>
       </v-col>
       <v-col
         cols="3"
@@ -103,6 +102,12 @@
   >
     <v-row>
       <v-col cols="3">
+        <h3>Adressen</h3>
+      </v-col>
+      <v-col cols="3">
+        <h3>Port</h3>
+      </v-col>
+      <v-col cols="3">
         <h3>
           Listener Protokoll<info-tooltip>
             <div class="pa-1">
@@ -118,9 +123,44 @@
       <v-col cols="3">
         <h3>Server Protokoll</h3>
       </v-col>
-      <v-col cols="3">
-        <h3>Port</h3>
+    </v-row>
+    <v-row>
+      <v-col
+        cols="3"
+        class="pt-0"
+      >
+        <div v-if="lb.addresses && lb.addresses.length">
+          <ul style="padding-left: 0; list-style-position: inside">
+            <li
+              v-for="addr in lb.addresses"
+              :key="addr"
+            >
+              {{ addr }}
+            </li>
+          </ul>
+        </div>
+        <p v-else>-</p>
       </v-col>
+      <v-col
+        cols="3"
+        class="pt-0"
+      >
+        <p>{{ lb.port }}</p>
+      </v-col>
+      <v-col
+        cols="3"
+        class="pt-0"
+      >
+        <p>{{ lb.listen }}</p>
+      </v-col>
+      <v-col
+        cols="3"
+        class="pt-0"
+      >
+        <p>{{ lb.forward }}</p>
+      </v-col>
+    </v-row>
+    <v-row>
       <v-col cols="3">
         <h3>
           Persistenz<info-tooltip>
@@ -142,34 +182,6 @@
           </info-tooltip>
         </h3>
       </v-col>
-    </v-row>
-    <v-row>
-      <v-col
-        cols="3"
-        class="pt-0"
-      >
-        <p>{{ lb.listen }}</p>
-      </v-col>
-      <v-col
-        cols="3"
-        class="pt-0"
-      >
-        <p>{{ lb.forward }}</p>
-      </v-col>
-      <v-col
-        cols="3"
-        class="pt-0"
-      >
-        <p>{{ lb.port }}</p>
-      </v-col>
-      <v-col
-        cols="3"
-        class="pt-0"
-      >
-        <p>{{ lb.persistence }}</p>
-      </v-col>
-    </v-row>
-    <v-row>
       <v-col cols="3">
         <h3>
           Redirect HTTP → HTTPS<info-tooltip>
@@ -182,17 +194,8 @@
           </info-tooltip>
         </h3>
       </v-col>
-      <v-col
-        v-if="lb.tenantRepositoryUrl"
-        cols="3"
-      >
-        <h3>Gitlab-Repository</h3></v-col
-      >
-      <v-col
-        v-if="lb.wafEnabled"
-        cols="3"
-      >
-        <h3>
+      <v-col cols="3">
+        <h3 v-if="lb.wafEnabled">
           WAF-Status<info-tooltip>
             <div class="pa-1">
               <p class="text-caption mt-2 mb-1">
@@ -216,27 +219,20 @@
         cols="3"
         class="pt-0"
       >
-        <p>{{ formatter.formatBooleanToJaNein(lb.redirect80) }}</p>
+        <p>{{ lb.persistence }}</p>
       </v-col>
       <v-col
-        cols="3"
-        class="links"
-      >
-        <a
-          v-if="lb.tenantRepositoryUrl"
-          :href="lb.tenantRepositoryUrl"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Config
-        </a>
-      </v-col>
-      <v-col
-        v-if="lb.wafEnabled"
         cols="3"
         class="pt-0"
       >
-        <p>{{ lb.wafStatus ?? "-" }}</p>
+        <p>{{ formatter.formatBooleanToJaNein(lb.redirect80) }}</p>
+      </v-col>
+
+      <v-col
+        cols="3"
+        class="pt-0"
+      >
+        <p v-if="lb.wafEnabled">{{ lb.wafStatus ?? "-" }}</p>
       </v-col>
     </v-row>
   </common-card>

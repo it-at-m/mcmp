@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.*;
 
@@ -70,7 +71,7 @@ public class ForemanController implements DisposableBean {
 
                 // 1) Pre-process: Ensure all repositories exist before processing hosts
                 log.info("Pre-processing: Ensuring all repositories exist in database");
-                foremanImportService.ensureAllRepositoriesExist(foremanDataDTO.hosts());
+                final Map<String, Long> repositoryIdByName = foremanImportService.ensureAllRepositoriesExist(foremanDataDTO.hosts());
 
                 final List<ServerMatcher<HostDTO>> strategies = createForemanStrategies(cache);
 
@@ -79,7 +80,12 @@ public class ForemanController implements DisposableBean {
                 // 2) Process each host
                 for (final HostDTO hostDTO : foremanDataDTO.hosts()) {
                     try {
-                        foremanImportService.processHostInNewTransaction(hostDTO, processedServerIDs, strategies);
+                        foremanImportService.processHostInNewTransaction(
+                                hostDTO,
+                                processedServerIDs,
+                                strategies,
+                                repositoryIdByName
+                        );
                     } catch (Exception e) {
                         log.error("Error processing host {}: {}",
                                 hostDTO.name(),

@@ -165,7 +165,11 @@ const nfsCifsChartOption = computed(() => {
     props.selectedStorageItem.spaceLogicalUsedByAfs
   );
 
-  if (snapshotReservePercent.value === 0) {
+  const snapshotUsed = clampToPositive(
+    props.selectedStorageItem.spaceSnapshotUsed
+  );
+
+  if (snapshotReservePercent.value === 0 && snapshotUsed === 0) {
     return getChartOption([
       {
         value: logicalUsedByAfs,
@@ -178,9 +182,26 @@ const nfsCifsChartOption = computed(() => {
     ]);
   }
 
-  const snapshotUsed = clampToPositive(
-    props.selectedStorageItem.spaceSnapshotUsed
-  );
+  if (snapshotReservePercent.value === 0) {
+    return getChartOption([
+      {
+        value: logicalUsedByAfs,
+        name: "Aktives Dateisystem: regulär belegt",
+      },
+      {
+        value: Math.max(
+          previewSizeBytes.value - logicalUsedByAfs - snapshotUsed,
+          0
+        ),
+        name: "Aktives Dateisystem: frei",
+      },
+      {
+        value: snapshotUsed,
+        name: "Aktives Dateisystem: belegt durch Snapshots",
+      },
+    ]);
+  }
+
   const reserveSize = snapshotReserveBytes.value;
   const snapshotOverflowIntoAfs = Math.max(snapshotUsed - reserveSize, 0);
 

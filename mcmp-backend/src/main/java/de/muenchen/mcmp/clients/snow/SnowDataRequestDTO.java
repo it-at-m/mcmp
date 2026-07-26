@@ -9,6 +9,11 @@ import java.util.List;
 
 @Builder
 public record SnowDataRequestDTO(
+
+        @JsonProperty("eai_info")
+        @Valid
+        EaiInfoDTO eaiInfo,
+
         @JsonProperty("users")
         @Valid
         List<UserDTO> users,
@@ -23,8 +28,50 @@ public record SnowDataRequestDTO(
 
         @JsonProperty("app_services")
         @Valid
-        List<AppServiceDTO> appServices
+        List<AppServiceDTO> appServices,
+
+        @JsonProperty("storage_server")
+        @Valid
+        List<StorageServerDTO> storageServers,
+
+        @JsonProperty("storage_volumes")
+        @Valid
+        List<StorageVolumeDTO> storageVolumes,
+
+        @JsonProperty("storage_qtrees")
+        @Valid
+        List<StorageQTreeDTO> storageQTrees,
+
+        @JsonProperty("storage_accounts")
+        @Valid
+        List<StorageAccountDTO> storageAccounts,
+
+        @JsonProperty("storage_buckets")
+        @Valid
+        List<StorageBucketDTO> storageBuckets,
+
+        @JsonProperty("lb_services")
+        @Valid
+        List<LbServiceDTO> lbServices,
+
+        @JsonProperty("kubernetes_clusters")
+        @Valid
+        List<KubernetesClusterDTO> kubernetesClusters
 ) {
+
+    @Builder
+    public record EaiInfoDTO(
+            @JsonProperty("name") String name,
+            @JsonProperty("version") String version,
+            @JsonProperty("commit_id") String commitId,
+            @JsonProperty("modified") boolean modified,
+            @JsonProperty("go_version") String goVersion,
+            @JsonProperty("fqdn") String fqdn,
+            @JsonProperty("start_time") String startTime,
+            @JsonProperty("end_time") String endTime,
+            @JsonProperty("duration") String duration,
+            @JsonProperty("status") String status
+    ) {}
 
     @Builder
     public record UserDTO(
@@ -77,7 +124,7 @@ public record SnowDataRequestDTO(
             @JsonProperty("serial_number")
             String serialNumber,
 
-            @JsonProperty("sys_class_name")
+            @JsonProperty("sys_class")
             String sysClassName,
 
             @JsonProperty("ip_address")
@@ -155,8 +202,169 @@ public record SnowDataRequestDTO(
             @JsonProperty("business_service_numbers")
             List<String> businessServiceNumbers,
 
-            @JsonProperty("cis")
+            @JsonProperty("server_cis")
             List<String> cis
     ) {
     }
+
+    @Builder
+    public record StorageServerDTO(
+            @JsonProperty("name")
+            String name,
+
+            @JsonProperty("sys_id")
+            @NotNull
+            String sysId,
+
+            @JsonProperty("serial_number")
+            String serialNumber,
+
+            @JsonProperty("sys_class")
+            String sysClass,
+
+            @JsonProperty("life_cycle_stage")
+            String lifeCycleStage,
+
+            @JsonProperty("life_cycle_stage_status")
+            String lifeCycleStageStatus,
+
+            @JsonProperty("last_discovered")
+            String lastDiscovered
+    ) {
+    }
+
+    @Builder
+    public record StorageVolumeDTO(
+            @JsonProperty("name")
+            String name,
+
+            @JsonProperty("sys_id")
+            @NotNull
+            String sysId,
+
+            @JsonProperty("sys_class")
+            String sysClass,
+
+            @JsonProperty("life_cycle_stage")
+            String lifeCycleStage,
+
+            @JsonProperty("life_cycle_stage_status")
+            String lifeCycleStageStatus,
+
+            @JsonProperty("last_discovered")
+            String lastDiscovered,
+
+            @JsonProperty("volume_id")
+            String volumeId,
+
+            @JsonProperty("svm_uuid")
+            String svmUUID,
+
+            @JsonProperty("svm_sys_id")
+            String svmSysId,
+
+            @JsonProperty("app_service_number")
+            List<String> appServiceNumber
+    ) {
+    }
+
+    @Builder
+    public record StorageQTreeDTO(
+            @JsonProperty("name")
+            String name,
+
+            @JsonProperty("sys_id")
+            @NotNull
+            String sysId,
+
+            @JsonProperty("sys_class")
+            String sysClass,
+
+            @JsonProperty("life_cycle_stage")
+            String lifeCycleStage,
+
+            @JsonProperty("life_cycle_stage_status")
+            String lifeCycleStageStatus,
+
+            @JsonProperty("last_discovered")
+            String lastDiscovered,
+
+            @JsonProperty("storage_type")
+            String storageType,
+
+            @JsonProperty("volume_id")
+            String volumeId,
+
+            @JsonProperty("qtree_id")
+            String qtreeId,
+
+            @JsonProperty("cluster_id")
+            String clusterId,
+
+            @JsonProperty("object_id")
+            String objectId,
+
+            @JsonProperty("svm_uuid")
+            String svmUUID,
+
+            @JsonProperty("svm_sys_id")
+            String svmSysId,
+
+            @JsonProperty("parent_id")
+            String parentId,
+
+            @JsonProperty("app_service_number")
+            List<String> appServiceNumber
+    ) {
+    }
+
+    @Builder
+    public record StorageAccountDTO(
+            @JsonProperty("name") String name,
+            @JsonProperty("sys_id") @NotNull String sysId,
+            @JsonProperty("sys_class") String sysClass,
+            @JsonProperty("account_id") String accountId,
+            @JsonProperty("app_service_number") List<String> appServiceNumber
+    ) {}
+
+    @Builder
+    public record StorageBucketDTO(
+            @JsonProperty("name") String name,
+            @JsonProperty("sys_id") @NotNull String sysId,
+            @JsonProperty("sys_class") String sysClass,
+            @JsonProperty("account_id") String accountId,
+            @JsonProperty("app_service_number") List<String> appServiceNumber
+    ) {}
+
+    @Builder
+    public record LbServiceDTO(
+            @JsonProperty("name") String name,
+            @JsonProperty("sys_id") @NotNull String sysId,
+            @JsonProperty("sys_class") String sysClass,
+            @JsonProperty("last_discovered") String lastDiscovered,
+            @JsonProperty("app_service_number") List<String> appServiceNumber
+    ) {}
+
+    @Builder
+    public record KubernetesClusterDTO(
+            @JsonProperty("name") String name,
+            @JsonProperty("sys_id") @NotNull String sysId,
+            @JsonProperty("sys_class") String sysClass,
+            @JsonProperty("last_discovered") String lastDiscovered,
+            @JsonProperty("k8s_uid") String k8sUid,
+            @JsonProperty("environment") String environment,
+            @JsonProperty("kubernetes_namespaces") List<KubernetesNamespaceDTO> kubernetesNamespaces
+    ) {}
+
+    @Builder
+    public record KubernetesNamespaceDTO(
+            @JsonProperty("name") String name,
+            @JsonProperty("sys_id") @NotNull String sysId,
+            @JsonProperty("sys_class") String sysClass,
+            @JsonProperty("last_discovered") String lastDiscovered,
+            @JsonProperty("k8s_uid") String k8sUid,
+            @JsonProperty("environment") String environment,
+            @JsonProperty("app_service_number") List<String> appServiceNumber
+    ) {}
+
 }

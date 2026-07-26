@@ -1,10 +1,12 @@
 package de.muenchen.mcmp.ontap;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -125,4 +127,42 @@ public interface OntapVolumeRepository extends JpaRepository<OntapVolume, Long> 
             ") THEN TRUE ELSE FALSE END")
     Boolean canUserEditVolume(@Param("uuid") UUID uuid, @Param("username") String username,
                               @Param("isAdmin") boolean isAdmin, @Param("isStorage") boolean isStorage);
+
+    @Modifying
+    @Query(value = """
+            UPDATE cmp.ontap_volume
+            SET snow_name = :name,
+                snow_sys_id = :sysId,
+                snow_sys_class = :sysClass,
+                snow_last_discovered = :lastDiscovered
+            WHERE id = :id
+            """, nativeQuery = true)
+    void updateSnowFields(@Param("id") Long id,
+                          @Param("name") String name,
+                          @Param("sysId") String sysId,
+                          @Param("sysClass") String sysClass,
+                          @Param("lastDiscovered") OffsetDateTime lastDiscovered);
+
+    @Modifying
+    @Query(value = "DELETE FROM cmp.ontap_volume_has_appservices WHERE ontap_volume_id = :volumeId", nativeQuery = true)
+    void deleteAppServiceAssociations(@Param("volumeId") Long volumeId);
+
+    @Modifying
+    @Query(value = "INSERT INTO cmp.ontap_volume_has_appservices (ontap_volume_id, appservice_id) " +
+            "SELECT :volumeId, a.id FROM appservice a WHERE a.number IN :appServiceNumbers " +
+            "ON CONFLICT DO NOTHING", nativeQuery = true)
+    void addAppServiceAssociations(@Param("volumeId") Long volumeId, @Param("appServiceNumbers") List<String> appServiceNumbers);
+
+    @Modifying
+    @Query(value = "DELETE FROM cmp.ontap_volume_has_appservices ovha " +
+            "WHERE ovha.ontap_volume_id = :volumeId " +
+            "AND ovha.appservice_id NOT IN (" +
+            "    SELECT a.id FROM appservice a " +
+            "    WHERE a.number IN :appServiceNumbers" +
+            ")", nativeQuery = true)
+    void deleteObsoleteAppServiceAssociations(@Param("volumeId") Long volumeId, @Param("appServiceNumbers") List<String> appServiceNumbers);
+
+    @Query("SELECT DISTINCT v FROM OntapVolume v LEFT JOIN FETCH v.appservices LEFT JOIN FETCH v.svm")
+    List<OntapVolume> findAllWithAppservices();
+
 }

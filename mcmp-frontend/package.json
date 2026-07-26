@@ -14,6 +14,7 @@
     "post-build": "cyclonedx-npm --omit dev --omit optional --output-reproducible -o dist/application.cdx.json",
     "lint": "prettier . --check --cache && eslint . --cache --concurrency auto && vue-tsc --build --noEmit",
     "fix": "prettier . --write --cache && eslint . --fix --cache --concurrency auto",
+    "fix prettier": "prettier . --write --cache",
     "build:war": "npm run build && node build-war.js",
     "security:check": "npm audit && dependency-check --project mcmp-frontend --scan ./node_modules --out ./reports --enableExperimental false",
     "security:check-html": "dependency-check.sh --project mcmp-frontend --scan ./node_modules --out ./reports --format HTML --enableExperimental false --disableYarnAudit"

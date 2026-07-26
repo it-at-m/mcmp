@@ -1,10 +1,12 @@
 package de.muenchen.mcmp.ontap;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -83,4 +85,45 @@ public interface OntapQtreeRepository extends JpaRepository<OntapQtree, Long> {
             ") THEN TRUE ELSE FALSE END")
     Boolean canUserEditQtree(@Param("id") Long id, @Param("username") String username,
                              @Param("isAdmin") boolean isAdmin, @Param("isStorage") boolean isStorage);
+
+    @Query("SELECT DISTINCT q FROM OntapQtree q " +
+            "LEFT JOIN FETCH q.appservices " +
+            "LEFT JOIN FETCH q.volume v " +
+            "LEFT JOIN FETCH v.svm")
+    List<OntapQtree> findAllWithAppservices();
+
+    @Modifying
+    @Query(value = """
+            UPDATE cmp.ontap_qtree
+            SET snow_name = :name,
+                snow_sys_id = :sysId,
+                snow_sys_class = :sysClass,
+                snow_last_discovered = :lastDiscovered
+            WHERE id = :id
+            """, nativeQuery = true)
+    void updateSnowFields(@Param("id") Long id,
+                          @Param("name") String name,
+                          @Param("sysId") String sysId,
+                          @Param("sysClass") String sysClass,
+                          @Param("lastDiscovered") OffsetDateTime lastDiscovered);
+
+    @Modifying
+    @Query(value = "DELETE FROM cmp.ontap_qtree_has_appservices WHERE ontap_qtree_id = :qtreeId", nativeQuery = true)
+    void deleteAppServiceAssociations(@Param("qtreeId") Long qtreeId);
+
+    @Modifying
+    @Query(value = "INSERT INTO cmp.ontap_qtree_has_appservices (ontap_qtree_id, appservice_id) " +
+            "SELECT :qtreeId, a.id FROM appservice a WHERE a.number IN :appServiceNumbers " +
+            "ON CONFLICT DO NOTHING", nativeQuery = true)
+    void addAppServiceAssociations(@Param("qtreeId") Long qtreeId, @Param("appServiceNumbers") List<String> appServiceNumbers);
+
+    @Modifying
+    @Query(value = "DELETE FROM cmp.ontap_qtree_has_appservices oqha " +
+            "WHERE oqha.ontap_qtree_id = :qtreeId " +
+            "AND oqha.appservice_id NOT IN (" +
+            "    SELECT a.id FROM appservice a " +
+            "    WHERE a.number IN :appServiceNumbers" +
+            ")", nativeQuery = true)
+    void deleteObsoleteAppServiceAssociations(@Param("qtreeId") Long qtreeId, @Param("appServiceNumbers") List<String> appServiceNumbers);
+
 }

@@ -8,6 +8,7 @@
     :submit-activated="true"
     @dialog-cancel="internalValue = false"
   >
+    <!-- Darstellung (Theme) -->
     <div class="text-subtitle-1 font-weight-bold mb-0">Darstellung</div>
     <v-btn-toggle
       v-model="themeName"
@@ -19,17 +20,56 @@
       <v-btn
         value="light"
         :prepend-icon="mdiWhiteBalanceSunny"
-        >Hell</v-btn
       >
+        Hell
+      </v-btn>
       <v-btn
         value="dark"
         :prepend-icon="mdiWeatherNight"
-        >Dunkel</v-btn
       >
+        Dunkel
+      </v-btn>
     </v-btn-toggle>
 
     <v-divider class="mb-6" />
 
+    <!-- Startseite Konfiguration -->
+    <div class="text-subtitle-1 font-weight-bold mb-2">Startseite</div>
+    <div class="text-caption text-disabled mb-2">
+      Legen Sie fest, welche Seite beim Aufruf der Anwendung als Erstes
+      angezeigt werden soll.
+    </div>
+
+    <v-menu
+      location="bottom"
+      :close-on-content-click="true"
+    >
+      <template v-slot:activator="{ props }">
+        <v-text-field
+          v-bind="props"
+          :model-value="selectedPageTitle"
+          variant="outlined"
+          density="comfortable"
+          readonly
+          append-inner-icon="mdi-menu-down"
+          class="mb-6 cursor-pointer"
+          :loading="pageLoading"
+        />
+      </template>
+      <v-list>
+        <v-list-item
+          v-for="page in availableStartPages"
+          :key="page.path"
+          @click="selectLoginPage(page.path)"
+        >
+          <v-list-item-title>{{ page.title }}</v-list-item-title>
+        </v-list-item>
+      </v-list>
+    </v-menu>
+
+    <v-divider class="mb-6" />
+
+    <!-- Rollen -->
     <div class="text-subtitle-1 font-weight-bold mb-2">Ihre Rollen</div>
     <div
       v-if="
@@ -55,6 +95,7 @@
     >
       Keine Rollen zugewiesen
     </div>
+
     <template #actions>
       <v-spacer />
       <v-btn
@@ -89,11 +130,14 @@ const emit = defineEmits(["update:modelValue"]);
 const theme = useTheme();
 const userStore = useUserStore();
 const themeLoading = ref(false);
+const pageLoading = ref(false);
+
 const internalValue = computed({
   get: () => props.modelValue,
   set: (val) => emit("update:modelValue", val),
 });
 
+// --- Theme Logik ---
 const themeName = ref(theme.global.name.value);
 
 watch(themeName, (newTheme) => {
@@ -104,4 +148,57 @@ watch(themeName, (newTheme) => {
     console.error("Error saving dark mode to DB", e);
   });
 });
+
+// --- Startseiten Logik ---
+const availableStartPages = [
+  { title: "Appservice", path: "/appservice" },
+  { title: "Server", path: "/server" },
+  { title: "Loadbalancer", path: "/loadbalancer" },
+  { title: "Storage", path: "/storage" },
+  { title: "Openshift", path: "/openshift" },
+];
+
+// Initialen Wert aus dem User-Store lesen
+const selectedLoginPage = ref(userStore.getUser?.login_page || "/appservice");
+
+// Aktualisiert die Anzeige, falls sich der User-Store extern ändert
+watch(
+  () => userStore.getUser?.login_page,
+  (newPage) => {
+    if (newPage) {
+      selectedLoginPage.value = newPage;
+    }
+  }
+);
+
+// Titel für das Eingabefeld ermitteln
+const selectedPageTitle = computed(() => {
+  const match = availableStartPages.find(
+    (p) => p.path === selectedLoginPage.value
+  );
+  return match ? match.title : selectedLoginPage.value;
+});
+
+// Explizite Funktion bei Klick auf ein Item
+const selectLoginPage = (newPath: string) => {
+  if (selectedLoginPage.value === newPath) return;
+
+  selectedLoginPage.value = newPath;
+
+  // Der userService kümmert sich über pageLoading (Ref) um den Spinner im TextField
+  userService
+    .setLoginPage(newPath, pageLoading)
+    .then(() => {
+      const currentUser = userStore.getUser;
+      if (currentUser) {
+        userStore.setUser({
+          ...currentUser,
+          login_page: newPath,
+        });
+      }
+    })
+    .catch((e) => {
+      console.error("Error saving login_page to DB", e);
+    });
+};
 </script>

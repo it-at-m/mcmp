@@ -68,6 +68,7 @@ import { useRules } from "@/composables/rules.ts";
 const props = defineProps<{
   selectedStorageItem: UnifiedStorageItem;
   policies: { title: string; value: string }[];
+  initialPolicy?: string;
 }>();
 const emits = defineEmits<(e: "save", newPolicy: string) => void>();
 
@@ -81,7 +82,7 @@ const title = computed(() => {
 });
 
 function openDialog() {
-  selectedPolicy.value = null; // reset on open
+  selectedPolicy.value = props.initialPolicy;
   validated.value = false;
   dialog.value = true;
 }

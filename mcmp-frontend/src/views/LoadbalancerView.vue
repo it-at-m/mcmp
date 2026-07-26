@@ -1,28 +1,8 @@
 <template>
   <v-container
-    v-if="testing"
     fluid
     class="split-container"
   >
-    <v-banner
-      v-if="showBanner"
-      bg-color="red"
-      rounded
-    >
-      <h2>Diese Ansicht ist nur in der Testumgebung verfügbar.</h2>
-      <template #actions>
-        <v-btn
-          icon
-          variant="outlined"
-          aria-label="Schließen"
-          class="mb-7"
-          @click="showBanner = false"
-        >
-          <v-icon>{{ mdiClose }}</v-icon>
-        </v-btn>
-      </template>
-    </v-banner>
-
     <div
       class="split-view"
       :class="{ resizing: isResizing }"
@@ -35,7 +15,9 @@
         <loadbalancer-list
           :model-value="selectedItems"
           :url-params-id="route.params.id"
+          :initial-search="loadbalancerSearch"
           @update:selected="onLoadbalancerSelected"
+          @update:search="loadbalancerSearch = $event"
         />
       </div>
 
@@ -59,11 +41,13 @@
           class="right-panel-inner"
         >
           <div class="right-panel-sticky">
-            <v-row>
-              <v-col>
-                <h2 class="ml-2">{{ selectedDetail.name }}</h2>
-              </v-col>
-            </v-row>
+            <breadcrumb-nav
+              :appservice-id="selectedDetail.appservices?.[0]?.id ?? null"
+              :appservice-name="selectedDetail.appservices?.[0]?.name ?? null"
+              :appservice-count="selectedDetail.appservices?.length ?? 0"
+              :current-icon="mdiSitemap"
+              :current-label="selectedDetail.name"
+            />
             <v-row>
               <v-col class="d-flex align-center">
                 <v-tabs
@@ -113,7 +97,11 @@
               </v-col>
             </v-row>
           </div>
-          <div class="right-panel-scroll">
+          <div
+            ref="scrollContainer"
+            class="right-panel-scroll"
+            tabindex="-1"
+          >
             <v-row>
               <v-col>
                 <v-tabs-window v-model="tab">
@@ -138,39 +126,26 @@
       </div>
     </div>
   </v-container>
-  <v-container v-else>
-    <v-row>
-      <v-col
-        cols="12"
-        class="d-flex align-center justify-center"
-      >
-        <img
-          :src="commingSoon"
-          alt="Comming Soon"
-          height="400"
-        />
-      </v-col>
-    </v-row>
-  </v-container>
 </template>
 
 <script setup lang="ts">
 import type { LoadbalancerDetail } from "@/types/LoadbalancerDetail";
 import type { LoadbalancerListItem } from "@/types/LoadbalancerListItem";
 
-import { mdiCallSplit, mdiClose, mdiHome, mdiScriptText } from "@mdi/js";
+import { mdiCallSplit, mdiHome, mdiScriptText, mdiSitemap } from "@mdi/js";
 import { onMounted, onUnmounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 import loadbalancerService from "@/api/loadbalancerService";
-import testenvService from "@/api/testenvService.ts";
-import commingSoon from "@/assets/commingSoon.png";
+import BreadcrumbNav from "@/components/common/BreadcrumbNav.vue";
 import CollapseAllCardsButton from "@/components/common/CollapseAllCardsButton.vue";
 import LoadbalancerDetailsGeneral from "@/components/Loadbalancer/LoadbalancerDetailsGeneral.vue";
 import LoadbalancerDetailsIrules from "@/components/Loadbalancer/LoadbalancerDetailsIrules.vue";
 import LoadbalancerDetailsPool from "@/components/Loadbalancer/LoadbalancerDetailsPool.vue";
 import LoadbalancerList from "@/components/Loadbalancer/LoadbalancerList.vue";
 import { useCollapsibleCards } from "@/composables/useCollapsibleCards";
+import { useScrollRestoration } from "@/composables/useScrollRestoration";
+import { useTabQuerySync } from "@/composables/useTabQuerySync";
 
 const leftPanelWidth = ref(400);
 const isResizing = ref(false);
@@ -180,12 +155,14 @@ const maxWidthPercent = 0.35;
 const selectedItems = ref<LoadbalancerListItem[]>([]);
 const selectedDetail = ref<LoadbalancerDetail | null>(null);
 const tab = ref("Allgemeines");
+const loadbalancerSearch = ref("");
 const loadingDetails = ref(false);
+const scrollContainer = ref<HTMLElement | null>(null);
 
 const { allCardsExpanded, toggleAllCards } = useCollapsibleCards(tab);
-const testing = ref(false);
-const showBanner = ref(true);
-const loadingTestEnv = ref(false);
+useTabQuerySync(tab);
+useTabQuerySync(loadbalancerSearch, "search");
+useScrollRestoration(scrollContainer);
 
 const route = useRoute();
 const router = useRouter();
@@ -199,7 +176,7 @@ async function onLoadbalancerSelected(item: LoadbalancerListItem | null) {
   selectedItems.value = [item];
   const targetPath = `/loadbalancer/${item.id}`;
   if (route.path !== targetPath) {
-    router.push(targetPath);
+    router.push({ path: targetPath, query: route.query });
   }
 }
 
@@ -253,9 +230,6 @@ watch(
 );
 
 onMounted(() => {
-  testenvService.getTestEnabled(loadingTestEnv).then((enabled) => {
-    testing.value = enabled;
-  });
   syncSelectionFromRoute(route.params.id);
 });
 

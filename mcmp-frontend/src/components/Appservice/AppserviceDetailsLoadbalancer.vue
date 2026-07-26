@@ -1,12 +1,14 @@
 <template>
   <common-card
-    v-if="testing && loadbalancers.length"
-    title="Loadbalancer"
-    :loading="loading"
+    v-if="loadbalancers.length"
+    :title="cardTitle"
     top-margin="0"
+    :is-default-expanded="false"
   >
+    <template #append-title>
+      <count-badge :count="loadbalancerCount" />
+    </template>
     <v-data-table
-      :loading="loading"
       :headers="headers"
       :items="loadbalancers"
       :items-per-page="-1"
@@ -29,24 +31,21 @@
 import type Appservice from "@/types/Appservice";
 import type { LoadbalancerListItem } from "@/types/LoadbalancerListItem";
 
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 
 import loadbalancerService from "@/api/loadbalancerService";
-import testenvService from "@/api/testenvService";
 import CommonCard from "@/components/common/CommonCard.vue";
+import CountBadge from "@/components/common/CountBadge.vue";
 
 const props = defineProps<{
   selectedAppservice: Appservice | null;
 }>();
 
-const testing = ref(false);
-const loadingTestEnv = ref(false);
-testenvService.getTestEnabled(loadingTestEnv).then((enabled) => {
-  testing.value = enabled;
-});
-
 const loadbalancers = ref<LoadbalancerListItem[]>([]);
 const loading = ref(false);
+
+const cardTitle = computed(() => "Loadbalancer");
+const loadbalancerCount = computed(() => loadbalancers.value.length);
 
 const headers = [
   { title: "Name", key: "name" },
@@ -56,7 +55,7 @@ const headers = [
 ];
 
 async function loadLoadbalancers(appservice: Appservice | null) {
-  if (!testing.value || !appservice) {
+  if (!appservice) {
     loadbalancers.value = [];
     return;
   }
@@ -74,10 +73,6 @@ watch(
   },
   { immediate: true }
 );
-
-watch(testing, () => {
-  void loadLoadbalancers(props.selectedAppservice);
-});
 </script>
 
 <!--suppress CssUnresolvedCustomProperty -->

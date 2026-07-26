@@ -3,11 +3,6 @@
     v-if="selectedStorageItem.type == 'NFS'"
     title="Export-Policys"
   >
-    <template #toolbar-actions>
-      <storage-change-nfs-export-policy
-        :selected-storage="selectedStorageItem"
-      />
-    </template>
     <v-row>
       <v-col cols="4">
         <h3>Server</h3>

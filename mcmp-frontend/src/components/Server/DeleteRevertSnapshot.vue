@@ -24,8 +24,8 @@
     submit-activated
     :check-for-enabled-actions="
       action == 'revert'
-        ? ['VMWARE_REVERT_SNAPSHOT']
-        : ['VMWARE_DELETE_SNAPSHOT']
+        ? ['REVERT_SNAPSHOT']
+        : ['DELETE_SNAPSHOT']
     "
     @dialog-cancel="close"
     @dialog-confirm="save"

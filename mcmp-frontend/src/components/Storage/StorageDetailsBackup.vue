@@ -5,6 +5,7 @@
         v-if="canManageSnapshots"
         :selected-storage-item="selectedStorageItem"
         :policies="policies"
+        :initial-policy="selectedStorageItem.snapshotPolicy"
         @save="(policy: string) => changeSnapshotPolicy(policy)"
       />
       <storage-add-snapshot
@@ -33,7 +34,7 @@
         :items="snapshots"
         :headers="headers"
         :loading="loading || backupLoading"
-        :sort-by="[{ key: 'createTime', order: 'asc' }]"
+        :sort-by="[{ key: 'createTime', order: 'desc' }]"
         density="compact"
       >
         <template #[`item.createTime`]="{ item }">
@@ -41,7 +42,7 @@
         </template>
         <template #[`item.actions`]="{ item }">
           <v-tooltip
-            v-if="canManageSnapshots"
+            v-if="canManageSnapshots && item.name?.startsWith('ms.')"
             location="bottom"
             text="Snapshot löschen"
           >
@@ -104,42 +105,69 @@ const backupLoading = ref(false);
 const confirmDeleteDialog = ref(false);
 const snapshotToDelete = ref<string | null>(null);
 
-const headers: DataTableHeader[] = [
-  { title: "Name", key: "name" },
-  { title: "Erstellt am", key: "createTime" },
-  { title: "Aktion", key: "actions", sortable: false },
-];
+const hasActions = computed(() => {
+  return (
+    canManageSnapshots.value &&
+    props.snapshots.some((item) => item.name?.startsWith("ms."))
+  );
+});
 
-const policies = [
-  { value: "dcc-6h", title: "Ein Snapshot pro Stunde der letzten 6h" },
-  { value: "dcc-24h", title: "Ein Snapshot pro Stunde der letzten 24h" },
-  {
-    value: "dcc-24h4d",
-    title:
-      "Ein Snapshot pro Stunde der letzten 24h + 4 Snapshots der letzten 4 Tage um 22 Uhr",
-  },
-  {
-    value: "dcc-24h7d",
-    title:
-      "Ein Snapshot pro Stunde der letzten 24h + 7 Snapshots der letzten 7 Tage um 22 Uhr",
-  },
-  { value: "none", title: "keine automatischen Snapshots" },
-];
+const headers = computed<DataTableHeader[]>(() => {
+  const baseHeaders: DataTableHeader[] = [
+    { title: "Name", key: "name" },
+    { title: "Erstellt am", key: "createTime" },
+  ];
+  if (hasActions.value) {
+    baseHeaders.push({ title: "Aktion", key: "actions", sortable: false });
+  }
+  return baseHeaders;
+});
+
+const policyPrefix = computed<"dcc" | "dcn">(() => {
+  const cat = props.selectedStorageItem?.storageCategory ?? "";
+  if (cat.startsWith("CIFS")) return "dcc";
+  if (cat.startsWith("NFS")) return "dcn";
+  return "dcc";
+});
+
+const policyTitles: Record<string, string> = {
+  "6h": "Ein Snapshot pro Stunde der letzten 6h",
+  "24h": "Ein Snapshot pro Stunde der letzten 24h",
+  "24h4d":
+    "Ein Snapshot pro Stunde der letzten 24h + 4 Snapshots der letzten 4 Tage um 22 Uhr",
+  "24h7d":
+    "Ein Snapshot pro Stunde der letzten 24h + 7 Snapshots der letzten 7 Tage um 22 Uhr",
+  none: "keine automatischen Snapshots",
+};
+
+const policies = computed(() => {
+  const prefix = policyPrefix.value;
+  return [
+    { value: `${prefix}-6h`, title: policyTitles["6h"] },
+    { value: `${prefix}-24h`, title: policyTitles["24h"] },
+    { value: `${prefix}-24h4d`, title: policyTitles["24h4d"] },
+    { value: `${prefix}-24h7d`, title: policyTitles["24h7d"] },
+    { value: "none", title: policyTitles["none"] },
+  ];
+});
+
+function getSuffixFromPolicy(value: string): string {
+  const parts = value.split("-");
+  return parts.length > 1 ? parts.slice(1).join("-") : value;
+}
 
 function getPolicyTitle(policyValue: string | undefined): string {
   if (!policyValue) return "Unbekannt";
-  const policy = policies.find((p) => p.value === policyValue);
-  return policy ? policy.title : policyValue;
+  const suffix = getSuffixFromPolicy(policyValue);
+  return policyTitles[suffix] ?? policyValue;
 }
 
 const canManageSnapshots = computed(() => {
   return (
     props.selectedStorageItem.storageCategory == "NFS_STANDARD_SHARE" ||
     props.selectedStorageItem.storageCategory == "NFS_CLONE" ||
-    props.selectedStorageItem.storageCategory == "NFS_WORM" ||
     props.selectedStorageItem.storageCategory == "CIFS_STANDARD_SHARE" ||
-    props.selectedStorageItem.storageCategory == "CIFS_CLONE" ||
-    props.selectedStorageItem.storageCategory == "CIFS_WORM"
+    props.selectedStorageItem.storageCategory == "CIFS_CLONE"
   );
 });
 

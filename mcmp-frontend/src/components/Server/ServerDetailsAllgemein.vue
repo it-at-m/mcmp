@@ -1,4 +1,3 @@
-<!-- eslint-disable @intlify/vue-i18n/no-raw-text -->
 <template>
   <common-card title="Informationen">
     <v-row>
@@ -22,7 +21,7 @@
       </v-col>
       <v-col cols="3">
         <h3>
-          MCMP-Anwendungsservice{{
+          Anwendungsservice{{
             props.selectedServer.appservices &&
             props.selectedServer.appservices.length > 1
               ? "s"
@@ -260,7 +259,10 @@
         </h3>
       </v-col>
       <v-col
-        v-if="props.selectedServer.serverType === 'VM_VCENTER'"
+        v-if="
+          props.selectedServer.serverType === 'VM_VCENTER' ||
+          props.selectedServer.serverType === 'VM_PROXMOX'
+        "
         cols="3"
       >
         <h3>Festplattengröße</h3>
@@ -294,7 +296,10 @@
         <p v-else>Checkmk RAM-Metriken nicht verfügbar</p>
       </v-col>
       <v-col
-        v-if="props.selectedServer.serverType === 'VM_VCENTER'"
+        v-if="
+          props.selectedServer.serverType === 'VM_VCENTER' ||
+          props.selectedServer.serverType === 'VM_PROXMOX'
+        "
         cols="3"
         class="pt-0"
       >
@@ -312,7 +317,12 @@
         cols="3"
         class="pt-0"
       >
-        <p v-if="props.selectedServer.serverType === 'VM_VCENTER'">
+        <p
+          v-if="
+            props.selectedServer.serverType === 'VM_VCENTER' ||
+            props.selectedServer.serverType === 'VM_PROXMOX'
+          "
+        >
           {{ props.selectedServer.numCpu }} CPUs
         </p>
         <p
@@ -332,7 +342,12 @@
         cols="3"
         class="pt-0"
       >
-        <p v-if="props.selectedServer.serverType === 'VM_VCENTER'">
+        <p
+          v-if="
+            props.selectedServer.serverType === 'VM_VCENTER' ||
+            props.selectedServer.serverType === 'VM_PROXMOX'
+          "
+        >
           {{ formatter.formatMBtoGB(props.selectedServer.memoryMb) }} GB
         </p>
         <p
@@ -485,80 +500,6 @@
           </info-tooltip>
         </h3>
       </v-col>
-      <v-col cols="3">
-        <h3>
-          Anwendungsservice{{
-            props.selectedServer.appservices &&
-            props.selectedServer.appservices.length > 1
-              ? "s"
-              : ""
-          }}<info-tooltip>
-            <div class="pa-1">
-              <strong
-                >Logische Geschäftsanwendung (Anwendungsservice-Sicht)</strong
-              >
-              <p class="text-caption mt-2 mb-1">
-                Repräsentiert die Gruppierung aller CIs, die für einen Dienst
-                zusammenarbeiten.
-              </p>
-              <ul
-                class="mt-2 text-body-2"
-                style="padding-left: 1.2rem"
-              >
-                <li>
-                  <strong>Zweck:</strong> Verknüpft die IT-Infrastruktur
-                  (Server, DBs) mit einem konkreten Business-Nutzen.
-                </li>
-                <li>
-                  <strong>Impact:</strong> Hilft bei der Analyse, welche Dienste
-                  bei einem Serverausfall betroffen sind.
-                </li>
-                <li>
-                  <strong>Eigentumsverantwortung:</strong> Hier sind
-                  Verantwortlichkeiten (Owner), Support-Gruppen und SLAs
-                  hinterlegt.
-                </li>
-              </ul>
-            </div>
-          </info-tooltip>
-        </h3>
-      </v-col>
-      <v-col cols="3">
-        <h3>
-          Anwendungsservice Map{{
-            props.selectedServer.appservices &&
-            props.selectedServer.appservices.length > 1
-              ? "s"
-              : ""
-          }}<info-tooltip>
-            <div class="pa-1">
-              <strong>Service-Abhängigkeiten (Top-Down Map)</strong>
-              <p class="text-caption mt-2 mb-1">
-                Visualisiert die hierarchische Struktur und Beziehungen des
-                Dienstes.
-              </p>
-              <ul
-                class="mt-2 text-body-2"
-                style="padding-left: 1.2rem"
-              >
-                <li>
-                  <strong>Visualisierung:</strong> Grafische Darstellung aller
-                  Komponenten (Server, DBs, LB), die den Service bilden.
-                </li>
-                <li>
-                  <strong>Beziehungen:</strong> Zeigt direkt, welche
-                  Infrastruktur-CIs miteinander kommunizieren oder voneinander
-                  abhängen.
-                </li>
-                <li>
-                  <strong>Fehlersuche:</strong> Ideal zur Identifikation von
-                  "Single Points of Failure" innerhalb der Service-Architektur.
-                </li>
-              </ul>
-            </div>
-          </info-tooltip>
-        </h3>
-      </v-col>
     </v-row>
     <v-row>
       <v-col
@@ -592,93 +533,6 @@
             {{ props.selectedServer.snowServerName }}
           </a>
         </p>
-        <p v-else>-</p>
-      </v-col>
-      <v-col
-        cols="3"
-        class="pt-0 links"
-      >
-        <div
-          v-if="
-            props.selectedServer.appservices &&
-            props.selectedServer.appservices.length > 1
-          "
-        >
-          <ul style="padding-left: 0; list-style-position: inside">
-            <li
-              v-for="appservice in props.selectedServer.appservices"
-              :key="appservice.sysId"
-              class="mb-1"
-            >
-              <a
-                :href="`https://it-services.muenchen.de/nav_to.do?uri=cmdb_ci_service_discovered.do?sys_id=${appservice.sysId}%26sysparm_view=EAM`"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Anwendungsservice in ServiceNow öffnen"
-              >
-                {{ appservice.name }}
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div
-          v-else-if="
-            props.selectedServer.appservices &&
-            props.selectedServer.appservices.length === 1
-          "
-        >
-          <a
-            :href="`https://it-services.muenchen.de/nav_to.do?uri=cmdb_ci_service_discovered.do?sys_id=${firstAppservice?.sysId}%26sysparm_view=EAM`"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Anwendungsservice Map in ServiceNow öffnen"
-          >
-            {{ firstAppservice?.name }}
-          </a>
-        </div>
-        <p v-else>-</p>
-      </v-col>
-      <v-col
-        cols="3"
-        class="pt-0 links"
-      >
-        <div
-          v-if="
-            props.selectedServer.appservices &&
-            props.selectedServer.appservices.length > 1
-          "
-        >
-          <ul style="padding-left: 0; list-style-position: inside">
-            <li
-              v-for="appservice in props.selectedServer.appservices"
-              :key="appservice.sysId"
-              class="mb-1"
-            >
-              <a
-                :href="`https://it-services.muenchen.de/now/sgw/record/cmdb_ci_service/${appservice.sysId}/sub/unifiedmap/params/root-node/${appservice.sysId}/`"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Appservice MAP in ServiceNow öffnen"
-              >
-                {{ appservice.name }}
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div
-          v-else-if="
-            props.selectedServer.appservices &&
-            props.selectedServer.appservices.length === 1
-          "
-        >
-          <a
-            :href="`https://it-services.muenchen.de/now/sgw/record/cmdb_ci_service/${firstAppservice?.sysId}/sub/unifiedmap/params/root-node/${firstAppservice?.sysId}/`"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            {{ firstAppservice?.name }}
-          </a>
-        </div>
         <p v-else>-</p>
       </v-col>
     </v-row>
@@ -762,7 +616,7 @@ function change_cpu_ram(
 ) {
   jobService.startJob(
     loading,
-    "VMWARE_CHANGE_CPU_RAM",
+    "CHANGE_CPU_RAM",
     props.selectedServer.id,
     {
       cpu: cpus,

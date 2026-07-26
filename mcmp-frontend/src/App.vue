@@ -29,11 +29,22 @@
           v-for="btn in buttonsCenter"
           :key="btn.text"
           :to="{ path: btn.path }"
-          :prepend-icon="btn.icon"
           :title="btn.text"
           :active="isCenterNavActive(btn.path)"
           color="primary"
         >
+          <template #prepend>
+            <v-badge
+              :model-value="btn.isNew"
+              color="info"
+              dot
+              offset-x="2"
+              offset-y="2"
+            >
+              <v-icon>{{ btn.icon }}</v-icon>
+            </v-badge>
+          </template>
+
           <v-tooltip
             v-if="rail"
             activator="parent"
@@ -226,6 +237,7 @@ import {
   mdiHarddisk,
   mdiHelpCircleOutline,
   mdiHistory,
+  mdiKubernetes,
   mdiLockAlert,
   mdiMenu,
   mdiMenuOpen,
@@ -421,16 +433,55 @@ const buttonsRight = computed(() => [
   },
 ]);
 
-const buttonsCenter = [
-  { text: "Server", icon: mdiServer, path: "/server" },
+const NEW_NAV_PATHS = ["/loadbalancer", "/openshift"];
+const NEW_NAV_STORAGE_KEY = "mcmp_seen_new_nav";
+
+const seenNewNavPaths = ref<string[]>(
+  JSON.parse(localStorage.getItem(NEW_NAV_STORAGE_KEY) || "[]")
+);
+
+function markNavSeen(path: string) {
+  if (seenNewNavPaths.value.includes(path)) return;
+  seenNewNavPaths.value = [...seenNewNavPaths.value, path];
+  localStorage.setItem(
+    NEW_NAV_STORAGE_KEY,
+    JSON.stringify(seenNewNavPaths.value)
+  );
+}
+
+watch(
+  () => route.path,
+  (path) => {
+    const matched = NEW_NAV_PATHS.find(
+      (p) => path === p || path.startsWith(`${p}/`)
+    );
+    if (matched) markNavSeen(matched);
+  },
+  { immediate: true }
+);
+
+const buttonsCenter = computed(() => [
+  { text: "Server", icon: mdiServer, path: "/server", isNew: false },
   {
     text: "Anwendungsservice",
     icon: mdiAlphaABox,
     path: "/appservice",
+    isNew: false,
   },
-  { text: "Storage", icon: mdiHarddisk, path: "/storage" },
-  { text: "Loadbalancer", icon: mdiSitemap, path: "/loadbalancer" },
-];
+  { text: "Storage", icon: mdiHarddisk, path: "/storage", isNew: false },
+  {
+    text: "Loadbalancer",
+    icon: mdiSitemap,
+    path: "/loadbalancer",
+    isNew: !seenNewNavPaths.value.includes("/loadbalancer"),
+  },
+  {
+    text: "Openshift",
+    icon: mdiKubernetes,
+    path: "/openshift",
+    isNew: !seenNewNavPaths.value.includes("/openshift"),
+  },
+]);
 
 function isCenterNavActive(path: string): boolean {
   return route.path === path || route.path.startsWith(`${path}/`);

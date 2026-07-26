@@ -4,9 +4,22 @@ import de.muenchen.mcmp.appservice.Appservice;
 import de.muenchen.mcmp.appservice.AppserviceRepository;
 import de.muenchen.mcmp.group.Group;
 import de.muenchen.mcmp.group.GroupRepository;
+import de.muenchen.mcmp.kubernetes.KubernetesCluster;
+import de.muenchen.mcmp.kubernetes.KubernetesClusterRepository;
+import de.muenchen.mcmp.kubernetes.KubernetesNamespace;
+import de.muenchen.mcmp.kubernetes.KubernetesNamespaceRepository;
+import de.muenchen.mcmp.loadbalancer.LbVirtualServer;
+import de.muenchen.mcmp.loadbalancer.LbVirtualServerCi;
+import de.muenchen.mcmp.loadbalancer.LbVirtualServerCiRepository;
+import de.muenchen.mcmp.loadbalancer.LbVirtualServerRepository;
+import de.muenchen.mcmp.ontap.*;
 import de.muenchen.mcmp.server.Server;
 import de.muenchen.mcmp.server.ServerRepository;
 import de.muenchen.mcmp.server.matching.ServerMatcher;
+import de.muenchen.mcmp.storagegrid.StorageGridAccount;
+import de.muenchen.mcmp.storagegrid.StorageGridAccountRepository;
+import de.muenchen.mcmp.storagegrid.StorageGridBucket;
+import de.muenchen.mcmp.storagegrid.StorageGridBucketRepository;
 import de.muenchen.mcmp.types.EnvironmentType;
 import de.muenchen.mcmp.user.User;
 import de.muenchen.mcmp.user.UserRepository;
@@ -68,6 +81,15 @@ public class SnowService {
     private final UserRepository userRepository;
     private final GroupRepository groupRepository;
     private final ServerRepository serverRepository;
+    private final OntapSvmRepository ontapSvmRepository;
+    private final OntapVolumeRepository ontapVolumeRepository;
+    private final OntapQtreeRepository ontapQtreeRepository;
+    private final StorageGridAccountRepository storageGridAccountRepository;
+    private final StorageGridBucketRepository storageGridBucketRepository;
+    private final LbVirtualServerRepository lbVirtualServerRepository;
+    private final LbVirtualServerCiRepository lbVirtualServerCiRepository;
+    private final KubernetesClusterRepository kubernetesClusterRepository;
+    private final KubernetesNamespaceRepository kubernetesNamespaceRepository;
     private final SnowServerCache snowServerCache;
 
     @PersistenceContext
@@ -93,14 +115,26 @@ public class SnowService {
             self.processSnowGroups(data.groups());
             self.processSnowCIs(data.cmdbCIs());
             self.processAppServices(data.appServices());
+            self.processSnowStorageServers(data.storageServers());
+            self.processSnowStorageVolumes(data.storageVolumes());
+            self.processSnowStorageQTrees(data.storageQTrees());
+            self.processSnowStorageGridAccounts(data.storageAccounts());
+            self.processSnowStorageGridBuckets(data.storageBuckets());
+            self.processSnowLbServices(data.lbServices());
+            self.processSnowKubernetesClusters(data.kubernetesClusters());
             log.info("Successfully completed ServiceNow data processing");
         } catch (Exception e) {
             int users = data != null && data.users() != null ? data.users().size() : 0;
             int groups = data != null && data.groups() != null ? data.groups().size() : 0;
             int cis = data != null && data.cmdbCIs() != null ? data.cmdbCIs().size() : 0;
             int apps = data != null && data.appServices() != null ? data.appServices().size() : 0;
+            int storage = data != null && data.storageServers() != null ? data.storageServers().size() : 0;
+            int storageVolumes = data != null && data.storageVolumes() != null ? data.storageVolumes().size() : 0;
+            int storageQTrees = data != null && data.storageQTrees() != null ? data.storageQTrees().size() : 0;
+            int lbServices = data != null && data.lbServices() != null ? data.lbServices().size() : 0;
+            int kubernetesClusters = data != null && data.kubernetesClusters() != null ? data.kubernetesClusters().size() : 0;
 
-            log.error("ServiceNow import failed (users={}, groups={}, cis={}, appServices={})", users, groups, cis, apps, e);
+            log.error("ServiceNow import failed (users={}, groups={}, cis={}, appServices={}, storageServers={}, storageVolumes={}, storageQTrees={}, lbServices={}, kubernetesClusters={})", users, groups, cis, apps, storage, storageVolumes, storageQTrees, lbServices, kubernetesClusters, e);
 
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "ServiceNow import failed", e);
         }
@@ -112,25 +146,35 @@ public class SnowService {
             return;
         }
 
-        // 1. Alle existierenden User aus der DB laden
+        // 1. Load all existing users and index them by username for efficient primary lookup
         final List<User> existingUsers = userRepository.findAll();
         final Map<String, User> existingUserMap = existingUsers.stream()
                 .collect(Collectors.toMap(user -> user.getUsername().toLowerCase(), Function.identity()));
 
-        // 2. Set der Usernames aus dem Import für später
+        // 2. Collect all usernames from the import for subsequent cleanup logic
         final Set<String> importedUsernames = users.stream()
                 .map(SnowDataRequestDTO.UserDTO::userId)
                 .collect(Collectors.toSet());
 
-        // 3. User aus Import verarbeiten (erstellen oder aktualisieren)
+        // 3. Process imported users (create new or update existing records)
         for (final SnowDataRequestDTO.UserDTO userDTO : users) {
             if (userDTO.userId() == null || userDTO.userId().isBlank()) {
                 continue;
             }
-            final User existingUser = existingUserMap.get(userDTO.userId().toLowerCase());
+            User existingUser = existingUserMap.get(userDTO.userId().toLowerCase());
+
+            // Fallback: If no match found by username, check via sys_id to handle identity stability
+            // during username changes (e.g. name change due to marriage).
+            if (existingUser == null && userDTO.sysId() != null && !userDTO.sysId().isBlank()) {
+                existingUser = userRepository.findBySysId(userDTO.sysId());
+                if (existingUser != null) {
+                    log.info("Username change detected for sys_id {}: old='{}', new='{}'",
+                            userDTO.sysId(), existingUser.getUsername(), userDTO.userId());
+                }
+            }
 
             if (existingUser != null) {
-                // User existiert - prüfen ob Update nötig ist
+                // User found - check if attributes have changed and trigger update if necessary
                 if (hasUserChanged(existingUser, userDTO)) {
                     final User freshUser = userRepository.findById(existingUser.getId()).orElse(null);
                     if (freshUser != null) {
@@ -146,7 +190,7 @@ public class SnowService {
                     }
                 }
             } else {
-                // Neuen User erstellen
+                // Identity is unknown (neither username nor sys_id matched) - create new user
                 final User newUser = createNewUser(userDTO);
                 try {
                     userRepository.save(newUser);
@@ -157,7 +201,8 @@ public class SnowService {
             }
         }
 
-        // 4. User löschen
+        // 4. Remove users that are no longer present in the ServiceNow import
+        // Note: Repository query filters out special/admin users to prevent accidental deletion.
         List<User> usersToDelete = userRepository.findNonSpecialUsersNotInUsernames(importedUsernames);
 
         if (!usersToDelete.isEmpty()) {
@@ -565,6 +610,644 @@ public class SnowService {
         appserviceRepository.deleteAll(appServicesToDelete);
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    protected void processSnowStorageServers(List<SnowDataRequestDTO.StorageServerDTO> storageServers) {
+        if (storageServers == null) {
+            storageServers = Collections.emptyList();
+        }
+
+        final List<OntapSvm> allSvms = ontapSvmRepository.findAll();
+        final Map<UUID, OntapSvm> svmMap = allSvms.stream().collect(Collectors.toMap(OntapSvm::getSwmUuid, Function.identity()));
+        final Set<UUID> importedUuids = new HashSet<>();
+
+        for (final SnowDataRequestDTO.StorageServerDTO dto : storageServers) {
+            if (dto.serialNumber() == null || dto.serialNumber().isBlank()) {
+                continue;
+            }
+
+            try {
+                final UUID swmUuid = UUID.fromString(dto.serialNumber());
+                importedUuids.add(swmUuid);
+                final OntapSvm svm = svmMap.get(swmUuid);
+
+                if (svm != null) {
+                    final OffsetDateTime lastDiscovered = parseSnowDateTime(dto.lastDiscovered());
+
+                    if (!Objects.equals(svm.getSnowName(), dto.name()) ||
+                            !Objects.equals(svm.getSnowSysId(), dto.sysId()) ||
+                            !Objects.equals(svm.getSnowSysClass(), dto.sysClass()) ||
+                            isTimeChanged(svm.getSnowLastDiscovered(), lastDiscovered)) {
+
+                        ontapSvmRepository.updateSnowFields(svm.getId(), dto.name(), dto.sysId(), dto.sysClass(), lastDiscovered);
+                        log.debug("Updated Snow fields for OntapSvm: {}", swmUuid);
+                    }
+                }
+            } catch (IllegalArgumentException e) {
+                log.warn("Invalid UUID format in storage server serial_number: {}", dto.serialNumber());
+            }
+        }
+
+        for (final OntapSvm svm : allSvms) {
+            if (!importedUuids.contains(svm.getSwmUuid())) {
+                if (svm.getSnowSysId() != null) {
+                    ontapSvmRepository.updateSnowFields(svm.getId(), null, null, null, null);
+                    log.debug("Cleared Snow fields for OntapSvm (not in import): {}", svm.getSwmUuid());
+                }
+            }
+        }
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    protected void processSnowStorageVolumes(List<SnowDataRequestDTO.StorageVolumeDTO> storageVolumes) {
+        if (storageVolumes == null || storageVolumes.isEmpty()) {
+            return;
+        }
+
+        final List<OntapVolume> allVolumes = ontapVolumeRepository.findAllWithAppservices();
+        final Map<UUID, OntapVolume> volumeMap = allVolumes.stream()
+                .collect(Collectors.toMap(OntapVolume::getVolumeUuid, Function.identity()));
+
+        final Map<Long, Set<String>> existingAssociations = allVolumes.stream()
+                .collect(Collectors.toMap(
+                        OntapVolume::getId,
+                        v -> v.getAppservices().stream()
+                                .map(Appservice::getNumber)
+                                .collect(Collectors.toSet())
+                ));
+
+        final Set<UUID> importedUuids = new HashSet<>();
+
+        for (final SnowDataRequestDTO.StorageVolumeDTO dto : storageVolumes) {
+            if (dto.volumeId() == null || dto.volumeId().isBlank()) {
+                continue;
+            }
+
+            try {
+                final UUID volumeUuid = UUID.fromString(dto.volumeId());
+                importedUuids.add(volumeUuid);
+                final OntapVolume volume = volumeMap.get(volumeUuid);
+
+                if (volume != null) {
+                    boolean svmMatches = volume.getSvm() != null &&
+                            (Objects.equals(volume.getSvm().getSnowSysId(), dto.svmSysId()) ||
+                                    Objects.equals(volume.getSvm().getSwmUuid().toString(), dto.svmUUID()));
+
+                    if (svmMatches) {
+                        final OffsetDateTime lastDiscovered = parseSnowDateTime(dto.lastDiscovered());
+
+                        boolean nameChanged = !Objects.equals(volume.getSnowName(), dto.name());
+                        boolean sysIdChanged = !Objects.equals(volume.getSnowSysId(), dto.sysId());
+                        boolean sysClassChanged = !Objects.equals(volume.getSnowSysClass(), dto.sysClass());
+                        boolean timeChanged = isTimeChanged(volume.getSnowLastDiscovered(), lastDiscovered);
+
+                        if (nameChanged || sysIdChanged || sysClassChanged || timeChanged) {
+                            if (log.isDebugEnabled()) {
+                                log.debug("Update trigger for OntapVolume {}: nameChanged={}, sysIdChanged={}, sysClassChanged={}, timeChanged={}",
+                                        volumeUuid, nameChanged, sysIdChanged, sysClassChanged, timeChanged);
+                                if (nameChanged) log.debug("  Name: DB='{}' vs DTO='{}'", volume.getSnowName(), dto.name());
+                                if (sysIdChanged) log.debug("  SysId: DB='{}' vs DTO='{}'", volume.getSnowSysId(), dto.sysId());
+                                if (sysClassChanged) log.debug("  SysClass: DB='{}' vs DTO='{}'", volume.getSnowSysClass(), dto.sysClass());
+                                if (timeChanged) log.debug("  Time: DB='{}' vs DTO='{}'", volume.getSnowLastDiscovered(), lastDiscovered);
+                            }
+
+                            ontapVolumeRepository.updateSnowFields(volume.getId(), dto.name(), dto.sysId(), dto.sysClass(), lastDiscovered);
+                            log.debug("Updated Snow fields for OntapVolume: {}", volumeUuid);
+                        }
+
+
+                        updateVolumeAppServiceAssociations(volume.getId(), dto.appServiceNumber(), existingAssociations.get(volume.getId()));
+                    }
+                }
+            } catch (IllegalArgumentException e) {
+                log.warn("Invalid UUID format in storage volume volume_id: {}", dto.volumeId());
+            }
+        }
+
+        for (final OntapVolume volume : allVolumes) {
+            if (!importedUuids.contains(volume.getVolumeUuid())) {
+                if (volume.getSnowSysId() != null || volume.getSnowName() != null) {
+                    ontapVolumeRepository.updateSnowFields(volume.getId(), null, null, null, null);
+                    ontapVolumeRepository.deleteAppServiceAssociations(volume.getId());
+                    log.debug("Cleared Snow fields and associations for OntapVolume (not in import): {}", volume.getVolumeUuid());
+                }
+            }
+        }
+    }
+
+    private void updateVolumeAppServiceAssociations(Long volumeId, List<String> incomingNumbers, Set<String> currentNumbers) {
+        final List<String> cleanIncoming = incomingNumbers != null ? incomingNumbers : Collections.emptyList();
+        final Set<String> incomingSet = new HashSet<>(cleanIncoming);
+        final Set<String> currentSet = currentNumbers != null ? currentNumbers : Collections.emptySet();
+
+        if (!currentSet.equals(incomingSet)) {
+            if (cleanIncoming.isEmpty()) {
+                ontapVolumeRepository.deleteAppServiceAssociations(volumeId);
+            } else {
+                ontapVolumeRepository.deleteObsoleteAppServiceAssociations(volumeId, cleanIncoming);
+                ontapVolumeRepository.addAppServiceAssociations(volumeId, cleanIncoming);
+            }
+            log.debug("Synchronized AppService associations for volume ID {}: {} incoming numbers", volumeId, cleanIncoming.size());
+        }
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    protected void processSnowStorageQTrees(List<SnowDataRequestDTO.StorageQTreeDTO> storageQTrees) {
+        if (storageQTrees == null || storageQTrees.isEmpty()) {
+            return;
+        }
+
+        final List<OntapQtree> allQtrees = ontapQtreeRepository.findAllWithAppservices();
+
+        // Key: volumeUuid + ":" + qtreeId
+        final Map<String, OntapQtree> qtreeMap = allQtrees.stream()
+                .filter(q -> q.getVolume() != null && q.getVolume().getVolumeUuid() != null && q.getQtreeId() != null)
+                .collect(Collectors.toMap(
+                        q -> q.getVolume().getVolumeUuid().toString() + ":" + q.getQtreeId(),
+                        Function.identity(),
+                        (existing, replacement) -> existing
+                ));
+
+        final Map<Long, Set<String>> existingAssociations = allQtrees.stream()
+                .collect(Collectors.toMap(
+                        OntapQtree::getId,
+                        q -> q.getAppservices().stream()
+                                .map(Appservice::getNumber)
+                                .collect(Collectors.toSet())
+                ));
+
+        final Set<String> importedKeys = new HashSet<>();
+
+        for (final SnowDataRequestDTO.StorageQTreeDTO dto : storageQTrees) {
+            if (dto.volumeId() == null || dto.volumeId().isBlank() || dto.qtreeId() == null || dto.qtreeId().isBlank()) {
+                continue;
+            }
+
+            final String key = dto.volumeId().toLowerCase() + ":" + dto.qtreeId();
+            importedKeys.add(key);
+            final OntapQtree qtree = qtreeMap.get(key);
+
+            if (qtree != null) {
+                boolean svmMatches = qtree.getVolume() != null && qtree.getVolume().getSvm() != null &&
+                        (Objects.equals(qtree.getVolume().getSvm().getSnowSysId(), dto.svmSysId()) ||
+                                Objects.equals(qtree.getVolume().getSvm().getSwmUuid().toString(), dto.svmUUID()));
+
+                if (svmMatches) {
+                    final OffsetDateTime lastDiscovered = parseSnowDateTime(dto.lastDiscovered());
+
+                    if (!Objects.equals(qtree.getSnowName(), dto.name()) ||
+                            !Objects.equals(qtree.getSnowSysId(), dto.sysId()) ||
+                            !Objects.equals(qtree.getSnowSysClass(), dto.sysClass()) ||
+                            isTimeChanged(qtree.getSnowLastDiscovered(), lastDiscovered)) {
+
+                        ontapQtreeRepository.updateSnowFields(qtree.getId(), dto.name(), dto.sysId(), dto.sysClass(), lastDiscovered);
+                        log.debug("Updated Snow fields for OntapQtree: volume={}, qtreeId={}", dto.volumeId(), dto.qtreeId());
+                    }
+
+                    updateQtreeAppServiceAssociations(qtree.getId(), dto.appServiceNumber(), existingAssociations.get(qtree.getId()));
+                }
+            }
+        }
+
+        for (final OntapQtree qtree : allQtrees) {
+            String qtreeKey = qtree.getVolume().getVolumeUuid().toString() + ":" + qtree.getQtreeId();
+            if (!importedKeys.contains(qtreeKey)) {
+                if (qtree.getSnowSysId() != null || qtree.getSnowName() != null) {
+                    ontapQtreeRepository.updateSnowFields(qtree.getId(), null, null, null, null);
+                    ontapQtreeRepository.deleteAppServiceAssociations(qtree.getId());
+                    log.debug("Cleared Snow fields and associations for OntapQtree (not in import): {}", qtreeKey);
+                }
+            }
+        }
+    }
+
+    private void updateQtreeAppServiceAssociations(Long qtreeId, List<String> incomingNumbers, Set<String> currentNumbers) {
+        final List<String> cleanIncoming = incomingNumbers != null ? incomingNumbers : Collections.emptyList();
+        final Set<String> incomingSet = new HashSet<>(cleanIncoming);
+        final Set<String> currentSet = currentNumbers != null ? currentNumbers : Collections.emptySet();
+
+        if (!currentSet.equals(incomingSet)) {
+            if (cleanIncoming.isEmpty()) {
+                ontapQtreeRepository.deleteAppServiceAssociations(qtreeId);
+            } else {
+                ontapQtreeRepository.deleteObsoleteAppServiceAssociations(qtreeId, cleanIncoming);
+                ontapQtreeRepository.addAppServiceAssociations(qtreeId, cleanIncoming);
+            }
+            log.debug("Synchronized AppService associations for qtree ID {}: {} incoming numbers", qtreeId, cleanIncoming.size());
+        }
+    }
+
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    protected void processSnowStorageGridAccounts(List<SnowDataRequestDTO.StorageAccountDTO> storageAccounts) {
+        if (storageAccounts == null || storageAccounts.isEmpty()) {
+            return;
+        }
+
+        final List<StorageGridAccount> allAccounts = storageGridAccountRepository.findAllWithAppservices();
+        final Map<String, StorageGridAccount> accountMap = allAccounts.stream()
+                .collect(Collectors.toMap(StorageGridAccount::getAccountId, Function.identity()));
+
+        final Map<Long, Set<String>> existingAssociations = allAccounts.stream()
+                .collect(Collectors.toMap(
+                        StorageGridAccount::getId,
+                        a -> a.getAppservices().stream()
+                                .map(Appservice::getNumber)
+                                .collect(Collectors.toSet())
+                ));
+
+        final Set<String> importedAccountIds = new HashSet<>();
+
+        for (final SnowDataRequestDTO.StorageAccountDTO dto : storageAccounts) {
+            if (dto.accountId() == null) {
+                continue;
+            }
+            final String accountId = dto.accountId().trim();
+            if (accountId.isBlank()) {
+                continue;
+            }
+
+            importedAccountIds.add(accountId);
+            final StorageGridAccount account = accountMap.get(accountId);
+
+            if (account != null) {
+                // Snow Felder aktualisieren
+                if (!Objects.equals(account.getSnowName(), dto.name()) ||
+                        !Objects.equals(account.getSnowSysId(), dto.sysId()) ||
+                        !Objects.equals(account.getSnowSysClass(), dto.sysClass())) {
+
+                    storageGridAccountRepository.updateSnowFields(
+                            account.getId(),
+                            dto.name(),
+                            dto.sysId(),
+                            dto.sysClass()
+                    );
+                    log.debug("Updated Snow fields for StorageGridAccount: {}", dto.accountId());
+                }
+
+                updateAccountAppServiceAssociations(account.getId(), dto.appServiceNumber(), existingAssociations.get(account.getId()));
+            }
+        }
+
+        for (final StorageGridAccount account : allAccounts) {
+            if (!importedAccountIds.contains(account.getAccountId())) {
+                if (account.getSnowSysId() != null || account.getSnowName() != null || account.getSnowSysClass() != null) {
+                    storageGridAccountRepository.updateSnowFields(account.getId(), null, null, null);
+                    storageGridAccountRepository.deleteAppServiceAssociations(account.getId());
+                    log.debug("Cleared Snow fields and associations for StorageGridAccount (not in import): {}", account.getAccountId());
+                }
+            }
+        }
+    }
+
+    private void updateAccountAppServiceAssociations(Long accountId, List<String> incomingNumbers, Set<String> currentNumbers) {
+        final List<String> cleanIncoming = incomingNumbers != null ? incomingNumbers : Collections.emptyList();
+        final Set<String> incomingSet = new HashSet<>(cleanIncoming);
+        final Set<String> currentSet = currentNumbers != null ? currentNumbers : Collections.emptySet();
+
+        if (!currentSet.equals(incomingSet)) {
+            if (cleanIncoming.isEmpty()) {
+                storageGridAccountRepository.deleteAppServiceAssociations(accountId);
+            } else {
+                storageGridAccountRepository.deleteObsoleteAppServiceAssociations(accountId, cleanIncoming);
+                storageGridAccountRepository.addAppServiceAssociations(accountId, cleanIncoming);
+            }
+            log.debug("Synchronized AppService associations for account ID {}: {} incoming numbers", accountId, cleanIncoming.size());
+        }
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    protected void processSnowStorageGridBuckets(List<SnowDataRequestDTO.StorageBucketDTO> storageBuckets) {
+        if (storageBuckets == null || storageBuckets.isEmpty()) {
+            return;
+        }
+
+        // 1. Load all accounts to map String accountId to technical Long ID
+        final Map<String, Long> accountIdToTechnicalId = storageGridAccountRepository.findAll().stream()
+                .collect(Collectors.toMap(StorageGridAccount::getAccountId, StorageGridAccount::getId));
+
+        // 2. Load all buckets including AppServices and Accounts to avoid N+1 selects
+        final List<StorageGridBucket> allBuckets = storageGridBucketRepository.findAllBuckets();
+
+        // Group buckets by account ID for efficient lookup
+        final Map<Long, Map<String, StorageGridBucket>> bucketsByAccount = allBuckets.stream()
+                .filter(b -> b.getStorageGridAccount() != null)
+                .collect(Collectors.groupingBy(
+                        b -> b.getStorageGridAccount().getId(),
+                        Collectors.toMap(StorageGridBucket::getName, Function.identity())
+                ));
+
+        // Extract existing AppService numbers per bucket ID for in-memory comparison
+        final Map<Long, Set<String>> existingAssociations = allBuckets.stream()
+                .collect(Collectors.toMap(
+                        StorageGridBucket::getId,
+                        b -> b.getAppservices().stream()
+                                .map(Appservice::getNumber)
+                                .collect(Collectors.toSet())
+                ));
+
+        final Set<Long> importedBucketIds = new HashSet<>();
+
+        // 3. Process import data
+        for (final SnowDataRequestDTO.StorageBucketDTO dto : storageBuckets) {
+            if (dto.accountId() == null || dto.name() == null) {
+                continue;
+            }
+
+            final Long technicalAccountId = accountIdToTechnicalId.get(dto.accountId().trim());
+            if (technicalAccountId == null) {
+                log.warn("StorageGridAccount with accountId '{}' not found for bucket '{}'", dto.accountId(), dto.name());
+                continue;
+            }
+
+            final Map<String, StorageGridBucket> accountBuckets = bucketsByAccount.getOrDefault(technicalAccountId, Collections.emptyMap());
+            final StorageGridBucket bucket = accountBuckets.get(dto.name().trim());
+
+            if (bucket != null) {
+                importedBucketIds.add(bucket.getId());
+
+                // Update Snow fields if necessary
+                if (!Objects.equals(bucket.getSnowName(), dto.name()) ||
+                        !Objects.equals(bucket.getSnowSysId(), dto.sysId()) ||
+                        !Objects.equals(bucket.getSnowSysClass(), dto.sysClass())) {
+
+                    storageGridBucketRepository.updateSnowFields(
+                            bucket.getId(),
+                            dto.name(),
+                            dto.sysId(),
+                            dto.sysClass()
+                    );
+                    log.debug("Updated Snow fields for StorageGridBucket: {}", dto.name());
+                }
+
+                // Synchronize AppService associations only if changed
+                updateBucketAppServiceAssociations(bucket.getId(), dto.appServiceNumber(), existingAssociations.get(bucket.getId()));
+            }
+        }
+
+        // 4. Cleanup: Reset attributes and delete associations if not present in import
+        for (final StorageGridBucket bucket : allBuckets) {
+            if (!importedBucketIds.contains(bucket.getId())) {
+                if (bucket.getSnowSysId() != null || bucket.getSnowName() != null || bucket.getSnowSysClass() != null) {
+                    storageGridBucketRepository.updateSnowFields(bucket.getId(), null, null, null);
+                    storageGridBucketRepository.deleteAppServiceAssociations(bucket.getId());
+                    log.debug("Cleared Snow fields and associations for StorageGridBucket: {}", bucket.getName());
+                }
+            }
+        }
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    protected void processSnowLbServices(List<SnowDataRequestDTO.LbServiceDTO> lbServices) {
+        if (lbServices == null || lbServices.isEmpty()) {
+            return;
+        }
+
+        final List<LbVirtualServerCi> allCis = lbVirtualServerCiRepository.findAllWithAppservices();
+        final Map<String, LbVirtualServerCi> ciMap = allCis.stream()
+                .collect(Collectors.toMap(LbVirtualServerCi::getSnowSysId, Function.identity()));
+
+        final Map<Long, Set<String>> existingCiAssociations = allCis.stream()
+                .collect(Collectors.toMap(
+                        LbVirtualServerCi::getId,
+                        ci -> ci.getAppservices().stream()
+                                .map(Appservice::getNumber)
+                                .collect(Collectors.toSet())
+                ));
+
+        final List<LbVirtualServer> allVs = lbVirtualServerRepository.findAll();
+        final Set<String> importedSysIds = new HashSet<>();
+        final Map<Long, Set<String>> vsToAppServices = new HashMap<>();
+
+        for (final SnowDataRequestDTO.LbServiceDTO dto : lbServices) {
+            if (dto.sysId() == null || dto.name() == null) {
+                continue;
+            }
+
+            importedSysIds.add(dto.sysId());
+            LbVirtualServerCi ci = ciMap.get(dto.sysId());
+            final OffsetDateTime lastDiscovered = parseSnowDateTime(dto.lastDiscovered());
+
+            // Splitting logic: "/alw26-s1/schulung/alw26-s1.muenchen.de_https" -> "/alw26-s1/schulung/alw26-s1.muenchen.de_"
+            String vsPrefix = dto.name();
+            int lastSlash = dto.name().lastIndexOf('/');
+            int underscoreIndex = dto.name().indexOf('_', Math.max(0, lastSlash));
+            if (underscoreIndex != -1) {
+                vsPrefix = dto.name().substring(0, underscoreIndex + 1);
+            }
+
+            final String prefixSearch = vsPrefix;
+            final Optional<LbVirtualServer> vs = allVs.stream()
+                    .filter(v -> v.getName().startsWith(prefixSearch))
+                    .findFirst();
+
+            if (vs.isPresent()) {
+                if (ci == null) {
+                    ci = new LbVirtualServerCi();
+                    ci.setSnowSysId(dto.sysId());
+                    ci.setLbVirtualServer(vs.get());
+                }
+
+                if (!Objects.equals(ci.getSnowName(), dto.name()) ||
+                        !Objects.equals(ci.getSnowSysClass(), dto.sysClass()) ||
+                        !Objects.equals(ci.getLbVirtualServer().getId(), vs.get().getId()) ||
+                        isTimeChanged(ci.getSnowLastDiscovered(), lastDiscovered)) {
+
+                    ci.setSnowName(dto.name());
+                    ci.setSnowSysClass(dto.sysClass());
+                    ci.setSnowLastDiscovered(lastDiscovered);
+                    ci.setLbVirtualServer(vs.get());
+                    lbVirtualServerCiRepository.save(ci);
+                    log.debug("Updated LbVirtualServerCi: {}", dto.name());
+                }
+
+                updateLbCiAppServiceAssociations(ci.getId(), dto.appServiceNumber(), existingCiAssociations.get(ci.getId()));
+
+                // Collect AppServices for the LbVirtualServer
+                if (dto.appServiceNumber() != null) {
+                    vsToAppServices.computeIfAbsent(vs.get().getId(), k -> new HashSet<>()).addAll(dto.appServiceNumber());
+                }
+            } else {
+                log.warn("No LbVirtualServer found for CI: {} (prefix search: {})", dto.name(), vsPrefix);
+            }
+        }
+
+        // Cleanup CIs
+        for (final LbVirtualServerCi ci : allCis) {
+            if (!importedSysIds.contains(ci.getSnowSysId())) {
+                lbVirtualServerCiRepository.delete(ci);
+                log.debug("Deleted LbVirtualServerCi (not in import): {}", ci.getSnowName());
+            }
+        }
+
+        // Update AppServices on LbVirtualServer level
+        for (Map.Entry<Long, Set<String>> entry : vsToAppServices.entrySet()) {
+            Long vsId = entry.getKey();
+            List<String> appServiceNumbers = new ArrayList<>(entry.getValue());
+            updateVsAppServiceAssociations(vsId, new ArrayList<>(entry.getValue()));
+        }
+    }
+
+    private void updateVsAppServiceAssociations(Long vsId, List<String> incomingNumbers) {
+        final List<String> cleanIncoming = incomingNumbers != null ? incomingNumbers : Collections.emptyList();
+        final Set<String> incomingSet = new HashSet<>(cleanIncoming);
+        final Set<String> currentNumbers = lbVirtualServerRepository.findAppserviceNumbersByVsId(vsId);
+
+        if (!currentNumbers.equals(incomingSet)) {
+            if (cleanIncoming.isEmpty()) {
+                lbVirtualServerCiRepository.deleteVsAppServiceAssociations(vsId);
+            } else {
+                lbVirtualServerCiRepository.deleteObsoleteVsAppServiceAssociations(vsId, cleanIncoming);
+                lbVirtualServerCiRepository.addVsAppServiceAssociations(vsId, cleanIncoming);
+            }
+            log.debug("Synchronized AppService associations for VirtualServer ID {}: {} incoming numbers", vsId, cleanIncoming.size());
+        }
+    }
+
+    private void updateLbCiAppServiceAssociations(Long ciId, List<String> incomingNumbers, Set<String> currentNumbers) {
+        final List<String> cleanIncoming = incomingNumbers != null ? incomingNumbers : Collections.emptyList();
+        final Set<String> incomingSet = new HashSet<>(cleanIncoming);
+        final Set<String> currentSet = currentNumbers != null ? currentNumbers : Collections.emptySet();
+
+        if (!currentSet.equals(incomingSet)) {
+            if (cleanIncoming.isEmpty()) {
+                lbVirtualServerCiRepository.deleteAppServiceAssociations(ciId);
+            } else {
+                lbVirtualServerCiRepository.deleteObsoleteAppServiceAssociations(ciId, cleanIncoming);
+                lbVirtualServerCiRepository.addAppServiceAssociations(ciId, cleanIncoming);
+            }
+            log.debug("Synchronized AppService associations for CI ID {}: {} incoming numbers", ciId, cleanIncoming.size());
+        }
+    }
+
+    private void updateBucketAppServiceAssociations(Long bucketId, List<String> incomingNumbers, Set<String> currentNumbers) {
+        final List<String> cleanIncoming = incomingNumbers != null ? incomingNumbers : Collections.emptyList();
+        final Set<String> incomingSet = new HashSet<>(cleanIncoming);
+        final Set<String> currentSet = currentNumbers != null ? currentNumbers : Collections.emptySet();
+
+        // Native queries are only executed if the sets differ
+        if (!currentSet.equals(incomingSet)) {
+            // Remove associations to AppServices no longer in the list
+            if (cleanIncoming.isEmpty()) {
+                storageGridBucketRepository.deleteAppServiceAssociations(bucketId);
+            } else {
+                storageGridBucketRepository.deleteObsoleteAppServiceAssociations(bucketId, cleanIncoming);
+            }
+
+            // Add new associations (ON CONFLICT DO NOTHING prevents duplicates)
+            if (!cleanIncoming.isEmpty()) {
+                storageGridBucketRepository.addAppServiceAssociations(bucketId, cleanIncoming);
+            }
+            log.debug("Synchronized AppService associations for bucket ID {}: {} incoming numbers", bucketId, cleanIncoming.size());
+        }
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    protected void processSnowKubernetesClusters(List<SnowDataRequestDTO.KubernetesClusterDTO> clusterDTOs) {
+        if (clusterDTOs == null || clusterDTOs.isEmpty()) {
+            return;
+        }
+
+        final List<KubernetesCluster> allClusters = kubernetesClusterRepository.findAll();
+        final Map<String, KubernetesCluster> clusterMap = allClusters.stream()
+                .collect(Collectors.toMap(KubernetesCluster::getSysId, Function.identity()));
+
+        final Set<String> importedClusterSysIds = new HashSet<>();
+
+        for (final SnowDataRequestDTO.KubernetesClusterDTO dto : clusterDTOs) {
+            if (dto.sysId() == null) continue;
+            importedClusterSysIds.add(dto.sysId());
+
+            KubernetesCluster cluster = clusterMap.get(dto.sysId());
+            if (cluster == null) {
+                cluster = new KubernetesCluster();
+                cluster.setSysId(dto.sysId());
+            }
+
+            updateKubernetesClusterFields(cluster, dto);
+            cluster = kubernetesClusterRepository.save(cluster);
+
+            processSnowKubernetesNamespaces(cluster, dto.kubernetesNamespaces());
+        }
+
+        // Cleanup Clusters
+        for (final KubernetesCluster cluster : allClusters) {
+            if (!importedClusterSysIds.contains(cluster.getSysId())) {
+                kubernetesClusterRepository.delete(cluster);
+                log.debug("Deleted KubernetesCluster (not in import): {}", cluster.getName());
+            }
+        }
+    }
+
+    private void updateKubernetesClusterFields(KubernetesCluster cluster, SnowDataRequestDTO.KubernetesClusterDTO dto) {
+        cluster.setName(dto.name());
+        cluster.setSysClass(dto.sysClass());
+        cluster.setLastDiscovered(dto.lastDiscovered() != null ? Date.from(parseSnowDateTime(dto.lastDiscovered()).toInstant()) : null);
+        cluster.setK8sUid(dto.k8sUid());
+        cluster.setEnvironment(parseEnvironmentType(dto.environment()));
+    }
+
+    private void processSnowKubernetesNamespaces(KubernetesCluster cluster, List<SnowDataRequestDTO.KubernetesNamespaceDTO> namespaceDTOs) {
+        final List<KubernetesNamespace> existingNamespaces = kubernetesNamespaceRepository.findAllByClusterIdWithAppservices(cluster.getId());
+        final Map<String, KubernetesNamespace> namespaceMap = existingNamespaces.stream()
+                .collect(Collectors.toMap(KubernetesNamespace::getSysId, Function.identity()));
+
+        final Set<String> importedNamespaceSysIds = new HashSet<>();
+
+        if (namespaceDTOs != null) {
+            for (final SnowDataRequestDTO.KubernetesNamespaceDTO dto : namespaceDTOs) {
+                if (dto.sysId() == null) continue;
+                importedNamespaceSysIds.add(dto.sysId());
+
+                KubernetesNamespace namespace = namespaceMap.get(dto.sysId());
+                if (namespace == null) {
+                    namespace = new KubernetesNamespace();
+                    namespace.setSysId(dto.sysId());
+                    namespace.setCluster(cluster);
+                }
+
+                updateKubernetesNamespaceFields(namespace, dto);
+                namespace = kubernetesNamespaceRepository.save(namespace);
+
+                // Update AppService Associations
+                Set<String> currentAppServiceNumbers = namespace.getAppservices().stream()
+                        .map(Appservice::getNumber)
+                        .collect(Collectors.toSet());
+                updateNamespaceAppServiceAssociations(namespace.getId(), dto.appServiceNumber(), currentAppServiceNumbers);
+            }
+        }
+
+        // Cleanup Namespaces for this Cluster
+        for (final KubernetesNamespace namespace : existingNamespaces) {
+            if (!importedNamespaceSysIds.contains(namespace.getSysId())) {
+                kubernetesNamespaceRepository.delete(namespace);
+                log.debug("Deleted KubernetesNamespace (not in import for cluster {}): {}", cluster.getName(), namespace.getName());
+            }
+        }
+    }
+
+    private void updateKubernetesNamespaceFields(KubernetesNamespace namespace, SnowDataRequestDTO.KubernetesNamespaceDTO dto) {
+        namespace.setName(dto.name());
+        namespace.setSysClass(dto.sysClass());
+        namespace.setLastDiscovered(dto.lastDiscovered() != null ? Date.from(parseSnowDateTime(dto.lastDiscovered()).toInstant()) : null);
+        namespace.setK8sUid(dto.k8sUid());
+        namespace.setEnvironment(parseEnvironmentType(dto.environment()));
+    }
+
+    private void updateNamespaceAppServiceAssociations(Long namespaceId, List<String> incomingNumbers, Set<String> currentNumbers) {
+        final List<String> cleanIncoming = incomingNumbers != null ? incomingNumbers : Collections.emptyList();
+        final Set<String> incomingSet = new HashSet<>(cleanIncoming);
+
+        if (!currentNumbers.equals(incomingSet)) {
+            if (cleanIncoming.isEmpty()) {
+                kubernetesNamespaceRepository.deleteAppServiceAssociations(namespaceId);
+            } else {
+                kubernetesNamespaceRepository.deleteObsoleteAppServiceAssociations(namespaceId, cleanIncoming);
+                kubernetesNamespaceRepository.addAppServiceAssociations(namespaceId, cleanIncoming);
+            }
+            log.debug("Synchronized AppService associations for namespace ID {}: {} incoming numbers", namespaceId, cleanIncoming.size());
+        }
+    }
+
     private boolean hasUserChanged(final User existingUser, final SnowDataRequestDTO.UserDTO userDTO) {
         return !existingUser.getUsername().equals(userDTO.userId()) ||
                 !existingUser.getSysId().equals(userDTO.sysId()) ||
@@ -657,11 +1340,17 @@ public class SnowService {
 
         try {
             final LocalDateTime localDateTime = LocalDateTime.parse(dateTimeString, SNOW_DATE_FORMATTER);
-            return localDateTime.atOffset(ZoneOffset.UTC);
+            return localDateTime.atOffset(ZoneOffset.UTC).withNano(0);
         } catch (DateTimeParseException e) {
             log.warn("Error parsing Snow date: {}", dateTimeString, e);
             return null;
         }
+    }
+
+    private boolean isTimeChanged(OffsetDateTime current, OffsetDateTime incoming) {
+        if (current == null && incoming == null) return false;
+        if (current == null || incoming == null) return true;
+        return !current.toInstant().equals(incoming.toInstant());
     }
 
     protected OffsetDateTime parseSnowDateTimeClosedAt(final String dateTimeString) {

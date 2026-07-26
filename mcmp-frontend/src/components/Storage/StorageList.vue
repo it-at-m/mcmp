@@ -10,11 +10,13 @@
       :items-per-page="itemsPerPage"
       :has-more="hasMore"
       :selected-id="selectedId"
+      :search="search"
       search-label="Storage suchen..."
       @update:sort-by="updateSortBy"
       @update:search="onSearchUpdate"
       @row-click="onRowClick"
       @load-more="onLoadMore"
+      @row-keydown="onRowKeydown"
     >
       <template #[`header.storageCategory`]>
         <div class="header-container">
@@ -77,6 +79,8 @@
             density="compact"
             :color="item.isFavorite ? 'warning' : 'grey-lighten-1'"
             class="mr-1 ml-2"
+            tabindex="-1"
+            title="Favorit (Taste F, wenn Zeile fokussiert)"
             @click.stop="toggleFavorite(item)"
           >
             <v-icon>{{ item.isFavorite ? mdiStar : mdiStarOutline }}</v-icon>
@@ -142,7 +146,7 @@ import {
   mdiStar,
   mdiStarOutline,
 } from "@mdi/js";
-import { computed, nextTick, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 
 import storageService from "@/api/storageService";
 import ScrollableListTable from "@/components/common/ScrollableListTable.vue";
@@ -158,15 +162,17 @@ type TableItem = UnifiedStorageItemList & { id: string };
 const props = defineProps<{
   modelValue?: UnifiedStorageItemList[];
   urlParamsId?: string | string[];
+  initialSearch?: string;
 }>();
 
 const emit = defineEmits<{
   (e: "update:modelValue", selected: UnifiedStorageItemList[]): void;
   (e: "update:selected", selected: UnifiedStorageItemList | null): void;
   (e: "update:totalItems", totalItems: number): void;
+  (e: "update:search", val: string): void;
 }>();
 
-const search = ref("");
+const search = ref(props.initialSearch ?? "");
 const loading = ref(false);
 const items = ref<UnifiedStorageItemList[]>([]);
 const totalItems = ref(0);
@@ -176,6 +182,7 @@ const sortBy = ref<SortByEntry[]>([{ key: "name", order: "asc" }]);
 const selected = ref<UnifiedStorageItemList[]>([]);
 const hasMore = ref(true);
 const selectedCategoryFilters = ref<string[]>([]);
+let searchTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const allCategories = [
   { value: "NFS_STANDARD_SHARE", label: "NFS Standard Share" },
@@ -264,6 +271,12 @@ function switchColor(type: string) {
       return "orange";
     default:
       return "grey";
+  }
+}
+
+function onRowKeydown({ key, item }: { key: string; item: TableItem }) {
+  if (key === "f" || key === "F") {
+    toggleFavorite(item);
   }
 }
 
@@ -361,6 +374,13 @@ const onSearchUpdate = (val: string) => {
   search.value = val;
 };
 
+watch(
+  () => props.initialSearch,
+  (val) => {
+    if (val !== undefined && val !== search.value) search.value = val;
+  }
+);
+
 const onRowClick = (item: TableItem) => {
   if (!item) return;
   selectItem(item);
@@ -377,11 +397,19 @@ watch(totalItems, (newVal) => {
   emit("update:totalItems", newVal);
 });
 
-watch(search, async () => {
-  currentPage.value = 1;
-  await loadItems(1);
-  await nextTick();
-  tableRef.value?.triggerObserveScroll();
+watch(search, () => {
+  if (searchTimeout) clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(async () => {
+    emit("update:search", search.value);
+    currentPage.value = 1;
+    await loadItems(1);
+    await nextTick();
+    tableRef.value?.triggerObserveScroll();
+  }, 300);
+});
+
+onUnmounted(() => {
+  if (searchTimeout) clearTimeout(searchTimeout);
 });
 
 // watch for selectedTypeFilters is defined above to reload from backend

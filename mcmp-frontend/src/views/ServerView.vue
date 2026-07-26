@@ -17,8 +17,10 @@
           :un-activate-server-row="unActivateServerListRow"
           :selected="selectedServer"
           :url-params-id="route.params.id"
+          :initial-search="serverSearch"
           @update:selected="getSelectedServerFromServerListComponent"
           @reset-un-activate-server-row="unActivateServerListRow = false"
+          @update:search="serverSearch = $event"
         />
       </div>
 
@@ -65,7 +67,7 @@
           class="right-panel-inner"
         >
           <div class="right-panel-sticky">
-            <v-row>
+            <v-row class="mb-0">
               <selected-server-actions-and-status
                 v-if="selectedServerItem && selectedServerItem.id"
                 :selected-server="selectedServerItem"
@@ -289,7 +291,11 @@
               </v-col>
             </v-row>
           </div>
-          <div class="right-panel-scroll">
+          <div
+            ref="scrollContainer"
+            class="right-panel-scroll"
+            tabindex="-1"
+          >
             <v-row>
               <v-col v-if="selectedServer.length > 0">
                 <v-tabs-window v-model="tab">
@@ -428,6 +434,8 @@ import ServerDetailsNetzwerk from "@/components/Server/ServerDetailsNetzwerk.vue
 import ServerDetailsPatchnight from "@/components/Server/ServerDetailsPatchnight.vue";
 import ServerList from "@/components/Server/ServerList.vue";
 import { useCollapsibleCards } from "@/composables/useCollapsibleCards";
+import { useScrollRestoration } from "@/composables/useScrollRestoration";
+import { useTabQuerySync } from "@/composables/useTabQuerySync";
 import Server from "@/types/Server";
 
 type HttpError = Error & { status?: number };
@@ -440,9 +448,14 @@ const showTabText = computed(() => width.value >= 1500);
 const selectedServer = ref<Server[]>([]);
 const selectedServerItem = computed(() => selectedServer.value[0] ?? null);
 const tab = ref("Allgemeines");
+const serverSearch = ref("");
 const loadingDetails = ref(true);
+const scrollContainer = ref<HTMLElement | null>(null);
 
 const { allCardsExpanded, toggleAllCards } = useCollapsibleCards(tab);
+useTabQuerySync(tab);
+useTabQuerySync(serverSearch, "search");
+useScrollRestoration(scrollContainer);
 
 const disks = ref<Disk[]>([]);
 const loadingDisks = ref(true);
@@ -597,7 +610,7 @@ function getSelectedServer(silent = false) {
       selectedServer.value = [res];
       const targetPath = `/server/${String(serverId ?? "")}`;
       if (route.path !== targetPath) {
-        router.push(targetPath);
+        router.push({ path: targetPath, query: route.query });
       }
 
       // Tab-Daten nur laden, wenn Server wirklich geladen wurde

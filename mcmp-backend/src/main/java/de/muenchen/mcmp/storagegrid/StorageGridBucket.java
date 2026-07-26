@@ -1,5 +1,6 @@
 package de.muenchen.mcmp.storagegrid;
 
+import de.muenchen.mcmp.appservice.Appservice;
 import de.muenchen.mcmp.common.AbstractEntity;
 import de.muenchen.mcmp.storage.StorageCategory;
 import jakarta.persistence.*;
@@ -8,6 +9,9 @@ import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
+
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -52,4 +56,11 @@ public class StorageGridBucket extends AbstractEntity {
 
     @Column(name = "snow_sys_class", length = Integer.MAX_VALUE)
     private String snowSysClass;
+
+    @ManyToMany
+    @JoinTable(name = "storagegrid_buckets_has_appservices",
+            joinColumns = {@JoinColumn(name = "storagegrid_bucket_id")},
+            inverseJoinColumns = {@JoinColumn(name = "appservice_id")})
+    private Set<Appservice> appservices = new LinkedHashSet<>();
+
 }

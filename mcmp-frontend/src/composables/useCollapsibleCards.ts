@@ -1,11 +1,17 @@
 import type { Ref } from "vue";
 
 import { computed, provide, reactive } from "vue";
+import { useRoute } from "vue-router";
 
 export interface CardExpandStore {
   isExpanded: (key: string, fallback: boolean) => boolean;
   setExpanded: (key: string, value: boolean) => void;
 }
+
+// Module-level so state survives component unmount/remount (e.g. navigating
+// away to a linked detail page and back), but not a full page reload. Keyed
+// by route path so different views/records don't share one collapse state.
+const cardExpandStates = new Map<string, Record<string, boolean>>();
 
 /**
  * Enables a "collapse/expand all" toggle for CommonCard instances within
@@ -15,7 +21,15 @@ export interface CardExpandStore {
  * mounted (v-show) in an inactive tab.
  */
 export function useCollapsibleCards(tab: Ref<string>) {
-  const cardExpandState = reactive<Record<string, boolean>>({});
+  const route = useRoute();
+  const stateKey = route.path;
+
+  let stored = cardExpandStates.get(stateKey);
+  if (!stored) {
+    stored = {};
+    cardExpandStates.set(stateKey, stored);
+  }
+  const cardExpandState = reactive<Record<string, boolean>>(stored);
   const cardKeyPrefix = computed(() => `${tab.value}::`);
 
   function isCardExpanded(key: string, fallback: boolean) {

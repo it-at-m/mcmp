@@ -10,11 +10,13 @@
       :items-per-page="itemsPerPage"
       :has-more="hasMore"
       :selected-id="selectedId"
+      :search="search"
       search-label="Loadbalancer suchen..."
       @update:sort-by="updateSortBy"
       @update:search="onSearchUpdate"
       @row-click="onRowClick"
       @load-more="onLoadMore"
+      @row-keydown="onRowKeydown"
     >
       <template #item.domain="{ item }">
         <div class="domain-header">
@@ -24,6 +26,8 @@
             density="compact"
             :color="item.isFavorite ? 'warning' : 'grey-lighten-1'"
             class="mr-1"
+            tabindex="-1"
+            title="Favorit (Taste F, wenn Zeile fokussiert)"
             @click.stop="toggleFavorite(item)"
           >
             <v-icon>{{ item.isFavorite ? mdiStar : mdiStarOutline }}</v-icon>
@@ -99,11 +103,13 @@ type TableItem = LoadbalancerListItem & { id: number };
 const props = defineProps<{
   modelValue?: LoadbalancerListItem[];
   urlParamsId?: string | string[];
+  initialSearch?: string;
 }>();
 
 const emit = defineEmits<{
   (e: "update:modelValue", selected: LoadbalancerListItem[]): void;
   (e: "update:selected", selected: LoadbalancerListItem | null): void;
+  (e: "update:search", val: string): void;
 }>();
 
 const loading = ref(false);
@@ -114,7 +120,7 @@ const currentPage = ref(1);
 const sortBy = ref<SortByEntry[]>([{ key: "domain", order: "asc" }]);
 const selected = ref<LoadbalancerListItem[]>([]);
 const hasMore = ref(true);
-const search = ref("");
+const search = ref(props.initialSearch ?? "");
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const tableRef = ref<{ triggerObserveScroll: () => void } | null>(null);
@@ -160,6 +166,12 @@ function selectItem(item: LoadbalancerListItem) {
   selected.value = [item];
   emit("update:selected", item);
   emit("update:modelValue", [item]);
+}
+
+function onRowKeydown({ key, item }: { key: string; item: TableItem }) {
+  if (key === "f" || key === "F") {
+    toggleFavorite(item);
+  }
 }
 
 async function toggleFavorite(item: TableItem) {
@@ -237,6 +249,13 @@ function onSearchUpdate(val: string) {
   search.value = val;
 }
 
+watch(
+  () => props.initialSearch,
+  (val) => {
+    if (val !== undefined && val !== search.value) search.value = val;
+  }
+);
+
 function onRowClick(item: TableItem) {
   if (!item) return;
   selectItem(item);
@@ -253,6 +272,7 @@ async function onLoadMore() {
 watch(search, () => {
   if (searchTimeout) clearTimeout(searchTimeout);
   searchTimeout = setTimeout(async () => {
+    emit("update:search", search.value);
     currentPage.value = 1;
     await loadItems(1);
     await nextTick();

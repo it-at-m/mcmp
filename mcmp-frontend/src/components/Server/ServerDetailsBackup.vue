@@ -293,20 +293,23 @@ function getBackupTypeFromServerName(serverName: string): string {
 function deleteSnapshot(snapshot: Snapshot) {
   jobService.startJob(
     jobLoading,
-    "DELETE_SNAPSHOT",
+    "VMWARE_DELETE_SNAPSHOT",
     props.selectedServer.id,
     {
       snapshotId: snapshot.snapshotId,
-      snapshotName: snapshot.name,
     }
   );
 }
 
 function revertSnapshot(snapshot: Snapshot) {
-  jobService.startJob(jobLoading, "REVERT_SNAPSHOT", props.selectedServer.id, {
-    snapshotId: snapshot.snapshotId,
-    snapshotName: snapshot.name,
-  });
+  jobService.startJob(
+    jobLoading,
+    "VMWARE_REVERT_SNAPSHOT",
+    props.selectedServer.id,
+    {
+      snapshotId: snapshot.snapshotId,
+    }
+  );
 }
 
 function formatDeleteDate(item: Snapshot): string {
@@ -319,6 +322,6 @@ function formatDeleteDate(item: Snapshot): string {
     return "Keine automatische Löschung (Anzahl > 1)";
   if (!item.retentionPeriod) return "";
 
-  return formatter.formatToGermanLocalTime(item.retentionPeriod).split(",")[0] || "";
+  return formatter.formatToGermanLocalTime(item.retentionPeriod).split(",")[0];
 }
 </script>

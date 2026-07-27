@@ -616,7 +616,7 @@ function change_cpu_ram(
 ) {
   jobService.startJob(
     loading,
-    "CHANGE_CPU_RAM",
+    "VMWARE_CHANGE_CPU_RAM",
     props.selectedServer.id,
     {
       cpu: cpus,

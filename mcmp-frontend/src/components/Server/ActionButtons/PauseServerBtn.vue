@@ -32,7 +32,7 @@
     max-width="600"
     show-actions
     :submit-activated="validated"
-    :check-for-enabled-actions="['STOP_SERVER', 'START_SERVER']"
+    :check-for-enabled-actions="['VMWARE_STOP_SERVER', 'VMWARE_START_SERVER']"
     @dialog-confirm="onDialogConfirm"
     @dialog-cancel="onDialogCancel"
   >
@@ -216,10 +216,10 @@ async function onDialogConfirm() {
       if (ids.length === 0 || !props.parentAllSelectedServersEligible) return;
 
       const promises = ids.flatMap((id) => [
-        jobService.startJob(loading, "STOP_SERVER", id, {
+        jobService.startJob(loading, "VMWARE_STOP_SERVER", id, {
           scheduleTime: stopDate.value.toISOString(),
         }),
-        jobService.startJob(loading, "START_SERVER", id, {
+        jobService.startJob(loading, "VMWARE_START_SERVER", id, {
           scheduleTime: startDate.value.toISOString(),
         }),
       ]);
@@ -228,7 +228,7 @@ async function onDialogConfirm() {
     } else if (props.server) {
       await jobService.startJob(
         loading,
-        "STOP_SERVER",
+        "VMWARE_STOP_SERVER",
         props.server.id,
         {
           scheduleTime: stopDate.value.toISOString(),
@@ -236,7 +236,7 @@ async function onDialogConfirm() {
       );
       await jobService.startJob(
         loading,
-        "START_SERVER",
+        "VMWARE_START_SERVER",
         props.server.id,
         {
           scheduleTime: startDate.value.toISOString(),

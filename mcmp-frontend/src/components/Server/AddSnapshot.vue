@@ -26,7 +26,7 @@
     show-actions
     submit-activated
     show-change-warning
-    :check-for-enabled-actions="['CREATE_SNAPSHOT']"
+    :check-for-enabled-actions="['VMWARE_CREATE_SNAPSHOT']"
     @dialog-cancel="close()"
     @dialog-confirm="save()"
   >
@@ -153,7 +153,7 @@ function save() {
         // Batch: start job for each selected server id. Parent guarantees eligibility.
         const ids = props.selectedServerIds || [];
         ids.forEach((id) => {
-          jobService.startJob(loading, "CREATE_SNAPSHOT", id, {
+          jobService.startJob(loading, "VMWARE_CREATE_SNAPSHOT", id, {
             duration: days.value,
             description: description.value,
             withShutdown: withShutdown.value,
@@ -162,7 +162,7 @@ function save() {
       } else if (props.server) {
         jobService.startJob(
           loading,
-          "CREATE_SNAPSHOT",
+          "VMWARE_CREATE_SNAPSHOT",
           props.server.id,
           {
             duration: days.value,

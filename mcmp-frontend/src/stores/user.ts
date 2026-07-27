@@ -1,8 +1,11 @@
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 
+
+
 import userService from "@/api/userService"; // Passe den Pfad an, falls nötig
 import User from "@/types/User";
+
 
 export const useUserStore = defineStore("user", () => {
   const user = ref<User | null>(null);
@@ -21,6 +24,10 @@ export const useUserStore = defineStore("user", () => {
     user.value = payload;
   }
 
+  function setLoginPage(payload: string | null): void {
+    loginPage.value = payload;
+  }
+
   // Login-Page aus der Datenbank laden
   async function fetchLoginPage(): Promise<void> {
     try {
@@ -35,6 +42,7 @@ export const useUserStore = defineStore("user", () => {
     getUser,
     setUser,
     getLoginPage,
+    setLoginPage,
     fetchLoginPage,
     loading,
   };

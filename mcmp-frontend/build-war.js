@@ -1,8 +1,10 @@
+/* eslint-disable no-console */
 import fs from "fs";
+import process from "node:process";
 import path from "path";
 import { fileURLToPath } from "url";
 
-import archiver from "archiver";
+import { ZipArchive } from "archiver";
 
 // Recreate __dirname because it is not automatically available in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -50,7 +52,7 @@ console.log("Version file created: META-INF/version.txt");
 
 // Create the WAR file
 const output = fs.createWriteStream(warFilePath);
-const archive = archiver("zip", {
+const archive = new ZipArchive({
   zlib: { level: 9 }, // Use maximum compression
 });
 

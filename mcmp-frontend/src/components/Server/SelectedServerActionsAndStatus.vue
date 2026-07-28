@@ -42,7 +42,7 @@
               :disabled="isRunning"
               tooltip="Server starten"
               :server="selectedServer"
-              :job-to-call="selectedServer.cloud.cloudType + '_START_SERVER'"
+              job-to-call="START_SERVER"
               show-confirm-dialog
               confirm-dialog-title="VM Starten"
               confirm-dialog-text="Wollen Sie diese VM wirklich starten?"
@@ -53,7 +53,7 @@
               :disabled="!isRunning"
               tooltip="Server stoppen"
               :server="selectedServer"
-              :job-to-call="selectedServer.cloud.cloudType + '_STOP_SERVER'"
+              job-to-call="STOP_SERVER"
               show-confirm-dialog
               confirm-dialog-title="VM Stoppen"
               confirm-dialog-text="Wollen Sie diese VM wirklich stoppen?"
@@ -72,7 +72,7 @@
               tooltip="Server neustarten"
               :server="selectedServer"
               :disabled="!isRunning"
-              :job-to-call="selectedServer.cloud.cloudType + '_RESTART_SERVER'"
+              job-to-call="RESTART_SERVER"
               show-confirm-dialog
               confirm-dialog-title="VM Neustarten"
               confirm-dialog-text="Wollen Sie diese VM wirklich neustarten?"

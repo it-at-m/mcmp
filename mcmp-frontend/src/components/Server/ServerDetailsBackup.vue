@@ -55,13 +55,13 @@
         <delete-revert-snapshot
           :snapshot="item"
           action="revert"
-          :jobToCall="props.selectedServer.cloud.cloudType + '_REVERT_SNAPSHOT'"
+          :job-to-call="props.selectedServer.cloud.cloudType + '_REVERT_SNAPSHOT'"
           @save="revertSnapshot(item)"
         />
         <delete-revert-snapshot
           :snapshot="item"
           action="delete"
-          :jobToCall="props.selectedServer.cloud.cloudType + '_DELETE_SNAPSHOT'"
+          :job-to-call="props.selectedServer.cloud.cloudType + '_DELETE_SNAPSHOT'"
           @save="deleteSnapshot(item)"
         />
       </template>
@@ -304,6 +304,7 @@ function deleteSnapshot(snapshot: Snapshot) {
     props.selectedServer.id,
     {
       snapshotId: snapshot.snapshotId,
+      snapshotName: snapshot.name,
     }
   );
 }
@@ -315,6 +316,7 @@ function revertSnapshot(snapshot: Snapshot) {
     props.selectedServer.id,
     {
       snapshotId: snapshot.snapshotId,
+      snapshotName: snapshot.name,
     }
   );
 }

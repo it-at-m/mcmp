@@ -573,6 +573,7 @@ func TestServer_handleChangeCallback_InvalidJSON(t *testing.T) {
 		LOGGING: logging.LogConfig{
 			Level:      "DEBUG",
 			Output:     "console",
+			Format:     "plain",
 			Filename:   "",
 			MaxSize:    0,
 			MaxBackups: 0,
@@ -1187,14 +1188,18 @@ func TestServer_handleIncidentCallback(t *testing.T) {
 		body               interface{}
 		mockFindIncident   func(id int64) (*db.JobIncident, error)
 		mockUpdateIncident func(incident *db.JobIncident) error
+		mockFindJob        func(id int64) (*db.Job, error)
+		mockUpdateJob      func(job *db.Job) error
 		expectedStatusCode int
 		validateResponse   func(t *testing.T, body []byte)
 		validateIncident   func(t *testing.T, incident *db.JobIncident)
+		validateJob        func(t *testing.T, job *db.Job)
 	}{
+		// Success cases
 		{
-			name:   "SuccessfullyResolvedIncident",
+			name:   "SuccessfullyResolved_Change",
 			method: http.MethodPost,
-			path:   "/callback/incident/123",
+			path:   "/callback/incident/1",
 			body: IncidentCallbackRequest{
 				Success:      true,
 				ErrorMessage: "",
@@ -1211,7 +1216,7 @@ func TestServer_handleIncidentCallback(t *testing.T) {
 					} `json:"state"`
 					CloseNotes string `json:"close_notes"`
 				}{
-					ResolvedBy: "b3594df2db628010ec0970a7f49619ae",
+					ResolvedBy: "12345678901234567890123456789012",
 					CloseCode: struct {
 						Label string `json:"label"`
 						Value string `json:"value"`
@@ -1231,61 +1236,109 @@ func TestServer_handleIncidentCallback(t *testing.T) {
 				},
 			},
 			mockFindIncident: func(id int64) (*db.JobIncident, error) {
-				return &db.JobIncident{
-					ID:            123,
-					JobID:         42,
-					Status:        db.IncidentStatusOpen,
-					SourceType:    "awx",
-					IncidentSysID: "incident-sys-id-123",
-				}, nil
+				return &db.JobIncident{ID: 1, JobID: 101, Status: db.IncidentStatusOpen}, nil
 			},
-			mockUpdateIncident: func(incident *db.JobIncident) error {
-				return nil
+			mockFindJob: func(id int64) (*db.Job, error) {
+				return &db.Job{ID: 101, ChangeStatus: db.ChangeStatusWaitingForIncidentResolution}, nil
 			},
+			mockUpdateIncident: func(incident *db.JobIncident) error { return nil },
+			mockUpdateJob:      func(job *db.Job) error { return nil },
 			expectedStatusCode: http.StatusOK,
-			validateResponse: func(t *testing.T, body []byte) {
-				var response map[string]interface{}
-				if err := json.Unmarshal(body, &response); err != nil {
-					t.Fatalf("Error parsing response: %v", err)
+			validateIncident: func(t *testing.T, incident *db.JobIncident) {
+				if *incident.Success != true {
+					t.Errorf("Expected Success to be true, got %v", *incident.Success)
 				}
-				if response["status"] != "success" {
-					t.Errorf("Expected status 'success', got '%v'", response["status"])
+				if *incident.CloseCodeLabel != "Gelöst (vor Ort, dauerhaft)" {
+					t.Errorf("Expected CloseCodeLabel to be 'Gelöst (vor Ort, dauerhaft)', got %s", *incident.CloseCodeLabel)
 				}
-				if response["incident_id"] != float64(123) {
-					t.Errorf("Expected incident_id 123, got %v", response["incident_id"])
+				if *incident.CloseCodeValue != "Solved (Permanently)" {
+					t.Errorf("Expected CloseCodeValue to be 'Solved (Permanently)', got %s", *incident.CloseCodeValue)
 				}
-				if response["new_status"] != string(db.IncidentStatusResolved) {
-					t.Errorf("Expected new_status 'resolved', got '%v'", response["new_status"])
+				if *incident.StateLabel != "Gelöst" {
+					t.Errorf("Expected StateLabel to be 'Gelöst', got %s", *incident.StateLabel)
+				}
+				if *incident.StateValue != "6" {
+					t.Errorf("Expected StateValue to be '6', got %s", *incident.StateValue)
+				}
+				if *incident.CloseNotes != "Gelöst" {
+					t.Errorf("Expected CloseNotes to be 'Gelöst', got %s", *incident.CloseNotes)
 				}
 			},
-			validateIncident: func(t *testing.T, incident *db.JobIncident) {
-				if incident.Status != db.IncidentStatusResolved {
-					t.Errorf("Expected IncidentStatus 'resolved', got '%s'", incident.Status)
-				}
-				if incident.Success == nil || *incident.Success != true {
-					t.Errorf("Expected Success=true, got %v", incident.Success)
-				}
-				if incident.CloseCodeValue == nil || *incident.CloseCodeValue != "Solved (Permanently)" {
-					t.Errorf("Expected CloseCodeValue 'Solved (Permanently)', got %v", incident.CloseCodeValue)
-				}
-				if incident.CloseCodeLabel == nil || *incident.CloseCodeLabel != "Gelöst (vor Ort, dauerhaft)" {
-					t.Errorf("Expected CloseCodeLabel 'Gelöst (vor Ort, dauerhaft)', got %v", incident.CloseCodeLabel)
-				}
-				if incident.StateValue == nil || *incident.StateValue != "6" {
-					t.Errorf("Expected StateValue '6', got %v", incident.StateValue)
-				}
-				if incident.CloseNotes == nil || *incident.CloseNotes != "Gelöst" {
-					t.Errorf("Expected CloseNotes 'Gelöst', got %v", incident.CloseNotes)
-				}
-				if incident.ResolvedAt == nil {
-					t.Errorf("Expected ResolvedAt to be set, got nil")
+			validateJob: func(t *testing.T, job *db.Job) {
+				if job.ChangeStatus != db.ChangeStatusNew || job.Status != db.JobStatusNew {
+					t.Errorf("Expected ChangeStatus to be '%s' and JobStatus to be '%s', got '%s' and '%s'",
+						db.ChangeStatusNew, db.JobStatusNew, job.ChangeStatus, job.Status)
 				}
 			},
 		},
 		{
-			name:   "FailedIncidentWithErrorMessage",
+			name:   "SuccessfullyResolved_QuickDiscovery",
 			method: http.MethodPost,
-			path:   "/callback/incident/456",
+			path:   "/callback/incident/2",
+			body:   IncidentCallbackRequest{Success: true},
+			mockFindIncident: func(id int64) (*db.JobIncident, error) {
+				return &db.JobIncident{ID: 2, JobID: 102, Status: db.IncidentStatusOpen}, nil
+			},
+			mockFindJob: func(id int64) (*db.Job, error) {
+				return &db.Job{ID: 102, QuickDiscoveryStatus: db.QuickdiscoveryStatusWaitingForIncidentResolution}, nil
+			},
+			mockUpdateIncident: func(incident *db.JobIncident) error { return nil },
+			mockUpdateJob:      func(job *db.Job) error { return nil },
+			expectedStatusCode: http.StatusOK,
+			validateJob: func(t *testing.T, job *db.Job) {
+				if job.QuickDiscoveryStatus != db.QuickdiscoveryStatusNew || job.Status != db.JobStatusAwxCompleted {
+					t.Errorf("Expected QuickDiscoveryStatus to be '%s' and JobStatus to be '%s', got '%s' and '%s'",
+						db.QuickdiscoveryStatusNew, db.JobStatusAwxCompleted, job.QuickDiscoveryStatus, job.Status)
+				}
+			},
+		},
+		{
+			name:   "SuccessfullyResolved_Tagging",
+			method: http.MethodPost,
+			path:   "/callback/incident/3",
+			body:   IncidentCallbackRequest{Success: true},
+			mockFindIncident: func(id int64) (*db.JobIncident, error) {
+				return &db.JobIncident{ID: 3, JobID: 103, Status: db.IncidentStatusOpen}, nil
+			},
+			mockFindJob: func(id int64) (*db.Job, error) {
+				return &db.Job{ID: 103, TaggingStatus: db.TaggingStatusWaitingForIncidentResolution}, nil
+			},
+			mockUpdateIncident: func(incident *db.JobIncident) error { return nil },
+			mockUpdateJob:      func(job *db.Job) error { return nil },
+			expectedStatusCode: http.StatusOK,
+			validateJob: func(t *testing.T, job *db.Job) {
+				if job.TaggingStatus != db.TaggingStatusNew || job.Status != db.JobStatusQuickdiscoveryCompleted {
+					t.Errorf("Expected TaggingStatus to be '%s' and JobStatus to be '%s', got '%s' and '%s'",
+						db.TaggingStatusNew, db.JobStatusQuickdiscoveryCompleted, job.TaggingStatus, job.Status)
+				}
+			},
+		},
+		{
+			name:   "SuccessfullyResolved_AWX",
+			method: http.MethodPost,
+			path:   "/callback/incident/4",
+			body:   IncidentCallbackRequest{Success: true},
+			mockFindIncident: func(id int64) (*db.JobIncident, error) {
+				return &db.JobIncident{ID: 4, JobID: 104, Status: db.IncidentStatusOpen}, nil
+			},
+			mockFindJob: func(id int64) (*db.Job, error) {
+				return &db.Job{ID: 104, AwxStatus: db.AwxStatusWaitingForIncidentResolution}, nil
+			},
+			mockUpdateIncident: func(incident *db.JobIncident) error { return nil },
+			mockUpdateJob:      func(job *db.Job) error { return nil },
+			expectedStatusCode: http.StatusOK,
+			validateJob: func(t *testing.T, job *db.Job) {
+				if job.AwxStatus != db.AwxStatusIncidentSuccessful || job.Status != db.JobStatusAwxCompleted {
+					t.Errorf("Expected AwxStatus to be '%s' and JobStatus to be '%s', got '%s' and '%s'",
+						db.AwxStatusIncidentSuccessful, db.JobStatusAwxCompleted, job.AwxStatus, job.Status)
+				}
+			},
+		},
+		// Failure cases
+		{
+			name:   "FailedResolution_Change",
+			method: http.MethodPost,
+			path:   "/callback/incident/5",
 			body: IncidentCallbackRequest{
 				Success:      false,
 				ErrorMessage: "Der Incident konnte nicht gelöst werden!",
@@ -1302,7 +1355,7 @@ func TestServer_handleIncidentCallback(t *testing.T) {
 					} `json:"state"`
 					CloseNotes string `json:"close_notes"`
 				}{
-					ResolvedBy: "b3594df2db628010ec0970a7f49619ae",
+					ResolvedBy: "12345678901234567890123456789012",
 					CloseCode: struct {
 						Label string `json:"label"`
 						Value string `json:"value"`
@@ -1322,107 +1375,142 @@ func TestServer_handleIncidentCallback(t *testing.T) {
 				},
 			},
 			mockFindIncident: func(id int64) (*db.JobIncident, error) {
-				return &db.JobIncident{
-					ID:            456,
-					JobID:         99,
-					Status:        db.IncidentStatusOpen,
-					SourceType:    "change",
-					IncidentSysID: "incident-sys-id-456",
-				}, nil
+				return &db.JobIncident{ID: 5, JobID: 105, Status: db.IncidentStatusOpen}, nil
 			},
-			mockUpdateIncident: func(incident *db.JobIncident) error {
-				return nil
+			mockFindJob: func(id int64) (*db.Job, error) {
+				return &db.Job{ID: 105, ChangeStatus: db.ChangeStatusWaitingForIncidentResolution}, nil
 			},
+			mockUpdateIncident: func(incident *db.JobIncident) error { return nil },
+			mockUpdateJob:      func(job *db.Job) error { return nil },
 			expectedStatusCode: http.StatusOK,
 			validateIncident: func(t *testing.T, incident *db.JobIncident) {
-				if incident.Status != db.IncidentStatusFailed {
-					t.Errorf("Expected IncidentStatus 'failed', got '%s'", incident.Status)
+				if *incident.Success != false {
+					t.Errorf("Expected Success to be false, got %v", *incident.Success)
 				}
-				if incident.Success == nil || *incident.Success != false {
-					t.Errorf("Expected Success=false, got %v", incident.Success)
+				if *incident.ErrorMessage != "Der Incident konnte nicht gelöst werden!" {
+					t.Errorf("Expected ErrorMessage to be 'Der Incident konnte nicht gelöst werden!', got %s", *incident.ErrorMessage)
 				}
-				if incident.ErrorMessage == nil || *incident.ErrorMessage != "Der Incident konnte nicht gelöst werden!" {
-					t.Errorf("Expected ErrorMessage 'Der Incident konnte nicht gelöst werden!', got %v", incident.ErrorMessage)
+				if *incident.CloseCodeLabel != "Nicht gelöst (nicht reproduzierbar)" {
+					t.Errorf("Expected CloseCodeLabel to be 'Nicht gelöst (nicht reproduzierbar)', got %s", *incident.CloseCodeLabel)
 				}
-				if incident.CloseCodeValue == nil || *incident.CloseCodeValue != "Not Solved (Not Reproducible)" {
-					t.Errorf("Expected CloseCodeValue 'Not Solved (Not Reproducible)', got %v", incident.CloseCodeValue)
+				if *incident.CloseCodeValue != "Not Solved (Not Reproducible)" {
+					t.Errorf("Expected CloseCodeValue to be 'Not Solved (Not Reproducible)', got %s", *incident.CloseCodeValue)
 				}
-				if incident.CloseNotes == nil || *incident.CloseNotes != "Nicht gelöst" {
-					t.Errorf("Expected CloseNotes 'Nicht gelöst', got %v", incident.CloseNotes)
+				if *incident.StateLabel != "Gelöst" {
+					t.Errorf("Expected StateLabel to be 'Gelöst', got %s", *incident.StateLabel)
+				}
+				if *incident.StateValue != "6" {
+					t.Errorf("Expected StateValue to be '6', got %s", *incident.StateValue)
+				}
+				if *incident.CloseNotes != "Nicht gelöst" {
+					t.Errorf("Expected CloseNotes to be 'Nicht gelöst', got %s", *incident.CloseNotes)
+				}
+			},
+			validateJob: func(t *testing.T, job *db.Job) {
+				if job.ChangeStatus != db.ChangeStatusIncidentFailed || job.Status != db.JobStatusError {
+					t.Errorf("Expected ChangeStatus to be '%s' and JobStatus to be '%s', got '%s' and '%s'",
+						db.ChangeStatusIncidentFailed, db.JobStatusError, job.ChangeStatus, job.Status)
 				}
 			},
 		},
 		{
-			name:               "InvalidHTTPMethod",
-			method:             http.MethodGet,
-			path:               "/callback/incident/123",
-			body:               nil,
-			expectedStatusCode: http.StatusMethodNotAllowed,
-		},
-		{
-			name:               "MissingIDInURL",
-			method:             http.MethodPost,
-			path:               "/callback/incident/",
-			body:               IncidentCallbackRequest{},
-			expectedStatusCode: http.StatusBadRequest,
-		},
-		{
-			name:               "InvalidIDFormat",
-			method:             http.MethodPost,
-			path:               "/callback/incident/abc",
-			body:               IncidentCallbackRequest{},
-			expectedStatusCode: http.StatusBadRequest,
-		},
-		{
-			name:   "IncidentNotFound",
+			name:   "FailedResolution_QuickDiscovery",
 			method: http.MethodPost,
-			path:   "/callback/incident/999",
-			body: IncidentCallbackRequest{
-				Success: true,
-			},
+			path:   "/callback/incident/6",
+			body:   IncidentCallbackRequest{Success: false},
 			mockFindIncident: func(id int64) (*db.JobIncident, error) {
-				return nil, errors.New("job incident not found")
+				return &db.JobIncident{ID: 6, JobID: 106, Status: db.IncidentStatusOpen}, nil
 			},
-			expectedStatusCode: http.StatusNotFound,
+			mockFindJob: func(id int64) (*db.Job, error) {
+				return &db.Job{ID: 106, QuickDiscoveryStatus: db.QuickdiscoveryStatusWaitingForIncidentResolution}, nil
+			},
+			mockUpdateIncident: func(incident *db.JobIncident) error { return nil },
+			mockUpdateJob:      func(job *db.Job) error { return nil },
+			expectedStatusCode: http.StatusOK,
+			validateJob: func(t *testing.T, job *db.Job) {
+				if job.QuickDiscoveryStatus != db.QuickdiscoveryStatusIncidentFailed || job.Status != db.JobStatusError {
+					t.Errorf("Expected QuickDiscoveryStatus to be '%s' and JobStatus to be '%s', got '%s' and '%s'",
+						db.QuickdiscoveryStatusIncidentFailed, db.JobStatusError, job.QuickDiscoveryStatus, job.Status)
+				}
+			},
 		},
 		{
-			name:   "InvalidIncidentStatus",
+			name:   "FailedResolution_Tagging",
 			method: http.MethodPost,
-			path:   "/callback/incident/789",
-			body: IncidentCallbackRequest{
-				Success: true,
-			},
+			path:   "/callback/incident/7",
+			body:   IncidentCallbackRequest{Success: false},
 			mockFindIncident: func(id int64) (*db.JobIncident, error) {
-				return &db.JobIncident{
-					ID:            789,
-					JobID:         12,
-					Status:        db.IncidentStatusResolved, // Already resolved
-					SourceType:    "awx",
-					IncidentSysID: "incident-sys-id-789",
-				}, nil
+				return &db.JobIncident{ID: 7, JobID: 107, Status: db.IncidentStatusOpen}, nil
 			},
-			expectedStatusCode: http.StatusBadRequest,
+			mockFindJob: func(id int64) (*db.Job, error) {
+				return &db.Job{ID: 107, TaggingStatus: db.TaggingStatusWaitingForIncidentResolution}, nil
+			},
+			mockUpdateIncident: func(incident *db.JobIncident) error { return nil },
+			mockUpdateJob:      func(job *db.Job) error { return nil },
+			expectedStatusCode: http.StatusOK,
+			validateJob: func(t *testing.T, job *db.Job) {
+				if job.TaggingStatus != db.TaggingStatusIncidentFailed || job.Status != db.JobStatusError {
+					t.Errorf("Expected TaggingStatus to be '%s' and JobStatus to be '%s', got '%s' and '%s'",
+						db.TaggingStatusIncidentFailed, db.JobStatusError, job.TaggingStatus, job.Status)
+				}
+			},
 		},
 		{
-			name:   "UpdateIncidentError",
+			name:   "FailedResolution_AWX",
 			method: http.MethodPost,
-			path:   "/callback/incident/321",
-			body: IncidentCallbackRequest{
-				Success: true,
-			},
+			path:   "/callback/incident/8",
+			body:   IncidentCallbackRequest{Success: false},
 			mockFindIncident: func(id int64) (*db.JobIncident, error) {
-				return &db.JobIncident{
-					ID:            321,
-					JobID:         77,
-					Status:        db.IncidentStatusOpen,
-					SourceType:    "awx",
-					IncidentSysID: "incident-sys-id-321",
-				}, nil
+				return &db.JobIncident{ID: 8, JobID: 108, Status: db.IncidentStatusOpen}, nil
 			},
-			mockUpdateIncident: func(incident *db.JobIncident) error {
-				return errors.New("database error")
+			mockFindJob: func(id int64) (*db.Job, error) {
+				return &db.Job{ID: 108, AwxStatus: db.AwxStatusWaitingForIncidentResolution}, nil
 			},
-			expectedStatusCode: http.StatusInternalServerError,
+			mockUpdateIncident: func(incident *db.JobIncident) error { return nil },
+			mockUpdateJob:      func(job *db.Job) error { return nil },
+			expectedStatusCode: http.StatusOK,
+			validateJob: func(t *testing.T, job *db.Job) {
+				if job.AwxStatus != db.AwxStatusIncidentFailed || job.Status != db.JobStatusError {
+					t.Errorf("Expected AwxStatus to be '%s' and JobStatus to be '%s', got '%s' and '%s'",
+						db.AwxStatusIncidentFailed, db.JobStatusError, job.AwxStatus, job.Status)
+				}
+			},
+		},
+		// Edge cases
+		{
+			name:   "JobNotFound",
+			method: http.MethodPost,
+			path:   "/callback/incident/9",
+			body:   IncidentCallbackRequest{Success: true},
+			mockFindIncident: func(id int64) (*db.JobIncident, error) {
+				return &db.JobIncident{ID: 9, JobID: 999, Status: db.IncidentStatusOpen}, nil
+			},
+			mockFindJob: func(id int64) (*db.Job, error) {
+				return nil, errors.New("job not found")
+			},
+			mockUpdateIncident: func(incident *db.JobIncident) error { return nil },
+			mockUpdateJob:      func(job *db.Job) error { return nil }, // Should not be called
+			expectedStatusCode: http.StatusOK,
+			validateJob: func(t *testing.T, job *db.Job) {
+				if job != nil {
+					t.Error("Expected job not to be updated, but it was")
+				}
+			},
+		},
+		{
+			name:   "UpdateJobFails",
+			method: http.MethodPost,
+			path:   "/callback/incident/10",
+			body:   IncidentCallbackRequest{Success: true},
+			mockFindIncident: func(id int64) (*db.JobIncident, error) {
+				return &db.JobIncident{ID: 10, JobID: 110, Status: db.IncidentStatusOpen}, nil
+			},
+			mockFindJob: func(id int64) (*db.Job, error) {
+				return &db.Job{ID: 110, AwxStatus: db.AwxStatusWaitingForIncidentResolution}, nil
+			},
+			mockUpdateIncident: func(incident *db.JobIncident) error { return nil },
+			mockUpdateJob:      func(job *db.Job) error { return errors.New("db update failed") },
+			expectedStatusCode: http.StatusOK, // Callback should still succeed
 		},
 	}
 
@@ -1432,12 +1520,21 @@ func TestServer_handleIncidentCallback(t *testing.T) {
 			t.Logf("Method: %s, Path: %s", tt.method, tt.path)
 
 			var capturedIncident *db.JobIncident
+			var capturedJob *db.Job
 			mockClient := &mockMCMPClient{
 				findJobIncidentByIDFunc: tt.mockFindIncident,
 				updateJobIncidentFunc: func(incident *db.JobIncident) error {
 					capturedIncident = incident
 					if tt.mockUpdateIncident != nil {
 						return tt.mockUpdateIncident(incident)
+					}
+					return nil
+				},
+				findJobByIDFunc: tt.mockFindJob,
+				updateJobFunc: func(job *db.Job) error {
+					capturedJob = job
+					if tt.mockUpdateJob != nil {
+						return tt.mockUpdateJob(job)
 					}
 					return nil
 				},
@@ -1479,6 +1576,11 @@ func TestServer_handleIncidentCallback(t *testing.T) {
 			if tt.validateIncident != nil && capturedIncident != nil {
 				t.Log("Validating incident state...")
 				tt.validateIncident(t, capturedIncident)
+			}
+
+			if tt.validateJob != nil {
+				t.Log("Validating job state...")
+				tt.validateJob(t, capturedJob)
 			}
 
 			t.Logf("=== Completed: %s ===\n", tt.name)

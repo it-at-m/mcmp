@@ -944,6 +944,60 @@ func (s *Server) handleIncidentCallback(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	// Find the associated job to update its status
+	job, err := s.mcmpClient.FindJobByID(incident.JobID)
+	if err != nil {
+		s.errorLog("Error finding job for incident", "error", err, "job_id", incident.JobID, "incident_id", id)
+		// We don't fail the whole callback here, as the incident itself is already updated.
+		// But we log it as an error.
+	} else {
+		// Update job status based on incident resolution
+		if callbackData.Success {
+			// Incident resolved successfully
+			if job.ChangeStatus == db.ChangeStatusWaitingForIncidentResolution {
+				job.ChangeStatus = db.ChangeStatusNew
+				job.Status = db.JobStatusNew
+			}
+			if job.QuickDiscoveryStatus == db.QuickdiscoveryStatusWaitingForIncidentResolution {
+				job.QuickDiscoveryStatus = db.QuickdiscoveryStatusNew
+				job.Status = db.JobStatusAwxCompleted
+			}
+			if job.TaggingStatus == db.TaggingStatusWaitingForIncidentResolution {
+				job.TaggingStatus = db.TaggingStatusNew
+				job.Status = db.JobStatusQuickdiscoveryCompleted
+			}
+			if job.AwxStatus == db.AwxStatusWaitingForIncidentResolution {
+				job.AwxStatus = db.AwxStatusIncidentSuccessful
+				job.Status = db.JobStatusAwxCompleted
+			}
+		} else {
+			// Incident resolution failed
+			if job.ChangeStatus == db.ChangeStatusWaitingForIncidentResolution {
+				job.ChangeStatus = db.ChangeStatusIncidentFailed
+				job.Status = db.JobStatusError
+			}
+			if job.QuickDiscoveryStatus == db.QuickdiscoveryStatusWaitingForIncidentResolution {
+				job.QuickDiscoveryStatus = db.QuickdiscoveryStatusIncidentFailed
+				job.Status = db.JobStatusError
+			}
+			if job.TaggingStatus == db.TaggingStatusWaitingForIncidentResolution {
+				job.TaggingStatus = db.TaggingStatusIncidentFailed
+				job.Status = db.JobStatusError
+			}
+			if job.AwxStatus == db.AwxStatusWaitingForIncidentResolution {
+				job.AwxStatus = db.AwxStatusIncidentFailed
+				job.Status = db.JobStatusError
+			}
+		}
+
+		if err := s.mcmpClient.UpdateJob(job); err != nil {
+			s.errorLog("Error updating job status after incident callback", "error", err, "job_id", job.ID, "incident_id", id)
+			// Again, don't fail the whole request, but log it.
+		} else {
+			s.infoLog("Successfully updated job status after incident callback", "job_id", job.ID, "new_job_status", job.Status)
+		}
+	}
+
 	// Send success response
 	response := map[string]interface{}{
 		"status":      responseStatusSuccess,

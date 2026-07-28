@@ -22,14 +22,16 @@ type DataSource[T any] interface {
 	ProcessData(ctx context.Context, data T) error
 }
 
-// EAIConfig contains common configuration for all EAIs
+// EAIConfig contains a common configuration for all EAIs
 type EAIConfig struct {
 	AppName     string
 	MaxWorkers  int
 	LockEnabled bool
 }
 
-// RunEAI executes the common bot logic
+// RunEAI processes data from multiple sources concurrently using the provided configuration, context, and logger.
+// It supports optional locking and metadata injection for data models implementing MetadataHolder.
+// Returns a combined error if any source encounters an issue during fetching or processing.
 func RunEAI[T any](ctx context.Context, cfg EAIConfig, sources []DataSource[T], logger logging.Logger) error {
 	startTime := time.Now()
 	logger.Info("Program started", "time", startTime.Format(time.RFC3339))
@@ -64,6 +66,10 @@ func RunEAI[T any](ctx context.Context, cfg EAIConfig, sources []DataSource[T], 
 				logger.Error("FetchData failed", "source", src.Name(), "error", err)
 				errorChannel <- err
 				return
+			}
+
+			if holder, ok := any(data).(MetadataHolder); ok {
+				holder.SetEaiMetadata(NewEaiMetadata(cfg.AppName, startTime))
 			}
 
 			if err := src.ProcessData(ctx, data); err != nil {

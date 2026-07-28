@@ -179,7 +179,7 @@
   </common-card>
   <common-card
     v-if="
-      props.selectedServer.serverType === 'VM_VCENTER' ||
+      props.selectedServer.serverType === 'VM_VMWARE' ||
       props.selectedServer.serverType === 'VM_PROXMOX'
     "
     title="Technische Informationen"

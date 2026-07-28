@@ -124,7 +124,9 @@
     <template #toolbar-actions>
       <edit-resources
         v-if="
-          selectedServer.canEdit && selectedServer.cloud?.cloudType == 'VCENTER'
+          selectedServer.canEdit &&
+          (selectedServer.cloud?.cloudType == 'VMWARE' ||
+            selectedServer.cloud?.cloudType == 'PROXMOX')
         "
         :server="props.selectedServer"
         :rightsize="false"
@@ -260,7 +262,7 @@
       </v-col>
       <v-col
         v-if="
-          props.selectedServer.serverType === 'VM_VCENTER' ||
+          props.selectedServer.serverType === 'VM_VMWARE' ||
           props.selectedServer.serverType === 'VM_PROXMOX'
         "
         cols="3"
@@ -297,7 +299,7 @@
       </v-col>
       <v-col
         v-if="
-          props.selectedServer.serverType === 'VM_VCENTER' ||
+          props.selectedServer.serverType === 'VM_VMWARE' ||
           props.selectedServer.serverType === 'VM_PROXMOX'
         "
         cols="3"
@@ -319,7 +321,7 @@
       >
         <p
           v-if="
-            props.selectedServer.serverType === 'VM_VCENTER' ||
+            props.selectedServer.serverType === 'VM_VMWARE' ||
             props.selectedServer.serverType === 'VM_PROXMOX'
           "
         >
@@ -344,7 +346,7 @@
       >
         <p
           v-if="
-            props.selectedServer.serverType === 'VM_VCENTER' ||
+            props.selectedServer.serverType === 'VM_VMWARE' ||
             props.selectedServer.serverType === 'VM_PROXMOX'
           "
         >
@@ -388,7 +390,8 @@
         <edit-resources
           v-if="
             selectedServer.canEdit &&
-            selectedServer.cloud?.cloudType == 'VCENTER'
+            (selectedServer.cloud?.cloudType == 'VMWARE' ||
+              selectedServer.cloud?.cloudType == 'PROXMOX')
           "
           :server="props.selectedServer"
           :rightsize="true"
@@ -418,7 +421,8 @@
         <edit-resources
           v-if="
             selectedServer.canEdit &&
-            selectedServer.cloud?.cloudType == 'VCENTER'
+            (selectedServer.cloud?.cloudType == 'VMWARE' ||
+              selectedServer.cloud?.cloudType == 'PROXMOX')
           "
           :server="props.selectedServer"
           :rightsize="true"
@@ -439,13 +443,16 @@
   >
     <v-row>
       <v-col
-        v-if="selectedServer.cloud?.cloudType == 'VCENTER'"
+        v-if="
+          selectedServer.cloud?.cloudType == 'VMWARE' ||
+          selectedServer.cloud?.cloudType == 'PROXMOX'
+        "
         cols="3"
       >
         <h3>
-          VMware Instanz<info-tooltip>
+          VM Instanz<info-tooltip>
             <div class="pa-1">
-              <strong>Virtuelle Infrastruktur (vCenter-Sicht)</strong>
+              <strong>Virtuelle Infrastruktur</strong>
               <p class="text-caption mt-2 mb-1">
                 Dieses Objekt repräsentiert die "Hülle" der virtuellen Maschine.
               </p>
@@ -503,7 +510,10 @@
     </v-row>
     <v-row>
       <v-col
-        v-if="selectedServer.cloud?.cloudType == 'VCENTER'"
+        v-if="
+          selectedServer.cloud?.cloudType == 'VMWARE' ||
+          selectedServer.cloud?.cloudType == 'PROXMOX'
+        "
         cols="3"
         class="pt-0 links"
       >
@@ -512,7 +522,7 @@
             :href="`https://it-services.muenchen.de/now/sgw/record/${props.selectedServer.snowInstanceSysClass}/${props.selectedServer.snowInstanceSysId}/`"
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="VMware Instanz in ServiceNow öffnen"
+            aria-label="VM Instanz in ServiceNow öffnen"
           >
             {{ props.selectedServer.snowInstanceName }}
           </a>
@@ -616,7 +626,7 @@ function change_cpu_ram(
 ) {
   jobService.startJob(
     loading,
-    "VMWARE_CHANGE_CPU_RAM",
+    props.selectedServer.cloud.cloudType + "_CHANGE_CPU_RAM",
     props.selectedServer.id,
     {
       cpu: cpus,

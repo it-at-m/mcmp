@@ -48,7 +48,7 @@ const (
 	ServerTypeOther                            = "OTHER"
 	ServerTypeCiscoRackUnit                    = "CISCO_RACK_UNIT"
 	ServerTypeCiscoBlade                       = "CISCO_BLADE"
-	ServerTypeVmVcenter                        = "VM_VCENTER"
+	ServerTypeVmVcenter                        = "VM_VMWARE"
 	ServerTypeVmProxmox                        = "VM_PROXMOX"
 	ServerTypeVmOpenshiftVirtualization        = "VM_OPENSHIFT_VIRTUALIZATION"
 	ServerTypeVmOlvm                           = "VM_OLVM"

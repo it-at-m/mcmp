@@ -5,7 +5,7 @@ public enum ServerType {
     OTHER,
     CISCO_RACK_UNIT,
     CISCO_BLADE,
-    VM_VCENTER,
+    VM_VMWARE,
     VM_PROXMOX,
     VM_OPENSHIFT_VIRTUALIZATION,
     VM_OLVM

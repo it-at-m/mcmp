@@ -7,7 +7,7 @@
           <strong>Cloud Type</strong>
           <v-autocomplete
             v-model="toEditCopy.cloudType"
-            :items="['VCENTER', 'PROXMOX', 'UCS_MANAGER', 'UCS_CIMC', 'OLVM']"
+            :items="['VMWARE', 'PROXMOX', 'UCS_MANAGER', 'UCS_CIMC', 'OLVM']"
             clearable
           />
         </template>

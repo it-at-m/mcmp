@@ -11,7 +11,7 @@
     show-actions
     :submit-activated="validated"
     show-change-warning
-    :check-for-enabled-actions="['VMWARE_CHANGE_CPU_RAM']"
+    :check-for-enabled-actions="[server.cloud.cloudType + '_CHANGE_CPU_RAM']"
     @dialog-cancel="close"
     @dialog-confirm="save"
   >

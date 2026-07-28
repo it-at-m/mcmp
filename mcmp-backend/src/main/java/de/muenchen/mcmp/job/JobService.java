@@ -287,15 +287,27 @@ public class JobService {
     }
 
     // -----------------------------------------------------------------------------------------------------------------
-    // VMWARE JOBs
+    // VM Operation JOBs
     // -----------------------------------------------------------------------------------------------------------------
-    public void vmwareStartServer(final Long serverId, final String start_server_identifier, final Instant scheduleTime) {
+    public void startServer(final Long serverId, final String start_server_identifier, final Instant scheduleTime) {
         Server server = getServerOrThrow(serverId);
 
         Map<String, Object> params = new HashMap<>();
         params.put("vm_name", server.getName());
-        params.put("vcenter_uuid", server.getCloud().getServerGui());
-        params.put("vm_powerstate", "powered-on");
+
+        String cloudType = server.getCloud().getCloudType().toString();
+
+        if (cloudType == "VMWARE"){
+            params.put("vcenter_uuid", server.getCloud().getServerGui());
+            params.put("vm_powerstate", "powered-on");
+        }
+        else if (cloudType == "PROXMOX") {
+            params.put("cluster_name", server.getCluster());
+            params.put("vm_powerstate", "started");
+        }
+        else {
+            throw new IllegalArgumentException("Cloud type " + cloudType + " is not supported.");
+        }
 
         if(scheduleTime != null){
             createJob(start_server_identifier, server, params, new HashMap<>(), scheduleTime,null,null);
@@ -304,16 +316,28 @@ public class JobService {
         }
     }
 
-    public void vmwareStopServer(final Long serverId, final String stop_server_identifier, final Instant scheduleTime) {
+    public void stopServer(final Long serverId, final String stop_server_identifier, final Instant scheduleTime) {
         Server server = getServerOrThrow(serverId);
 
         Map<String, Object> params = new HashMap<>();
         params.put("vm_name", server.getName());
-        params.put("vcenter_uuid", server.getCloud().getServerGui());
-        params.put("vm_powerstate", "shutdown-guest");
         params.put("turned_off_at", new SimpleDateFormat("MM/dd/yy HH:mm:ss").format(new Date()));
         params.put("turned_off_by", AuthUtils.getUsername());
         params.put("turned_off_note", "Server wurde durch den Benutzer " + AuthUtils.getUsername() + " in der MCMP gestoppt.");
+
+        String cloudType = server.getCloud().getCloudType().toString();
+
+        if (cloudType == "VMWARE"){
+            params.put("vcenter_uuid", server.getCloud().getServerGui());
+            params.put("vm_powerstate", "shutdown-guest");
+        }
+        else if (cloudType == "PROXMOX") {
+            params.put("cluster_name", server.getCluster());
+            params.put("vm_powerstate", "stopped");
+        }
+        else {
+            throw new IllegalArgumentException("Cloud type " + cloudType + " is not supported.");
+        }
 
         if(scheduleTime != null){
             createJob(stop_server_identifier, server, params, new HashMap<>(), scheduleTime,null,null);
@@ -322,16 +346,28 @@ public class JobService {
         }
     }
 
-    public void vmwareRestartServer(final Long serverId, final String restart_server_identifier, final Instant scheduleTime) {
+    public void restartServer(final Long serverId, final String restart_server_identifier, final Instant scheduleTime) {
         Server server = getServerOrThrow(serverId);
 
         Map<String, Object> params = new HashMap<>();
         params.put("vm_name", server.getName());
-        params.put("vcenter_uuid", server.getCloud().getServerGui());
-        params.put("vm_powerstate", "reboot-guest");
         params.put("turned_off_at", new SimpleDateFormat("MM/dd/yy HH:mm:ss").format(new Date()));
         params.put("turned_off_by", AuthUtils.getUsername());
         params.put("turned_off_note", "Server wurde durch den Benutzer " + AuthUtils.getUsername() + " in der MCMP gerestarted.");
+
+        String cloudType = server.getCloud().getCloudType().toString();
+
+        if (cloudType == "VMWARE"){
+            params.put("vcenter_uuid", server.getCloud().getServerGui());
+            params.put("vm_powerstate", "reboot-guest");
+        }
+        else if (cloudType == "PROXMOX") {
+            params.put("cluster_name", server.getCluster());
+            params.put("vm_powerstate", "restarted");
+        }
+        else {
+            throw new IllegalArgumentException("Cloud type " + cloudType + " is not supported.");
+        }
 
         if(scheduleTime != null){
             createJob(restart_server_identifier, server, params, new HashMap<>(), scheduleTime,null,null);
@@ -340,7 +376,7 @@ public class JobService {
         }
     }
 
-    public void vmwareChangeCpuRam(final Long serverId, final String change_cpu_ram_identifier, final Integer cpu, final Integer ram, final Instant scheduleTime, final boolean schedulePatchnight) {
+    public void changeCpuRam(final Long serverId, final String change_cpu_ram_identifier, final Integer cpu, final Integer ram, final Instant scheduleTime, final boolean schedulePatchnight) {
         final Server server = getServerOrThrow(serverId);
 
         final Map<String, Object> params = new HashMap<>();
@@ -348,6 +384,17 @@ public class JobService {
         params.put("vcenter_uuid", server.getCloud().getServerGui());
         params.put("cpus_new", cpu);
         params.put("memory_new", ram);
+
+        String cloudType = server.getCloud().getCloudType().toString();
+        if (cloudType == "VMWARE"){
+            params.put("vcenter_uuid", server.getCloud().getServerGui());
+        }
+        else if (cloudType == "PROXMOX") {
+            params.put("cluster_name", server.getCluster());
+        }
+        else {
+            throw new IllegalArgumentException("Cloud type " + cloudType + " is not supported.");
+        }
 
         final Map<String, Object> guiVars = new HashMap<>();
         guiVars.put("scheduled_time", "");
@@ -370,16 +417,26 @@ public class JobService {
         createJob(change_cpu_ram_identifier, server, params, guiVars, scheduleTime, tag, null);
     }
 
-    public void vmwareCreateSnapshot(final Long serverId, final Integer duration, final String description, final boolean withShutdown, final String create_snapshot_identifier) {
+    public void createSnapshot(final Long serverId, final Integer duration, final String description, final boolean withShutdown, final String create_snapshot_identifier) {
         Server server = getServerOrThrow(serverId);
 
         Map<String, Object> params = new HashMap<>();
         params.put("vm_name", server.getName());
-        params.put("vcenter_uuid", server.getCloud().getServerGui());
         params.put("state", "present");
         params.put("TeamName", AuthUtils.getUsername()); //TODO TEAMNAME nicht username (Wird nach ablöse des Snapshot Tools entfernt)
         params.put("time", duration);
         params.put("snapshot_description", description);
+
+        String cloudType = server.getCloud().getCloudType().toString();
+        if (cloudType == "VMWARE"){
+            params.put("vcenter_uuid", server.getCloud().getServerGui());
+        }
+        else if (cloudType == "PROXMOX") {
+            params.put("cluster_name", server.getCluster());
+        }
+        else {
+            throw new IllegalArgumentException("Cloud type " + cloudType + " is not supported.");
+        }
 
         String awxSkipTag = null;
         if (!withShutdown){
@@ -389,28 +446,55 @@ public class JobService {
         createJob(create_snapshot_identifier, server, params, new HashMap<>(), null, awxSkipTag);
     }
 
-    public void vmwareDeleteSnapshot(final Long serverId, final Long snapshotId, final String delete_snapshot_identifier){
+    public void deleteSnapshot(final Long serverId, final Long snapshotId, final String snapshotName, final String delete_snapshot_identifier){
         Server server = getServerOrThrow(serverId);
 
         Map<String, Object> params = new HashMap<>();
         params.put("vm_name", server.getName());
-        params.put("vcenter_uuid", server.getCloud().getServerGui());
         params.put("state", "absent");
         params.put("TeamName", AuthUtils.getUsername()); //TODO TEAMNAME nicht username (Wird nach ablöse des Snapshot Tools entfernt)
-        params.put("snapshot_id", snapshotId);
+
+        String cloudType = server.getCloud().getCloudType().toString();
+        if (cloudType == "VMWARE"){
+            params.put("vcenter_uuid", server.getCloud().getServerGui());
+            if (snapshotId == null) throw new MissingFormatArgumentException("Snapshot Id must be provided.");
+            params.put("snapshot_id", snapshotId);
+        }
+        else if (cloudType == "PROXMOX") {
+            params.put("cluster_name", server.getCluster());
+            if (snapshotName == null) throw new MissingFormatArgumentException("Snapshot Name must be provided.");
+            params.put("snapshot_name", snapshotName);
+        }
+        else {
+            throw new IllegalArgumentException("Cloud type " + cloudType + " is not supported.");
+        }
 
         createJob(delete_snapshot_identifier, server, params, new HashMap<>());
     }
 
-    public void vmwareRevertSnapshot(final Long serverId, final Long snapshotId, final String reverte_snapshot_identifier){
+    public void revertSnapshot(final Long serverId, final Long snapshotId, final String snapshotName, final String reverte_snapshot_identifier){
         Server server = getServerOrThrow(serverId);
 
         Map<String, Object> params = new HashMap<>();
         params.put("vm_name", server.getName());
-        params.put("vcenter_uuid", server.getCloud().getServerGui());
-        params.put("state", "revert");
         params.put("TeamName", AuthUtils.getUsername()); //TODO TEAMNAME nicht username (Wird nach ablöse des Snapshot Tools entfernt)
-        params.put("snapshot_id", snapshotId);
+
+        String cloudType = server.getCloud().getCloudType().toString();
+        if (cloudType == "VMWARE"){
+            params.put("vcenter_uuid", server.getCloud().getServerGui());
+            params.put("state", "revert");
+            if (snapshotId == null) throw new MissingFormatArgumentException("Snapshot Id must be provided.");
+            params.put("snapshot_id", snapshotId);
+        }
+        else if (cloudType == "PROXMOX") {
+            params.put("cluster_name", server.getCluster());
+            params.put("state", "rollback");
+            if (snapshotName == null) throw new MissingFormatArgumentException("Snapshot Name must be provided.");
+            params.put("snapshot_name", snapshotName);
+        }
+        else {
+            throw new IllegalArgumentException("Cloud type " + cloudType + " is not supported.");
+        }
 
         createJob(reverte_snapshot_identifier, server, params, new HashMap<>());
     }

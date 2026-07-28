@@ -45,7 +45,7 @@
     show-actions
     :submit-activated="validated"
     :show-change-warning="true"
-    :check-for-enabled-actions="jobToCall ? [jobToCall] : undefined"
+    :check-for-enabled-actions="action"
     @dialog-confirm="onDialogConfirm"
     @dialog-cancel="onDialogCancel"
   >
@@ -192,6 +192,17 @@ const validated = ref(true);
 const rawDate = ref<Date>(new Date());
 const validationRules = useRules();
 
+const action = computed(() => {
+  if (props.isBatchOperation) {
+    return [
+      ...new Set(
+        props.selectedServers?.map((server) => server.cloud.cloudType)
+      ),
+    ].map((type) => `${type}_${props.jobToCall}`);
+  }
+  return [props.server?.cloud.cloudType + "_" + props.jobToCall];
+});
+
 function changeToSchedule() {
   rawDate.value = new Date();
 }
@@ -233,9 +244,8 @@ function onDialogCancel() {
 function makeJobCall() {
   // batch operation: iterate over selectedServerIds
   if (props.isBatchOperation) {
-    const ids =
-      props.selectedServerIds ?? props.selectedServers?.map((s) => s.id) ?? [];
-    if (ids.length === 0) {
+    const servers = props.selectedServers || [];
+    if (servers.length === 0) {
       return;
     }
 
@@ -245,11 +255,11 @@ function makeJobCall() {
     }
 
     loading.value = true;
-    const promises = ids.map((id) =>
+    const promises = servers.map((server) =>
       jobService.startJob(
         loading,
-        props.jobToCall!,
-        id,
+        server.cloud.cloudType + "_" + props.jobToCall,
+        server.id,
         schedule.value ? { scheduleTime: rawDate.value.toISOString() } : {}
       )
     );
@@ -274,7 +284,7 @@ function makeJobCall() {
   jobService
     .startJob(
       loading,
-      props.jobToCall,
+      props.server!.cloud.cloudType + "_" + props.jobToCall,
       props.server!.id,
       schedule.value ? { scheduleTime: rawDate.value.toISOString() } : {}
     )

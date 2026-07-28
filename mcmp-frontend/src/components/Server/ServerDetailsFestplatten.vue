@@ -1,6 +1,6 @@
 <template>
   <common-card
-    v-show="selectedServer.cloud?.cloudType == 'VCENTER'"
+    v-show="selectedServer.cloud?.cloudType == 'VMWARE'"
     title="Virtuelle Festplatten"
   >
     <v-data-table
@@ -28,7 +28,7 @@
           selectedServer.guestToolsFullName?.includes('Linux 10') &&
           selectedServer.managed &&
           selectedServer.canEdit &&
-          selectedServer.cloud?.cloudType == 'VCENTER'
+          selectedServer.cloud?.cloudType == 'VMWARE'
         "
         :mount-points="[]"
         :selected-server="props.selectedServer"
@@ -40,7 +40,7 @@
         v-if="
           selectedServer.managed &&
           selectedServer.canEdit &&
-          selectedServer.cloud?.cloudType == 'VCENTER'
+          selectedServer.cloud?.cloudType == 'VMWARE'
         "
         :mount-points="props.mountPoints"
         :selected-server="props.selectedServer"

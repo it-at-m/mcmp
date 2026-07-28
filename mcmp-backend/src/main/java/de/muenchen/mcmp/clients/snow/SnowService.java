@@ -1027,15 +1027,7 @@ public class SnowService {
             LbVirtualServerCi ci = ciMap.get(dto.sysId());
             final OffsetDateTime lastDiscovered = parseSnowDateTime(dto.lastDiscovered());
 
-            // Splitting logic: "/alw26-s1/schulung/alw26-s1.muenchen.de_https" -> "/alw26-s1/schulung/alw26-s1.muenchen.de_"
-            String vsPrefix = dto.name();
-            int lastSlash = dto.name().lastIndexOf('/');
-            int underscoreIndex = dto.name().indexOf('_', Math.max(0, lastSlash));
-            if (underscoreIndex != -1) {
-                vsPrefix = dto.name().substring(0, underscoreIndex + 1);
-            }
-
-            final String prefixSearch = vsPrefix;
+            final String prefixSearch = stripVsSuffix(dto.name());
             final Optional<LbVirtualServer> vs = allVs.stream()
                     .filter(v -> v.getName().startsWith(prefixSearch))
                     .findFirst();
@@ -1057,7 +1049,7 @@ public class SnowService {
                     ci.setSnowLastDiscovered(lastDiscovered);
                     ci.setLbVirtualServer(vs.get());
                     lbVirtualServerCiRepository.save(ci);
-                    log.debug("Updated LbVirtualServerCi: {}", dto.name());
+                    log.debug("Updated LbVirtualServerCi: {} (assigned to VS: {})", dto.name(), vs.get().getName());
                 }
 
                 updateLbCiAppServiceAssociations(ci.getId(), dto.appServiceNumber(), existingCiAssociations.get(ci.getId()));
@@ -1067,7 +1059,7 @@ public class SnowService {
                     vsToAppServices.computeIfAbsent(vs.get().getId(), k -> new HashSet<>()).addAll(dto.appServiceNumber());
                 }
             } else {
-                log.warn("No LbVirtualServer found for CI: {} (prefix search: {})", dto.name(), vsPrefix);
+                log.warn("No LbVirtualServer found for CI: {} (prefix search: {})", dto.name(), prefixSearch);
             }
         }
 
@@ -1085,6 +1077,24 @@ public class SnowService {
             List<String> appServiceNumbers = new ArrayList<>(entry.getValue());
             updateVsAppServiceAssociations(vsId, new ArrayList<>(entry.getValue()));
         }
+    }
+
+    /**
+     * Strips everything after the last "_vs" in a LoadBalancer name.
+     * Example: "/test/test.example.org_https_vs-Redirect-" -> "/test/test.example.org_https_vs"
+     *
+     * @param name The LoadBalancer name to process
+     * @return The stripped name, or the original name if "_vs" is not found
+     */
+    public static String stripVsSuffix(final String name) {
+        if (name == null) {
+            return null;
+        }
+        int lastVsIndex = name.toLowerCase().lastIndexOf("_vs");
+        if (lastVsIndex != -1) {
+            return name.substring(0, lastVsIndex + 3);
+        }
+        return name;
     }
 
     private void updateVsAppServiceAssociations(Long vsId, List<String> incomingNumbers) {

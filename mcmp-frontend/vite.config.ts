@@ -14,6 +14,19 @@ import { EncodeBracketsPlugin, extendRoute } from "./encode-brackets-plugin";
 export default defineConfig(({ mode }) => {
   const isDevelopment = mode === "development";
   return {
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes("node_modules")) {
+              if (id.includes("vuetify")) return "vendor-vuetify";
+              if (id.includes("echarts")) return "vendor-echarts";
+              return "vendor";
+            }
+          },
+        },
+      },
+    },
     plugins: [
       VueRouter({
         routesFolder: {

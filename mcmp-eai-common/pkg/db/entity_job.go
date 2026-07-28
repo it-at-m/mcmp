@@ -106,6 +106,7 @@ type Job struct {
 	AwxDuration                *string              `gorm:"column:awx_duration;->;type:interval" json:"awx_duration"`
 	JobDuration                *string              `gorm:"column:job_duration;->;type:interval" json:"job_duration"`
 	AwxJobArtifacts            *string              `gorm:"column:awx_job_artifacts;type:text" json:"awx_job_artifacts"`
+	CreateIncidents            bool                 `gorm:"column:create_incidents;default:true" json:"create_incidents"`
 }
 
 func (Job) TableName() string {

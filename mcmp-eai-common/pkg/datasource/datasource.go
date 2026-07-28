@@ -8,6 +8,7 @@ import (
 	"os"
 	"sync"
 
+	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/app"
 	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/logging"
 )
 
@@ -54,6 +55,12 @@ func (s *JsonFileSource[T]) FetchData(ctx context.Context) (T, error) {
 }
 
 func (s *JsonFileSource[T]) ProcessData(ctx context.Context, data T) error {
+	if holder, ok := any(data).(app.MetadataHolder); ok {
+		meta := holder.GetEaiMetadata()
+		app.FinalizeMetadata(&meta)
+		holder.SetEaiMetadata(meta)
+	}
+
 	// 1. Marshal to JSON
 	jsonData, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {

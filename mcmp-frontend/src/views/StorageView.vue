@@ -197,7 +197,7 @@ import {
   mdiHarddisk,
   mdiHome,
 } from "@mdi/js";
-import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch, defineAsyncComponent } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 import storageService from "@/api/storageService";
@@ -205,9 +205,11 @@ import testenvService from "@/api/testenvService.ts";
 import commingSoon from "@/assets/commingSoon.png";
 import BreadcrumbNav from "@/components/common/BreadcrumbNav.vue";
 import CollapseAllCardsButton from "@/components/common/CollapseAllCardsButton.vue";
-import StorageDetailsBackup from "@/components/Storage/StorageDetailsBackup.vue";
-import StorageDetailsGeneral from "@/components/Storage/StorageDetailsGeneral.vue";
-import StorageDetailsPermissions from "@/components/Storage/StorageDetailsPermissions.vue";
+
+const StorageDetailsBackup = defineAsyncComponent(() => import("@/components/Storage/StorageDetailsBackup.vue"));
+const StorageDetailsGeneral = defineAsyncComponent(() => import("@/components/Storage/StorageDetailsGeneral.vue"));
+const StorageDetailsPermissions = defineAsyncComponent(() => import("@/components/Storage/StorageDetailsPermissions.vue"));
+
 import StorageList from "@/components/Storage/StorageList.vue";
 import { useCollapsibleCards } from "@/composables/useCollapsibleCards";
 import { useScrollRestoration } from "@/composables/useScrollRestoration";

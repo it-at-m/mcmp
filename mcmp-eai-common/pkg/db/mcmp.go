@@ -257,7 +257,7 @@ func (c *Client) UpdateJob(job *Job) error {
 		// but apply the values from our 'job' argument.
 		// Omit ensures we don't touch complex associations that might be stale.
 		err := c.db.Model(&freshJob).
-			Omit("Snow", "Awx", "User", "Server", "Appservice", "CreatedAt").
+			Omit("ID", "Snow", "Awx", "User", "Server", "Appservice", "CreatedAt").
 			Updates(job).Error
 
 		if err != nil {
@@ -302,6 +302,16 @@ func (c *Client) UpdateJobIncident(incident *JobIncident) error {
 	return c.retryOperation(func() error {
 		incident.UpdatedAt = time.Now()
 		return c.db.Model(incident).Save(incident).Error
+	})
+}
+
+// SaveJobIncident creates a new job incident record in the database.
+func (c *Client) SaveJobIncident(incident *JobIncident) error {
+	if incident == nil {
+		return errors.New("incident cannot be nil")
+	}
+	return c.retryOperation(func() error {
+		return c.db.Create(incident).Error
 	})
 }
 
@@ -441,44 +451,6 @@ func (c *Client) GetJobsByStatus() ([]*Job, error) {
 		Find(&jobs).Error
 	if err != nil {
 		return nil, fmt.Errorf("error loading job entries: %w", err)
-	}
-
-	return jobs, nil
-}
-
-func (c *Client) GetWorkflowJobsToProcess() ([]*Job, error) {
-	var jobs []*Job
-
-	err := c.db.Where("awx_template_type = ? AND awx_job_id > ?", AwxTemplateTypeWorkflow, 1565596).
-		Preload("Snow").
-		Preload("Awx").
-		Preload("User").
-		Preload("Server").
-		Preload("Appservice").
-		Preload("Appservice.ChangeGroup").
-		Order("id ASC").
-		Find(&jobs).Error
-	if err != nil {
-		return nil, fmt.Errorf("error loading workflow job entries: %w", err)
-	}
-
-	return jobs, nil
-}
-
-func (c *Client) GetJobsToProcess() ([]*Job, error) {
-	var jobs []*Job
-
-	err := c.db.Where("awx_template_type = ? AND awx_job_id > ?", AwxTemplateTypeTemplate, 1565596).
-		Preload("Snow").
-		Preload("Awx").
-		Preload("User").
-		Preload("Server").
-		Preload("Appservice").
-		Preload("Appservice.ChangeGroup").
-		Order("id ASC").
-		Find(&jobs).Error
-	if err != nil {
-		return nil, fmt.Errorf("error loading workflow job entries: %w", err)
 	}
 
 	return jobs, nil

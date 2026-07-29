@@ -47,12 +47,6 @@
           use-extra-sure-dialog
           extra-sure-checkbox-text="Mir ist bewusst, dass durch das Stoppen der VM eine Serviceunterbrechung entsteht."
         />
-        <pause-server-btn
-          :server="selectedServer"
-          :disabled="!isRunning"
-          :icon="mdiPause"
-          @change="$emit('change')"
-        />
         <action-button
           color="btn_red"
           :icon="mdiRestart"
@@ -65,6 +59,12 @@
           confirm-dialog-text="Wollen Sie diese VM wirklich neustarten?"
           use-extra-sure-dialog
           extra-sure-checkbox-text="Mir ist bewusst, dass durch das Neustarten der VM eine Serviceunterbrechung entsteht."
+        />
+        <pause-server-btn
+          :server="selectedServer"
+          :disabled="!isRunning"
+          :icon="mdiWrenchClock"
+          @change="$emit('change')"
         />
       </div>
 
@@ -288,13 +288,13 @@ import type Server from "@/types/Server";
 import {
   mdiDelete,
   mdiKeyChain,
-  mdiPause,
   mdiPauseCircle,
   mdiPlay,
   mdiPlayCircle,
   mdiRestart,
   mdiStop,
   mdiStopCircle,
+  mdiWrenchClock,
 } from "@mdi/js";
 import { computed } from "vue";
 import { useTheme } from "vuetify";

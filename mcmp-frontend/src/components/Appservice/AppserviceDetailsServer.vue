@@ -72,17 +72,6 @@
             extra-sure-checkbox-text="Mir ist bewusst, dass durch das Stoppen der VM eine Serviceunterbrechung entsteht."
             @change="onBatchOrderCompleteDone"
           />
-          <pause-server-btn
-            :icon="mdiPause"
-            :tooltip="powerPauseTooltip"
-            :is-batch-operation="true"
-            :selected-server-ids="selectedServers"
-            :selected-servers="serversForBatch"
-            :parent-all-selected-servers-eligible="
-              allSelectedServersEligibleToPause
-            "
-            @change="onBatchOrderCompleteDone"
-          />
           <action-button
             color="btn_red"
             :icon="mdiRestart"
@@ -99,6 +88,17 @@
             confirm-dialog-text="Wollen Sie diese VMs wirklich neustarten?"
             use-extra-sure-dialog
             extra-sure-checkbox-text="Mir ist bewusst, dass durch das Neustarten der VM eine Serviceunterbrechung entsteht."
+            @change="onBatchOrderCompleteDone"
+          />
+          <pause-server-btn
+            :icon="mdiWrenchClock"
+            :tooltip="powerPauseTooltip"
+            :is-batch-operation="true"
+            :selected-server-ids="selectedServers"
+            :selected-servers="serversForBatch"
+            :parent-all-selected-servers-eligible="
+              allSelectedServersEligibleToPause
+            "
             @change="onBatchOrderCompleteDone"
           />
           <root-admin-rechte-btn
@@ -313,7 +313,6 @@ import {
   mdiAlert,
   mdiCloud,
   mdiKeyChain,
-  mdiPause,
   mdiPauseCircle,
   mdiPlay,
   mdiPlayCircle,
@@ -321,6 +320,7 @@ import {
   mdiServer,
   mdiStop,
   mdiStopCircle,
+  mdiWrenchClock,
 } from "@mdi/js";
 import { computed, ref, watch } from "vue";
 

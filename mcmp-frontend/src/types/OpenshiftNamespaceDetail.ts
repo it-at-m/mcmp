@@ -13,4 +13,5 @@ export interface OpenshiftNamespaceDetail {
   environment: string | null;
   clusterName: string | null;
   appservices: OpenshiftAppserviceRef[];
+  canEdit: boolean;
 }

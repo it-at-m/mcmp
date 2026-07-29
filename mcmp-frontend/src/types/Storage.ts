@@ -8,6 +8,7 @@ export interface UnifiedStorageItem {
   used: number;
   protocol: string;
   appservices: AppserviceNameAndSysId[];
+  canEdit: boolean;
 
   // NFS Specifics
   nfs_mount_path?: string;

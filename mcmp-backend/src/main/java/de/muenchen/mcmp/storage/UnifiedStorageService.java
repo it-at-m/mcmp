@@ -59,6 +59,7 @@ public class UnifiedStorageService {
                     .appservices(volume.getAppservices().stream()
                             .map(a -> new de.muenchen.mcmp.appservice.AppserviceNameAndSysIdDTO(a.getId(), a.getName(), a.getSysId()))
                             .toList())
+                    .canEdit(Boolean.TRUE.equals(ontapVolumeRepository.canUserEditVolume(volume.getVolumeUuid(), username, isAdmin, isStorage)))
                     .size(volume.getSize())
                     .used(volume.getSpaceLogicalUsed())
                     // Extended Volume Properties
@@ -126,6 +127,7 @@ public class UnifiedStorageService {
                             .appservices(qtree.getAppservices().stream()
                                     .map(a -> new de.muenchen.mcmp.appservice.AppserviceNameAndSysIdDTO(a.getId(), a.getName(), a.getSysId()))
                                     .toList())
+                            .canEdit(Boolean.TRUE.equals(ontapQtreeRepository.canUserEditQtree(qtree.getId(), username, isAdmin, isStorage)))
                             .size(qtree.getQuotaHardLimit()) // Can be null
                             .used(qtree.getQuotaUsedBytes()) // Can be null
                             .diskClass(getDiskClass(qtree.getVolume()))
@@ -161,6 +163,7 @@ public class UnifiedStorageService {
                                             .map(a -> new de.muenchen.mcmp.appservice.AppserviceNameAndSysIdDTO(a.getId(), a.getName(), a.getSysId()))
                                             .toList() :
                                     List.of())
+                            .canEdit(Boolean.TRUE.equals(storageGridBucketRepository.canUserEditBucket(bucket.getId(), username, isAdmin, isStorage)))
                             .size(quota) // Using Account Quota as size
                             .used(bucket.getDataBytes())
                             .s3_object_count(bucket.getObjectCount())

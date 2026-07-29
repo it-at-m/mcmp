@@ -21,5 +21,6 @@ public record UnifiedLoadbalancer(
         String tenantRepositoryUrl,
         List<UnifiedLoadbalancerPoolDTO> pools,
         List<LbIruleDTO> irules,
-        List<LbVirtualServerCiDTO> snowCis
+        List<LbVirtualServerCiDTO> snowCis,
+        boolean canEdit
 ) {}

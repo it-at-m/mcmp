@@ -66,4 +66,5 @@ export interface LoadbalancerDetail {
   pools: LoadbalancerPool[];
   irules: LbIrule[];
   snowCis: LbVirtualServerCi[];
+  canEdit: boolean;
 }

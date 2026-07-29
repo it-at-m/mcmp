@@ -20,6 +20,7 @@ public class UnifiedStorageItemDto {
     private Long used;
     private String protocol;
     private List<AppserviceNameAndSysIdDTO> appservices;
+    private boolean canEdit;
 
     // NFS Specifics
     private String nfs_mount_path;

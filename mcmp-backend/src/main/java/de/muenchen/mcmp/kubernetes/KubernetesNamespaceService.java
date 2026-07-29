@@ -89,6 +89,10 @@ public class KubernetesNamespaceService {
                 ? new java.util.ArrayList<>(namespace.getAppservices())
                 : Collections.emptyList();
 
+        final UserRoles userRoles = AuthUtils.getCurrentUserRoles();
+        final boolean canEdit = Boolean.TRUE.equals(repository.canUserEditNamespace(
+                id, userRoles.getUsername(), userRoles.hasAdminRole()));
+
         return KubernetesNamespaceDetailDTO.builder()
                 .id(namespace.getId())
                 .name(namespace.getName())
@@ -102,6 +106,7 @@ public class KubernetesNamespaceService {
                         .map(a -> new KubernetesAppserviceRefDTO(a.getId(), a.getName()))
                         .sorted(Comparator.comparing(KubernetesAppserviceRefDTO::name))
                         .collect(Collectors.toList()))
+                .canEdit(canEdit)
                 .build();
     }
 }

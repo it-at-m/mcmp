@@ -50,6 +50,7 @@
             >
               <template #statusChips>
                 <appservice-assignment-status-chips
+                  :can-edit="selectedDetail.canEdit"
                   :assigned-count="selectedDetail.appservices?.length ?? 0"
                   entity-label="Loadbalancer"
                 />

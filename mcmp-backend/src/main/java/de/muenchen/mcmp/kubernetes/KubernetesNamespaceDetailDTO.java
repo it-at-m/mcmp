@@ -15,5 +15,6 @@ public record KubernetesNamespaceDetailDTO(
         String k8sUid,
         String environment,
         String clusterName,
-        List<KubernetesAppserviceRefDTO> appservices
+        List<KubernetesAppserviceRefDTO> appservices,
+        boolean canEdit
 ) {}

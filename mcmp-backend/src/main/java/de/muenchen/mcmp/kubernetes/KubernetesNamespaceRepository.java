@@ -14,6 +14,16 @@ import java.util.Optional;
 @Repository
 public interface KubernetesNamespaceRepository extends JpaRepository<KubernetesNamespace, Long> {
 
+    @Query("SELECT CASE WHEN :isAdmin = TRUE OR EXISTS (" +
+            "SELECT 1 FROM KubernetesNamespace n " +
+            "JOIN n.appservices a " +
+            "JOIN a.changeGroup g " +
+            "JOIN g.users u " +
+            "WHERE n.id = :id AND u.username = :username" +
+            ") THEN TRUE ELSE FALSE END")
+    Boolean canUserEditNamespace(@Param("id") Long id, @Param("username") String username,
+                                 @Param("isAdmin") boolean isAdmin);
+
     @Query("SELECT DISTINCT n FROM KubernetesNamespace n LEFT JOIN FETCH n.appservices WHERE n.cluster.id = :clusterId")
     List<KubernetesNamespace> findAllByClusterIdWithAppservices(@Param("clusterId") Long clusterId);
 

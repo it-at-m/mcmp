@@ -55,6 +55,7 @@
             >
               <template #statusChips>
                 <appservice-assignment-status-chips
+                  :can-edit="selectedStorageDetail.canEdit"
                   :assigned-count="
                     selectedStorageDetail.appservices?.length ?? 0
                   "

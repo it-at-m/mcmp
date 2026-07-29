@@ -158,7 +158,7 @@ import type { Page } from "@/types/Page";
 
 import {
   mdiAccountKey,
-  mdiArchiveArrowDownOutline,
+  mdiDelete,
   mdiHistory,
   mdiHome,
   mdiPencil,
@@ -223,7 +223,7 @@ const appserviceShopLinks = [
   },
   {
     Name: "Stilllegen",
-    icon: mdiArchiveArrowDownOutline,
+    icon: mdiDelete,
     color: "btn_red",
     href: "https://it-services.muenchen.de/sp?id=sc_cat_item&sys_id=a58ee9d71b4f16104b4ffd509b4bcbbb",
   },

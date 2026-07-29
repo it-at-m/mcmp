@@ -416,14 +416,7 @@ const loadSnapshotCount = async (id: number) => {
 
 const serversForBatch = computed(() => {
   return selectedServers.value
-    .map((id) => {
-      const full = fullServerCache.value.get(Number(id));
-      if (full) return full;
-      const partial = (props.selectedAppservice?.servers || []).find(
-        (s: any) => Number(s.id) === Number(id)
-      );
-      return partial || null;
-    })
+    .map((id) => fullServerCache.value.get(Number(id)))
     .filter((s): s is Server => !!s);
 });
 

@@ -1,28 +1,8 @@
 <template>
   <v-container
-    v-if="testing"
     fluid
     class="split-container"
   >
-    <v-banner
-      v-if="showBanner"
-      bg-color="red"
-      rounded
-    >
-      <h2>Diese Ansicht ist nur in der Testumgebung verfügbar.</h2>
-      <template #actions>
-        <v-btn
-          icon
-          variant="outlined"
-          aria-label="Schließen"
-          class="mb-7"
-          @click="showBanner = false"
-        >
-          <v-icon>{{ mdiClose }}</v-icon>
-        </v-btn>
-      </template>
-    </v-banner>
-
     <div
       class="split-view"
       :class="{ resizing: isResizing }"
@@ -62,7 +42,7 @@
           class="right-panel-inner"
         >
           <div class="right-panel-sticky">
-            <breadcrumb-nav
+            <detail-page-header
               :appservice-id="
                 selectedStorageDetail.appservices?.[0]?.id ?? null
               "
@@ -72,7 +52,16 @@
               :appservice-count="selectedStorageDetail.appservices?.length ?? 0"
               :current-icon="mdiHarddisk"
               :current-label="getTitle()"
-            />
+            >
+              <template #statusChips>
+                <appservice-assignment-status-chips
+                  :assigned-count="
+                    selectedStorageDetail.appservices?.length ?? 0
+                  "
+                  entity-label="Storage"
+                />
+              </template>
+            </detail-page-header>
             <v-row>
               <v-col class="d-flex align-center">
                 <v-tabs
@@ -169,20 +158,6 @@
       </div>
     </div>
   </v-container>
-  <v-container v-else>
-    <v-row>
-      <v-col
-        cols="12"
-        class="d-flex align-center justify-center"
-      >
-        <img
-          :src="commingSoon"
-          alt="Comming Soon"
-          height="400"
-        />
-      </v-col>
-    </v-row>
-  </v-container>
 </template>
 
 <script setup lang="ts">
@@ -190,30 +165,35 @@ import type { UnifiedStorageItem } from "@/types/Storage";
 import type { UnifiedStorageItemList } from "@/types/UnifiedStorageItemList";
 import type { UnifiedStorageSnapshotItem } from "@/types/UnifiedStorageSnapshotItem";
 
+import { mdiAccountCog, mdiDatabase, mdiHarddisk, mdiHome } from "@mdi/js";
 import {
-  mdiAccountCog,
-  mdiClose,
-  mdiDatabase,
-  mdiHarddisk,
-  mdiHome,
-} from "@mdi/js";
-import { computed, onMounted, onUnmounted, ref, watch, defineAsyncComponent } from "vue";
+  computed,
+  defineAsyncComponent,
+  onMounted,
+  onUnmounted,
+  ref,
+  watch,
+} from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 import storageService from "@/api/storageService";
-import testenvService from "@/api/testenvService.ts";
-import commingSoon from "@/assets/commingSoon.png";
-import BreadcrumbNav from "@/components/common/BreadcrumbNav.vue";
+import AppserviceAssignmentStatusChips from "@/components/common/AppserviceAssignmentStatusChips.vue";
 import CollapseAllCardsButton from "@/components/common/CollapseAllCardsButton.vue";
-
-const StorageDetailsBackup = defineAsyncComponent(() => import("@/components/Storage/StorageDetailsBackup.vue"));
-const StorageDetailsGeneral = defineAsyncComponent(() => import("@/components/Storage/StorageDetailsGeneral.vue"));
-const StorageDetailsPermissions = defineAsyncComponent(() => import("@/components/Storage/StorageDetailsPermissions.vue"));
-
+import DetailPageHeader from "@/components/common/DetailPageHeader.vue";
 import StorageList from "@/components/Storage/StorageList.vue";
 import { useCollapsibleCards } from "@/composables/useCollapsibleCards";
 import { useScrollRestoration } from "@/composables/useScrollRestoration";
 import { useTabQuerySync } from "@/composables/useTabQuerySync";
+
+const StorageDetailsBackup = defineAsyncComponent(
+  () => import("@/components/Storage/StorageDetailsBackup.vue")
+);
+const StorageDetailsGeneral = defineAsyncComponent(
+  () => import("@/components/Storage/StorageDetailsGeneral.vue")
+);
+const StorageDetailsPermissions = defineAsyncComponent(
+  () => import("@/components/Storage/StorageDetailsPermissions.vue")
+);
 
 const leftPanelWidth = ref(400);
 const isResizing = ref(false);
@@ -233,9 +213,6 @@ useTabQuerySync(storageSearch, "search");
 useScrollRestoration(scrollContainer);
 const loadingSnapshots = ref(false);
 const snapshots = ref<UnifiedStorageSnapshotItem[]>([]);
-const testing = ref<boolean>(false); // Only show view in test env
-const showBanner = ref(true); // Controls visibility of the test-environment banner
-const loadingTestEnv = ref(false);
 const storageTotalItems = ref<number | null>(null);
 
 const route = useRoute();
@@ -322,10 +299,6 @@ async function syncSelectionFromRoute(
 }
 
 onMounted(() => {
-  testenvService.getTestEnabled(loadingTestEnv).then((enabled) => {
-    testing.value = enabled;
-  });
-
   syncSelectionFromRoute(route.params.type, route.params.id);
 });
 

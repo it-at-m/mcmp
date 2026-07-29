@@ -60,10 +60,21 @@
           class="right-panel-inner"
         >
           <div class="right-panel-sticky">
-            <breadcrumb-nav
+            <detail-page-header
               :appservice-id="selectedAppservice.id"
               :appservice-name="selectedAppservice.name"
-            />
+            >
+              <template #actions>
+                <action-button
+                  v-for="ticket in appserviceShopLinks"
+                  :key="ticket.Name"
+                  :color="ticket.color"
+                  :icon="ticket.icon"
+                  :tooltip="ticket.Name"
+                  :link="ticket.href"
+                />
+              </template>
+            </detail-page-header>
             <div class="d-flex align-center">
               <v-tabs
                 v-model="tabAppservices"
@@ -145,7 +156,14 @@ import type AppserviceListItem from "@/types/AppserviceList";
 import type JobList from "@/types/JobList";
 import type { Page } from "@/types/Page";
 
-import { mdiHistory, mdiHome } from "@mdi/js";
+import {
+  mdiAccountKey,
+  mdiArchiveArrowDownOutline,
+  mdiHistory,
+  mdiHome,
+  mdiPencil,
+  mdiPlus,
+} from "@mdi/js";
 import { onUnmounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
@@ -158,9 +176,10 @@ import AppserviceDetailsOpenshift from "@/components/Appservice/AppserviceDetail
 import AppserviceDetailsServer from "@/components/Appservice/AppserviceDetailsServer.vue";
 import AppserviceDetailsStorage from "@/components/Appservice/AppserviceDetailsStorage.vue";
 import AppserviceList from "@/components/Appservice/AppserviceList.vue";
-import BreadcrumbNav from "@/components/common/BreadcrumbNav.vue";
 import CollapseAllCardsButton from "@/components/common/CollapseAllCardsButton.vue";
 import CommonAlert from "@/components/common/CommonAlert.vue";
+import DetailPageHeader from "@/components/common/DetailPageHeader.vue";
+import ActionButton from "@/components/Server/ActionButtons/ActionButton.vue";
 import { useCollapsibleCards } from "@/composables/useCollapsibleCards";
 import { useScrollRestoration } from "@/composables/useScrollRestoration";
 import { useTabQuerySync } from "@/composables/useTabQuerySync";
@@ -188,6 +207,33 @@ useScrollRestoration(scrollContainer);
 
 const notFound = ref(false);
 const notFoundId = ref<number | null>(null);
+
+const appserviceShopLinks = [
+  {
+    Name: "Erstellen",
+    icon: mdiPlus,
+    color: "btn_green",
+    href: "https://it-services.muenchen.de/sp?id=sc_cat_item&sys_id=b3b788ca1b2ca550e52dfddacd4bcbb4",
+  },
+  {
+    Name: "Bearbeiten",
+    icon: mdiPencil,
+    color: "accent",
+    href: "https://it-services.muenchen.de/sp?id=sc_cat_item&sys_id=fc165be41b49e990e52dfddacd4bcb1b",
+  },
+  {
+    Name: "Stilllegen",
+    icon: mdiArchiveArrowDownOutline,
+    color: "btn_red",
+    href: "https://it-services.muenchen.de/sp?id=sc_cat_item&sys_id=a58ee9d71b4f16104b4ffd509b4bcbbb",
+  },
+  {
+    Name: "Zugriff bearbeiten",
+    icon: mdiAccountKey,
+    color: "secondary",
+    href: "https://it-services.muenchen.de/sp?id=sc_cat_item&sys_id=58f6edb71b77ec10e52dfddacd4bcb6c",
+  },
+];
 
 const route = useRoute();
 const router = useRouter();

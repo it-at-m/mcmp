@@ -20,5 +20,6 @@ public record UnifiedLoadbalancer(
         List<LbAppserviceRefDTO> appservices,
         String tenantRepositoryUrl,
         List<UnifiedLoadbalancerPoolDTO> pools,
-        List<LbIruleDTO> irules
+        List<LbIruleDTO> irules,
+        List<LbVirtualServerCiDTO> snowCis
 ) {}

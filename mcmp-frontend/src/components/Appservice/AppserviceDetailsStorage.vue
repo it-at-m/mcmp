@@ -1,6 +1,6 @@
 <template>
   <common-card
-    v-if="testing && storages.length"
+    v-if="storages.length"
     :title="cardTitle"
     top-margin="0"
     :is-default-expanded="false"
@@ -34,19 +34,12 @@ import type { UnifiedStorageItemList } from "@/types/UnifiedStorageItemList";
 import { computed, ref, watch } from "vue";
 
 import storageService from "@/api/storageService";
-import testenvService from "@/api/testenvService";
 import CommonCard from "@/components/common/CommonCard.vue";
 import CountBadge from "@/components/common/CountBadge.vue";
 
 const props = defineProps<{
   selectedAppservice: Appservice | null;
 }>();
-
-const testing = ref(false);
-const loadingTestEnv = ref(false);
-testenvService.getTestEnabled(loadingTestEnv).then((enabled) => {
-  testing.value = enabled;
-});
 
 const storages = ref<UnifiedStorageItemList[]>([]);
 const loading = ref(false);
@@ -61,7 +54,7 @@ const headers = [
 ];
 
 async function loadStorages(appservice: Appservice | null) {
-  if (!testing.value || !appservice) {
+  if (!appservice) {
     storages.value = [];
     return;
   }
@@ -78,10 +71,6 @@ watch(
   },
   { immediate: true }
 );
-
-watch(testing, () => {
-  void loadStorages(props.selectedAppservice);
-});
 </script>
 
 <!--suppress CssUnresolvedCustomProperty -->

@@ -521,7 +521,8 @@ const allSelectedServersEligibleToStart = computed(() =>
   allSelectedPass(
     (s: any) =>
       (s as any).canEdit &&
-      ((s as any).cloud?.cloudType === "VMWARE" || (s as any).cloud?.cloudType === "PROXMOX") &&
+      ((s as any).cloud?.cloudType === "VMWARE" ||
+        (s as any).cloud?.cloudType === "PROXMOX") &&
       (s as any).powerState === "poweredOff"
   )
 );
@@ -530,7 +531,8 @@ const allSelectedServersEligibleToStop = computed(() =>
   allSelectedPass(
     (s: any) =>
       (s as any).canEdit &&
-      ((s as any).cloud?.cloudType === "VMWARE" || (s as any).cloud?.cloudType === "PROXMOX") &&
+      ((s as any).cloud?.cloudType === "VMWARE" ||
+        (s as any).cloud?.cloudType === "PROXMOX") &&
       (s as any).powerState === "poweredOn"
   )
 );
@@ -539,7 +541,8 @@ const allSelectedServersEligibleToPause = computed(() =>
   allSelectedPass(
     (s: any) =>
       (s as any).canEdit &&
-      ((s as any).cloud?.cloudType === "VMWARE" || (s as any).cloud?.cloudType === "PROXMOX") &&
+      ((s as any).cloud?.cloudType === "VMWARE" ||
+        (s as any).cloud?.cloudType === "PROXMOX") &&
       (s as any).powerState === "poweredOn"
   )
 );
@@ -549,7 +552,8 @@ const allSelectedServersEligibleToRestart = computed(() =>
   allSelectedPass(
     (s: any) =>
       (s as any).canEdit &&
-      ((s as any).cloud?.cloudType === "VMWARE" || (s as any).cloud?.cloudType === "PROXMOX") &&
+      ((s as any).cloud?.cloudType === "VMWARE" ||
+        (s as any).cloud?.cloudType === "PROXMOX") &&
       (s as any).powerState === "poweredOn"
   )
 );

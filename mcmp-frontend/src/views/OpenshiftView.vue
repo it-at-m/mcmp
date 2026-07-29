@@ -41,13 +41,20 @@
           class="right-panel-inner"
         >
           <div class="right-panel-sticky">
-            <breadcrumb-nav
+            <detail-page-header
               :appservice-id="selectedDetail.appservices?.[0]?.id ?? null"
               :appservice-name="selectedDetail.appservices?.[0]?.name ?? null"
               :appservice-count="selectedDetail.appservices?.length ?? 0"
               :current-icon="mdiKubernetes"
               :current-label="selectedDetail.name"
-            />
+            >
+              <template #statusChips>
+                <appservice-assignment-status-chips
+                  :assigned-count="selectedDetail.appservices?.length ?? 0"
+                  entity-label="Namespace"
+                />
+              </template>
+            </detail-page-header>
             <v-row>
               <v-col class="d-flex align-center">
                 <v-tabs
@@ -113,8 +120,9 @@ import { onMounted, onUnmounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 import openshiftService from "@/api/openshiftService";
-import BreadcrumbNav from "@/components/common/BreadcrumbNav.vue";
+import AppserviceAssignmentStatusChips from "@/components/common/AppserviceAssignmentStatusChips.vue";
 import CollapseAllCardsButton from "@/components/common/CollapseAllCardsButton.vue";
+import DetailPageHeader from "@/components/common/DetailPageHeader.vue";
 import OpenshiftNamespaceDetailsGeneral from "@/components/Openshift/OpenshiftNamespaceDetailsGeneral.vue";
 import OpenshiftNamespaceList from "@/components/Openshift/OpenshiftNamespaceList.vue";
 import { useCollapsibleCards } from "@/composables/useCollapsibleCards";

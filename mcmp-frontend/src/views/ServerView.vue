@@ -67,16 +67,14 @@
           class="right-panel-inner"
         >
           <div class="right-panel-sticky">
-            <v-row class="mb-0">
-              <selected-server-actions-and-status
-                v-if="selectedServerItem && selectedServerItem.id"
-                :selected-server="selectedServerItem"
-                :loading-server-details="loadingDetails"
-                @change="getSelectedServer"
-                @navigate-to-history="navigateToHistory"
-                @navigate-to-patchnight="navigateToPatchnight"
-              />
-            </v-row>
+            <selected-server-actions-and-status
+              v-if="selectedServerItem && selectedServerItem.id"
+              :selected-server="selectedServerItem"
+              :loading-server-details="loadingDetails"
+              @change="getSelectedServer"
+              @navigate-to-history="navigateToHistory"
+              @navigate-to-patchnight="navigateToPatchnight"
+            />
             <v-row>
               <v-col
                 v-if="selectedServerItem"
@@ -236,6 +234,35 @@
                   </v-tab>
 
                   <v-tab
+                    value="Repos"
+                    rounded="lg"
+                    class="d-flex justify-center align-center"
+                  >
+                    <v-tooltip
+                      v-if="!showTabText"
+                      location="bottom"
+                      text="Repos"
+                    >
+                      <template #activator="{ props }">
+                        <v-icon
+                          v-bind="props"
+                          size="x-large"
+                          >{{ mdiPackageVariant }}</v-icon
+                        >
+                      </template>
+                    </v-tooltip>
+
+                    <template v-else>
+                      <v-icon
+                        size="x-large"
+                        class="me-2"
+                        >{{ mdiPackageVariant }}</v-icon
+                      >
+                      <span>Repos</span>
+                    </template>
+                  </v-tab>
+
+                  <v-tab
                     value="History"
                     rounded="lg"
                     class="d-flex justify-center align-center"
@@ -353,6 +380,13 @@
                     />
                   </v-tabs-window-item>
 
+                  <v-tabs-window-item value="Repos">
+                    <server-details-repos
+                      :repos="repos"
+                      :loading="loadingRepos"
+                    />
+                  </v-tabs-window-item>
+
                   <v-tabs-window-item value="Netzwerk">
                     <server-details-netzwerk
                       :nics="nics"
@@ -397,6 +431,7 @@ import type JobList from "@/types/JobList";
 import type { LbServerMembership } from "@/types/LbServerMembership";
 import type MountPoint from "@/types/MountPoint";
 import type Nic from "@/types/Nic";
+import type Repository from "@/types/Repository";
 import type Snapshot from "@/types/Snapshot";
 import type { UnifiedStorageMountItem } from "@/types/UnifiedStorageMountItem.ts";
 
@@ -408,6 +443,7 @@ import {
   mdiHome,
   mdiInformationSlabCircleOutline,
   mdiLan,
+  mdiPackageVariant,
 } from "@mdi/js";
 import { computed, onMounted, onUnmounted, provide, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
@@ -419,6 +455,7 @@ import jobService from "@/api/jobService";
 import loadbalancerService from "@/api/loadbalancerService";
 import mountPointService from "@/api/mountPointService";
 import nicService from "@/api/nicService";
+import repositoryService from "@/api/repositoryService";
 import serverService from "@/api/serverService";
 import snapshotService from "@/api/snapshotService";
 import StorageService from "@/api/storageService.ts";
@@ -432,6 +469,7 @@ import ServerDetailsFestplatten from "@/components/Server/ServerDetailsFestplatt
 import ServerDetailsHistory from "@/components/Server/ServerDetailsHistory.vue";
 import ServerDetailsNetzwerk from "@/components/Server/ServerDetailsNetzwerk.vue";
 import ServerDetailsPatchnight from "@/components/Server/ServerDetailsPatchnight.vue";
+import ServerDetailsRepos from "@/components/Server/ServerDetailsRepos.vue";
 import ServerList from "@/components/Server/ServerList.vue";
 import { useCollapsibleCards } from "@/composables/useCollapsibleCards";
 import { useScrollRestoration } from "@/composables/useScrollRestoration";
@@ -467,6 +505,8 @@ const snapshots = ref<Snapshot[]>([]);
 const loadingSnapshots = ref(true);
 const nics = ref<Nic[]>([]);
 const loadingNics = ref(true);
+const repos = ref<Repository[]>([]);
+const loadingRepos = ref(true);
 const lbMemberships = ref<LbServerMembership[]>([]);
 const loadingLbMemberships = ref(true);
 const backups = ref<Backup[]>([]);
@@ -649,6 +689,8 @@ function loadTabData(tabName: string, silent = false) {
   } else if (tabName === "Netzwerk") {
     fetchNics(silent);
     fetchLbMemberships(silent);
+  } else if (tabName === "Repos") {
+    fetchRepos(silent);
   } else if (tabName === "History") {
     fetchHistory(silent);
   }
@@ -722,6 +764,21 @@ function fetchNics(silent = false) {
     });
   } else {
     nics.value = [];
+    return Promise.resolve();
+  }
+}
+
+function fetchRepos(silent = false) {
+  const serverId = selectedServerItem.value?.id;
+  if (serverId) {
+    const loadingRef = silent ? ref(false) : loadingRepos;
+    return repositoryService
+      .getRepositoriesByServerId(loadingRef, serverId)
+      .then((res) => {
+        repos.value = res;
+      });
+  } else {
+    repos.value = [];
     return Promise.resolve();
   }
 }

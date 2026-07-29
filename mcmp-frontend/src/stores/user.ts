@@ -1,11 +1,8 @@
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 
-
-
 import userService from "@/api/userService"; // Passe den Pfad an, falls nötig
 import User from "@/types/User";
-
 
 export const useUserStore = defineStore("user", () => {
   const user = ref<User | null>(null);

@@ -12,10 +12,16 @@ import java.util.Optional;
 public class RepositoryService {
 
     private final RepositoryRepository repositoryRepository;
+    private final RepositoryMapper repositoryMapper;
 
     @Transactional(readOnly = true)
     public List<Repository> findAll() {
         return repositoryRepository.findAll();
+    }
+
+    @Transactional(readOnly = true)
+    public List<RepositoryDTO> findByServerId(final Long serverId) {
+        return repositoryMapper.toDTOs(repositoryRepository.findAllByServersId(serverId));
     }
 
     @Transactional(readOnly = true)

@@ -50,10 +50,7 @@ public class CloudImportService {
                 .collect(Collectors.toMap(Server::getUuid, Function.identity()));
 
         // 2) Alle UUIDs aus dem DTO sammeln (für spätere Löschung)
-        final Set<String> importedUuids = cloudDTO.servers().stream()
-                .map(CloudImportDTO.Server::uuid)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
+        final Set<String> importedUuids = new HashSet<>();
 
         // 3+4) Update bestehender / Insert neuer Server
         final List<Server> toInsert = new ArrayList<>();
@@ -61,6 +58,11 @@ public class CloudImportService {
         for (final CloudImportDTO.Server dto : cloudDTO.servers()) {
             if (dto.uuid() == null || dto.uuid().isBlank()) {
                 log.warn("Server ohne UUID übersprungen: name={}", dto.name());
+                continue;
+            }
+
+            if (!importedUuids.add(dto.uuid())) {
+                log.warn("Server mit duplizierter UUID übersprungen: name={}, uuid={}", dto.name(), dto.uuid());
                 continue;
             }
 

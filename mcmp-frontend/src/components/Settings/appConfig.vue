@@ -58,7 +58,7 @@
   </common-card>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import type { SystemStatus } from "@/types/AppConfig";
 
 import { mdiContentSave } from "@mdi/js";

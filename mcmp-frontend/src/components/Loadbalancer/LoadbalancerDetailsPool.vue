@@ -227,56 +227,98 @@
 
     <template v-if="pool.members && pool.members.length">
       <v-divider class="my-3" />
-      <v-row>
-        <v-col cols="3">
-          <h3>Server</h3>
-        </v-col>
-        <v-col cols="2">
-          <h3>IP</h3>
-        </v-col>
-        <v-col cols="1">
-          <h3>Port</h3>
-        </v-col>
-        <v-col cols="3">
-          <h3>Monitor</h3>
-        </v-col>
-      </v-row>
-      <v-row
-        v-for="(member, idx) in pool.members"
-        :key="idx"
-      >
-        <v-col
-          cols="3"
-          class="pt-0 links"
-        >
-          <router-link
-            v-if="member.serverId"
-            :to="`/server/${member.serverId}`"
-            >{{ member.serverName }}</router-link
+      <v-row v-if="isCapPool(pool)">
+        <v-col cols="12">
+          <v-alert
+            type="info"
+            density="compact"
           >
-          <p v-else>{{ member.serverName ?? "-" }}</p>
-        </v-col>
-        <v-col
-          cols="2"
-          class="pt-0"
-        >
-          <p>{{ member.ip }}</p>
-        </v-col>
-        <v-col
-          cols="1"
-          class="pt-0"
-        >
-          <p>{{ member.port }}</p>
-        </v-col>
-        <v-col
-          cols="3"
-          class="pt-0"
-        >
-          <p>
-            {{ member.monitorCondition === "inherit" ? "default" : "custom" }}
-          </p>
+            Loadbalancer zeigt auf CAP Ingress - Funktionsgruppe
+            {{ capFunktionsgruppe(pool) }} ->
+            <a
+              class="cap-alert-link"
+              href="https://git.muenchen.de/openshift/openshift-configs/-/wikis/Netzwerksecurity#liste-der-konfigurierten-ingress-rouer-nodeports"
+              target="_blank"
+              rel="noopener noreferrer"
+              >CAP-Anleitung</a
+            >
+          </v-alert>
         </v-col>
       </v-row>
+      <v-row>
+        <v-col
+          cols="12"
+          class="d-flex align-center"
+          style="cursor: pointer"
+          @click="toggleServerList(pool.name)"
+        >
+          <h3>Server ({{ pool.members.length }})</h3>
+          <v-btn
+            :icon="
+              isServerListExpanded(pool.name) ? mdiChevronUp : mdiChevronDown
+            "
+            variant="text"
+            size="small"
+            @click.stop="toggleServerList(pool.name)"
+          />
+        </v-col>
+      </v-row>
+      <v-expand-transition>
+        <div v-show="isServerListExpanded(pool.name)">
+          <v-row>
+            <v-col cols="3">
+              <h3>Server</h3>
+            </v-col>
+            <v-col cols="2">
+              <h3>IP</h3>
+            </v-col>
+            <v-col cols="1">
+              <h3>Port</h3>
+            </v-col>
+            <v-col cols="3">
+              <h3>Monitor</h3>
+            </v-col>
+          </v-row>
+          <v-row
+            v-for="(member, idx) in pool.members"
+            :key="idx"
+          >
+            <v-col
+              cols="3"
+              class="pt-0 links"
+            >
+              <router-link
+                v-if="member.serverId"
+                :to="`/server/${member.serverId}`"
+                >{{ member.serverName }}</router-link
+              >
+              <p v-else>{{ member.serverName ?? "-" }}</p>
+            </v-col>
+            <v-col
+              cols="2"
+              class="pt-0"
+            >
+              <p>{{ member.ip }}</p>
+            </v-col>
+            <v-col
+              cols="1"
+              class="pt-0"
+            >
+              <p>{{ member.port }}</p>
+            </v-col>
+            <v-col
+              cols="3"
+              class="pt-0"
+            >
+              <p>
+                {{
+                  member.monitorCondition === "inherit" ? "default" : "custom"
+                }}
+              </p>
+            </v-col>
+          </v-row>
+        </div>
+      </v-expand-transition>
     </template>
     <v-row v-else>
       <v-col class="pt-0 text-grey">
@@ -300,7 +342,8 @@ import type {
   LoadbalancerPool,
 } from "@/types/LoadbalancerDetail";
 
-import { mdiInformationOutline } from "@mdi/js";
+import { mdiChevronDown, mdiChevronUp, mdiInformationOutline } from "@mdi/js";
+import { ref } from "vue";
 
 import CommonCard from "@/components/common/CommonCard.vue";
 import InfoTooltip from "@/components/common/InfoTooltip.vue";
@@ -308,6 +351,20 @@ import InfoTooltip from "@/components/common/InfoTooltip.vue";
 defineProps<{
   lb: LoadbalancerDetail;
 }>();
+
+const collapsedServerLists = ref<Set<string>>(new Set());
+
+function toggleServerList(poolName: string) {
+  if (collapsedServerLists.value.has(poolName)) {
+    collapsedServerLists.value.delete(poolName);
+  } else {
+    collapsedServerLists.value.add(poolName);
+  }
+}
+
+function isServerListExpanded(poolName: string): boolean {
+  return !collapsedServerLists.value.has(poolName);
+}
 
 function poolHosts(pool: LoadbalancerPool): string[] {
   const hosts = pool.poolRef?.hosts;
@@ -329,6 +386,38 @@ function poolHasHttpMonitor(pool: LoadbalancerPool): boolean {
   return !!pool.monitors?.some((m) => m.type?.toLowerCase().includes("http"));
 }
 
+const CAP_PORT_RANGES: [number, number][] = [
+  [32201, 32207],
+  [32301, 32307],
+  [32401, 32407],
+];
+
+function isCapPort(port: number): boolean {
+  return CAP_PORT_RANGES.some(([from, to]) => port >= from && port <= to);
+}
+
+const CAP_FUNKTIONSGRUPPEN: Record<string, string> = {
+  "01": "Web2Tier",
+  "02": "EAI",
+  "04": "SYSADM",
+  "05": "SWVT",
+  "06": "AUTH",
+  "07": "Monitor",
+};
+
+function capFunktionsgruppe(pool: LoadbalancerPool): string {
+  const suffix = String(pool.members[0]?.port ?? "").slice(-2);
+  return CAP_FUNKTIONSGRUPPEN[suffix] ?? "-";
+}
+
+function isCapPool(pool: LoadbalancerPool): boolean {
+  return (
+    pool.members.length > 0 &&
+    pool.members.every((m) => !m.serverId) &&
+    pool.members.every((m) => isCapPort(m.port))
+  );
+}
+
 function poolTypeLabel(pool: LoadbalancerPool): string {
   if (pool.poolRef?.isDefault === true) {
     return "Standard";
@@ -347,5 +436,14 @@ function poolTypeLabel(pool: LoadbalancerPool): string {
   /* noinspection CssUnresolvedCustomProperty */
   color: rgb(var(--v-theme-link));
   text-decoration: none;
+}
+
+.links a.cap-alert-link,
+.links a.cap-alert-link:visited,
+.links a.cap-alert-link:hover,
+.links a.cap-alert-link:active {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
 }
 </style>

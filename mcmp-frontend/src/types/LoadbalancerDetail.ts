@@ -43,6 +43,12 @@ export interface LbAppserviceRef {
   name: string;
 }
 
+export interface LbVirtualServerCi {
+  snowName: string;
+  snowSysId: string;
+  snowSysClass: string;
+}
+
 export interface LoadbalancerDetail {
   id: number;
   name: string;
@@ -59,4 +65,5 @@ export interface LoadbalancerDetail {
   tenantRepositoryUrl: string | null;
   pools: LoadbalancerPool[];
   irules: LbIrule[];
+  snowCis: LbVirtualServerCi[];
 }

@@ -124,6 +124,10 @@ public class LoadbalancerService {
                         .map(i -> new LbIruleDTO(i.getName(), i.getContent()))
                         .sorted(Comparator.comparing(LbIruleDTO::name))
                         .collect(Collectors.toList()))
+                .snowCis(lvs.getSnowCis().stream()
+                        .map(ci -> new LbVirtualServerCiDTO(ci.getSnowName(), ci.getSnowSysId(), ci.getSnowSysClass()))
+                        .sorted(Comparator.comparing(LbVirtualServerCiDTO::snowName))
+                        .collect(Collectors.toList()))
                 .build();
     }
 

@@ -134,7 +134,9 @@ const serverPowerOnInDialog = computed(() => {
 const action = computed(() => {
   if (props.isBatchOperation) {
     return [
-      ...new Set(props.selectedServers?.map((server) => server.cloud.cloudType)),
+      ...new Set(
+        props.selectedServers?.map((server) => server.cloud.cloudType)
+      ),
     ].map((type) => `${type}_CREATE_SNAPSHOT`);
   }
   return [props.server?.cloud.cloudType + "_CREATE_SNAPSHOT"];

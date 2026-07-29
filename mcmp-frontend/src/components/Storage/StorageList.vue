@@ -484,7 +484,7 @@ onMounted(async () => {
 }
 
 :deep(th:first-child) {
-  padding-left: 6px !important;
+  padding-left: 14px !important;
 }
 
 .links a,

@@ -18,29 +18,15 @@
       @load-more="onLoadMore"
       @row-keydown="onRowKeydown"
     >
-      <template #[`header.name`]="{ column, toggleSort }">
-        <div
-          class="header-container"
-          @click="toggleSort(column)"
-        >
-          <span>Servername</span>
-          <v-icon
-            v-if="sortBy.length > 0 && sortBy[0].key === 'name'"
-            size="small"
-            class="v-data-table-header__sort-icon"
-          >
-            {{ sortBy[0].order === "asc" ? mdiArrowUp : mdiArrowDown }}
-          </v-icon>
+      <template #[`header.status`]>
+        <div class="header-container">
           <v-badge
             :model-value="
               statusFilter.length !== 0 || osFilter !== '' || favoritesFilter
             "
             dot
           >
-            <div
-              class="filter-buttons"
-              @click.stop
-            >
+            <div class="filter-buttons">
               <v-menu :close-on-content-click="false">
                 <template #activator="{ props: activatorProps }">
                   <v-btn
@@ -196,14 +182,14 @@
         </div>
       </template>
 
-      <template #[`item.name`]="{ item }">
-        <div class="server-name-cell">
+      <template #[`item.status`]="{ item }">
+        <div class="server-status-cell">
           <v-btn
             icon
             variant="text"
             density="compact"
             :color="item.isFavorite ? 'warning' : 'grey-lighten-1'"
-            class="mr-1"
+            class="mr-1 ml-2"
             tabindex="-1"
             title="Favorit (Taste F, wenn Zeile fokussiert)"
             @click.stop="toggleFavorite(item)"
@@ -248,6 +234,11 @@
             size="small"
             class="os-icon-inline"
           />
+        </div>
+      </template>
+
+      <template #[`item.name`]="{ item }">
+        <div class="server-name-cell">
           <span class="server-name-text">{{ item.name.split(".")[0] }}</span>
           <v-tooltip
             v-if="item.hasWarnings"
@@ -306,8 +297,6 @@ import type { DataTableHeader } from "vuetify";
 
 import {
   mdiAlert,
-  mdiArrowDown,
-  mdiArrowUp,
   mdiFilterVariant,
   mdiPauseCircle,
   mdiPlayCircle,
@@ -359,6 +348,7 @@ const emit = defineEmits<{
 }>();
 
 const headers = ref<DataTableHeader[]>([
+  { title: "", key: "status", sortable: false, width: "104px" },
   { title: "Servername", key: "name", align: "start", sortable: true },
 ]);
 
@@ -600,6 +590,12 @@ defineExpose({ updateServerPowerState });
   min-height: 0;
 }
 
+.server-status-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .server-name-cell {
   display: flex;
   align-items: center;
@@ -658,6 +654,23 @@ defineExpose({ updateServerPowerState });
 .filter-buttons {
   display: flex;
   gap: 4px;
+}
+
+:deep(td:first-child),
+:deep(th:first-child) {
+  width: 104px !important;
+  min-width: 104px !important;
+  max-width: 104px !important;
+  padding-left: 8px !important;
+  padding-right: 0 !important;
+}
+
+:deep(th:first-child) {
+  padding-left: 14px !important;
+}
+
+:deep(th:nth-child(2) .v-data-table-header__content) {
+  margin-left: 3px;
 }
 
 .links a,

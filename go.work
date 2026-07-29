@@ -1,4 +1,4 @@
-go 1.26.4
+go 1.26.5
 
 use (
 	./mcmp-callback-server
@@ -13,8 +13,8 @@ use (
 	./mcmp-eai-olvm
 	./mcmp-eai-patchnight
 	./mcmp-eai-proxmox
-	./mcmp-eai-rightsizing
 	./mcmp-eai-repo
+	./mcmp-eai-rightsizing
 	./mcmp-eai-scheduler
 	./mcmp-eai-snow
 	./mcmp-eai-ucs

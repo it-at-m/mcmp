@@ -60,13 +60,15 @@ import AppVersion from "@/components/help/AppVersion.vue";
 import HelpChangelog from "@/components/help/HelpChangelog.vue";
 import HelpFaq from "@/components/help/HelpFaq.vue";
 import HelpFaqCategories from "@/components/help/HelpFaqCategories.vue";
+import { useTabQuerySync } from "@/composables/useTabQuerySync";
 import { useUserStore } from "@/stores/user";
 
 const userStore = useUserStore();
 
-// Diese Variablen fehlten:
 const activeTab = ref("faq");
 const isAdmin = computed(
   () => userStore.getUser?.authorities?.includes("ROLE_ADMIN") || false
 );
+
+useTabQuerySync(activeTab);
 </script>

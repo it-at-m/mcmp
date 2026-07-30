@@ -234,6 +234,7 @@
                   </v-tab>
 
                   <v-tab
+                    v-if="showReposTab"
                     value="Repos"
                     rounded="lg"
                     class="d-flex justify-center align-center"
@@ -380,7 +381,10 @@
                     />
                   </v-tabs-window-item>
 
-                  <v-tabs-window-item value="Repos">
+                  <v-tabs-window-item
+                    v-if="showReposTab"
+                    value="Repos"
+                  >
                     <server-details-repos
                       :repos="repos"
                       :loading="loadingRepos"
@@ -485,6 +489,7 @@ const showTabText = computed(() => width.value >= 1500);
 
 const selectedServer = ref<Server[]>([]);
 const selectedServerItem = computed(() => selectedServer.value[0] ?? null);
+const showReposTab = ref(false);
 const tab = ref("Allgemeines");
 const serverSearch = ref("");
 const loadingDetails = ref(true);
@@ -901,6 +906,23 @@ watch(
       getSelectedServer();
     }
   }
+);
+
+watch(
+  selectedServerItem,
+  (newVal) => {
+    // Skip while only the lightweight list item is loaded (managed/roleLinux
+    // aren't known yet) so the tab doesn't flicker away and back while the
+    // full server details are still loading.
+    if (newVal?.managed === undefined || newVal?.roleLinux === undefined) {
+      return;
+    }
+    showReposTab.value = !!(newVal.managed && newVal.roleLinux);
+    if (tab.value === "Repos" && !showReposTab.value) {
+      tab.value = "Allgemeines";
+    }
+  },
+  { immediate: true }
 );
 
 watch(tab, (newTab) => {

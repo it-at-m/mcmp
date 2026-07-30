@@ -916,9 +916,7 @@ function save() {
   form.value?.validate().then((validation: { valid: boolean }) => {
     if (validation.valid) {
       emits("save", actionTmp.value);
-      dialog.value = false;
-      form.value?.resetValidation();
-      awxAdvancedOptions.value = false;
+      reset()
     }
   });
 }

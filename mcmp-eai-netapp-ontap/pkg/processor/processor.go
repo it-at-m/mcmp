@@ -145,7 +145,6 @@ func (p *Processor) AggregateData(ctx context.Context) (*ontap.OntapData, error)
 					cifsMountPath := fmt.Sprintf(`\\%s\%s`, svmFQDN, s.Name)
 
 					if currentVol.NAS.Path == s.Path {
-
 						cleanShares = append(cleanShares, ontap.ShareData{
 							Name:          s.Name,
 							Path:          s.Path,

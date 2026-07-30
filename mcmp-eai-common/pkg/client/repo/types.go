@@ -8,9 +8,7 @@ import (
 	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/logging"
 )
 
-var (
-	ErrRepoUrlRequired = errors.New("repo url is required")
-)
+var ErrRepoUrlRequired = errors.New("repo url is required")
 
 type (
 	HTTPClient interface {

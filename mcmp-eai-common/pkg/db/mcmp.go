@@ -259,7 +259,6 @@ func (c *Client) UpdateJob(job *Job) error {
 		err := c.db.Model(&freshJob).
 			Omit("ID", "Snow", "Awx", "User", "Server", "Appservice", "CreatedAt").
 			Updates(job).Error
-
 		if err != nil {
 			return err
 		}
@@ -489,7 +488,6 @@ func (c *Client) UpdateServer(server *Server) error {
 				"updated_at":              server.UpdatedAt,
 				"version":                 server.Version,
 			}).Error
-
 		if err != nil {
 			var freshServer Server
 			if reloadErr := c.db.First(&freshServer, server.ID).Error; reloadErr == nil {
@@ -542,7 +540,6 @@ func (c *Client) UpdateJobNode(node *JobNode) error {
 
 		// Omit ID and CreatedAt from updates to prevent accidental changes
 		err := c.db.Model(node).Omit("ID", "CreatedAt").Updates(node).Error
-
 		if err != nil {
 			// Reload the node to ensure we have the correct state for the next attempt
 			var freshNode JobNode

@@ -10,6 +10,11 @@ export interface UnifiedStorageItem {
   appservices: AppserviceNameAndSysId[];
   canEdit: boolean;
 
+  // CMDB
+  snowName?: string;
+  snowSysId?: string;
+  snowSysClass?: string;
+
   // NFS Specifics
   nfs_mount_path?: string;
   nfs_export_policy?: {

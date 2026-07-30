@@ -60,6 +60,9 @@ public class UnifiedStorageService {
                             .map(a -> new de.muenchen.mcmp.appservice.AppserviceNameAndSysIdDTO(a.getId(), a.getName(), a.getSysId()))
                             .toList())
                     .canEdit(Boolean.TRUE.equals(ontapVolumeRepository.canUserEditVolume(volume.getVolumeUuid(), username, isAdmin, isStorage)))
+                    .snowName(volume.getSnowName())
+                    .snowSysId(volume.getSnowSysId())
+                    .snowSysClass(volume.getSnowSysClass())
                     .size(volume.getSize())
                     .used(volume.getSpaceLogicalUsed())
                     // Extended Volume Properties
@@ -128,6 +131,9 @@ public class UnifiedStorageService {
                                     .map(a -> new de.muenchen.mcmp.appservice.AppserviceNameAndSysIdDTO(a.getId(), a.getName(), a.getSysId()))
                                     .toList())
                             .canEdit(Boolean.TRUE.equals(ontapQtreeRepository.canUserEditQtree(qtree.getId(), username, isAdmin, isStorage)))
+                            .snowName(qtree.getSnowName())
+                            .snowSysId(qtree.getSnowSysId())
+                            .snowSysClass(qtree.getSnowSysClass())
                             .size(qtree.getQuotaHardLimit()) // Can be null
                             .used(qtree.getQuotaUsedBytes()) // Can be null
                             .diskClass(getDiskClass(qtree.getVolume()))
@@ -164,6 +170,9 @@ public class UnifiedStorageService {
                                             .toList() :
                                     List.of())
                             .canEdit(Boolean.TRUE.equals(storageGridBucketRepository.canUserEditBucket(bucket.getId(), username, isAdmin, isStorage)))
+                            .snowName(bucket.getSnowName())
+                            .snowSysId(bucket.getSnowSysId())
+                            .snowSysClass(bucket.getSnowSysClass())
                             .size(quota) // Using Account Quota as size
                             .used(bucket.getDataBytes())
                             .s3_object_count(bucket.getObjectCount())

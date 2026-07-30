@@ -22,6 +22,11 @@ public class UnifiedStorageItemDto {
     private List<AppserviceNameAndSysIdDTO> appservices;
     private boolean canEdit;
 
+    // CMDB
+    private String snowName;
+    private String snowSysId;
+    private String snowSysClass;
+
     // NFS Specifics
     private String nfs_mount_path;
     private OntapExportPolicyListDto nfs_export_policy;

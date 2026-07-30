@@ -1510,12 +1510,6 @@ public class JobController {
             throw new IllegalArgumentException("Permission must be either 'rw' or 'ro'.");
         }
 
-        List<Server> matchingServers = serverService.findByFqdnIn(Collections.singletonList(fqdn));
-        if (matchingServers == null || matchingServers.isEmpty()) {
-            log.info("FQDN provided by user: {} for serverId: {} is not a valid server.", AuthUtils.getUsername(), serverId);
-            throw new IllegalArgumentException("FQDN does not correspond to a valid server.");
-        }
-
         final UnifiedStorageItemDto storageItem;
         try {
             storageItem = unifiedStorageService.getUnifiedStorageItem(storageUuidObj.toString(), StorageType.NFS);

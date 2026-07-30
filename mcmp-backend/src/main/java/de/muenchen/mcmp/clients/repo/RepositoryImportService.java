@@ -31,38 +31,36 @@ public class RepositoryImportService {
         final long startTime = System.currentTimeMillis();
         log.info("Starting native repository synchronization for {} entries.", dto.repositories().size());
 
-        // 1) Alle vorhandenen Repositories laden für In-Memory Vergleich (minimiert IO)
         final Map<String, Repository> existingReposByName = repositoryRepository.findAll().stream()
                 .collect(Collectors.toMap(Repository::getName, Function.identity()));
 
-        // 2) Namen aus dem Import sammeln für die Sperr-Logik
         final Set<String> importedNames = dto.repositories().stream()
                 .map(RepositoryDTO.RepositoryEntryDTO::name)
                 .filter(Objects::nonNull)
+                .map(String::trim)
                 .collect(Collectors.toSet());
+
+        log.info("Extracted {} valid names from import DTO.", importedNames.size());
 
         int updatedCount = 0;
         int createdCount = 0;
 
-        // 3) Import-Liste mit nativen SQL-Upserts verarbeiten
         for (final RepositoryDTO.RepositoryEntryDTO entry : dto.repositories()) {
-            final String name = entry.name();
+            final String name = entry.name() != null ? entry.name().trim() : null;
             if (name == null || name.isBlank()) continue;
 
             final Repository existing = existingReposByName.get(name);
 
-            // Nur persistieren, wenn tatsächlich eine Änderung vorliegt (In-Memory Check)
             if (existing == null || existing.isLocked() || !Objects.equals(existing.getRepositoryUrl(), entry.url())) {
                 repositoryRepository.upsertRepository(name, entry.url());
                 if (existing == null) createdCount++; else updatedCount++;
             }
         }
 
-        // 4) Repositories sperren, die nicht im Import enthalten sind (via native Update)
         int lockedCount = 0;
         for (Repository repo : existingReposByName.values()) {
-            if (!importedNames.contains(repo.getName())) {
-                // Nur updaten, wenn nicht schon locked/url null (In-Memory Check)
+            String repoName = repo.getName() != null ? repo.getName().trim() : "";
+            if (!importedNames.contains(repoName)) {
                 if (!repo.isLocked() || repo.getRepositoryUrl() != null) {
                     repositoryRepository.lockRepository(repo.getName());
                     lockedCount++;

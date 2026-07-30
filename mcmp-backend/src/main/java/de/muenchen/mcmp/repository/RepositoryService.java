@@ -21,7 +21,7 @@ public class RepositoryService {
 
     @Transactional(readOnly = true)
     public List<RepositoryDTO> findByServerId(final Long serverId) {
-        return repositoryMapper.toDTOs(repositoryRepository.findAllByServersId(serverId));
+        return repositoryMapper.toDTOs(repositoryRepository.findAllByServersIdOrderByNameAscIgnoreCase(serverId));
     }
 
     @Transactional(readOnly = true)

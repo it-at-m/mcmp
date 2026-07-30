@@ -12,7 +12,11 @@ import java.util.Optional;
 public interface RepositoryRepository extends JpaRepository<Repository, Long> {
 
     Optional<Repository> findByName(String name);
+
     List<Repository> findAllByServersId(Long serverId);
+
+    @Query("SELECT r FROM Repository r JOIN r.servers s WHERE s.id = :serverId ORDER BY LOWER(r.name) ASC")
+    List<Repository> findAllByServersIdOrderByNameAscIgnoreCase(@Param("serverId") Long serverId);
 
     @Query(value = "SELECT name, id FROM cmp.repository", nativeQuery = true)
     List<RepositoryIdByName> findAllIdsByName();

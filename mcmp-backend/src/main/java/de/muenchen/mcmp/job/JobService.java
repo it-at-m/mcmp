@@ -381,7 +381,6 @@ public class JobService {
 
         final Map<String, Object> params = new HashMap<>();
         params.put("vm_name", server.getName());
-        params.put("vcenter_uuid", server.getCloud().getServerGui());
         params.put("cpus_new", cpu);
         params.put("memory_new", ram);
 

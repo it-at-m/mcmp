@@ -423,7 +423,7 @@ public class JobService {
         Map<String, Object> params = new HashMap<>();
         params.put("vm_name", server.getName());
         params.put("state", "present");
-        params.put("TeamName", AuthUtils.getUsername()); //TODO TEAMNAME nicht username (Wird nach ablöse des Snapshot Tools entfernt)
+        params.put("TeamName", AuthUtils.getUsername().replace('.','_')); //TODO TEAMNAME nicht username (Wird nach ablöse des Snapshot Tools entfernt)
         params.put("time", duration);
         params.put("snapshot_description", description);
 

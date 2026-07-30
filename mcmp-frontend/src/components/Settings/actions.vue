@@ -2,6 +2,15 @@
   <common-card title="Actions">
     <template #toolbar-actions>
       <action-add-edit
+        title="Action kopieren"
+        :copy="true"
+        :icon="mdiContentCopy"
+        :awx-configs="awxConfigs"
+        :snow-configs="snowConfigs"
+        :all-actions="items"
+        @save="saveAction"
+      />
+      <action-add-edit
         title="Action hinzufügen"
         :icon="mdiPlus"
         :awx-configs="awxConfigs"
@@ -57,7 +66,7 @@ import type Action from "@/types/Action";
 import type { AwxConfig } from "@/types/AwxConfig";
 import type { SnowConfig } from "@/types/SnowConfig";
 
-import { mdiPencil, mdiPlus } from "@mdi/js";
+import { mdiContentCopy, mdiPencil, mdiPlus } from "@mdi/js";
 import { onMounted, ref } from "vue";
 
 import actionService from "@/api/actionService";

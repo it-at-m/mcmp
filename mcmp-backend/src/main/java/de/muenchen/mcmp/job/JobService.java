@@ -143,7 +143,7 @@ public class JobService {
         if (userRoles.hasAdminRole() || userRoles.hasSecurityRole()) {
             return jobRepository.findAllJobsComplete(pageable, jobId, awxJobId, createdFrom, createdTo, changeStartFrom, changeStartTo, userId, serverId, appserviceId, actionIdentifier, statusIdentifier, awxVariables);
         }
-        return jobRepository.findAllJobsBasic(pageable, userId, serverId);
+        return jobRepository.findAllJobsBasic(pageable, userId, serverId, appserviceId);
     }
 
     public Page<JobListBasic> getJobsByAppServiceId(

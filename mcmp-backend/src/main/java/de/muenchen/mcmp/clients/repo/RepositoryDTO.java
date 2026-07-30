@@ -34,9 +34,9 @@ public record RepositoryDTO(
 
     @Builder
     public record RepositoryEntryDTO(
-            @JsonProperty("Name")
+            @JsonProperty("name")
             String name,
-            @JsonProperty("URL")
+            @JsonProperty("url")
             String url
     ) {
     }

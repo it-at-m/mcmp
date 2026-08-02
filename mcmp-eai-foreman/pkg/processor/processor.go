@@ -476,6 +476,16 @@ func (sp *ServiceProcessor) transformForemanHostToMCMP(foremanHost *foreman.Host
 		Source:                    hostNamePtr,
 	}
 
+	// Proxmox VMs don't have a useful UUID or serial number, so fall
+	// back to the DMI UUID from host facts instead. This can be mapped
+	// to the SMBIOS-UUID reported by Proxmox.
+	if mcmpHost.Serialnumber == nil {
+		if dmiUUID := sp.extractStringValueFromFacts(foremanHost.Facts, "dmi::system::uuid"); dmiUUID != nil {
+			lowerCase := strings.ToLower(*dmiUUID)
+			mcmpHost.Serialnumber = &lowerCase
+		}
+	}
+
 	// Apply advanced processing for database and OS type determination
 	sp.determineDatabaseAndOSType(&mcmpHost,
 		sp.extractBooleanValueFromFacts(foremanHost.Facts, "lhm_managed_postgresql"),

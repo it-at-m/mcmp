@@ -17,6 +17,19 @@
       </v-btn>
     </template>
     <v-form ref="form">
+      <v-row v-if="props.copy">
+        <v-col cols="12">
+          <v-select
+            v-model="selectedAction"
+            :items="allActions"
+            item-title="identifier"
+            :item-value="(item) => item"
+            label="Vorlage auswählen"
+            return-object
+          />
+        </v-col>
+      </v-row>
+      <div v-if="!props.copy || selectedAction">
       <v-row>
         <v-col cols="12">
           <v-toolbar color="backgroundLight">
@@ -45,7 +58,7 @@
           <v-text-field
             v-model="actionTmp.identifier"
             label="Identifier"
-            :disabled="!!props.action"
+            :disabled="!!props.action && !props.copy"
             placeholder="Identifier der Aktion. Kann nicht mehr geändert werden und wird vom Entwicklungsteam vergeben!"
             maxlength="50"
             :rules="[
@@ -734,6 +747,7 @@
           </v-toolbar>
         </v-col>
       </v-row>
+      </div>
     </v-form>
   </common-dialog>
 </template>
@@ -744,7 +758,7 @@ import type { AwxConfig } from "@/types/AwxConfig";
 import type { SnowConfig } from "@/types/SnowConfig";
 
 import { mdiInformation } from "@mdi/js";
-import { onMounted, ref, watch } from "vue";
+import { onMounted, ref, watch, toRaw } from "vue";
 
 import testenvService from "@/api/testenvService.ts";
 import CommonDialog from "@/components/common/CommonDialog.vue";
@@ -755,6 +769,7 @@ const props = defineProps<{
   title: string;
   icon: string;
   action?: Action;
+  copy?: boolean;
   awxConfigs: AwxConfig[];
   snowConfigs: SnowConfig[];
   allActions: Action[];
@@ -774,6 +789,7 @@ const form = ref<HTMLFormElement>();
 const awxAdvancedOptions = ref(false);
 const testing = ref(false);
 const loadingTestEnv = ref(false);
+const selectedAction = ref<Action | null>(null);
 
 const actionTmp = ref<Action>(
   props.action ? { ...props.action } : getEmptyAction()
@@ -814,6 +830,19 @@ watch(
     }
   }
 );
+
+watch(selectedAction, (action) => {
+  if (!action) {
+    actionTmp.value = getEmptyAction();
+    return;
+  }
+
+  actionTmp.value = structuredClone(toRaw(action));
+  console.log(actionTmp.value);
+
+  // Identifier zurücksetzen
+  actionTmp.value.identifier = "";
+});
 
 function getEmptyAction(): Action {
   return {
@@ -880,15 +909,14 @@ function reset() {
   dialog.value = false;
   actionTmp.value = getEmptyAction();
   awxAdvancedOptions.value = false;
+  selectedAction.value = null;
 }
 
 function save() {
   form.value?.validate().then((validation: { valid: boolean }) => {
     if (validation.valid) {
       emits("save", actionTmp.value);
-      dialog.value = false;
-      form.value?.resetValidation();
-      awxAdvancedOptions.value = false;
+      reset()
     }
   });
 }

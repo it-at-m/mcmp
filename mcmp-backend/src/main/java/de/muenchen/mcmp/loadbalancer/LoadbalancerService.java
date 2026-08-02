@@ -75,6 +75,10 @@ public class LoadbalancerService {
         final LbVirtualServer lvs = repository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Loadbalancer not found: " + id));
 
+        final UserRoles userRoles = AuthUtils.getCurrentUserRoles();
+        final boolean canEdit = Boolean.TRUE.equals(repository.canUserEditLoadbalancer(
+                id, userRoles.getUsername(), userRoles.hasAdminRole(), userRoles.hasLoadbalancerRole()));
+
         final List<LbVirtualServerPoolRef> poolRefs =
                 lvs.getPoolRefs() != null ? lvs.getPoolRefs() : Collections.emptyList();
 
@@ -124,6 +128,11 @@ public class LoadbalancerService {
                         .map(i -> new LbIruleDTO(i.getName(), i.getContent()))
                         .sorted(Comparator.comparing(LbIruleDTO::name))
                         .collect(Collectors.toList()))
+                .snowCis(lvs.getSnowCis().stream()
+                        .map(ci -> new LbVirtualServerCiDTO(ci.getSnowName(), ci.getSnowSysId(), ci.getSnowSysClass()))
+                        .sorted(Comparator.comparing(LbVirtualServerCiDTO::snowName))
+                        .collect(Collectors.toList()))
+                .canEdit(canEdit)
                 .build();
     }
 

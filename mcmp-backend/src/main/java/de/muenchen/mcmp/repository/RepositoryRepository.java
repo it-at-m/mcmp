@@ -12,13 +12,18 @@ import java.util.Optional;
 public interface RepositoryRepository extends JpaRepository<Repository, Long> {
 
     Optional<Repository> findByName(String name);
+
     List<Repository> findAllByServersId(Long serverId);
+
+    @Query("SELECT r FROM Repository r JOIN r.servers s WHERE s.id = :serverId ORDER BY LOWER(r.name) ASC")
+    List<Repository> findAllByServersIdOrderByNameAscIgnoreCase(@Param("serverId") Long serverId);
 
     @Query(value = "SELECT name, id FROM cmp.repository", nativeQuery = true)
     List<RepositoryIdByName> findAllIdsByName();
 
     @Query(value = "SELECT id FROM cmp.repository WHERE name = :name", nativeQuery = true)
     Optional<Long> findIdByName(@Param("name") String name);
+
 
     @Modifying
     @Transactional
@@ -28,6 +33,29 @@ public interface RepositoryRepository extends JpaRepository<Repository, Long> {
             ON CONFLICT (name) DO NOTHING
             """, nativeQuery = true)
     void insertIfNotExists(@Param("name") String name);
+
+    @Modifying
+    @Transactional
+    @Query(value = """
+            INSERT INTO cmp.repository (name, repository_url, locked, created_at, updated_at)
+            VALUES (:name, :url, FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ON CONFLICT (name) DO UPDATE
+            SET repository_url = EXCLUDED.repository_url,
+                locked = FALSE,
+                updated_at = CURRENT_TIMESTAMP
+            """, nativeQuery = true)
+    void upsertRepository(@Param("name") String name, @Param("url") String url);
+
+    @Modifying
+    @Transactional
+    @Query(value = """
+            UPDATE cmp.repository 
+            SET locked = TRUE, 
+                repository_url = NULL,
+                updated_at = CURRENT_TIMESTAMP 
+            WHERE name = :name
+            """, nativeQuery = true)
+    void lockRepository(@Param("name") String name);
 
     @Modifying
     @Transactional

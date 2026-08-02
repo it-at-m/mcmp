@@ -20,6 +20,12 @@ public class UnifiedStorageItemDto {
     private Long used;
     private String protocol;
     private List<AppserviceNameAndSysIdDTO> appservices;
+    private boolean canEdit;
+
+    // CMDB
+    private String snowName;
+    private String snowSysId;
+    private String snowSysClass;
 
     // NFS Specifics
     private String nfs_mount_path;

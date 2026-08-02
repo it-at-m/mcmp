@@ -26,7 +26,7 @@
     show-actions
     submit-activated
     show-change-warning
-    :check-for-enabled-actions="['CREATE_SNAPSHOT']"
+    :check-for-enabled-actions="action"
     @dialog-cancel="close()"
     @dialog-confirm="save()"
   >
@@ -131,6 +131,17 @@ const serverPowerOnInDialog = computed(() => {
   return props.server?.powerState === "poweredOn";
 });
 
+const action = computed(() => {
+  if (props.isBatchOperation) {
+    return [
+      ...new Set(
+        props.selectedServers?.map((server) => server.cloud.cloudType)
+      ),
+    ].map((type) => `${type}_CREATE_SNAPSHOT`);
+  }
+  return [props.server?.cloud.cloudType + "_CREATE_SNAPSHOT"];
+});
+
 const isDisabled = computed(() => {
   if (props.isBatchOperation) {
     if (!props.parentAllSelectedServersEligible) return true;
@@ -142,8 +153,9 @@ const isDisabled = computed(() => {
   if (!props.server) return true;
   return (
     (props.snapshotCount ?? 0) > 0 ||
-    props.server.cloud?.cloudType !== "VCENTER"
-  );
+    (props.server.cloud?.cloudType !== "VMWARE" //&&
+      //props.server.cloud?.cloudType !== "PROXMOX"
+    ));
 });
 
 function save() {
@@ -151,18 +163,23 @@ function save() {
     if (validation.valid) {
       if (props.isBatchOperation) {
         // Batch: start job for each selected server id. Parent guarantees eligibility.
-        const ids = props.selectedServerIds || [];
-        ids.forEach((id) => {
-          jobService.startJob(loading, "CREATE_SNAPSHOT", id, {
-            duration: days.value,
-            description: description.value,
-            withShutdown: withShutdown.value,
-          });
+        const servers = props.selectedServers || [];
+        servers.forEach((server: Server) => {
+          jobService.startJob(
+            loading,
+            server.cloud.cloudType + "_CREATE_SNAPSHOT",
+            server.id,
+            {
+              duration: days.value,
+              description: description.value,
+              withShutdown: withShutdown.value,
+            }
+          );
         });
       } else if (props.server) {
         jobService.startJob(
           loading,
-          "CREATE_SNAPSHOT",
+          props.server.cloud.cloudType + "_CREATE_SNAPSHOT",
           props.server.id,
           {
             duration: days.value,
@@ -232,7 +249,10 @@ const tooltipText = computed(() => {
   if ((props.snapshotCount ?? 0) > 0) {
     return "Es ist max 1 Snapshot erlaubt.";
   }
-  if (props.server?.cloud?.cloudType != "VCENTER") {
+  if (
+    props.server?.cloud?.cloudType != "VMWARE" &&
+    props.server?.cloud?.cloudType != "PROXMOX"
+  ) {
     return "Snapshots sind für diesen Server nicht möglich.";
   }
   return "Snapshot erstellen"; // Standardtext, wenn Button aktiv

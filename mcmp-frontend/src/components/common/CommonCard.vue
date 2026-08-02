@@ -72,14 +72,18 @@ const props = withDefaults(
     disableExpansion?: boolean;
     isDefaultExpanded?: boolean;
     cardId?: string;
+    modelValue?: boolean;
   }>(),
   {
     topMargin: undefined,
     disableExpansion: false,
     isDefaultExpanded: true,
     cardId: undefined,
+    modelValue: undefined,
   }
 );
+
+const emit = defineEmits<(e: "update:modelValue", value: boolean) => void>();
 
 interface CardExpandStore {
   isExpanded: (id: string, fallback: boolean) => boolean;
@@ -92,15 +96,27 @@ const ownerTab = currentTabRef ? currentTabRef.value : "";
 const cardKey = `${ownerTab}::${props.cardId ?? props.title}`;
 const defaultExpanded = props.disableExpansion ? true : props.isDefaultExpanded;
 
-store?.setExpanded(cardKey, store.isExpanded(cardKey, defaultExpanded));
+// Controlled mode (v-model="modelValue" passed in): the parent owns the
+// state entirely, bypassing the shared cardExpandStore/local fallback.
+const isControlled = props.modelValue !== undefined;
+
+if (!isControlled) {
+  store?.setExpanded(cardKey, store.isExpanded(cardKey, defaultExpanded));
+}
 
 const localExpanded = ref(defaultExpanded);
 
 const expanded = computed({
-  get: () =>
-    store ? store.isExpanded(cardKey, defaultExpanded) : localExpanded.value,
+  get: () => {
+    if (isControlled) return props.modelValue as boolean;
+    return store
+      ? store.isExpanded(cardKey, defaultExpanded)
+      : localExpanded.value;
+  },
   set: (value: boolean) => {
-    if (store) {
+    if (isControlled) {
+      emit("update:modelValue", value);
+    } else if (store) {
       store.setExpanded(cardKey, value);
     } else {
       localExpanded.value = value;

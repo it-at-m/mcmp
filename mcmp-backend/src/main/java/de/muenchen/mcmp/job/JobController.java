@@ -48,13 +48,21 @@ public class JobController {
     private final UnifiedStorageService unifiedStorageService;
     private final UserService userService;
 
-    public static final String START_SERVER = "START_SERVER";
-    public static final String STOP_SERVER = "STOP_SERVER";
-    public static final String RESTART_SERVER = "RESTART_SERVER";
-    public static final String CHANGE_CPU_RAM = "CHANGE_CPU_RAM";
-    public static final String CREATE_SNAPSHOT = "CREATE_SNAPSHOT";
-    public static final String DELETE_SNAPSHOT = "DELETE_SNAPSHOT";
-    public static final String REVERT_SNAPSHOT = "REVERT_SNAPSHOT";
+    public static final String VMWARE_START_SERVER = "VMWARE_START_SERVER";
+    public static final String VMWARE_STOP_SERVER = "VMWARE_STOP_SERVER";
+    public static final String VMWARE_RESTART_SERVER = "VMWARE_RESTART_SERVER";
+    public static final String VMWARE_CHANGE_CPU_RAM = "VMWARE_CHANGE_CPU_RAM";
+    public static final String VMWARE_CREATE_SNAPSHOT = "VMWARE_CREATE_SNAPSHOT";
+    public static final String VMWARE_DELETE_SNAPSHOT = "VMWARE_DELETE_SNAPSHOT";
+    public static final String VMWARE_REVERT_SNAPSHOT = "VMWARE_REVERT_SNAPSHOT";
+
+    public static final String PROXMOX_START_SERVER = "PROXMOX_START_SERVER";
+    public static final String PROXMOX_STOP_SERVER = "PROXMOX_STOP_SERVER";
+    public static final String PROXMOX_RESTART_SERVER = "PROXMOX_RESTART_SERVER";
+    public static final String PROXMOX_CHANGE_CPU_RAM = "PROXMOX_CHANGE_CPU_RAM";
+    public static final String PROXMOX_CREATE_SNAPSHOT = "PROXMOX_CREATE_SNAPSHOT";
+    public static final String PROXMOX_DELETE_SNAPSHOT = "PROXMOX_DELETE_SNAPSHOT";
+    public static final String PROXMOX_REVERT_SNAPSHOT = "PROXMOX_REVERT_SNAPSHOT";
 
     public static final String CHECKMK_SET_DOWNTIME = "CHECKMK_SET_DOWNTIME";
     public static final String CHECKMK_SERVICE_DISCOVERY = "CHECKMK_SERVICE_DISCOVERY";
@@ -96,6 +104,7 @@ public class JobController {
     public static final String STORAGE_DELETE_SNAPSHOT_CIFS = "STORAGE_DELETE_SNAPSHOT_CIFS";
     public static final String STORAGE_CHANGE_SNAPSHOT_POLICY_NFS = "STORAGE_CHANGE_SNAPSHOT_POLICY_NFS";
     public static final String STORAGE_CHANGE_SNAPSHOT_POLICY_CIFS = "STORAGE_CHANGE_SNAPSHOT_POLICY_CIFS";
+
 
     @HasUserOrSpecialRole
     @GetMapping("/{jobId}/hierarchy")
@@ -235,196 +244,94 @@ public class JobController {
     }
 
     // -----------------------------------------------------------------------------------------------------------------
-    // VM Operation JOBs
+    // VMWARE JOBs
     // -----------------------------------------------------------------------------------------------------------------
-    @PostMapping("/create/" + START_SERVER)
-    public void startServer(@RequestParam(name = "serverId") final Long serverId,
+    @PostMapping("/create/" + VMWARE_START_SERVER)
+    public void vmwareStartServer(@RequestParam(name = "serverId") final Long serverId,
                                   @RequestBody final Map<String, Object> awxExtraVars) {
-        if (!serverService.canUserEditServer(serverId)) {
-            logTriedToCreateJob(START_SERVER, serverId);
-            throw new AccessDeniedException("You are not allowed to create a job for this server.");
-        }
-
-        Object scheduleTimeObj = awxExtraVars.get("scheduleTime");
-        Instant scheduleTime;
-        if (scheduleTimeObj != null) {
-            scheduleTime = Instant.parse(scheduleTimeObj.toString());
-        } else{
-            scheduleTime = null;
-        }
-
-        logCreatedJob(START_SERVER, serverId);
-        jobService.startServer(serverId, START_SERVER, scheduleTime);
+        startServer(serverId, awxExtraVars, VMWARE_START_SERVER);
     }
 
-    @PostMapping("/create/" + STOP_SERVER)
-    public void stopServer(@RequestParam(name = "serverId") final Long serverId,
+    @PostMapping("/create/" + VMWARE_STOP_SERVER)
+    public void vmwareStopServer(@RequestParam(name = "serverId") final Long serverId,
                                  @RequestBody final Map<String, Object> awxExtraVars) {
-        if (!serverService.canUserEditServer(serverId)) {
-            logTriedToCreateJob(STOP_SERVER, serverId);
-            throw new AccessDeniedException("You are not allowed to create a job for this server.");
-        }
-
-        Object scheduleTimeObj = awxExtraVars.get("scheduleTime");
-        Instant scheduleTime;
-        if (scheduleTimeObj != null) {
-            scheduleTime = Instant.parse(scheduleTimeObj.toString());
-        } else{
-            scheduleTime = null;
-        }
-
-        logCreatedJob(STOP_SERVER, serverId);
-        jobService.stopServer(serverId, STOP_SERVER, scheduleTime);
-
+        stopServer(serverId, awxExtraVars, VMWARE_STOP_SERVER);
     }
 
-    @PostMapping("/create/" + RESTART_SERVER)
-    public void restartServer(@RequestParam(name = "serverId") final Long serverId,
+    @PostMapping("/create/" + VMWARE_RESTART_SERVER)
+    public void vmwareRestartServer(@RequestParam(name = "serverId") final Long serverId,
                                     @RequestBody final Map<String, Object> awxExtraVars) {
-        if (!serverService.canUserEditServer(serverId)) {
-            logTriedToCreateJob(RESTART_SERVER, serverId);
-            throw new AccessDeniedException("You are not allowed to create a job for this server.");
-        }
-
-        Object scheduleTimeObj = awxExtraVars.get("scheduleTime");
-        Instant scheduleTime;
-        if (scheduleTimeObj != null) {
-            scheduleTime = Instant.parse(scheduleTimeObj.toString());
-        } else{
-            scheduleTime = null;
-        }
-
-        logCreatedJob(RESTART_SERVER, serverId);
-        jobService.restartServer(serverId, RESTART_SERVER, scheduleTime);
+        restartServer(serverId, awxExtraVars, VMWARE_RESTART_SERVER);
     }
 
-    @PostMapping("/create/" + CHANGE_CPU_RAM)
-    public void changeCpuRam(@RequestParam(name = "serverId") final Long serverId,
+    @PostMapping("/create/" + VMWARE_CHANGE_CPU_RAM)
+    public void vmwareChangeCpuRam(@RequestParam(name = "serverId") final Long serverId,
                                    @RequestBody final Map<String, Object> awxExtraVars) {
-        if (!serverService.canUserEditServer(serverId)) {
-            logTriedToCreateJob(CHANGE_CPU_RAM, serverId);
-            throw new AccessDeniedException("You are not allowed to create a job for this server.");
-        }
-
-        ServerFullDTO server = serverService.getServerById(serverId);
-
-        Object scheduleTimeObj = awxExtraVars.get("scheduleTime");
-        Object schedulePatchnightObj = awxExtraVars.get("schedulePatchnight");
-        Instant scheduleTime;
-        if (scheduleTimeObj != null) {
-            scheduleTime = Instant.parse(scheduleTimeObj.toString());
-        } else{
-            scheduleTime = null;
-        }
-        boolean schedulePatchnight = Boolean.parseBoolean(schedulePatchnightObj.toString());
-
-        if (schedulePatchnight && !server.patchnightIncluded()){
-            log.warn("Schedule request by user: {} for serverId: {} can't be accomplished because no participation in the patchnight.", AuthUtils.getUsername(), serverId);
-            throw new IllegalArgumentException("Can't set a schedule because no participation in the patchnight.");
-        }
-
-        // Validate awxExtraVars for CPU and RAM
-        Object cpuObj = awxExtraVars.get("cpu");
-        Object ramObj = awxExtraVars.get("ram");
-        if (cpuObj == null || ramObj == null) {
-            log.info("CPU or RAM values not provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
-            throw new MissingFormatArgumentException("CPU and RAM values must be provided.");
-        }
-        int cpu = Integer.parseInt(cpuObj.toString());
-        int ram = Integer.parseInt(ramObj.toString());
-
-        if (cpu < 2 || (cpu > 72 && cpu > server.numCpu()) || ram < 4 || (ram > 72 && ram > server.memoryMb()*1024)) {
-            log.warn("Invalid CPU or RAM values provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
-            throw new IllegalArgumentException("CPU must be between 2 and 72, RAM must be between 4 and 100.");
-        }
-
-        logCreatedJob(CHANGE_CPU_RAM, serverId);
-        jobService.changeCpuRam(serverId, CHANGE_CPU_RAM, cpu, ram, scheduleTime, schedulePatchnight);
+        changeCpuRam(serverId, awxExtraVars, VMWARE_CHANGE_CPU_RAM);
     }
 
-    @PostMapping("/create/" + CREATE_SNAPSHOT)
-    public void createSnapshot(@RequestParam(name = "serverId") final Long serverId,
+    @PostMapping("/create/" + VMWARE_CREATE_SNAPSHOT)
+    public void vmwareCreateSnapshot(@RequestParam(name = "serverId") final Long serverId,
                                      @RequestBody final Map<String, Object> awxExtraVars){
-        if (!serverService.canUserEditServer(serverId)) {
-            logTriedToCreateJob(CREATE_SNAPSHOT, serverId);
-            throw new AccessDeniedException("You are not allowed to create a job for this server.");
-        }
-
-        // Validate awxExtraVars
-        Object durationObj = awxExtraVars.get("duration");
-        Object descriptionObj = awxExtraVars.get("description");
-        Object withShutdownObj = awxExtraVars.get("withShutdown");
-
-        if (durationObj == null) {
-            log.info("Duration value not provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
-            throw new MissingFormatArgumentException("Duration value must be provided.");
-        }
-        int duration = Integer.parseInt(durationObj.toString());
-        if (duration < 1 || duration > 10) {
-            log.warn("Invalid duration value provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
-            throw new IllegalArgumentException("Duration must be between 1 and 10 days.");
-        }
-
-        String description = (descriptionObj == null) ? "" : descriptionObj.toString();
-        if (description.length() > 50) {
-            log.warn("User {} provided a snapshot description that is too long.", AuthUtils.getUsername());
-            throw new IllegalArgumentException("The description must not exceed 50 characters.");
-        }
-
-        boolean withShutdown = true;
-        if (withShutdownObj != null) {
-            withShutdown = Boolean.parseBoolean(withShutdownObj.toString());
-        }
-
-        logCreatedJob(CREATE_SNAPSHOT, serverId);
-
-        jobService.createSnapshot(serverId, duration*24, description, withShutdown, CREATE_SNAPSHOT);
+        createSnapshot(serverId, awxExtraVars, VMWARE_CREATE_SNAPSHOT);
     }
 
-    @PostMapping("/create/" + DELETE_SNAPSHOT)
-    public void deleteSnapshot(@RequestParam(name = "serverId") final Long serverId,
+    @PostMapping("/create/" + VMWARE_DELETE_SNAPSHOT)
+    public void vmwareDeleteSnapshot(@RequestParam(name = "serverId") final Long serverId,
                                      @RequestBody final Map<String, Object> awxExtraVars) {
-        if (!serverService.canUserEditServer(serverId)) {
-            logTriedToCreateJob(DELETE_SNAPSHOT, serverId);
-            throw new AccessDeniedException("You are not allowed to create a job for this server.");
-        }
-
-        // Validate awxExtraVars
-        Object snapshotIdObj = awxExtraVars.get("snapshotId");
-        Object snapshotNameObj = awxExtraVars.get("snapshotName");
-        if (snapshotIdObj == null && snapshotNameObj == null) {
-            log.info("Snapshot ID or Snapshot Name not provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
-            throw new MissingFormatArgumentException("Snapshot ID or Snapshot Name must be provided.");
-        }
-        long snapshotId = Long.parseLong(snapshotIdObj.toString());
-        String snapshotName = snapshotNameObj.toString();
-
-        logCreatedJob(DELETE_SNAPSHOT, serverId);
-
-        jobService.deleteSnapshot(serverId, snapshotId, snapshotName, DELETE_SNAPSHOT);
+        deleteSnapshot(serverId, awxExtraVars, VMWARE_DELETE_SNAPSHOT);
     }
 
-    @PostMapping("/create/" + REVERT_SNAPSHOT)
-    public void revertSnapshot(@RequestParam(name = "serverId") final Long serverId,
+    @PostMapping("/create/" + VMWARE_REVERT_SNAPSHOT)
+    public void vmwareRevertSnapshot(@RequestParam(name = "serverId") final Long serverId,
                                      @RequestBody final Map<String, Object> awxExtraVars) {
-        if (!serverService.canUserEditServer(serverId)) {
-            logTriedToCreateJob(REVERT_SNAPSHOT, serverId);
-            throw new AccessDeniedException("You are not allowed to create a job for this server.");
-        }
+        revertSnapshot(serverId, awxExtraVars, VMWARE_REVERT_SNAPSHOT);
+    }
 
-        // Validate awxExtraVars
-        Object snapshotIdObj = awxExtraVars.get("snapshotId");
-        Object snapshotNameObj = awxExtraVars.get("snapshotName");
-        if (snapshotIdObj == null && snapshotNameObj == null) {
-            log.info("Snapshot ID or Snapshot Name not provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
-            throw new MissingFormatArgumentException("Snapshot ID or Snapshot Name must be provided.");
-        }
-        long snapshotId = Long.parseLong(snapshotIdObj.toString());
-        String snapshotName = snapshotNameObj.toString();
+    // -----------------------------------------------------------------------------------------------------------------
+    // PROXMOX JOBs
+    // -----------------------------------------------------------------------------------------------------------------
+    @PostMapping("/create/" + PROXMOX_START_SERVER)
+    public void proxmoxStartServer(@RequestParam(name = "serverId") final Long serverId,
+                                  @RequestBody final Map<String, Object> awxExtraVars) {
+        startServer(serverId, awxExtraVars, PROXMOX_START_SERVER);
+    }
 
-        logCreatedJob(REVERT_SNAPSHOT, serverId);
+    @PostMapping("/create/" + PROXMOX_STOP_SERVER)
+    public void proxmoxStopServer(@RequestParam(name = "serverId") final Long serverId,
+                                 @RequestBody final Map<String, Object> awxExtraVars) {
+        stopServer(serverId, awxExtraVars, PROXMOX_STOP_SERVER);
 
-        jobService.revertSnapshot(serverId, snapshotId, snapshotName, REVERT_SNAPSHOT);
+    }
+
+    @PostMapping("/create/" + PROXMOX_RESTART_SERVER)
+    public void proxmoxRestartServer(@RequestParam(name = "serverId") final Long serverId,
+                                    @RequestBody final Map<String, Object> awxExtraVars) {
+        restartServer(serverId, awxExtraVars, PROXMOX_RESTART_SERVER);
+    }
+
+    @PostMapping("/create/" + PROXMOX_CHANGE_CPU_RAM)
+    public void proxmoxChangeCpuRam(@RequestParam(name = "serverId") final Long serverId,
+                                   @RequestBody final Map<String, Object> awxExtraVars) {
+        changeCpuRam(serverId, awxExtraVars, PROXMOX_CHANGE_CPU_RAM);
+    }
+
+    @PostMapping("/create/" + PROXMOX_CREATE_SNAPSHOT)
+    public void proxmoxCreateSnapshot(@RequestParam(name = "serverId") final Long serverId,
+                                     @RequestBody final Map<String, Object> awxExtraVars){
+        createSnapshot(serverId, awxExtraVars, PROXMOX_CREATE_SNAPSHOT);
+    }
+
+    @PostMapping("/create/" + PROXMOX_DELETE_SNAPSHOT)
+    public void proxmoxDeleteSnapshot(@RequestParam(name = "serverId") final Long serverId,
+                                     @RequestBody final Map<String, Object> awxExtraVars) {
+        deleteSnapshot(serverId, awxExtraVars, PROXMOX_DELETE_SNAPSHOT);
+    }
+
+    @PostMapping("/create/" + PROXMOX_REVERT_SNAPSHOT)
+    public void proxmoxRevertSnapshot(@RequestParam(name = "serverId") final Long serverId,
+                                     @RequestBody final Map<String, Object> awxExtraVars) {
+        revertSnapshot(serverId, awxExtraVars, PROXMOX_REVERT_SNAPSHOT);
     }
 
     // -----------------------------------------------------------------------------------------------------------------
@@ -906,8 +813,8 @@ public class JobController {
     }
 
     // ==========================================
-    // WINDOWS SERVER 2025
-    // ==========================================
+// WINDOWS SERVER 2025
+// ==========================================
     @PostMapping("/create/" + WINDOWS_SERVER_2025)
     public void windowsServer2025(@RequestParam(name = "serverId") final Long serverId,
                                   @RequestBody final Map<String, Object> awxExtraVars) {
@@ -991,8 +898,8 @@ public class JobController {
     }
 
     // ==========================================
-    // WINDOWS SERVER 2022
-    // ==========================================
+// WINDOWS SERVER 2022
+// ==========================================
     @PostMapping("/create/" + WINDOWS_SERVER_2022)
     public void windowsServer2022(@RequestParam(name = "serverId") final Long serverId,
                                   @RequestBody final Map<String, Object> awxExtraVars) {
@@ -1079,7 +986,7 @@ public class JobController {
     // DB JOBs
     // -----------------------------------------------------------------------------------------------------------------
     @PostMapping("/create/" + DB_ORACLE_CREATE_BACKUP)
-    public void vmwareOracleCreateBackup(@RequestParam(name = "serverId") final Long serverId,
+    public void createOracleBackup(@RequestParam(name = "serverId") final Long serverId,
                                          @RequestBody final Map<String, Object> awxExtraVars) {
         if (!serverService.canUserEditServer(serverId)) {
             logTriedToCreateJob(DB_ORACLE_CREATE_BACKUP, serverId);
@@ -1153,6 +1060,7 @@ public class JobController {
     // -----------------------------------------------------------------------------------------------------------------
     // Loadbalancer JOBs
     // -----------------------------------------------------------------------------------------------------------------
+
     @PostMapping("/create/" + LOADBALANCER_F5)
     public void createLoadbalancer(@RequestParam(name = "serverId") final Long serverId,
                                    @RequestBody final Map<String, Object> awxExtraVars) {
@@ -1319,6 +1227,8 @@ public class JobController {
     // -----------------------------------------------------------------------------------------------------------------
     // Storage JOBs
     // -----------------------------------------------------------------------------------------------------------------
+
+
     @PostMapping("/create/" + STORAGE_MODIFY_NFS)
     public void storageModifyNfs(@RequestParam(name = "serverId") final Long serverId,
                                  @RequestBody final Map<String, Object> awxExtraVars) {
@@ -1600,12 +1510,6 @@ public class JobController {
             throw new IllegalArgumentException("Permission must be either 'rw' or 'ro'.");
         }
 
-        List<Server> matchingServers = serverService.findByFqdnIn(Collections.singletonList(fqdn));
-        if (matchingServers == null || matchingServers.isEmpty()) {
-            log.info("FQDN provided by user: {} for serverId: {} is not a valid server.", AuthUtils.getUsername(), serverId);
-            throw new IllegalArgumentException("FQDN does not correspond to a valid server.");
-        }
-
         final UnifiedStorageItemDto storageItem;
         try {
             storageItem = unifiedStorageService.getUnifiedStorageItem(storageUuidObj.toString(), StorageType.NFS);
@@ -1741,6 +1645,7 @@ public class JobController {
     // -----------------------------------------------------------------------------------------------------------------
     // Helper Methods
     // -----------------------------------------------------------------------------------------------------------------
+
     private void validateWinDiskSizes(List<Map<String, Object>> disks) {
         for (Map<String, Object> disk : disks) {
             Object sizeObj = disk.get("size");
@@ -1883,5 +1788,192 @@ public class JobController {
         if (!appserviceService.canUserEditAppservice(appserviceId)) {
             throw new AccessDeniedException("You are not allowed to create a Server for this Application Service.");
         }
+    }
+
+    // VM Operations
+    private void startServer(final Long serverId, final Map<String, Object> awxExtraVars, final String startServerIdentifier) {
+        if (!serverService.canUserEditServer(serverId)) {
+            logTriedToCreateJob(startServerIdentifier, serverId);
+            throw new AccessDeniedException("You are not allowed to create a job for this server.");
+        }
+
+        Object scheduleTimeObj = awxExtraVars.get("scheduleTime");
+        Instant scheduleTime;
+        if (scheduleTimeObj != null) {
+            scheduleTime = Instant.parse(scheduleTimeObj.toString());
+        } else{
+            scheduleTime = null;
+        }
+
+        logCreatedJob(startServerIdentifier, serverId);
+        jobService.startServer(serverId, startServerIdentifier, scheduleTime);
+    }
+
+    private void stopServer(final Long serverId, final Map<String, Object> awxExtraVars, final String stopServerIdentifier) {
+        if (!serverService.canUserEditServer(serverId)) {
+            logTriedToCreateJob(stopServerIdentifier, serverId);
+            throw new AccessDeniedException("You are not allowed to create a job for this server.");
+        }
+
+        Object scheduleTimeObj = awxExtraVars.get("scheduleTime");
+        Instant scheduleTime;
+        if (scheduleTimeObj != null) {
+            scheduleTime = Instant.parse(scheduleTimeObj.toString());
+        } else{
+            scheduleTime = null;
+        }
+
+        logCreatedJob(stopServerIdentifier, serverId);
+        jobService.stopServer(serverId, stopServerIdentifier, scheduleTime);
+
+    }
+
+    private void restartServer(final Long serverId, final Map<String, Object> awxExtraVars, final String restartServerIdentifier) {
+        if (!serverService.canUserEditServer(serverId)) {
+            logTriedToCreateJob(restartServerIdentifier, serverId);
+            throw new AccessDeniedException("You are not allowed to create a job for this server.");
+        }
+
+        Object scheduleTimeObj = awxExtraVars.get("scheduleTime");
+        Instant scheduleTime;
+        if (scheduleTimeObj != null) {
+            scheduleTime = Instant.parse(scheduleTimeObj.toString());
+        } else{
+            scheduleTime = null;
+        }
+
+        logCreatedJob(restartServerIdentifier, serverId);
+        jobService.restartServer(serverId, restartServerIdentifier, scheduleTime);
+    }
+
+    private void changeCpuRam(final Long serverId, final Map<String, Object> awxExtraVars, final String changeCpuRamIdentifier) {
+        if (!serverService.canUserEditServer(serverId)) {
+            logTriedToCreateJob(changeCpuRamIdentifier, serverId);
+            throw new AccessDeniedException("You are not allowed to create a job for this server.");
+        }
+
+        ServerFullDTO server = serverService.getServerById(serverId);
+
+        Object scheduleTimeObj = awxExtraVars.get("scheduleTime");
+        Object schedulePatchnightObj = awxExtraVars.get("schedulePatchnight");
+        Instant scheduleTime;
+        if (scheduleTimeObj != null) {
+            scheduleTime = Instant.parse(scheduleTimeObj.toString());
+        } else{
+            scheduleTime = null;
+        }
+        boolean schedulePatchnight = Boolean.parseBoolean(schedulePatchnightObj.toString());
+
+        if (schedulePatchnight && !server.patchnightIncluded()){
+            log.warn("Schedule request by user: {} for serverId: {} can't be accomplished because no participation in the patchnight.", AuthUtils.getUsername(), serverId);
+            throw new IllegalArgumentException("Can't set a schedule because no participation in the patchnight.");
+        }
+
+        // Validate awxExtraVars for CPU and RAM
+        Object cpuObj = awxExtraVars.get("cpu");
+        Object ramObj = awxExtraVars.get("ram");
+        if (cpuObj == null || ramObj == null) {
+            log.info("CPU or RAM values not provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
+            throw new MissingFormatArgumentException("CPU and RAM values must be provided.");
+        }
+        int cpu = Integer.parseInt(cpuObj.toString());
+        int ram = Integer.parseInt(ramObj.toString());
+
+        if (cpu < 2 || (cpu > 72 && cpu > server.numCpu()) || ram < 4 || (ram > 72 && ram > server.memoryMb()*1024)) {
+            log.warn("Invalid CPU or RAM values provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
+            throw new IllegalArgumentException("CPU must be between 2 and 72, RAM must be between 4 and 100.");
+        }
+
+        logCreatedJob(changeCpuRamIdentifier, serverId);
+        jobService.changeCpuRam(serverId, changeCpuRamIdentifier, cpu, ram, scheduleTime, schedulePatchnight);
+    }
+
+    private void createSnapshot(final Long serverId, final Map<String, Object> awxExtraVars, final String createSnapshotIdentifier){
+        if (!serverService.canUserEditServer(serverId)) {
+            logTriedToCreateJob(createSnapshotIdentifier, serverId);
+            throw new AccessDeniedException("You are not allowed to create a job for this server.");
+        }
+
+        // Validate awxExtraVars
+        Object durationObj = awxExtraVars.get("duration");
+        Object descriptionObj = awxExtraVars.get("description");
+        Object withShutdownObj = awxExtraVars.get("withShutdown");
+
+        if (durationObj == null) {
+            log.info("Duration value not provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
+            throw new MissingFormatArgumentException("Duration value must be provided.");
+        }
+        int duration = Integer.parseInt(durationObj.toString());
+        if (duration < 1 || duration > 10) {
+            log.warn("Invalid duration value provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
+            throw new IllegalArgumentException("Duration must be between 1 and 10 days.");
+        }
+
+        String description = (descriptionObj == null) ? "" : descriptionObj.toString();
+        if (description.length() > 50) {
+            log.warn("User {} provided a snapshot description that is too long.", AuthUtils.getUsername());
+            throw new IllegalArgumentException("The description must not exceed 50 characters.");
+        }
+
+        boolean withShutdown = true;
+        if (withShutdownObj != null) {
+            withShutdown = Boolean.parseBoolean(withShutdownObj.toString());
+        }
+
+        logCreatedJob(createSnapshotIdentifier, serverId);
+
+        jobService.createSnapshot(serverId, duration*24, description, withShutdown, createSnapshotIdentifier);
+    }
+
+    private void deleteSnapshot(final Long serverId, final Map<String, Object> awxExtraVars, final String deleteSnapshotIdentifier) {
+        if (!serverService.canUserEditServer(serverId)) {
+            logTriedToCreateJob(deleteSnapshotIdentifier, serverId);
+            throw new AccessDeniedException("You are not allowed to create a job for this server.");
+        }
+
+        // Validate awxExtraVars
+        Object snapshotIdObj = awxExtraVars.get("snapshotId");
+        Object snapshotNameObj = awxExtraVars.get("snapshotName");
+        if (deleteSnapshotIdentifier.contains("VMWWARE") && snapshotIdObj == null) {
+            log.info("Snapshot ID not provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
+            throw new MissingFormatArgumentException("Snapshot ID must be provided.");
+        }
+        if (deleteSnapshotIdentifier.contains("PROXMOX") && snapshotNameObj == null) {
+            log.info("Snapshot Name not provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
+            throw new MissingFormatArgumentException("Snapshot Name must be provided.");
+        }
+
+        long snapshotId = Long.parseLong(snapshotIdObj.toString());
+        String snapshotName = snapshotNameObj.toString();
+
+        logCreatedJob(deleteSnapshotIdentifier, serverId);
+
+        jobService.deleteSnapshot(serverId, snapshotId, snapshotName, deleteSnapshotIdentifier);
+    }
+
+    private void revertSnapshot(final Long serverId, final Map<String, Object> awxExtraVars, final String revertSnapshotIdentifier) {
+        if (!serverService.canUserEditServer(serverId)) {
+            logTriedToCreateJob(revertSnapshotIdentifier, serverId);
+            throw new AccessDeniedException("You are not allowed to create a job for this server.");
+        }
+
+        // Validate awxExtraVars
+        Object snapshotIdObj = awxExtraVars.get("snapshotId");
+        Object snapshotNameObj = awxExtraVars.get("snapshotName");
+        if (revertSnapshotIdentifier.contains("VMWWARE") && snapshotIdObj == null) {
+            log.info("Snapshot ID not provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
+            throw new MissingFormatArgumentException("Snapshot ID must be provided.");
+        }
+        if (revertSnapshotIdentifier.contains("PROXMOX") && snapshotNameObj == null) {
+            log.info("Snapshot Name not provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
+            throw new MissingFormatArgumentException("Snapshot Name must be provided.");
+        }
+
+        long snapshotId = Long.parseLong(snapshotIdObj.toString());
+        String snapshotName = snapshotNameObj.toString();
+
+        logCreatedJob(revertSnapshotIdentifier, serverId);
+
+        jobService.revertSnapshot(serverId, snapshotId, snapshotName, revertSnapshotIdentifier);
     }
 }

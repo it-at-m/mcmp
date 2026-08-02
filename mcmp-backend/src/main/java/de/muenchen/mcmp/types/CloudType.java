@@ -1,7 +1,7 @@
 package de.muenchen.mcmp.types;
 
 public enum CloudType {
-    VCENTER,
+    VMWARE,
     PROXMOX,
     UCS_MANAGER,
     UCS_CIMC,

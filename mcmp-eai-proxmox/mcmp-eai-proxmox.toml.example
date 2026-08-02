@@ -11,8 +11,8 @@ APITokenID          = 'root@pam!token-name'
 APITokenSecret      = 'token-secret'
 
 [[MCMP]]
-OAuthUrl = 'http://keycloak:8100/auth'
-OAuthRealm = 'local_realm'
-OAuthClientId = 'local'
+OAuthUrl          = 'http://keycloak:8100/auth'
+OAuthRealm        = 'local_realm'
+OAuthClientId     = 'local'
 OAuthClientSecret = 'client_secret'
-ApiEndpoint = 'http://localhost:8083/clients/eai-backend-service/cloud/import'
+ApiEndpoint       = 'http://localhost:8083/clients/eai-backend-service/cloud/import'

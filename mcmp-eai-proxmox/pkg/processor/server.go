@@ -30,7 +30,6 @@ type Server struct {
 	Name                string     `json:"name,omitempty"`                   // Name of the server on the hypervisor.
 	VMID                string     `json:"vm_id,omitempty"`                  // Sequential ID of the server on the hypervisor.
 	UUID                string     `json:"uuid,omitempty"`                   // Unique UUID for the server.
-	InstanceUUID        string     `json:"instance_uuid,omitempty"`          // UUID of the VM instance.
 	Cluster             string     `json:"cluster,omitempty"`                // Cluster the VM is hosted in.
 	Host                string     `json:"host,omitempty"`                   // Host/Node the VM is hosted on.
 	PowerState          PowerState `json:"power_state,omitempty"`            // Must be "poweredOn" or "poweredOff"
@@ -62,11 +61,7 @@ func (p *Processor) ProcessServer(ctx context.Context, res *pdm.Resource) (*Serv
 	if !ok {
 		return nil, fmt.Errorf("failed to process vm %d: failed to determine node FQDN of %s", res.VMID, res.Node)
 	}
-
 	server.Host = nodeFQDN
-	// obviously not a real UUID, but this value only really needs to be
-	// unique so we can import all servers.
-	server.UUID = fmt.Sprintf("%s:%d", nodeFQDN, res.VMID)
 
 	// ID schema: remote/<remote>/guest/<vmid>
 	ps := strings.Split(res.ID, "/")
@@ -84,9 +79,9 @@ func (p *Processor) ProcessServer(ctx context.Context, res *pdm.Resource) (*Serv
 	for _, attr := range strings.Split(cfg.SMBIOS1, ",") {
 		k, v, ok := strings.Cut(attr, "=")
 		if !ok {
-			server.InstanceUUID = attr
+			server.UUID = attr
 		} else if k == "uuid" {
-			server.InstanceUUID = v
+			server.UUID = v
 		}
 	}
 

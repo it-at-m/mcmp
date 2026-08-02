@@ -316,16 +316,19 @@ public interface JobRepository extends JpaRepository<Job, Long> {
     LEFT JOIN cmp.appservice a on j.appservice_id = a.id
     WHERE (CAST(:userId AS bigint) IS NULL OR j.user_id = :userId)
     AND (CAST(:serverId AS bigint) IS NULL OR j.server_id = :serverId)
+    AND (CAST(:appserviceId AS bigint) IS NULL OR j.appservice_id = :appserviceId)
     """,
             countQuery = """
     SELECT COUNT(*)
     FROM cmp.job j
     WHERE (CAST(:userId AS bigint) IS NULL OR j.user_id = :userId)
     AND (CAST(:serverId AS bigint) IS NULL OR j.server_id = :serverId)
+    AND (CAST(:appserviceId AS bigint) IS NULL OR j.appservice_id = :appserviceId)
     """, nativeQuery = true)
     Page<JobListBasic> findAllJobsBasic(Pageable pageable,
                                         @Param("userId") Long userId,
-                                        @Param("serverId") Long serverId);
+                                        @Param("serverId") Long serverId,
+                                        @Param("appserviceId") Long appserviceId);
 
     @Query(value = """
         SELECT

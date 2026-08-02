@@ -19,6 +19,7 @@ export const DISK_BASE = `${API}/disk`;
 export const MOUNTPOINT_BASE = `${API}/mount-point`;
 export const SNAPSHOT_BASE = `${API}/snapshot`;
 export const NIC_BASE = `${API}/nic`;
+export const REPOSITORY_BASE = `${API}/repository`;
 export const BACKUP_BASE = `${API}/backup`;
 export const INFOBLOX_CONFIG_BASE = `${API}/infobloxConfig`;
 export const INFOBLOX_FQDN_BASE = `${API}/infobloxFQDN`;

@@ -21,7 +21,7 @@ public interface CloudMapper {
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "apiPasswordEncrypted", ignore = true)
     @ValueMappings({
-            @ValueMapping(target = "VCENTER", source = "VCENTER"),
+            @ValueMapping(target = "VMWARE", source = "VMWARE"),
             @ValueMapping(target = "PROXMOX", source = "PROXMOX"),
             @ValueMapping(target = "UCS_MANAGER", source = "UCS_MANAGER"),
             @ValueMapping(target = "UCS_CIMC", source = "UCS_CIMC")

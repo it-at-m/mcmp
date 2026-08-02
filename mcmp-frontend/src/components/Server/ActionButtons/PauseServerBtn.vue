@@ -32,7 +32,7 @@
     max-width="600"
     show-actions
     :submit-activated="validated"
-    :check-for-enabled-actions="['STOP_SERVER', 'START_SERVER']"
+    :check-for-enabled-actions="action"
     @dialog-confirm="onDialogConfirm"
     @dialog-cancel="onDialogCancel"
   >
@@ -184,6 +184,20 @@ const computedDisabled = computed(() => {
   return props.disabled ?? false;
 });
 
+const action = computed(() => {
+  if (props.isBatchOperation) {
+    return [
+      ...new Set(
+        props.selectedServers?.map((server) => server.cloud.cloudType)
+      ),
+    ].flatMap((type) => [`${type}_STOP_SERVER`, `${type}_START_SERVER`]);
+  }
+  return [
+    props.server?.cloud.cloudType + "_STOP_SERVER",
+    props.server?.cloud.cloudType + "_START_SERVER",
+  ];
+});
+
 const tooltipText = computed(() => {
   return props.tooltip || "Geplante Downtime (Ausschalten & Wiederhochfahren)";
 });
@@ -209,26 +223,29 @@ async function onDialogConfirm() {
 
   try {
     if (props.isBatchOperation) {
-      const ids =
-        props.selectedServerIds ??
-        props.selectedServers?.map((s) => s.id) ??
-        [];
-      if (ids.length === 0 || !props.parentAllSelectedServersEligible) return;
-
-      const promises = ids.flatMap((id) => [
-        jobService.startJob(loading, "STOP_SERVER", id, {
-          scheduleTime: stopDate.value.toISOString(),
-        }),
-        jobService.startJob(loading, "START_SERVER", id, {
-          scheduleTime: startDate.value.toISOString(),
-        }),
-      ]);
-
-      await Promise.all(promises);
+      const servers = props.selectedServers || [];
+      servers.forEach((server: Server) => {
+        jobService.startJob(
+          loading,
+          server.cloud.cloudType + "_STOP_SERVER",
+          server.id,
+          {
+            scheduleTime: stopDate.value.toISOString(),
+          }
+        );
+        jobService.startJob(
+          loading,
+          server.cloud.cloudType + "_START_SERVER",
+          server.id,
+          {
+            scheduleTime: startDate.value.toISOString(),
+          }
+        );
+      });
     } else if (props.server) {
       await jobService.startJob(
         loading,
-        "STOP_SERVER",
+        props.server.cloud.cloudType + "_STOP_SERVER",
         props.server.id,
         {
           scheduleTime: stopDate.value.toISOString(),
@@ -236,7 +253,7 @@ async function onDialogConfirm() {
       );
       await jobService.startJob(
         loading,
-        "START_SERVER",
+        props.server.cloud.cloudType + "_START_SERVER",
         props.server.id,
         {
           scheduleTime: startDate.value.toISOString(),

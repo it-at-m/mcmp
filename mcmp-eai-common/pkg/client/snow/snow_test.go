@@ -1,11 +1,14 @@
 package snow
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/logging"
 )
@@ -900,6 +903,349 @@ func TestGetFoundationData(t *testing.T) {
 				if !compareUsers(member, tt.expectedResult.Members[i]) {
 					t.Errorf("member at index %d differs: expected %+v, got %+v", i, tt.expectedResult.Members[i], member)
 				}
+			}
+		})
+	}
+}
+
+func TestGetVMwareInstanceData(t *testing.T) {
+	tests := []struct {
+		name           string
+		httpResponse   *http.Response
+		expectedResult []ConfigurationItemWithAppServices
+		expectedError  error
+	}{
+		{
+			name: "success with pagination stop",
+			httpResponse: &http.Response{
+				StatusCode: http.StatusOK,
+				Body: io.NopCloser(strings.NewReader(`
+        {
+          "result": [{
+            "name": "vm1",
+            "sys_id": "sys1",
+            "ip_address": "10.0.0.1",
+            "sys_class_name": "cmdb_ci_vmware_instance"
+          }]
+        }
+        `)),
+			},
+			expectedResult: []ConfigurationItemWithAppServices{
+				NewConfigurationItemWithAppServices(map[string]any{
+					"name":           "vm1",
+					"sys_id":         "sys1",
+					"ip_address":     "10.0.0.1",
+					"sys_class_name": "cmdb_ci_vmware_instance",
+				}),
+			},
+		},
+		{
+			name: "empty response",
+			httpResponse: &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader(`{"result": []}`)),
+			},
+			expectedResult: []ConfigurationItemWithAppServices{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			callCount := 0
+			mockHttpClient := &MockHttpClient{
+				DoFunc: func(req *http.Request) (*http.Response, error) {
+					// Mock für die Key-Value Abfrage
+					if strings.Contains(req.URL.Path, "cmdb_key_value") {
+						return &http.Response{
+							StatusCode: http.StatusOK,
+							Body:       io.NopCloser(strings.NewReader(`{"result": []}`)),
+						}, nil
+					}
+
+					callCount++
+
+					if callCount == 1 && tt.httpResponse != nil {
+						// Erster Aufruf liefert die Testdaten
+						return tt.httpResponse, nil
+					}
+
+					return &http.Response{
+						StatusCode: http.StatusOK,
+						Body:       io.NopCloser(strings.NewReader(`{"result": []}`)),
+					}, nil
+				},
+			}
+			client := &Client{
+				httpClient:       mockHttpClient,
+				urlCmdbDataTable: "http://example.com/%s",
+				urlCmdbKeyValue:  "http://example.com/cmdb_key_value",
+				DebugLogger:      logging.NewDebugLogger(nil),
+			}
+			res, err := client.GetVMwareInstanceData()
+			if err != nil && tt.expectedError == nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+			if len(res) != len(tt.expectedResult) {
+				t.Errorf("expected %d results, got %d", len(tt.expectedResult), len(res))
+			}
+		})
+	}
+}
+
+func TestGetGreenItMethods(t *testing.T) {
+	mockJSON := `{"result": [{"ci_sys_id": "ci1", "task_closed_at": "2024-01-01"}]}`
+
+	tests := []struct {
+		name   string
+		method func(*Client) (map[string]string, error)
+	}{
+		{"GetLockedShutdown", func(c *Client) (map[string]string, error) { return c.GetLockedShutdown() }},
+		{"GetLockedRightsize", func(c *Client) (map[string]string, error) { return c.GetLockedRightsize() }},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockHttpClient := &MockHttpClient{
+				DoFunc: func(req *http.Request) (*http.Response, error) {
+					return &http.Response{
+						StatusCode: http.StatusOK,
+						Body:       io.NopCloser(strings.NewReader(mockJSON)),
+					}, nil
+				},
+			}
+			client := &Client{httpClient: mockHttpClient, DebugLogger: logging.NewDebugLogger(nil)}
+			res, err := tt.method(client)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if res["ci1"] != "2024-01-01" {
+				t.Errorf("expected 2024-01-01, got %s", res["ci1"])
+			}
+		})
+	}
+}
+
+func TestGetServerForVMwareInstance(t *testing.T) {
+	mockHttpClient := &MockHttpClient{
+		DoFunc: func(req *http.Request) (*http.Response, error) {
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader(`{"result": {"sys_id": "srv1", "name": "server1"}}`)),
+			}, nil
+		},
+	}
+	client := &Client{httpClient: mockHttpClient, urlVMwareServer: "http://example.com/%s", DebugLogger: logging.NewDebugLogger(nil)}
+	res, err := client.GetServerForVMwareInstance("vm1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.SysID != "srv1" {
+		t.Errorf("expected srv1, got %s", res.SysID)
+	}
+}
+
+func TestGetDataTableMethods(t *testing.T) {
+	tests := []struct {
+		name   string
+		method func(*Client) ([]ConfigurationItemWithAppServices, error)
+	}{
+		{"Kubernetes", func(c *Client) ([]ConfigurationItemWithAppServices, error) { return c.GetKubernetesNamespaceData() }},
+		{"Storage", func(c *Client) ([]ConfigurationItemWithAppServices, error) { return c.GetStorageVolumeData() }},
+		{"LB", func(c *Client) ([]ConfigurationItemWithAppServices, error) { return c.GetLbServiceData() }},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			callCount := 0
+			mockHttpClient := &MockHttpClient{
+				DoFunc: func(req *http.Request) (*http.Response, error) {
+					if strings.Contains(req.URL.Path, "cmdb_key_value") {
+						return &http.Response{
+							StatusCode: http.StatusOK,
+							Body:       io.NopCloser(strings.NewReader(`{"result": [{"configuration_item.sys_id": "id1", "value": "APP1"}]}`)),
+						}, nil
+					}
+
+					callCount++
+					if callCount == 1 {
+						return &http.Response{
+							StatusCode: http.StatusOK,
+							Body:       io.NopCloser(strings.NewReader(`{"result": [{"sys_id": "id1", "name": "item1"}]}`)),
+						}, nil
+					}
+
+					return &http.Response{
+						StatusCode: http.StatusOK,
+						Body:       io.NopCloser(strings.NewReader(`{"result": []}`)),
+					}, nil
+				},
+			}
+			client := &Client{
+				httpClient:       mockHttpClient,
+				urlCmdbDataTable: "http://example.com/%s",
+				urlCmdbKeyValue:  "http://example.com/cmdb_key_value",
+				DebugLogger:      logging.NewDebugLogger(nil),
+			}
+
+			res, err := tt.method(client)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if len(res) != 1 {
+				t.Fatalf("expected 1 result, got %d", len(res))
+			}
+			if res[0].GetSysID() != "id1" {
+				t.Errorf("expected id1, got %s", res[0].GetSysID())
+			}
+			if res[0].GetAppServiceNumbers()[0] != "APP1" {
+				t.Errorf("expected APP1, got %v", res[0].GetAppServiceNumbers())
+			}
+		})
+	}
+}
+
+func TestIdentifyReconcilePackageRepository(t *testing.T) {
+	tests := []struct {
+		name           string
+		repositoryName string
+		httpResponse   string
+		expectedOp     string
+		expectedSysId  string
+	}{
+		{
+			name:           "new repository (INSERT)",
+			repositoryName: "test1",
+			httpResponse: `{
+				"result": {
+					"items": [
+						{
+							"className": "x_lam_lhm_packag_0_cmdb_ci_package_repository",
+							"operation": "INSERT",
+							"sysId": "123",
+							"identifierEntrySysId": "Unknown",
+							"errorCount": 0,
+							"warningCount": 0,
+							"inputIndices": [0]
+						}
+					],
+					"hasError": false,
+					"hasWarning": false
+				}
+			}`,
+			expectedOp:    "INSERT",
+			expectedSysId: "123",
+		},
+		{
+			name:           "existing repository (NO_CHANGE)",
+			repositoryName: "test2",
+			httpResponse: `{
+				"result": {
+					"items": [
+						{
+							"className": "x_lam_lhm_packag_0_cmdb_ci_package_repository",
+							"operation": "NO_CHANGE",
+							"sysId": "456",
+							"identifierEntrySysId": "789",
+							"errorCount": 0,
+							"warningCount": 0,
+							"inputIndices": [0]
+						}
+					],
+					"hasError": false,
+					"hasWarning": false
+				}
+			}`,
+			expectedOp:    "NO_CHANGE",
+			expectedSysId: "456",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockHttpClient := &MockHttpClient{
+				DoFunc: func(req *http.Request) (*http.Response, error) {
+					// 1. Grundlegende HTTP-Prüfungen
+					if req.Method != http.MethodPost {
+						t.Errorf("expected POST request, got %s", req.Method)
+					}
+					if req.URL.String() != "http://example.com/identify" {
+						t.Errorf("expected URL http://example.com/identify, got %s", req.URL.String())
+					}
+					if req.Header.Get("Content-Type") != "application/json" {
+						t.Errorf("expected application/json content-type, got %s", req.Header.Get("Content-Type"))
+					}
+
+					// 2. Request Payload detailliert prüfen
+					body, _ := io.ReadAll(req.Body)
+					var payload IdentifyReconcilePayload
+					if err := json.Unmarshal(body, &payload); err != nil {
+						t.Errorf("failed to unmarshal request body: %v", err)
+					}
+
+					if len(payload.Items) != 1 {
+						t.Fatalf("expected 1 item in payload, got %d", len(payload.Items))
+					}
+
+					item := payload.Items[0]
+					// Prüfung der ClassName
+					if item.ClassName != "x_lam_lhm_packag_0_cmdb_ci_package_repository" {
+						t.Errorf("wrong className: expected x_lam_lhm_packag_0_cmdb_ci_package_repository, got %s", item.ClassName)
+					}
+					// Prüfung der InternalID
+					if item.InternalID != "package_repo" {
+						t.Errorf("wrong internal_id: expected package_repo, got %s", item.InternalID)
+					}
+					// Prüfung der Values (name, life_cycle_stage, etc.)
+					if item.Values["name"] != tt.repositoryName {
+						t.Errorf("wrong value 'name': expected %s, got %v", tt.repositoryName, item.Values["name"])
+					}
+					if item.Values["life_cycle_stage"] != "Operational" {
+						t.Errorf("wrong value 'life_cycle_stage': expected Operational, got %v", item.Values["life_cycle_stage"])
+					}
+					if item.Values["life_cycle_stage_status"] != "In Use" {
+						t.Errorf("wrong value 'life_cycle_stage_status': expected In Use, got %v", item.Values["life_cycle_stage_status"])
+					}
+					// Prüfung der Source Info
+					if item.SysObjectSourceInfo == nil {
+						t.Fatal("sys_object_source_info is missing in request")
+					}
+					if item.SysObjectSourceInfo.SourceName != "MCMP" {
+						t.Errorf("wrong source_name: expected MCMP, got %s", item.SysObjectSourceInfo.SourceName)
+					}
+					// Prüfung des Zeitstempel-Formats (YYYY-MM-DD HH:MM:SS)
+					_, err := time.Parse("2006-01-02 15:04:05", item.SysObjectSourceInfo.SourceRecencyTimestamp)
+					if err != nil {
+						t.Errorf("wrong timestamp format: %s", item.SysObjectSourceInfo.SourceRecencyTimestamp)
+					}
+
+					return &http.Response{
+						StatusCode: http.StatusOK,
+						Body:       io.NopCloser(strings.NewReader(tt.httpResponse)),
+					}, nil
+				},
+			}
+
+			client := &Client{
+				httpClient:           mockHttpClient,
+				urlIdentifyReconcile: "http://example.com/identify",
+				DebugLogger:          logging.NewDebugLogger(nil),
+			}
+
+			res, err := client.IdentifyReconcilePackageRepository(context.Background(), tt.repositoryName)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			// 3. Response-Verarbeitung prüfen
+			if res.Result.HasError {
+				t.Errorf("response reported error, but none expected")
+			}
+			item := res.Result.Items[0]
+			if item.Operation != tt.expectedOp {
+				t.Errorf("expected operation %s, got %s", tt.expectedOp, item.Operation)
+			}
+			if item.SysId != tt.expectedSysId {
+				t.Errorf("expected sysId %s, got %s", tt.expectedSysId, item.SysId)
 			}
 		})
 	}

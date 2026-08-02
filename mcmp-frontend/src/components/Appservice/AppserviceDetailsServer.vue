@@ -72,17 +72,6 @@
             extra-sure-checkbox-text="Mir ist bewusst, dass durch das Stoppen der VM eine Serviceunterbrechung entsteht."
             @change="onBatchOrderCompleteDone"
           />
-          <pause-server-btn
-            :icon="mdiPause"
-            :tooltip="powerPauseTooltip"
-            :is-batch-operation="true"
-            :selected-server-ids="selectedServers"
-            :selected-servers="serversForBatch"
-            :parent-all-selected-servers-eligible="
-              allSelectedServersEligibleToPause
-            "
-            @change="onBatchOrderCompleteDone"
-          />
           <action-button
             color="btn_red"
             :icon="mdiRestart"
@@ -99,6 +88,17 @@
             confirm-dialog-text="Wollen Sie diese VMs wirklich neustarten?"
             use-extra-sure-dialog
             extra-sure-checkbox-text="Mir ist bewusst, dass durch das Neustarten der VM eine Serviceunterbrechung entsteht."
+            @change="onBatchOrderCompleteDone"
+          />
+          <pause-server-btn
+            :icon="mdiWrenchClock"
+            :tooltip="powerPauseTooltip"
+            :is-batch-operation="true"
+            :selected-server-ids="selectedServers"
+            :selected-servers="serversForBatch"
+            :parent-all-selected-servers-eligible="
+              allSelectedServersEligibleToPause
+            "
             @change="onBatchOrderCompleteDone"
           />
           <root-admin-rechte-btn
@@ -313,7 +313,6 @@ import {
   mdiAlert,
   mdiCloud,
   mdiKeyChain,
-  mdiPause,
   mdiPauseCircle,
   mdiPlay,
   mdiPlayCircle,
@@ -321,6 +320,7 @@ import {
   mdiServer,
   mdiStop,
   mdiStopCircle,
+  mdiWrenchClock,
 } from "@mdi/js";
 import { computed, ref, watch } from "vue";
 
@@ -416,14 +416,7 @@ const loadSnapshotCount = async (id: number) => {
 
 const serversForBatch = computed(() => {
   return selectedServers.value
-    .map((id) => {
-      const full = fullServerCache.value.get(Number(id));
-      if (full) return full;
-      const partial = (props.selectedAppservice?.servers || []).find(
-        (s: any) => Number(s.id) === Number(id)
-      );
-      return partial || null;
-    })
+    .map((id) => fullServerCache.value.get(Number(id)))
     .filter((s): s is Server => !!s);
 });
 
@@ -521,7 +514,8 @@ const allSelectedServersEligibleToStart = computed(() =>
   allSelectedPass(
     (s: any) =>
       (s as any).canEdit &&
-      (s as any).cloud?.cloudType === "VCENTER" &&
+      ((s as any).cloud?.cloudType === "VMWARE" ||
+        (s as any).cloud?.cloudType === "PROXMOX") &&
       (s as any).powerState === "poweredOff"
   )
 );
@@ -530,7 +524,8 @@ const allSelectedServersEligibleToStop = computed(() =>
   allSelectedPass(
     (s: any) =>
       (s as any).canEdit &&
-      (s as any).cloud?.cloudType === "VCENTER" &&
+      ((s as any).cloud?.cloudType === "VMWARE" ||
+        (s as any).cloud?.cloudType === "PROXMOX") &&
       (s as any).powerState === "poweredOn"
   )
 );
@@ -539,7 +534,8 @@ const allSelectedServersEligibleToPause = computed(() =>
   allSelectedPass(
     (s: any) =>
       (s as any).canEdit &&
-      (s as any).cloud?.cloudType === "VCENTER" &&
+      ((s as any).cloud?.cloudType === "VMWARE" ||
+        (s as any).cloud?.cloudType === "PROXMOX") &&
       (s as any).powerState === "poweredOn"
   )
 );
@@ -549,7 +545,8 @@ const allSelectedServersEligibleToRestart = computed(() =>
   allSelectedPass(
     (s: any) =>
       (s as any).canEdit &&
-      (s as any).cloud?.cloudType === "VCENTER" &&
+      ((s as any).cloud?.cloudType === "VMWARE" ||
+        (s as any).cloud?.cloudType === "PROXMOX") &&
       (s as any).powerState === "poweredOn"
   )
 );

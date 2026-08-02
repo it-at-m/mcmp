@@ -34,7 +34,6 @@
     <v-divider class="mb-6" />
 
     <!-- Startseite Konfiguration -->
-    <div class="text-subtitle-1 font-weight-bold mb-2">Startseite</div>
     <div class="text-caption text-disabled mb-2">
       Legen Sie fest, welche Seite beim Aufruf der Anwendung als Erstes
       angezeigt werden soll.
@@ -151,19 +150,31 @@ watch(themeName, (newTheme) => {
 
 // --- Startseiten Logik ---
 const availableStartPages = [
-  { title: "Appservice", path: "/appservice" },
+  { title: "Anwendungsservice", path: "/appservice" },
   { title: "Server", path: "/server" },
   { title: "Loadbalancer", path: "/loadbalancer" },
   { title: "Storage", path: "/storage" },
   { title: "Openshift", path: "/openshift" },
 ];
 
-// Initialen Wert aus dem User-Store lesen
-const selectedLoginPage = ref(userStore.getUser?.login_page || "/appservice");
+const selectedLoginPage = ref(userStore.getLoginPage || "/appservice");
 
-// Aktualisiert die Anzeige, falls sich der User-Store extern ändert
 watch(
-  () => userStore.getUser?.login_page,
+  internalValue,
+  async (isOpen) => {
+    if (!isOpen) return;
+
+    await userStore.fetchLoginPage();
+
+    if (userStore.getLoginPage) {
+      selectedLoginPage.value = userStore.getLoginPage;
+    }
+  },
+  { immediate: true }
+);
+
+watch(
+  () => userStore.getLoginPage,
   (newPage) => {
     if (newPage) {
       selectedLoginPage.value = newPage;
@@ -171,7 +182,6 @@ watch(
   }
 );
 
-// Titel für das Eingabefeld ermitteln
 const selectedPageTitle = computed(() => {
   const match = availableStartPages.find(
     (p) => p.path === selectedLoginPage.value
@@ -179,7 +189,6 @@ const selectedPageTitle = computed(() => {
   return match ? match.title : selectedLoginPage.value;
 });
 
-// Explizite Funktion bei Klick auf ein Item
 const selectLoginPage = (newPath: string) => {
   if (selectedLoginPage.value === newPath) return;
 
@@ -189,13 +198,7 @@ const selectLoginPage = (newPath: string) => {
   userService
     .setLoginPage(newPath, pageLoading)
     .then(() => {
-      const currentUser = userStore.getUser;
-      if (currentUser) {
-        userStore.setUser({
-          ...currentUser,
-          login_page: newPath,
-        });
-      }
+      userStore.setLoginPage(newPath);
     })
     .catch((e) => {
       console.error("Error saving login_page to DB", e);

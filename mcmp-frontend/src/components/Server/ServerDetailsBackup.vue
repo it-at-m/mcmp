@@ -1,6 +1,9 @@
 <template>
   <common-card
-    v-show="selectedServer.cloud?.cloudType == 'VCENTER'"
+    v-show="
+      selectedServer.cloud?.cloudType == 'VMWARE' ||
+      selectedServer.cloud?.cloudType == 'PROXMOX'
+    "
     title="Snapshots"
   >
     <template #append-title>
@@ -21,7 +24,9 @@
     <template #toolbar-actions>
       <add-snapshot
         v-if="
-          selectedServer.canEdit && selectedServer.cloud?.cloudType == 'VCENTER'
+          selectedServer.canEdit &&
+          (selectedServer.cloud?.cloudType == 'VMWARE' ||
+            selectedServer.cloud?.cloudType == 'PROXMOX')
         "
         :server="props.selectedServer"
         :snapshot-count="
@@ -49,12 +54,18 @@
       <template #item.edit="{ item }">
         <delete-revert-snapshot
           :snapshot="item"
-          :action="'revert'"
+          action="revert"
+          :job-to-call="
+            props.selectedServer.cloud.cloudType + '_REVERT_SNAPSHOT'
+          "
           @save="revertSnapshot(item)"
         />
         <delete-revert-snapshot
           :snapshot="item"
-          :action="'delete'"
+          action="delete"
+          :job-to-call="
+            props.selectedServer.cloud.cloudType + '_DELETE_SNAPSHOT'
+          "
           @save="deleteSnapshot(item)"
         />
       </template>
@@ -293,7 +304,7 @@ function getBackupTypeFromServerName(serverName: string): string {
 function deleteSnapshot(snapshot: Snapshot) {
   jobService.startJob(
     jobLoading,
-    "DELETE_SNAPSHOT",
+    props.selectedServer.cloud.cloudType + "_DELETE_SNAPSHOT",
     props.selectedServer.id,
     {
       snapshotId: snapshot.snapshotId,
@@ -303,10 +314,15 @@ function deleteSnapshot(snapshot: Snapshot) {
 }
 
 function revertSnapshot(snapshot: Snapshot) {
-  jobService.startJob(jobLoading, "REVERT_SNAPSHOT", props.selectedServer.id, {
-    snapshotId: snapshot.snapshotId,
-    snapshotName: snapshot.name,
-  });
+  jobService.startJob(
+    jobLoading,
+    props.selectedServer.cloud.cloudType + "_REVERT_SNAPSHOT",
+    props.selectedServer.id,
+    {
+      snapshotId: snapshot.snapshotId,
+      snapshotName: snapshot.name,
+    }
+  );
 }
 
 function formatDeleteDate(item: Snapshot): string {
@@ -319,6 +335,8 @@ function formatDeleteDate(item: Snapshot): string {
     return "Keine automatische Löschung (Anzahl > 1)";
   if (!item.retentionPeriod) return "";
 
-  return formatter.formatToGermanLocalTime(item.retentionPeriod).split(",")[0] || "";
+  return (
+    formatter.formatToGermanLocalTime(item.retentionPeriod).split(",")[0] || ""
+  );
 }
 </script>

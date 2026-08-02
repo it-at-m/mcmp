@@ -22,11 +22,7 @@
     :icon="snapshotActions[props.action].icon"
     :show-actions="true"
     submit-activated
-    :check-for-enabled-actions="
-      action == 'revert'
-        ? ['REVERT_SNAPSHOT']
-        : ['DELETE_SNAPSHOT']
-    "
+    :check-for-enabled-actions="[jobToCall]"
     @dialog-cancel="close"
     @dialog-confirm="save"
   >
@@ -53,6 +49,7 @@ import CommonDialog from "@/components/common/CommonDialog.vue";
 const props = defineProps<{
   snapshot: Snapshot;
   action: string;
+  jobToCall: string;
 }>();
 
 const emit = defineEmits<(e: "save", save: boolean) => void>();

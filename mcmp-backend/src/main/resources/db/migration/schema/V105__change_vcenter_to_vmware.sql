@@ -1,0 +1,4 @@
+SET client_encoding = 'UTF8';
+
+ALTER TYPE cmp.cloud_type RENAME VALUE 'VCENTER' TO 'VMWARE';
+ALTER TYPE cmp.server_type RENAME VALUE 'VM_VCENTER' TO 'VM_VMWARE';

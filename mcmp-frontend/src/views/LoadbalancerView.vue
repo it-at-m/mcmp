@@ -41,13 +41,21 @@
           class="right-panel-inner"
         >
           <div class="right-panel-sticky">
-            <breadcrumb-nav
+            <detail-page-header
               :appservice-id="selectedDetail.appservices?.[0]?.id ?? null"
               :appservice-name="selectedDetail.appservices?.[0]?.name ?? null"
               :appservice-count="selectedDetail.appservices?.length ?? 0"
               :current-icon="mdiSitemap"
               :current-label="selectedDetail.name"
-            />
+            >
+              <template #statusChips>
+                <appservice-assignment-status-chips
+                  :can-edit="selectedDetail.canEdit"
+                  :assigned-count="selectedDetail.appservices?.length ?? 0"
+                  entity-label="Loadbalancer"
+                />
+              </template>
+            </detail-page-header>
             <v-row>
               <v-col class="d-flex align-center">
                 <v-tabs
@@ -137,8 +145,9 @@ import { onMounted, onUnmounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 import loadbalancerService from "@/api/loadbalancerService";
-import BreadcrumbNav from "@/components/common/BreadcrumbNav.vue";
+import AppserviceAssignmentStatusChips from "@/components/common/AppserviceAssignmentStatusChips.vue";
 import CollapseAllCardsButton from "@/components/common/CollapseAllCardsButton.vue";
+import DetailPageHeader from "@/components/common/DetailPageHeader.vue";
 import LoadbalancerDetailsGeneral from "@/components/Loadbalancer/LoadbalancerDetailsGeneral.vue";
 import LoadbalancerDetailsIrules from "@/components/Loadbalancer/LoadbalancerDetailsIrules.vue";
 import LoadbalancerDetailsPool from "@/components/Loadbalancer/LoadbalancerDetailsPool.vue";

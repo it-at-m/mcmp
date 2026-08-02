@@ -70,24 +70,17 @@
               />
             </h2>
 
-            <v-card
+            <common-card
               v-for="faq in getFaqsByCategory(category.id)"
               :id="`faq-${faq.id}`"
               :key="faq.id"
-              color="backgroundLight"
-              variant="flat"
-              class="mb-4 border"
-              rounded="lg"
+              :title="faq.question"
+              :card-id="`faq-${faq.id}`"
+              top-margin="0"
+              :model-value="!collapsed[faq.id]"
+              @update:model-value="(v) => (collapsed[faq.id] = !v)"
             >
-              <v-toolbar
-                density="compact"
-                color="transparent"
-                class="pr-2"
-              >
-                <div class="text-h6 py-2 px-4 flex-grow-1 custom-question-text">
-                  {{ faq.question }}
-                </div>
-
+              <template #toolbar-actions>
                 <template v-if="isAdmin">
                   <v-chip
                     v-if="!faq.isPublished"
@@ -147,26 +140,13 @@
                 >
                   <v-icon size="small">{{ mdiLink }}</v-icon>
                 </v-btn>
+              </template>
 
-                <v-btn
-                  variant="flat"
-                  icon
-                  @click="collapsed[faq.id] = !collapsed[faq.id]"
-                >
-                  <v-icon>{{
-                    collapsed[faq.id] ? mdiChevronDown : mdiChevronUp
-                  }}</v-icon>
-                </v-btn>
-              </v-toolbar>
-
-              <v-divider v-if="!collapsed[faq.id]"></v-divider>
-              <v-card-text v-if="!collapsed[faq.id]">
-                <div
-                  class="faq-content"
-                  v-html="faq.answerHtml"
-                ></div>
-              </v-card-text>
-            </v-card>
+              <div
+                class="faq-content"
+                v-html="faq.answerHtml"
+              ></div>
+            </common-card>
           </v-expansion-panel-text>
         </v-expansion-panel>
       </v-expansion-panels>
@@ -178,104 +158,72 @@
     </div>
 
     <!-- FAQ Edit Dialog -->
-    <v-dialog
+    <common-dialog
       v-model="faqDialog"
-      max-width="800px"
+      :title="editedFaq.id ? 'Eintrag bearbeiten' : 'Neuer FAQ Eintrag'"
+      :max-width="800"
+      :submit-activated="true"
+      :show-actions="true"
+      @dialog-cancel="faqDialog = false"
+      @dialog-confirm="saveFaq"
     >
-      <v-card>
-        <v-card-title>{{
-          editedFaq.id ? "Eintrag bearbeiten" : "Neuer FAQ Eintrag"
-        }}</v-card-title>
-        <v-card-text>
-          <v-select
-            v-model="editedFaq.categoryId"
-            :items="categories"
-            item-title="name"
-            item-value="id"
-            label="Kategorie"
-            required
-            :menu-props="{ persistent: true, closeOnContentClick: true }"
-          ></v-select>
+      <v-select
+        v-model="editedFaq.categoryId"
+        :items="categories"
+        item-title="name"
+        item-value="id"
+        label="Kategorie"
+        required
+        :menu-props="{ persistent: true, closeOnContentClick: true }"
+      ></v-select>
+      <v-text-field
+        v-model="editedFaq.question"
+        label="Frage"
+        required
+      ></v-text-field>
+      <v-textarea
+        v-model="editedFaq.answerMarkdown"
+        label="Antwort (Markdown)"
+        rows="8"
+        hint="Formatierung mit Markdown möglich"
+        persistent-hint
+        required
+      ></v-textarea>
+      <v-row>
+        <v-col cols="6">
           <v-text-field
-            v-model="editedFaq.question"
-            label="Frage"
-            required
+            v-model.number="editedFaq.sortOrder"
+            label="Sortierung"
+            type="number"
           ></v-text-field>
-          <v-textarea
-            v-model="editedFaq.answerMarkdown"
-            label="Antwort (Markdown)"
-            rows="8"
-            hint="Formatierung mit Markdown möglich"
-            persistent-hint
-            required
-          ></v-textarea>
-          <v-row>
-            <v-col cols="6">
-              <v-text-field
-                v-model.number="editedFaq.sortOrder"
-                label="Sortierung"
-                type="number"
-              ></v-text-field>
-            </v-col>
-            <v-col cols="6">
-              <v-checkbox
-                v-model="editedFaq.isPublished"
-                label="Veröffentlicht"
-              ></v-checkbox>
-            </v-col>
-          </v-row>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn
-            variant="text"
-            @click="faqDialog = false"
-            >Abbrechen</v-btn
-          >
-          <v-btn
-            color="primary"
-            :loading="loading"
-            @click="saveFaq"
-            >Speichern</v-btn
-          >
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+        </v-col>
+        <v-col cols="6">
+          <v-checkbox
+            v-model="editedFaq.isPublished"
+            label="Veröffentlicht"
+          ></v-checkbox>
+        </v-col>
+      </v-row>
+    </common-dialog>
 
     <!-- Delete Confirm -->
-    <v-dialog
+    <common-dialog
       v-model="deleteConfirmDialog"
-      max-width="500px"
+      title="Eintrag löschen?"
+      :max-width="500"
+      :submit-activated="true"
+      :show-actions="true"
+      @dialog-cancel="deleteConfirmDialog = false"
+      @dialog-confirm="deleteFaq"
     >
-      <v-card>
-        <v-card-title>Eintrag löschen?</v-card-title>
-        <v-card-text>
-          Sind Sie sicher, dass Sie den Eintrag
-          <strong>{{ faqToDelete?.question }}</strong> löschen möchten?
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn
-            variant="text"
-            @click="deleteConfirmDialog = false"
-            >Abbrechen</v-btn
-          >
-          <v-btn
-            color="error"
-            :loading="loading"
-            @click="deleteFaq"
-            >Löschen</v-btn
-          >
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+      Sind Sie sicher, dass Sie den Eintrag
+      <strong>{{ faqToDelete?.question }}</strong> löschen möchten?
+    </common-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import {
-  mdiChevronDown,
-  mdiChevronUp,
   mdiDelete,
   mdiLink,
   mdiPencil,
@@ -288,6 +236,8 @@ import { useRoute } from "vue-router";
 
 import faqCategoryService from "@/api/faqCategoryService";
 import faqService from "@/api/faqService";
+import CommonCard from "@/components/common/CommonCard.vue";
+import CommonDialog from "@/components/common/CommonDialog.vue";
 import InfoTooltip from "@/components/common/InfoTooltip.vue";
 
 const props = defineProps({
@@ -429,11 +379,6 @@ onMounted(loadData);
 </script>
 
 <style scoped>
-.custom-question-text {
-  white-space: normal;
-  line-height: 1.4;
-  word-break: break-word;
-}
 .faq-content :deep(a) {
   /* noinspection CssUnresolvedCustomProperty */
   color: rgb(var(--v-theme-link));

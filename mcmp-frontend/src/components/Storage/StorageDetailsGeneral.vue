@@ -292,7 +292,30 @@
   <common-card
     title="CMDB"
     top-margin="0"
+    :is-default-expanded="false"
   >
+    <v-row>
+      <v-col cols="6">
+        <h3>Storage CI</h3>
+      </v-col>
+    </v-row>
+    <v-row>
+      <v-col
+        cols="6"
+        class="pt-0 links"
+      >
+        <a
+          v-if="selectedStorageItem.snowSysId"
+          :href="`https://it-services.muenchen.de/now/sgw/record/${selectedStorageItem.snowSysClass}/${selectedStorageItem.snowSysId}/`"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Storage CI in ServiceNow öffnen"
+        >
+          {{ selectedStorageItem.snowName }}
+        </a>
+        <p v-else>-</p>
+      </v-col>
+    </v-row>
   </common-card>
 </template>
 <script setup lang="ts">

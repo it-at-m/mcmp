@@ -6,10 +6,8 @@ import (
 	"fmt"
 )
 
-var (
-	// ErrNilDestination is returned when the destination pointer is nil.
-	ErrNilDestination = errors.New("destination pointer is nil")
-)
+// ErrNilDestination is returned when the destination pointer is nil.
+var ErrNilDestination = errors.New("destination pointer is nil")
 
 // ScanString attempts to scan a value into a string-like type T, handling strings, byte slices, and nil values.
 func ScanString[T ~string](ptr *T, value interface{}) error {

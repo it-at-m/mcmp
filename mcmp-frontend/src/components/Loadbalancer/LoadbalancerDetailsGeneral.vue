@@ -236,6 +236,44 @@
       </v-col>
     </v-row>
   </common-card>
+
+  <common-card
+    title="CMDB"
+    top-margin="0"
+    :is-default-expanded="false"
+  >
+    <v-row>
+      <v-col cols="6">
+        <h3>Loadbalancer CI</h3>
+      </v-col>
+    </v-row>
+    <v-row>
+      <v-col
+        cols="6"
+        class="pt-0 links"
+      >
+        <div v-if="lb.snowCis && lb.snowCis.length">
+          <ul style="padding-left: 0; list-style-position: inside">
+            <li
+              v-for="ci in lb.snowCis"
+              :key="ci.snowSysId"
+              class="mb-1"
+            >
+              <a
+                :href="`https://it-services.muenchen.de/now/sgw/record/${ci.snowSysClass}/${ci.snowSysId}/`"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Loadbalancer CI in ServiceNow öffnen"
+              >
+                {{ ci.snowName }}
+              </a>
+            </li>
+          </ul>
+        </div>
+        <p v-else>-</p>
+      </v-col>
+    </v-row>
+  </common-card>
 </template>
 
 <script setup lang="ts">

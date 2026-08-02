@@ -127,7 +127,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { mdiDelete, mdiPencil, mdiPlus } from "@mdi/js";
 import { onMounted, ref } from "vue";
 

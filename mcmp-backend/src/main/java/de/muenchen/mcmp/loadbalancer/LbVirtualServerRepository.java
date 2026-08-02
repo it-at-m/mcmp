@@ -187,6 +187,16 @@ public interface LbVirtualServerRepository extends JpaRepository<LbVirtualServer
             @Param("isNetwork") boolean isNetwork,
             @Param("isLoadbalancer") boolean isLoadbalancer);
 
+    @Query("SELECT CASE WHEN :isAdmin = TRUE OR :isLoadbalancer = TRUE OR EXISTS (" +
+            "SELECT 1 FROM LbVirtualServer lvs " +
+            "JOIN lvs.appservices a " +
+            "JOIN a.changeGroup g " +
+            "JOIN g.users u " +
+            "WHERE lvs.id = :id AND u.username = :username" +
+            ") THEN TRUE ELSE FALSE END")
+    Boolean canUserEditLoadbalancer(@Param("id") Long id, @Param("username") String username,
+                                    @Param("isAdmin") boolean isAdmin, @Param("isLoadbalancer") boolean isLoadbalancer);
+
     Optional<LbVirtualServer> findByName(String name);
 
     @Query("SELECT lvs FROM LbVirtualServer lvs WHERE :name LIKE CONCAT(lvs.name, '%')")

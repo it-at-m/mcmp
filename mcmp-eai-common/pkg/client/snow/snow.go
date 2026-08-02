@@ -20,14 +20,18 @@ import (
 // URL constants for ServiceNow API endpoints
 // These constants define the API endpoints for different ServiceNow services
 const (
-	urlAppservice      = "%s/cmdb/appservice"              // Application service endpoint
-	urlTag             = "%s/tag/"                         // Tag management endpoint
-	urlCmdbCi          = "%s/cmdb/ci/"                     // urlCmdbCi defines the endpoint for Configuration Items in the CMDB module.
-	urlGroup           = "%s/foundation_data/group/"       // Foundation data group endpoint
-	urlVMwareInstance  = "%s/cmdb/cmdb_ci_vmware_instance" // urlVMwareInstance defines the endpoint for VMware instance configuration items in the CMDB.
-	urlLockedShutdown  = "%s/cmdb/cmdb_ci_vmware_instance/locked-shutdown"
-	urlLockedRightsize = "%s/cmdb/cmdb_ci_vmware_instance/locked-rightsize"
-	urlVMwareServer    = "%s/cmdb/cmdb_ci_vmware_instance/%s/cmdb_ci_server"
+	urlAppservice      = "%s/api/x_lam_lhm_cmp/cmdb/appservice"        // Application service endpoint
+	urlTag             = "%s/api/x_lam_lhm_cmp/tag/"                   // Tag management endpoint
+	urlCmdbCi          = "%s/api/x_lam_lhm_cmp/cmdb/ci/"               // urlCmdbCi defines the endpoint for Configuration Items in the CMDB module.
+	urlGroup           = "%s/api/x_lam_lhm_cmp/foundation_data/group/" // Foundation data group endpoint
+	urlLockedShutdown  = "%s/api/x_lam_lhm_cmp/cmdb/cmdb_ci_vmware_instance/locked-shutdown"
+	urlLockedRightsize = "%s/api/x_lam_lhm_cmp/cmdb/cmdb_ci_vmware_instance/locked-rightsize"
+	urlVMwareServer    = "%s/api/x_lam_lhm_cmp/cmdb/cmdb_ci_vmware_instance/%s/cmdb_ci_server"
+
+	urlCmdbKeyValue  = "%s/api/x_lam_lhm_api_gw/foundation/data/table/cmdb_key_value"
+	urlCmdbDataTable = "%s/api/x_lam_lhm_api_gw/cmdb/data/table/%s"
+
+	urlIdentifyReconcile = "%s/api/now/identifyreconcile/enhanced"
 )
 
 // NewClient creates and initializes a new ServiceNow client instance with OAuth2 support and proxy configuration.
@@ -79,10 +83,13 @@ func NewClient(config ClientConfig) (*Client, error) {
 	c.urlTag = fmt.Sprintf(urlTag, config.ApiEndpoint)
 	c.urlCmdbCi = fmt.Sprintf(urlCmdbCi, config.ApiEndpoint)
 	c.urlGroup = fmt.Sprintf(urlGroup, config.ApiEndpoint)
-	c.urlVMwareInstance = fmt.Sprintf(urlVMwareInstance, config.ApiEndpoint)
+	//	c.urlVMwareInstance = fmt.Sprintf(urlVMwareInstance, config.ApiEndpoint)
 	c.urlLockedShutdown = fmt.Sprintf(urlLockedShutdown, config.ApiEndpoint)
 	c.urlLockedRightsize = fmt.Sprintf(urlLockedRightsize, config.ApiEndpoint)
 	c.urlVMwareServer = fmt.Sprintf(urlVMwareServer, config.ApiEndpoint, "%s")
+	c.urlCmdbKeyValue = fmt.Sprintf(urlCmdbKeyValue, config.ApiEndpoint)
+	c.urlCmdbDataTable = fmt.Sprintf(urlCmdbDataTable, config.ApiEndpoint, "%s")
+	c.urlIdentifyReconcile = fmt.Sprintf(urlIdentifyReconcile, config.ApiEndpoint)
 
 	// Configure secure TLS settings
 	tlsConfig := &tls.Config{
@@ -93,8 +100,8 @@ func NewClient(config ClientConfig) (*Client, error) {
 	// Configure HTTP transport with optimized settings
 	transport := &http.Transport{
 		TLSClientConfig:       tlsConfig,
-		MaxIdleConns:          100,
-		IdleConnTimeout:       90 * time.Second,
+		MaxIdleConns:          1000,
+		IdleConnTimeout:       900 * time.Second,
 		TLSHandshakeTimeout:   10 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
 	}
@@ -243,37 +250,6 @@ func (c *Client) PostData(ctx context.Context, endpoint string, jsonData []byte)
 	return err
 }
 
-// GetVMwareInstances retrieves a list of VMware instances from the endpoint and returns them as a slice of CmdbCi.
-// It fetches all available records by setting a high limit on the API request and parses the JSON response.
-func (c *Client) GetVMwareInstances() ([]CmdbCi, error) {
-	var allInstances []CmdbCi
-	offset := 0
-	limit := 1000
-
-	for {
-		requestURL := fmt.Sprintf("%s?sysparm_offset=%d&sysparm_limit=%d", c.urlVMwareInstance, offset, limit)
-		resp, err := c.getRequest(requestURL)
-		if err != nil {
-			return nil, err
-		}
-		resp = strings.TrimSpace(resp)
-		if resp == "" {
-			break
-		}
-		var vmwareInstanceResponse VMwareInstance
-		err = json.Unmarshal([]byte(resp), &vmwareInstanceResponse)
-		if err != nil {
-			return nil, err
-		}
-		if len(vmwareInstanceResponse.Result) == 0 {
-			break
-		}
-		allInstances = append(allInstances, vmwareInstanceResponse.Result...)
-		offset += limit
-	}
-	return allInstances, nil
-}
-
 // GetAppServices retrieves all application services from the ServiceNow CMDB.
 // This method fetches application service records with a high limit to ensure
 // all records are retrieved in a single request.
@@ -331,8 +307,21 @@ func (c *Client) GetCIsForTag(tag string) ([]TagEntry, error) {
 		return nil, fmt.Errorf("tag parameter cannot be empty")
 	}
 
-	// Make API request with URL-escaped tag and high limit
-	resp, err := c.getRequest(c.urlTag + url.PathEscape(tag) + "?sysparm_limit=100000&sysparm_query=configuration_item.life_cycle_stage!=End%20of%20Life^ORconfiguration_item.life_cycle_stageISEMPTY^configuration_item.sys_class_nameINSTANCEOFcmdb_ci_server^ORconfiguration_item.sys_class_nameINSTANCEOFcmdb_ci_vm_instance")
+	cmdbTagClassNames := []string{
+		"cmdb_ci_server",
+		"cmdb_ci_vm_instance",
+		//	"cmdb_ci_storage_volume",
+		//	"cmdb_ci_cloud_object_storage",
+		//	"cmdb_ci_lb_service",
+		//	"cmdb_ci_kubernetes_namespace",
+	}
+	classQuery := buildTagClassQuery(cmdbTagClassNames)
+	query := fmt.Sprintf("configuration_item.life_cycle_stage!=End of Life^ORconfiguration_item.life_cycle_stageISEMPTY%s", classQuery)
+	requestUrl := fmt.Sprintf("%s%s?sysparm_limit=100000&sysparm_query=%s",
+		c.urlTag,
+		url.PathEscape(tag),
+		url.QueryEscape(query))
+	resp, err := c.getRequest(requestUrl)
 	if err != nil {
 		return nil, err
 	}
@@ -527,4 +516,447 @@ func (c *Client) GetServerForVMwareInstance(vmInstanceSysID string) (Server, err
 	}
 
 	return serverResponse.Result, nil
+}
+
+// GetCmdbDataTable performs a universal GET request to the ServiceNow CMDB data table endpoint.
+// It allows querying any table with custom query parameters, fields, and limits.
+func (c *Client) getCmdbDataTable(params GetCmdbDataTableParams) ([]map[string]any, error) {
+	if params.TableName == "" {
+		return nil, fmt.Errorf("table name is required")
+	}
+
+	// Build the request URL using the table name
+	tableUrl := fmt.Sprintf(c.urlCmdbDataTable, strings.TrimSpace(params.TableName))
+	requestUrl, err := url.Parse(tableUrl)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse table URL: %w", err)
+	}
+
+	var allResults []map[string]any
+	offset := 0
+	limit := params.Limit
+	if limit <= 0 {
+		limit = 5000
+	}
+	for {
+
+		// Set query parameters
+		q := requestUrl.Query()
+		if params.Query != "" {
+			q.Set("sysparm_query", params.Query)
+		}
+		q.Set("sysparm_limit", fmt.Sprintf("%d", limit))
+		q.Set("sysparm_offset", fmt.Sprintf("%d", offset))
+
+		if len(params.Fields) > 0 {
+			q.Set("sysparm_fields", strings.Join(params.Fields, ","))
+		}
+		if params.ExcludeReferenceLink {
+			q.Set("sysparm_exclude_reference_link", "true")
+		}
+
+		requestUrl.RawQuery = q.Encode()
+
+		// Execute request
+		resp, err := c.getRequest(requestUrl.String())
+		if err != nil {
+			return nil, err
+		}
+
+		resp = strings.TrimSpace(resp)
+		if resp == "" {
+			return []map[string]any{}, nil
+		}
+
+		// Parse generic JSON result
+		var result struct {
+			Result []map[string]any `json:"result"`
+		}
+		err = json.Unmarshal([]byte(resp), &result)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal table response: %w", err)
+		}
+
+		if len(result.Result) == 0 {
+			break
+		}
+
+		allResults = append(allResults, result.Result...)
+		offset += limit
+
+		if params.Limit > 0 && len(allResults) >= params.Limit {
+			break
+		}
+	}
+
+	return allResults, nil
+}
+
+// fetchCmdbKeyValue performs the actual API request to the cmdb_key_value table.
+func (c *Client) fetchCmdbKeyValue(query string, fields []string) ([]map[string]any, error) {
+	requestUrl, err := url.Parse(c.urlCmdbKeyValue)
+	if err != nil {
+		return nil, err
+	}
+
+	q := requestUrl.Query()
+	q.Set("sysparm_query", query)
+	q.Set("sysparm_limit", "1000000")
+	q.Set("sysparm_fields", strings.Join(fields, ","))
+
+	requestUrl.RawQuery = q.Encode()
+
+	resp, err := c.getRequest(requestUrl.String())
+	if err != nil {
+		return nil, err
+	}
+
+	resp = strings.TrimSpace(resp)
+	if resp == "" {
+		return nil, nil
+	}
+
+	var result struct {
+		Result []map[string]any `json:"result"`
+	}
+	err = json.Unmarshal([]byte(resp), &result)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+
+	return result.Result, nil
+}
+
+// GetCmdbKeyValue retrieves data from the cmdb_key_value table and groups it by Configuration Item SysID.
+func (c *Client) getCmdbKeyValue(query string, fields []string) (map[string]map[string]struct{}, error) {
+	results, err := c.fetchCmdbKeyValue(query, fields)
+	if err != nil {
+		return nil, err
+	}
+
+	grouped := make(map[string]map[string]struct{})
+	for _, res := range results {
+		sysID, _ := res["configuration_item.sys_id"].(string)
+		if sysID == "" {
+			continue
+		}
+
+		val, _ := res["value"].(string)
+		if _, exists := grouped[sysID]; !exists {
+			grouped[sysID] = make(map[string]struct{})
+		}
+		if val != "" {
+			grouped[sysID][val] = struct{}{}
+		}
+	}
+
+	return grouped, nil
+}
+
+func (c *Client) getCmdbKeyValueServiceId(sysClassName string) (map[string]map[string]struct{}, error) {
+	query := fmt.Sprintf("key=serviceid^configuration_item.sys_class_nameINSTANCEOF%s^configuration_item.life_cycle_stage!=End of Life^ORconfiguration_item.life_cycle_stageISEMPTY", strings.TrimSpace(sysClassName))
+	fields := []string{
+		"configuration_item.sys_id",
+		"value",
+	}
+
+	return c.getCmdbKeyValue(query, fields)
+}
+
+func (c *Client) getCmdbStoragegridTenantId(sysClassName string) ([]map[string]any, error) {
+	query := fmt.Sprintf("key=storagegrid-tenant-id^configuration_item.sys_class_name=%s", strings.TrimSpace(sysClassName))
+	fields := []string{
+		"configuration_item.sys_id",
+		"value",
+		"configuration_item.name",
+		"configuration_item.sys_class_name",
+	}
+
+	return c.fetchCmdbKeyValue(query, fields)
+}
+
+func (c *Client) GetCmdbCiCloudServiceAccountData() ([]ConfigurationItemWithAppServices, error) {
+	return c.getConfigurationItemsWithAppServices("cmdb_ci_cloud_service_account", "", nil)
+}
+
+func (c *Client) GetCmdbCiCloudObjectStorageData() ([]ConfigurationItemWithAppServices, error) {
+	return c.getConfigurationItemsWithAppServices("cmdb_ci_cloud_object_storage", "", nil)
+}
+
+func (c *Client) getConfigurationItemsWithAppServices(tableName string, query string, fields []string) ([]ConfigurationItemWithAppServices, error) {
+	var rawCIs []map[string]any
+	var err error
+	if tableName == "cmdb_ci_cloud_service_account" || tableName == "cmdb_ci_cloud_object_storage" {
+		rawCIs, err = c.getCmdbStoragegridTenantId(tableName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch cloud service account or cloud object storage data: %w", err)
+		}
+	} else {
+		// 1. Fetch RAW CI Data
+		rawCIs, err = c.getCmdbDataTable(GetCmdbDataTableParams{
+			TableName:            tableName,
+			Query:                query,
+			Fields:               fields,
+			ExcludeReferenceLink: true,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch data for table %s: %w", tableName, err)
+		}
+
+	}
+	// 2. Fetch KeyValue Mappings using the provided loader
+	keyValues, err := c.getCmdbKeyValueServiceId(tableName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch key values for table %s: %w", tableName, err)
+	}
+
+	// 3. Aggregate data
+	results := make([]ConfigurationItemWithAppServices, 0, len(rawCIs))
+	for _, raw := range rawCIs {
+		ci := NewConfigurationItemWithAppServices(raw)
+		sysID := ci.GetSysID()
+
+		if appServices, ok := keyValues[sysID]; ok {
+			for appServiceNumber := range appServices {
+				ci.AddAppServiceNumber(appServiceNumber)
+			}
+		}
+		results = append(results, ci)
+	}
+
+	return results, nil
+}
+
+// GetKubernetesNamespaceData retrieves data for Kubernetes Namespaces.
+func (c *Client) GetKubernetesNamespaceData() ([]ConfigurationItemWithAppServices, error) {
+	fields := []string{
+		"sys_id",
+		"name",
+		"sys_class_name",
+		"last_discovered",
+		"life_cycle_stage",
+		"life_cycle_stage_status",
+		"k8s_uid",
+		"environment",
+		"cluster.name",
+		"cluster.sys_id",
+		"cluster.sys_class_name",
+		"cluster.last_discovered",
+		"cluster.life_cycle_stage",
+		"cluster.life_cycle_stage_status",
+		"cluster.k8s_uid",
+		"cluster.environment",
+	}
+
+	return c.getConfigurationItemsWithAppServices(
+		"cmdb_ci_kubernetes_namespace",
+		"life_cycle_stageISEMPTY^ORlife_cycle_stage=Operational",
+		fields,
+	)
+}
+
+// GetStorageServerData retrieves data for Storage Volumes.
+func (c *Client) GetStorageServerData() ([]ConfigurationItemWithAppServices, error) {
+	fields := []string{
+		"sys_id",
+		"name",
+		"sys_class_name",
+		"last_discovered",
+		"life_cycle_stage",
+		"life_cycle_stage_status",
+		"serial_number",
+	}
+
+	return c.getConfigurationItemsWithAppServices(
+		"cmdb_ci_server",
+		"sys_class_name=cmdb_ci_storage_server^serial_numberISNOTEMPTY^duplicate_ofISEMPTY^life_cycle_stageISEMPTY^ORlife_cycle_stage=Operational",
+		fields,
+	)
+}
+
+// GetStorageVolumeData retrieves data for Storage Volumes.
+func (c *Client) GetStorageVolumeData() ([]ConfigurationItemWithAppServices, error) {
+	fields := []string{
+		"sys_id",
+		"name",
+		"sys_class_name",
+		"last_discovered",
+		"life_cycle_stage",
+		"life_cycle_stage_status",
+		"storage_type",
+		"cluster_id",
+		"volume_id",
+		"computer.serial_number",
+	}
+
+	return c.getConfigurationItemsWithAppServices(
+		"cmdb_ci_storage_volume",
+		"storage_typeISEMPTY^sys_class_name=cmdb_ci_storage_volume^volume_idISNOTEMPTY^life_cycle_stageISEMPTY^ORlife_cycle_stage=Operational",
+		fields,
+	)
+}
+
+// GetStorageQTreeData retrieves data for Storage Volumes.
+func (c *Client) GetStorageQTreeData() ([]ConfigurationItemWithAppServices, error) {
+	fields := []string{
+		"sys_id",
+		"name",
+		"sys_class_name",
+		"last_discovered",
+		"life_cycle_stage",
+		"life_cycle_stage_status",
+		"storage_type",
+		"cluster_id",
+		"volume_id",
+		"object_id",
+		"computer.serial_number",
+	}
+
+	return c.getConfigurationItemsWithAppServices(
+		"cmdb_ci_storage_volume",
+		"storage_type=QTree^life_cycle_stageISEMPTY^ORlife_cycle_stage=Operational",
+		fields,
+	)
+}
+
+// GetLbServiceData retrieves data for Loadbalancer Services.
+func (c *Client) GetLbServiceData() ([]ConfigurationItemWithAppServices, error) {
+	fields := []string{
+		"sys_id",
+		"name",
+		"sys_class_name",
+		"last_discovered",
+		"life_cycle_stage",
+		"life_cycle_stage_status",
+	}
+
+	return c.getConfigurationItemsWithAppServices(
+		"cmdb_ci_lb_service",
+		"life_cycle_stageISEMPTY^ORlife_cycle_stage=Operational",
+		fields,
+	)
+}
+
+func (c *Client) GetVMwareInstanceData() ([]ConfigurationItemWithAppServices, error) {
+	fields := []string{
+		"sys_id",
+		"name",
+		"sys_class_name",
+		"last_discovered",
+		"life_cycle_stage",
+		"life_cycle_stage_status",
+		"operational_status",
+		"vm_instance_uuid",
+		"state",
+		"bios_uuid",
+		"object_id",
+		"vcenter_uuid",
+		"template",
+		"fqdn",
+		"ip_address",
+	}
+
+	return c.getConfigurationItemsWithAppServices(
+		"cmdb_ci_vmware_instance",
+		"life_cycle_stageISEMPTY^ORlife_cycle_stage=Operational",
+		fields,
+	)
+}
+
+func (c *Client) GetCmdbCiServerData() ([]ConfigurationItemWithAppServices, error) {
+	fields := []string{
+		"sys_id",
+		"name",
+		"sys_class_name",
+		"last_discovered",
+		"life_cycle_stage",
+		"life_cycle_stage_status",
+		"operational_status",
+		"dns_domain",
+		"manufacturer",
+		"os_version",
+		"serial_number",
+		"install_date",
+		"fqdn",
+		"hardware_status",
+		"install_status",
+		"default_gateway",
+		"company",
+		"os",
+		"ip_address",
+		"model_id",
+		"environment",
+		"host_name",
+		"mac_address",
+		"os_domain",
+		"virtual",
+	}
+
+	return c.getConfigurationItemsWithAppServices(
+		"cmdb_ci_server",
+		"life_cycle_stageISEMPTY^ORlife_cycle_stage=Operational",
+		fields,
+	)
+}
+
+// IdentifyReconcile sends a payload to the ServiceNow Identify and Reconcile API.
+// This endpoint allows creating or updating Configuration Items (CIs) based on identification rules.
+func (c *Client) IdentifyReconcile(ctx context.Context, payload IdentifyReconcilePayload) (*IdentifyReconcileResponse, error) {
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal identify reconcile payload: %w", err)
+	}
+
+	respBody, err := c.postRequest(c.urlIdentifyReconcile, jsonData)
+	if err != nil {
+		return nil, err
+	}
+
+	var response IdentifyReconcileResponse
+	err = json.Unmarshal([]byte(respBody), &response)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal identify reconcile response: %w", err)
+	}
+
+	return &response, nil
+}
+
+// IdentifyReconcilePackageRepository sends a specific payload for a package repository to ServiceNow.
+// It sets the provided name and uses the current time as source_recency_timestamp.
+func (c *Client) IdentifyReconcilePackageRepository(ctx context.Context, repositoryName string) (*IdentifyReconcileResponse, error) {
+	if repositoryName == "" {
+		return nil, fmt.Errorf("repository name is required")
+	}
+
+	payload := IdentifyReconcilePayload{
+		Items: []IdentifyReconcileItem{
+			{
+				ClassName: "x_lam_lhm_packag_0_cmdb_ci_package_repository",
+				Lookup:    []any{},
+				Values: map[string]any{
+					"name":                    repositoryName,
+					"life_cycle_stage":        "Operational",
+					"life_cycle_stage_status": "In Use",
+				},
+				InternalID: "package_repo",
+				SysObjectSourceInfo: &SysObjectSourceInfo{
+					SourceName:             "MCMP",
+					SourceRecencyTimestamp: time.Now().Format("2006-01-02 15:04:05"),
+				},
+			},
+		},
+	}
+
+	return c.IdentifyReconcile(ctx, payload)
+}
+
+func buildTagClassQuery(classes []string) string {
+	if len(classes) == 0 {
+		return ""
+	}
+	var queries []string
+	for _, class := range classes {
+		queries = append(queries, fmt.Sprintf("configuration_item.sys_class_nameINSTANCEOF%s", class))
+	}
+	return "^" + strings.Join(queries, "^OR")
 }

@@ -7,7 +7,7 @@ require (
 	github.com/spf13/viper v1.21.0
 	golang.org/x/oauth2 v0.36.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
-	gorm.io/driver/postgres v1.6.0
+	gorm.io/driver/postgres v1.6.2
 	gorm.io/gorm v1.31.2
 )
 

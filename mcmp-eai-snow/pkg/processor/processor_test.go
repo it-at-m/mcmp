@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/client/snow"
 	"github.com/it-at-m/mcmp/mcmp-eai-snow/pkg/clients/mcmp"
-	"github.com/it-at-m/mcmp/mcmp-eai-snow/pkg/clients/snow"
 )
 
 // MockSnowClient implements SnowClientInterface for testing purposes.
@@ -53,10 +53,6 @@ func (m *MockSnowClient) GetLockedShutdown() (map[string]string, error) {
 
 func (m *MockSnowClient) GetLockedRightsize() (map[string]string, error) {
 	return make(map[string]string), nil
-}
-
-func (m *MockSnowClient) GetServerForVMwareInstance(vmInstanceSysID string) (snow.Server, error) {
-	return snow.Server{}, nil
 }
 
 func (m *MockSnowClient) GetVMwareInstances() ([]snow.CmdbCi, error) {
@@ -116,6 +112,58 @@ func (m *MockSnowClient) GetCmdbCI(sysId string) (snow.CmdbCi, error) {
 		return ci, nil
 	}
 	return snow.CmdbCi{}, nil
+}
+
+func (m *MockSnowClient) GetKubernetesNamespaceData() ([]snow.ConfigurationItemWithAppServices, error) {
+	return nil, nil
+}
+
+func (m *MockSnowClient) GetStorageServerData() ([]snow.ConfigurationItemWithAppServices, error) {
+	return nil, nil
+}
+
+func (m *MockSnowClient) GetStorageVolumeData() ([]snow.ConfigurationItemWithAppServices, error) {
+	return nil, nil
+}
+
+func (m *MockSnowClient) GetStorageQTreeData() ([]snow.ConfigurationItemWithAppServices, error) {
+	return nil, nil
+}
+
+func (m *MockSnowClient) GetCmdbCiCloudServiceAccountData() ([]snow.ConfigurationItemWithAppServices, error) {
+	return nil, nil
+}
+
+func (m *MockSnowClient) GetCmdbCiCloudObjectStorageData() ([]snow.ConfigurationItemWithAppServices, error) {
+	return nil, nil
+}
+
+func (m *MockSnowClient) GetLbServiceData() ([]snow.ConfigurationItemWithAppServices, error) {
+	return nil, nil
+}
+
+func (m *MockSnowClient) GetVMwareInstanceData() ([]snow.ConfigurationItemWithAppServices, error) {
+	return nil, nil
+}
+
+func (m *MockSnowClient) GetServerForVMwareInstance(vmInstanceSysID string) (snow.Server, error) {
+	return snow.Server{}, nil
+}
+
+func (m *MockSnowClient) GetCmdbCiServerData() ([]snow.ConfigurationItemWithAppServices, error) {
+	return nil, nil
+}
+
+func (m *MockSnowClient) GetKubernetesNamespaceKeyValues() (map[string]snow.ConfigurationItemWithAppServices, error) {
+	return make(map[string]snow.ConfigurationItemWithAppServices), nil
+}
+
+func (m *MockSnowClient) GetStorageVolumeKeyValues() (map[string]snow.ConfigurationItemWithAppServices, error) {
+	return make(map[string]snow.ConfigurationItemWithAppServices), nil
+}
+
+func (m *MockSnowClient) GetLbServiceKeyValues() (map[string]snow.ConfigurationItemWithAppServices, error) {
+	return make(map[string]snow.ConfigurationItemWithAppServices), nil
 }
 
 // EnableDebug is a no-op method for the mock implementation.
@@ -474,8 +522,8 @@ func TestServiceProcessor_ProcessAppServices(t *testing.T) {
 		if appService1.Group != "group-001" {
 			t.Errorf("AppService 1 Group expected 'group-001', got '%s'", appService1.Group)
 		}
-		if len(appService1.CIs) != 2 {
-			t.Errorf("AppService 1 expected 2 CIs, got %d", len(appService1.CIs))
+		if len(appService1.ServerCIs) != 2 {
+			t.Errorf("AppService 1 expected 2 CIs, got %d", len(appService1.ServerCIs))
 		}
 
 		// Validate second app service data and CI associations
@@ -483,8 +531,8 @@ func TestServiceProcessor_ProcessAppServices(t *testing.T) {
 		if appService2.Environment != "TEST" {
 			t.Errorf("AppService 2 Environment expected 'TEST', got '%s'", appService2.Environment)
 		}
-		if len(appService2.CIs) != 2 {
-			t.Errorf("AppService 2 expected 2 CIs, got %d", len(appService2.CIs))
+		if len(appService2.ServerCIs) != 2 {
+			t.Errorf("AppService 2 expected 2 CIs, got %d", len(appService2.ServerCIs))
 		}
 	})
 }

@@ -5,7 +5,7 @@ Debug = false
 OAuthUrl          = 'https://example.service-now.com/oauth_token.do'
 OAuthClientId     = 'local'
 OAuthClientSecret = 'client_secret'
-ApiEndpoint       = 'https://snow.example.org/api/x_lam_lhm_cmp'
+ApiEndpoint       = 'https://snow.example.org'
 ProxyUrl          = 'http://proxy.example.com:80'
 
 [MCMP]

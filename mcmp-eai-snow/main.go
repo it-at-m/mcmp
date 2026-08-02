@@ -8,8 +8,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/app"
+	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/client/snow"
 	"github.com/it-at-m/mcmp/mcmp-eai-snow/pkg/clients/mcmp"
-	"github.com/it-at-m/mcmp/mcmp-eai-snow/pkg/clients/snow"
 	"github.com/it-at-m/mcmp/mcmp-eai-snow/pkg/processor"
 	"github.com/spf13/viper"
 )
@@ -99,6 +100,7 @@ func main() {
 // 5. Sends processed data to MCMP API
 func run() {
 	// Load configuration from TOML file using the generic ReadConfig function
+	startTime := time.Now()
 	cfg := ReadConfig[Config](appname)
 	debug = cfg.GENERAL.Debug
 
@@ -110,7 +112,7 @@ func run() {
 		ApiEndpoint:     cfg.SERVICENOW.ApiEndpoint,
 		ProxyURL:        cfg.SERVICENOW.ProxyUrl,
 		EnableTLSVerify: true,
-		RequestTimeout:  30 * time.Second,
+		RequestTimeout:  300 * time.Second,
 		Scopes:          []string{},
 	}
 
@@ -136,6 +138,11 @@ func run() {
 	// Retrieve the processed ServiceNow data structure
 	// This contains all collected data ready for export
 	snowData := serviceProcessor.GetSnowData()
+
+	meta := app.NewEaiMetadata(appname, startTime)
+	app.FinalizeMetadata(&meta)
+	snowData.SetEaiMetadata(meta)
+
 	debugPrintf("SnowData created:")
 	debugPrintf("- Users: %d", len(snowData.Users))
 	debugPrintf("- Groups: %d", len(snowData.Groups))

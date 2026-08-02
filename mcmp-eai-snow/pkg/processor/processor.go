@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sort"
+	"strings"
 
+	"github.com/google/uuid"
+	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/client/snow"
 	"github.com/it-at-m/mcmp/mcmp-eai-snow/pkg/clients/mcmp"
-	"github.com/it-at-m/mcmp/mcmp-eai-snow/pkg/clients/snow"
 )
 
 // SnowClientInterface defines the contract for ServiceNow client operations.
@@ -23,33 +26,56 @@ type SnowClientInterface interface {
 	// GetCmdbCI fetches detailed configuration item data from CMDB by system ID
 	GetCmdbCI(sysId string) (snow.CmdbCi, error)
 	// GetVMwareInstances retrieves a list of VMware instances from the ServiceNow CMDB. Returns a slice of CmdbCi and an error.
-	GetVMwareInstances() ([]snow.CmdbCi, error)
+	//	GetVMwareInstances() ([]snow.CmdbCi, error)
 	GetLockedShutdown() (map[string]string, error)
 	GetLockedRightsize() (map[string]string, error)
 	GetServerForVMwareInstance(vmInstanceSysID string) (snow.Server, error)
+	GetKubernetesNamespaceData() ([]snow.ConfigurationItemWithAppServices, error)
+	GetStorageServerData() ([]snow.ConfigurationItemWithAppServices, error)
+	GetStorageVolumeData() ([]snow.ConfigurationItemWithAppServices, error)
+	GetStorageQTreeData() ([]snow.ConfigurationItemWithAppServices, error)
+	GetCmdbCiCloudServiceAccountData() ([]snow.ConfigurationItemWithAppServices, error)
+	GetCmdbCiCloudObjectStorageData() ([]snow.ConfigurationItemWithAppServices, error)
+	GetLbServiceData() ([]snow.ConfigurationItemWithAppServices, error)
+	GetVMwareInstanceData() ([]snow.ConfigurationItemWithAppServices, error)
+	GetCmdbCiServerData() ([]snow.ConfigurationItemWithAppServices, error)
 	// EnableDebug activates debug logging for the ServiceNow client
 	EnableDebug()
 }
 
-// ServiceProcessor orchestrates the processing of ServiceNow data into MCMP format.
-// It maintains internal maps to prevent duplicate processing and ensure data consistency.
-// The processor handles complex relationships between users, groups, CIs and app services.
-type ServiceProcessor struct {
-	// snowClient provides access to ServiceNow API operations
-	snowClient SnowClientInterface
-	// userMap stores processed users indexed by their system ID to prevent duplicates
-	userMap map[string]mcmp.User
-	// groupMap stores processed groups indexed by their system ID to prevent duplicates
-	groupMap map[string]mcmp.Group
-	// ciMap stores processed configuration items indexed by their system ID to prevent duplicates
-	ciMap map[string]mcmp.CI
-	// appServices holds the final list of processed application services
-	appServices []mcmp.AppService
-	// debug controls whether debug logging is enabled
-	lockedShutdownMap  map[string]string
-	lockedRightsizeMap map[string]string
-	debug              bool
-}
+type (
+	// ServiceProcessor orchestrates the processing of ServiceNow data into MCMP format.
+	// It maintains internal maps to prevent duplicate processing and ensure data consistency.
+	// The processor handles complex relationships between users, groups, CIs and app services.
+	ServiceProcessor struct {
+		// snowClient provides access to ServiceNow API operations
+		snowClient SnowClientInterface
+
+		// userMap stores processed users indexed by their system ID to prevent duplicates
+		userMap map[string]*mcmp.User
+
+		// groupMap stores processed groups indexed by their system ID to prevent duplicates
+		groupMap map[string]*mcmp.Group
+
+		// ciMap stores processed configuration items indexed by their system ID to prevent duplicates
+		ciMap map[string]*mcmp.ServerCI
+
+		// appServices holds the final list of processed application services
+		appServices []mcmp.AppService
+
+		k8sClusters     map[string]*mcmp.KubernetesClusterCI
+		storageServers  map[string]*mcmp.ServerCI
+		storageVolumes  map[string]*mcmp.StorageCI
+		storageQTrees   map[string]*mcmp.StorageCI
+		storageAccounts map[string]*mcmp.CloudObjectCI
+		storageBuckets  map[string]*mcmp.CloudObjectCI
+		lbServices      map[string]*mcmp.LbServiceCI
+		// debug controls whether debug logging is enabled
+		lockedShutdownMap  map[string]string
+		lockedRightsizeMap map[string]string
+		debug              bool
+	}
+)
 
 // NewServiceProcessor creates a new instance of ServiceProcessor with initialized maps.
 // The processor uses dependency injection for the ServiceNow client to improve testability.
@@ -62,12 +88,19 @@ type ServiceProcessor struct {
 //   - *ServiceProcessor: Fully initialized processor ready for data processing
 func NewServiceProcessor(snowClient SnowClientInterface, debug bool) *ServiceProcessor {
 	return &ServiceProcessor{
-		snowClient:  snowClient,
-		userMap:     make(map[string]mcmp.User),
-		groupMap:    make(map[string]mcmp.Group),
-		ciMap:       make(map[string]mcmp.CI),
-		appServices: make([]mcmp.AppService, 0),
-		debug:       debug,
+		snowClient:      snowClient,
+		userMap:         make(map[string]*mcmp.User),
+		groupMap:        make(map[string]*mcmp.Group),
+		ciMap:           make(map[string]*mcmp.ServerCI),
+		k8sClusters:     make(map[string]*mcmp.KubernetesClusterCI),
+		storageServers:  make(map[string]*mcmp.ServerCI),
+		storageVolumes:  make(map[string]*mcmp.StorageCI),
+		storageQTrees:   make(map[string]*mcmp.StorageCI),
+		storageAccounts: make(map[string]*mcmp.CloudObjectCI),
+		storageBuckets:  make(map[string]*mcmp.CloudObjectCI),
+		lbServices:      make(map[string]*mcmp.LbServiceCI),
+		appServices:     make([]mcmp.AppService, 0),
+		debug:           debug,
 	}
 }
 
@@ -90,6 +123,35 @@ func NewServiceProcessor(snowClient SnowClientInterface, debug bool) *ServicePro
 //   - error: nil on success, or an error describing what went wrong
 func (sp *ServiceProcessor) ProcessAppServices() error {
 	var err error
+	err = sp.ProcessKubernetesNamespaces()
+	if err != nil {
+		return fmt.Errorf("error processing Kubernetes namespaces: %w", err)
+	}
+	err = sp.ProcessLbServices()
+	if err != nil {
+		return fmt.Errorf("error processing load balancer services: %w", err)
+	}
+	err = sp.ProcessStorageServers()
+	if err != nil {
+		return fmt.Errorf("error processing storage server: %w", err)
+	}
+	err = sp.ProcessStorageVolumes()
+	if err != nil {
+		return fmt.Errorf("error processing storage volumes: %w", err)
+	}
+	err = sp.ProcessStorageQTree()
+	if err != nil {
+		return fmt.Errorf("error processing storage QTrees: %w", err)
+	}
+	err = sp.ProcessStorageS3Accounts()
+	if err != nil {
+		return fmt.Errorf("error processing storage S3 accounts: %w", err)
+	}
+	err = sp.ProcessStorageS3Buckets()
+	if err != nil {
+		return fmt.Errorf("error processing storage S3 buckets: %w", err)
+	}
+
 	sp.lockedShutdownMap, err = sp.snowClient.GetLockedShutdown()
 	if err != nil {
 		log.Printf("Error loading locked shutdown data: %v", err)
@@ -98,25 +160,37 @@ func (sp *ServiceProcessor) ProcessAppServices() error {
 	if err != nil {
 		log.Printf("Error loading locked rightsizing data: %v", err)
 	}
-	// Fetch all VMware instances from ServiceNow
-	snowVMwareInstances, err := sp.snowClient.GetVMwareInstances()
+
+	snowVMwareInstances, err := sp.snowClient.GetVMwareInstanceData()
 	if err != nil {
 		return fmt.Errorf("error loading cmdb_ci_vmware_instance services: %w", err)
 	}
 	for _, snowVMwareInstance := range snowVMwareInstances {
 
 		// Convert ServiceNow CI format to MCMP format and cache
-		mcmpCI := sp.convertSnowCIToMcmpCI(snowVMwareInstance)
-		server, err := sp.snowClient.GetServerForVMwareInstance(snowVMwareInstance.SysId)
+		mcmpCI := sp.convertConfigurationItemWithAppServicesToMcmoCI(snowVMwareInstance)
+		server, err := sp.snowClient.GetServerForVMwareInstance(snowVMwareInstance.GetSysID())
 		if err != nil {
-			sp.debugPrintf("Warning: could not fetch server for VMware instance %s: %v", snowVMwareInstance.Name, err)
+			sp.debugPrintf("Warning: could not fetch server for VMware instance %s: %v", snowVMwareInstance.GetName(), err)
 		} else if server.SysID != "" {
 			mcmpCI.ServerSysID = server.SysID
 		} else {
-			sp.debugPrintf("Info: No server relation found for VMware instance %s", snowVMwareInstance.Name)
+			sp.debugPrintf("Info: No server relation found for VMware instance %s", snowVMwareInstance.GetName())
 		}
-		sp.ciMap[snowVMwareInstance.SysId] = mcmpCI
-		sp.debugPrintf("CI %s stored in ciMap", snowVMwareInstance.Name)
+		sp.ciMap[snowVMwareInstance.GetSysID()] = &mcmpCI
+		sp.debugPrintf("CI %s stored in ciMap", snowVMwareInstance.GetName())
+	}
+
+	snowServers, err := sp.snowClient.GetCmdbCiServerData()
+	if err != nil {
+		return fmt.Errorf("error loading cmdb_ci_server services: %w", err)
+	}
+	for _, snowServer := range snowServers {
+
+		// Convert ServiceNow CI format to MCMP format and cache
+		mcmpCI := sp.convertConfigurationItemWithAppServicesToMcmoCI(snowServer)
+		sp.ciMap[snowServer.GetSysID()] = &mcmpCI
+		sp.debugPrintf("CI %s stored in ciMap", snowServer.GetName())
 	}
 
 	// Fetch all application services from ServiceNow
@@ -227,7 +301,7 @@ func (sp *ServiceProcessor) processAssignmentGroup(assignmentGroup string) error
 	}
 
 	// Cache the processed group to prevent duplicate processing
-	sp.groupMap[assignmentGroup] = group
+	sp.groupMap[assignmentGroup] = &group
 	sp.debugPrintf("Assignment group %s stored in groupMap", assignmentGroup)
 
 	return nil
@@ -254,7 +328,7 @@ func (sp *ServiceProcessor) processUser(user snow.User) {
 	// Convert ServiceNow user format to MCMP format
 	mcmpUser := sp.convertSnowUserToMcmpUser(user)
 	// Cache the processed user
-	sp.userMap[user.SysID] = mcmpUser
+	sp.userMap[user.SysID] = &mcmpUser
 	sp.debugPrintf("User %s stored in userMap", user.Name)
 }
 
@@ -313,7 +387,7 @@ func (sp *ServiceProcessor) processCIsForAppService(appServiceNumber string) ([]
 
 		// Convert ServiceNow CI format to MCMP format and cache
 		mcmpCI := sp.convertSnowCIToMcmpCI(cmdbCI)
-		sp.ciMap[tagEntry.CI] = mcmpCI
+		sp.ciMap[tagEntry.CI] = &mcmpCI
 		sp.debugPrintf("CI %s stored in ciMap", cmdbCI.Name)
 	}
 
@@ -338,12 +412,69 @@ func (sp *ServiceProcessor) convertSnowUserToMcmpUser(snowUser snow.User) mcmp.U
 	}
 }
 
+func (sp *ServiceProcessor) convertConfigurationItemWithAppServicesToMcmoCI(configurationItemWithAppServices snow.ConfigurationItemWithAppServices) mcmp.ServerCI {
+	rawCI := configurationItemWithAppServices.RawCI
+	sysID := configurationItemWithAppServices.GetSysID()
+	mcmpCI := mcmp.ServerCI{
+		Name:           configurationItemWithAppServices.GetName(),
+		SysID:          sysID,
+		SysClassName:   configurationItemWithAppServices.GetSysClassName(),
+		LastDiscovered: configurationItemWithAppServices.GetLastDiscovered(),
+		IPAddress:      sp.getStringValue(rawCI, "ip_address"),
+		FQDN:           sp.getStringValue(rawCI, "fqdn"),
+		VmInstanceUUID: sp.getStringValue(rawCI, "vm_instance_uuid"),
+
+		SerialNumber:   sp.getStringValue(rawCI, "serial_number"),
+		OS:             sp.getStringValue(rawCI, "os"),
+		OSVersion:      sp.getStringValue(rawCI, "os_version"),
+		OsDomain:       sp.getStringValue(rawCI, "os_domain"),
+		HardwareStatus: sp.getStringValue(rawCI, "hardware_status"),
+		MacAddress:     sp.getStringValue(rawCI, "mac_address"),
+
+		Company:              sp.getStringValue(rawCI, "company"),
+		DefaultGateway:       sp.getStringValue(rawCI, "default_gateway"),
+		DnsDomain:            sp.getStringValue(rawCI, "dns_domain"),
+		Environment:          sp.getStringValue(rawCI, "environment"),
+		HostName:             sp.getStringValue(rawCI, "host_name"),
+		InstallDate:          sp.getStringValue(rawCI, "install_date"),
+		InstallStatus:        sp.getStringValue(rawCI, "install_status"),
+		LifeCycleStage:       configurationItemWithAppServices.GetLifeCycleStage(),
+		LifeCycleStageStatus: configurationItemWithAppServices.GetLifeCycleStageStatus(),
+		Manufacturer:         sp.getStringValue(rawCI, "manufacturer"),
+		ModelID:              sp.getStringValue(rawCI, "model_id"),
+		OperationalStatus:    sp.getStringValue(rawCI, "operational_status"),
+		Virtual:              sp.getStringValue(rawCI, "virtual"),
+
+		BiosUUID:    sp.getStringValue(rawCI, "bios_uuid"),
+		ObjectID:    sp.getStringValue(rawCI, "object_id"),
+		VcenterUUID: sp.getStringValue(rawCI, "vcenter_uuid"),
+		Template:    sp.getStringValue(rawCI, "template"),
+
+		AppServiceNumbers: configurationItemWithAppServices.GetAppServiceNumbers(),
+	}
+	// Check for locked shutdown status
+	if closedAt, exists := sp.lockedShutdownMap[sysID]; exists {
+		mcmpCI.ShutdownTaskClosedAt = closedAt
+		// If closedAt is empty, the change is still open and the CI is locked
+		mcmpCI.LockedShutdown = closedAt == ""
+	}
+
+	// Check for locked rightsize status
+	if closedAt, exists := sp.lockedRightsizeMap[sysID]; exists {
+		mcmpCI.RightsizeTaskClosedAt = closedAt
+		// If closedAt is empty, the change is still open and the CI is locked
+		mcmpCI.LockedRightsize = closedAt == ""
+	}
+
+	return mcmpCI
+}
+
 // convertSnowCIToMcmpCI converts a ServiceNow configuration item to MCMP CI format.
 // This conversion maps ServiceNow CMDB fields to their MCMP equivalents, preserving
 // essential infrastructure information for asset management and monitoring.
 // It also enriches the CI with locked status information for Shutdown and Rightsizing.
-func (sp *ServiceProcessor) convertSnowCIToMcmpCI(snowCI snow.CmdbCi) mcmp.CI {
-	mcmpCI := mcmp.CI{
+func (sp *ServiceProcessor) convertSnowCIToMcmpCI(snowCI snow.CmdbCi) mcmp.ServerCI {
+	mcmpCI := mcmp.ServerCI{
 		Name:           snowCI.Name,
 		SysID:          snowCI.SysId,
 		SerialNumber:   snowCI.SerialNumber,
@@ -397,7 +528,7 @@ func (sp *ServiceProcessor) convertSnowAppServiceToMcmpAppService(snowAppService
 		OwnedBy:                snowAppService.OwnedBy.SysID,
 		ServiceOwnerDelegate:   snowAppService.ServiceOwnerDelegate.SysID,
 		BusinessServiceNumbers: snowAppService.BusinessServiceNumbers,
-		CIs:                    ciSysIDs,
+		ServerCIs:              ciSysIDs,
 	}
 }
 
@@ -420,31 +551,34 @@ func (sp *ServiceProcessor) debugPrintf(format string, a ...interface{}) {
 // Returns:
 //   - mcmp.SnowData: Complete dataset containing all processed users, groups, CIs, and app services
 func (sp *ServiceProcessor) GetSnowData() mcmp.SnowData {
-	// Convert user map to slice for JSON serialization
-	// Pre-allocate slice for efficiency
-	users := make([]mcmp.User, 0, len(sp.userMap))
-	for _, user := range sp.userMap {
-		users = append(users, user)
+	storageVolumes := mapToSlice(sp.storageVolumes)
+	storageQTrees := mapToSlice(sp.storageQTrees)
+
+	// Sort helper for StorageCI
+	sortCIs := func(cis []mcmp.StorageCI) {
+		sort.Slice(cis, func(i, j int) bool {
+			if cis[i].VolumeID != cis[j].VolumeID {
+				return cis[i].VolumeID < cis[j].VolumeID
+			}
+			return cis[i].QTreeID < cis[j].QTreeID
+		})
 	}
 
-	// Convert group map to slice for JSON serialization
-	groups := make([]mcmp.Group, 0, len(sp.groupMap))
-	for _, group := range sp.groupMap {
-		groups = append(groups, group)
-	}
+	sortCIs(storageVolumes)
+	sortCIs(storageQTrees)
 
-	// Convert CI map to slice for JSON serialization
-	cis := make([]mcmp.CI, 0, len(sp.ciMap))
-	for _, ci := range sp.ciMap {
-		cis = append(cis, ci)
-	}
-
-	// Return complete aggregated dataset
 	return mcmp.SnowData{
-		Users:       users,
-		Groups:      groups,
-		CmdbCIs:     cis,
-		AppServices: sp.appServices,
+		Users:                mapToSlice(sp.userMap),
+		Groups:               mapToSlice(sp.groupMap),
+		CmdbCIs:              mapToSlice(sp.ciMap),
+		AppServices:          sp.appServices,
+		KubernetesClusterCIs: mapToSlice(sp.k8sClusters),
+		StorageServerCIs:     mapToSlice(sp.storageServers),
+		StorageVolumeCIs:     mapToSlice(sp.storageVolumes),
+		StorageQTreeCIs:      mapToSlice(sp.storageQTrees),
+		StorageAccountCIs:    mapToSlice(sp.storageAccounts),
+		StorageBucketCIs:     mapToSlice(sp.storageBuckets),
+		LbServiceCI:          mapToSlice(sp.lbServices),
 	}
 }
 
@@ -488,33 +622,6 @@ func (sp *ServiceProcessor) ExportSnowDataToFile(filename string) error {
 	return nil
 }
 
-// GetUserMap returns the internal user map for direct access.
-// This method provides access to processed users indexed by their system ID.
-//
-// Returns:
-//   - map[string]mcmp.User: Map of processed users indexed by system ID
-func (sp *ServiceProcessor) GetUserMap() map[string]mcmp.User {
-	return sp.userMap
-}
-
-// GetGroupMap returns the internal group map for direct access.
-// This method provides access to processed groups indexed by their system ID.
-//
-// Returns:
-//   - map[string]mcmp.Group: Map of processed groups indexed by system ID
-func (sp *ServiceProcessor) GetGroupMap() map[string]mcmp.Group {
-	return sp.groupMap
-}
-
-// GetCIMap returns the internal CI map for direct access.
-// This method provides access to processed configuration items indexed by their system ID.
-//
-// Returns:
-//   - map[string]mcmp.CI: Map of processed CIs indexed by system ID
-func (sp *ServiceProcessor) GetCIMap() map[string]mcmp.CI {
-	return sp.ciMap
-}
-
 // GetAppServices returns the list of processed application services.
 // This method provides access to the final processed app services list.
 //
@@ -522,4 +629,311 @@ func (sp *ServiceProcessor) GetCIMap() map[string]mcmp.CI {
 //   - []mcmp.AppService: List of processed application services
 func (sp *ServiceProcessor) GetAppServices() []mcmp.AppService {
 	return sp.appServices
+}
+
+func (sp *ServiceProcessor) GetUserMap() map[string]*mcmp.User {
+	return sp.userMap
+}
+
+func (sp *ServiceProcessor) GetGroupMap() map[string]*mcmp.Group {
+	return sp.groupMap
+}
+
+func (sp *ServiceProcessor) GetCIMap() map[string]*mcmp.ServerCI {
+	return sp.ciMap
+}
+
+// ProcessKubernetesNamespaces fetches and transforms Kubernetes namespace data from ServiceNow.
+func (sp *ServiceProcessor) ProcessKubernetesNamespaces() error {
+	dataList, err := sp.snowClient.GetKubernetesNamespaceData()
+	if err != nil {
+		return fmt.Errorf("error loading kubernetes namespaces: %w", err)
+	}
+
+	for _, data := range dataList {
+		res := data.RawCI
+		sysID := data.GetSysID()
+		if sysID == "" {
+			continue
+		}
+
+		// Check if the cluster has the correct sys_class
+		clusterClass := sp.getStringValue(res, "cluster.sys_class_name")
+		if clusterClass != "cmdb_ci_kubernetes_cluster" {
+			sp.debugPrintf("Skipping namespace %s because cluster class is %s", data.GetName(), clusterClass)
+			continue
+		}
+
+		clusterSysID := sp.getStringValue(res, "cluster.sys_id")
+		if clusterSysID == "" {
+			continue
+		}
+
+		cluster, exists := sp.k8sClusters[clusterSysID]
+		if !exists {
+			cluster = &mcmp.KubernetesClusterCI{
+				Name:                 sp.getStringValue(res, "cluster.name"),
+				SysID:                sp.getStringValue(res, "cluster.sys_id"),
+				SysClass:             sp.getStringValue(res, "cluster.sys_class_name"),
+				LastDiscovered:       sp.getStringValue(res, "cluster.last_discovered"),
+				LifeCycleStage:       sp.getNestedValue(res, "cluster.life_cycle_stage"),
+				LifeCycleStageStatus: sp.getNestedValue(res, "cluster.life_cycle_stage_status"),
+				K8SUID:               sp.getStringValue(res, "cluster.k8s_uid"),
+				Environment:          sp.getStringValue(res, "cluster.environment"),
+			}
+			sp.k8sClusters[clusterSysID] = cluster
+		}
+
+		k8sUID := sp.getStringValue(res, "k8s_uid")
+		if k8sUID != "" {
+			parts := strings.Split(k8sUID, " ")
+			k8sUID = parts[0]
+		}
+		ns := mcmp.KubernetesNamespaceCI{
+			Name:                 data.GetName(),
+			SysID:                sysID,
+			SysClass:             data.GetSysClassName(),
+			LastDiscovered:       data.GetLastDiscovered(),
+			LifeCycleStage:       data.GetLifeCycleStage(),
+			LifeCycleStageStatus: data.GetLifeCycleStageStatus(),
+			K8sUID:               k8sUID,
+			Environment:          sp.getStringValue(res, "environment"),
+			AppServiceNumbers:    data.GetAppServiceNumbers(),
+		}
+		cluster.KubernetesNamespaceCIs = append(cluster.KubernetesNamespaceCIs, ns)
+
+	}
+	return nil
+}
+
+func (sp *ServiceProcessor) ProcessStorageServers() error {
+	dataList, err := sp.snowClient.GetStorageServerData()
+	if err != nil {
+		return fmt.Errorf("error loading storage server: %w", err)
+	}
+
+	for _, data := range dataList {
+		res := data.RawCI
+		sysID := data.GetSysID()
+		if sysID == "" {
+			continue
+		}
+		storageServerCI := &mcmp.ServerCI{
+			Name:                 data.GetName(),
+			SysID:                sysID,
+			SysClassName:         data.GetSysClassName(),
+			LifeCycleStage:       data.GetLifeCycleStage(),
+			LifeCycleStageStatus: data.GetLifeCycleStageStatus(),
+			LastDiscovered:       data.GetLastDiscovered(),
+			SerialNumber:         sp.getStringValue(res, "serial_number"),
+			AppServiceNumbers:    data.GetAppServiceNumbers(),
+		}
+		sp.storageServers[sysID] = storageServerCI
+	}
+	return nil
+}
+
+// ProcessStorageVolumes fetches and transforms Storage Volume data from ServiceNow.
+func (sp *ServiceProcessor) ProcessStorageVolumes() error {
+	dataList, err := sp.snowClient.GetStorageVolumeData()
+	if err != nil {
+		return fmt.Errorf("error loading storage volumes: %w", err)
+	}
+
+	for _, data := range dataList {
+		res := data.RawCI
+		sysID := data.GetSysID()
+		if sysID == "" {
+			continue
+		}
+		storageType := sp.getStringValue(res, "storage_type")
+		volumeID := sp.getStringValue(res, "volume_id")
+		qTreeID := ""
+		if storageType == "QTree" && volumeID != "" {
+			parts := strings.Split(volumeID, "/")
+			volumeID = parts[0]
+			if len(parts) > 1 {
+				qTreeID = parts[1]
+			}
+			if len(parts) < 2 {
+				fmt.Printf("Invalid volume ID format %s, sys_id %s\n", volumeID, sysID)
+			}
+		}
+
+		// Skip invalid volume IDs that are not a valid UUID
+		if _, err := uuid.Parse(volumeID); err != nil {
+			sp.debugPrintf("Skipping volume %s because volumeID %s is not a valid UUID, sys_id %s", data.GetName(), volumeID, sysID)
+			continue
+		}
+
+		storageVolumeCI := &mcmp.StorageCI{
+			Name:                 data.GetName(),
+			SysID:                sysID,
+			SysClass:             data.GetSysClassName(),
+			LifeCycleStage:       data.GetLifeCycleStage(),
+			LifeCycleStageStatus: data.GetLifeCycleStageStatus(),
+			LastDiscovered:       data.GetLastDiscovered(),
+			StorageType:          storageType,
+			ClusterID:            sp.getStringValue(res, "cluster_id"),
+			VolumeID:             volumeID,
+			QTreeID:              qTreeID,
+			ObjectID:             sp.getStringValue(res, "object_id"),
+			SvmUUID:              sp.getStringValue(res, "computer.serial_number"),
+			AppServiceNumbers:    data.GetAppServiceNumbers(),
+		}
+		sp.storageVolumes[sysID] = storageVolumeCI
+	}
+	return nil
+}
+
+// ProcessStorageVolumes fetches and transforms Storage Volume data from ServiceNow.
+func (sp *ServiceProcessor) ProcessStorageQTree() error {
+	dataList, err := sp.snowClient.GetStorageQTreeData()
+	if err != nil {
+		return fmt.Errorf("error loading storage volumes: %w", err)
+	}
+
+	for _, data := range dataList {
+		res := data.RawCI
+		sysID := data.GetSysID()
+		if sysID == "" {
+			continue
+		}
+		storageType := sp.getStringValue(res, "storage_type")
+		volumeID := sp.getStringValue(res, "volume_id")
+		qTreeID := ""
+		if storageType == "QTree" && volumeID != "" {
+			parts := strings.Split(volumeID, "/")
+			volumeID = parts[0]
+			if len(parts) > 1 {
+				qTreeID = parts[1]
+			}
+			if len(parts) < 2 {
+				fmt.Printf("Invalid volume ID format %s, sys_id %s\n", volumeID, sysID)
+			}
+		}
+
+		// Skip invalid volume IDs that are not a valid UUID
+		if _, err := uuid.Parse(volumeID); err != nil {
+			sp.debugPrintf("Skipping QTree %s because volumeID %s is not a valid UUID, sys_id %s", data.GetName(), volumeID, sysID)
+			continue
+		}
+
+		storageQTreeCI := &mcmp.StorageCI{
+			Name:                 data.GetName(),
+			SysID:                sysID,
+			SysClass:             data.GetSysClassName(),
+			LifeCycleStage:       data.GetLifeCycleStage(),
+			LifeCycleStageStatus: data.GetLifeCycleStageStatus(),
+			LastDiscovered:       data.GetLastDiscovered(),
+			StorageType:          storageType,
+			ClusterID:            sp.getStringValue(res, "cluster_id"),
+			VolumeID:             volumeID,
+			QTreeID:              qTreeID,
+			ObjectID:             sp.getStringValue(res, "object_id"),
+			SvmUUID:              sp.getStringValue(res, "computer.serial_number"),
+			AppServiceNumbers:    data.GetAppServiceNumbers(),
+		}
+		sp.storageQTrees[sysID] = storageQTreeCI
+	}
+	return nil
+}
+
+func (sp *ServiceProcessor) ProcessStorageS3Accounts() error {
+	dataList, err := sp.snowClient.GetCmdbCiCloudServiceAccountData()
+	if err != nil {
+		return fmt.Errorf("failed to fetch cloud service account for table cmdb_ci_cloud_service_account: %w", err)
+	}
+	for _, data := range dataList {
+		res := data.RawCI
+		sysID := sp.getStringValue(res, "configuration_item.sys_id")
+		if sysID == "" {
+			continue
+		}
+		tenant := &mcmp.CloudObjectCI{
+			SysID:             sysID,
+			Name:              sp.getStringValue(res, "configuration_item.name"),
+			SysClass:          sp.getStringValue(res, "configuration_item.sys_class_name"),
+			AccountId:         sp.getStringValue(res, "value"),
+			AppServiceNumbers: data.GetAppServiceNumbers(),
+		}
+		sp.storageAccounts[sysID] = tenant
+	}
+	return nil
+}
+
+func (sp *ServiceProcessor) ProcessStorageS3Buckets() error {
+	dataList, err := sp.snowClient.GetCmdbCiCloudObjectStorageData()
+	if err != nil {
+		return fmt.Errorf("failed to fetch cloud object storage for table cmdb_ci_cloud_object_storage: %w", err)
+	}
+	for _, data := range dataList {
+		res := data.RawCI
+		sysID := sp.getStringValue(res, "configuration_item.sys_id")
+		if sysID == "" {
+			continue
+		}
+		bucket := &mcmp.CloudObjectCI{
+			SysID:             sysID,
+			Name:              sp.getStringValue(res, "configuration_item.name"),
+			SysClass:          sp.getStringValue(res, "configuration_item.sys_class_name"),
+			AccountId:         sp.getStringValue(res, "value"),
+			AppServiceNumbers: data.GetAppServiceNumbers(),
+		}
+		sp.storageBuckets[sysID] = bucket
+	}
+	return nil
+}
+
+// ProcessLbServices fetches and transforms Loadbalancer Service data from ServiceNow.
+func (sp *ServiceProcessor) ProcessLbServices() error {
+	dataList, err := sp.snowClient.GetLbServiceData()
+	if err != nil {
+		return fmt.Errorf("error loading lb services: %w", err)
+	}
+
+	for _, data := range dataList {
+		sysID := data.GetSysID()
+		lbServiceCI := &mcmp.LbServiceCI{
+			Name:                 data.GetName(),
+			SysID:                sysID,
+			SysClass:             data.GetSysClassName(),
+			LifeCycleStage:       data.GetLifeCycleStage(),
+			LifeCycleStageStatus: data.GetLifeCycleStageStatus(),
+			LastDiscovered:       data.GetLastDiscovered(),
+			AppServiceNumbers:    data.GetAppServiceNumbers(),
+		}
+		sp.lbServices[sysID] = lbServiceCI
+	}
+	return nil
+}
+
+func (sp *ServiceProcessor) getStringValue(m map[string]any, key string) string {
+	if val, ok := m[key].(string); ok {
+		return val
+	}
+	return ""
+}
+
+func (sp *ServiceProcessor) getNestedValue(m map[string]any, key string) string {
+	if val, ok := m[key].(string); ok {
+		return val
+	}
+	if nested, ok := m[key].(map[string]any); ok {
+		if v, exists := nested["value"].(string); exists {
+			return v
+		}
+	}
+	return ""
+}
+
+// mapToSlice converts a map of pointers to a slice of values.
+func mapToSlice[T any](m map[string]*T) []T {
+	s := make([]T, 0, len(m))
+	for _, v := range m {
+		if v != nil {
+			s = append(s, *v)
+		}
+	}
+	return s
 }

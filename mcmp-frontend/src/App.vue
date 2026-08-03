@@ -470,7 +470,7 @@ const buttonsCenter = computed(() => [
   },
   { text: "Storage", icon: mdiHarddisk, path: "/storage", isNew: false },
   {
-    text: "Loadbalancer",
+    text: "Loadbalancer / WAF",
     icon: mdiSitemap,
     path: "/loadbalancer",
     isNew: !seenNewNavPaths.value.includes("/loadbalancer"),

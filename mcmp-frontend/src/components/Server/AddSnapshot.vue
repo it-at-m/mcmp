@@ -153,9 +153,9 @@ const isDisabled = computed(() => {
   if (!props.server) return true;
   return (
     (props.snapshotCount ?? 0) > 0 ||
-    (props.server.cloud?.cloudType !== "VMWARE" //&&
-      //props.server.cloud?.cloudType !== "PROXMOX"
-    ));
+    props.server.cloud?.cloudType !== "VMWARE" //&&
+    //props.server.cloud?.cloudType !== "PROXMOX"
+  );
 });
 
 function save() {

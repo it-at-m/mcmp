@@ -252,7 +252,7 @@
           style="cursor: pointer"
           @click="toggleServerList(pool.name)"
         >
-          <h3>Server ({{ pool.members.length }})</h3>
+          <h3>Member ({{ pool.members.length }})</h3>
           <v-btn
             :icon="
               isServerListExpanded(pool.name) ? mdiChevronUp : mdiChevronDown

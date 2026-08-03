@@ -146,6 +146,10 @@
 </template>
 
 <script setup lang="ts">
+
+
+
+
 import { computed, inject, ref, watch } from "vue";
 
 import jobService from "@/api/jobService";
@@ -193,14 +197,18 @@ const rawDate = ref<Date>(new Date());
 const validationRules = useRules();
 
 const action = computed(() => {
-  if (props.isBatchOperation) {
-    return [
-      ...new Set(
-        props.selectedServers?.map((server) => server.cloud.cloudType)
-      ),
-    ].map((type) => `${type}_${props.jobToCall}`);
+  if (!props.jobToCall?.includes("DELETE")) {
+    if (props.isBatchOperation) {
+      return [
+        ...new Set(
+          props.selectedServers?.map((server) => server.cloud.cloudType)
+        ),
+      ].map((type) => `${type}_${props.jobToCall}`);
+    }
+    return [props.server?.cloud.cloudType + "_" + props.jobToCall];
+  } else {
+    return [props.jobToCall];
   }
-  return [props.server?.cloud.cloudType + "_" + props.jobToCall];
 });
 
 function changeToSchedule() {
@@ -258,7 +266,8 @@ function makeJobCall() {
     const promises = servers.map((server) =>
       jobService.startJob(
         loading,
-        server.cloud.cloudType + "_" + props.jobToCall,
+        (props.jobToCall?.includes("DELETE")?'': (server.cloud.cloudType + "_")) +
+          props.jobToCall,
         server.id,
         schedule.value ? { scheduleTime: rawDate.value.toISOString() } : {}
       )
@@ -284,7 +293,7 @@ function makeJobCall() {
   jobService
     .startJob(
       loading,
-      props.server!.cloud.cloudType + "_" + props.jobToCall,
+      (props.jobToCall?.includes("DELETE")?'': (props.server?.cloud.cloudType + "_")) + props.jobToCall,
       props.server!.id,
       schedule.value ? { scheduleTime: rawDate.value.toISOString() } : {}
     )

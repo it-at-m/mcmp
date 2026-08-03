@@ -11,5 +11,6 @@ export interface Cloud extends BaseIntegrationConfig {
   apiPassword?: string;
   configInfobloxId: number;
   configBaasId: number;
+  awxInventoryId?: number;
   type: "cloud";
 }

@@ -294,7 +294,7 @@ public class JobService {
 
         Map<String, Object> params = new HashMap<>();
         params.put("vm_name", server.getName());
-        params.put("inventory_id",server.getCloud().getAwxInventoryId().toString());
+        params.put("inventory_id", (server.getCloud().getAwxInventoryId() == null ? "" : server.getCloud().getAwxInventoryId().toString() ));
 
         String cloudType = server.getCloud().getCloudType().toString();
         if (cloudType == "VMWARE"){
@@ -324,7 +324,7 @@ public class JobService {
         params.put("turned_off_at", new SimpleDateFormat("MM/dd/yy HH:mm:ss").format(new Date()));
         params.put("turned_off_by", AuthUtils.getUsername());
         params.put("turned_off_note", "Server wurde durch den Benutzer " + AuthUtils.getUsername() + " in der MCMP gestoppt.");
-        params.put("inventory_id",server.getCloud().getAwxInventoryId().toString());
+        params.put("inventory_id",(server.getCloud().getAwxInventoryId() == null ? "" : server.getCloud().getAwxInventoryId().toString() ));
 
         String cloudType = server.getCloud().getCloudType().toString();
 
@@ -355,7 +355,7 @@ public class JobService {
         params.put("turned_off_at", new SimpleDateFormat("MM/dd/yy HH:mm:ss").format(new Date()));
         params.put("turned_off_by", AuthUtils.getUsername());
         params.put("turned_off_note", "Server wurde durch den Benutzer " + AuthUtils.getUsername() + " in der MCMP gerestarted.");
-        params.put("inventory_id",server.getCloud().getAwxInventoryId().toString());
+        params.put("inventory_id",(server.getCloud().getAwxInventoryId() == null ? "" : server.getCloud().getAwxInventoryId().toString() ));
 
         String cloudType = server.getCloud().getCloudType().toString();
 
@@ -385,7 +385,7 @@ public class JobService {
         params.put("vm_name", server.getName());
         params.put("cpus_new", cpu);
         params.put("memory_new", ram);
-        params.put("inventory_id",server.getCloud().getAwxInventoryId().toString());
+        params.put("inventory_id",(server.getCloud().getAwxInventoryId() == null ? "" : server.getCloud().getAwxInventoryId().toString() ));
 
         String cloudType = server.getCloud().getCloudType().toString();
         if (cloudType == "VMWARE"){
@@ -428,7 +428,7 @@ public class JobService {
         params.put("TeamName", AuthUtils.getUsername().replace('.','_')); //TODO TEAMNAME nicht username (Wird nach ablöse des Snapshot Tools entfernt)
         params.put("time", duration);
         params.put("snapshot_description", description);
-        params.put("inventory_id",server.getCloud().getAwxInventoryId().toString());
+        params.put("inventory_id",(server.getCloud().getAwxInventoryId() == null ? "" : server.getCloud().getAwxInventoryId().toString() ));
 
         String cloudType = server.getCloud().getCloudType().toString();
         if (cloudType == "VMWARE"){
@@ -456,7 +456,7 @@ public class JobService {
         params.put("vm_name", server.getName());
         params.put("state", "absent");
         params.put("TeamName", AuthUtils.getUsername()); //TODO TEAMNAME nicht username (Wird nach ablöse des Snapshot Tools entfernt)
-        params.put("inventory_id",server.getCloud().getAwxInventoryId().toString());
+        params.put("inventory_id",(server.getCloud().getAwxInventoryId() == null ? "" : server.getCloud().getAwxInventoryId().toString() ));
 
         String cloudType = server.getCloud().getCloudType().toString();
         if (cloudType == "VMWARE"){
@@ -482,7 +482,7 @@ public class JobService {
         Map<String, Object> params = new HashMap<>();
         params.put("vm_name", server.getName());
         params.put("TeamName", AuthUtils.getUsername()); //TODO TEAMNAME nicht username (Wird nach ablöse des Snapshot Tools entfernt)
-        params.put("inventory_id",server.getCloud().getAwxInventoryId().toString());
+        params.put("inventory_id",(server.getCloud().getAwxInventoryId() == null ? "" : server.getCloud().getAwxInventoryId().toString() ));
 
         String cloudType = server.getCloud().getCloudType().toString();
         if (cloudType == "VMWARE"){

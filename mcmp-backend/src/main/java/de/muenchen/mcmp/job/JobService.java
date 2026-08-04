@@ -314,9 +314,9 @@ public class JobService {
         }
 
         if(scheduleTime != null){
-            createJob(start_server_identifier, server, params, new HashMap<>(), scheduleTime,null,null, (server.getCloud().getAwxInventoryId() == null ? "" : server.getCloud().getAwxInventoryId().toString() ));
+            createJob(start_server_identifier, server, params, new HashMap<>(), scheduleTime,null,null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
         } else {
-            createJob(start_server_identifier, server, params, new HashMap<>(), null, null, null, (server.getCloud().getAwxInventoryId() == null ? "" : server.getCloud().getAwxInventoryId().toString() ));
+            createJob(start_server_identifier, server, params, new HashMap<>(), null, null, null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
         }
     }
 
@@ -344,9 +344,9 @@ public class JobService {
         }
 
         if(scheduleTime != null){
-            createJob(stop_server_identifier, server, params, new HashMap<>(), scheduleTime,null,null, (server.getCloud().getAwxInventoryId() == null ? "" : server.getCloud().getAwxInventoryId().toString() ));
+            createJob(stop_server_identifier, server, params, new HashMap<>(), scheduleTime,null,null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
         } else {
-            createJob(stop_server_identifier, server, params, new HashMap<>(), null, null, null, (server.getCloud().getAwxInventoryId() == null ? "" : server.getCloud().getAwxInventoryId().toString() ));
+            createJob(stop_server_identifier, server, params, new HashMap<>(), null, null, null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
         }
     }
 
@@ -374,9 +374,9 @@ public class JobService {
         }
 
         if(scheduleTime != null){
-            createJob(restart_server_identifier, server, params, new HashMap<>(), scheduleTime,null,null, (server.getCloud().getAwxInventoryId() == null ? "" : server.getCloud().getAwxInventoryId().toString() ));
+            createJob(restart_server_identifier, server, params, new HashMap<>(), scheduleTime,null,null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
         } else {
-            createJob(restart_server_identifier, server, params, new HashMap<>(), null, null, null, (server.getCloud().getAwxInventoryId() == null ? "" : server.getCloud().getAwxInventoryId().toString() ));
+            createJob(restart_server_identifier, server, params, new HashMap<>(), null, null, null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
         }
     }
 
@@ -417,7 +417,7 @@ public class JobService {
                 guiVars.put("scheduled_time", "Geplante Durchführungszeit: " + dateTime);
             }
         }
-        createJob(change_cpu_ram_identifier, server, params, guiVars, scheduleTime, tag, null, (server.getCloud().getAwxInventoryId() == null ? "" : server.getCloud().getAwxInventoryId().toString() ));
+        createJob(change_cpu_ram_identifier, server, params, guiVars, scheduleTime, tag, null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
     }
 
     public void createSnapshot(final Long serverId, final Integer duration, final String description, final boolean withShutdown, final String create_snapshot_identifier) {
@@ -446,7 +446,7 @@ public class JobService {
             awxSkipTag = "with_power_off, with_power_on";
         }
 
-        createJob(create_snapshot_identifier, server, params, new HashMap<>(), null, awxSkipTag, (server.getCloud().getAwxInventoryId() == null ? "" : server.getCloud().getAwxInventoryId().toString() ));
+        createJob(create_snapshot_identifier, server, params, new HashMap<>(), null, awxSkipTag, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
     }
 
     public void deleteSnapshot(final Long serverId, final Long snapshotId, final String snapshotName, final String delete_snapshot_identifier){
@@ -472,7 +472,7 @@ public class JobService {
             throw new IllegalArgumentException("Cloud type " + cloudType + " is not supported.");
         }
 
-        createJob(delete_snapshot_identifier, server, params, new HashMap<>(), null, null, null, (server.getCloud().getAwxInventoryId() == null ? "" : server.getCloud().getAwxInventoryId().toString() ));
+        createJob(delete_snapshot_identifier, server, params, new HashMap<>(), null, null, null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
     }
 
     public void revertSnapshot(final Long serverId, final Long snapshotId, final String snapshotName, final String reverte_snapshot_identifier){
@@ -499,7 +499,7 @@ public class JobService {
             throw new IllegalArgumentException("Cloud type " + cloudType + " is not supported.");
         }
 
-        createJob(reverte_snapshot_identifier, server, params, new HashMap<>(), null , null, (server.getCloud().getAwxInventoryId() == null ? "" : server.getCloud().getAwxInventoryId().toString() ));
+        createJob(reverte_snapshot_identifier, server, params, new HashMap<>(), null , null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
     }
 
     // -----------------------------------------------------------------------------------------------------------------

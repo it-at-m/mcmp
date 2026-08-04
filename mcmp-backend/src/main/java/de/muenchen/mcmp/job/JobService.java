@@ -175,6 +175,10 @@ public class JobService {
     }
 
     public void createJob(final String actionIdentifier, Server server, Map<String, Object> awxExtraVars, Map<String, Object> guiVars, Instant scheduleTime, String awxJobTags, String awxSkipTags) {
+        createJob(actionIdentifier, server, awxExtraVars, guiVars,null, awxJobTags, awxSkipTags, null);
+    }
+
+    public void createJob(final String actionIdentifier, Server server, Map<String, Object> awxExtraVars, Map<String, Object> guiVars, Instant scheduleTime, String awxJobTags, String awxSkipTags, String awxInventroyId) {
         Action action = getActionOrThrow(actionIdentifier);
 
         checkActionEnabled(action);
@@ -229,6 +233,7 @@ public class JobService {
 
         if (awxJobTags != null){job.setAwxJobTags((action.getAwxJobTags().isEmpty()) ? awxJobTags : action.getAwxJobTags() + "," + awxJobTags);}
         if (awxSkipTags != null){job.setAwxSkipTags((action.getAwxSkipTags().isEmpty()) ? awxSkipTags : action.getAwxSkipTags() + "," + awxSkipTags);}
+        if (awxInventroyId != null){job.setAwxInventoryId(Integer.valueOf(awxInventroyId));}
 
         if(scheduleTime != null){
             job.setChangeStartDate(scheduleTime);
@@ -294,7 +299,6 @@ public class JobService {
 
         Map<String, Object> params = new HashMap<>();
         params.put("vm_name", server.getName());
-        params.put("inventory_id", (server.getCloud().getAwxInventoryId() == null ? "" : server.getCloud().getAwxInventoryId().toString() ));
 
         String cloudType = server.getCloud().getCloudType().toString();
         if (cloudType == "VMWARE"){
@@ -310,9 +314,9 @@ public class JobService {
         }
 
         if(scheduleTime != null){
-            createJob(start_server_identifier, server, params, new HashMap<>(), scheduleTime,null,null);
+            createJob(start_server_identifier, server, params, new HashMap<>(), scheduleTime,null,null, (server.getCloud().getAwxInventoryId() == null ? "" : server.getCloud().getAwxInventoryId().toString() ));
         } else {
-            createJob(start_server_identifier, server, params, new HashMap<>());
+            createJob(start_server_identifier, server, params, new HashMap<>(), null, null, null, (server.getCloud().getAwxInventoryId() == null ? "" : server.getCloud().getAwxInventoryId().toString() ));
         }
     }
 
@@ -324,7 +328,6 @@ public class JobService {
         params.put("turned_off_at", new SimpleDateFormat("MM/dd/yy HH:mm:ss").format(new Date()));
         params.put("turned_off_by", AuthUtils.getUsername());
         params.put("turned_off_note", "Server wurde durch den Benutzer " + AuthUtils.getUsername() + " in der MCMP gestoppt.");
-        params.put("inventory_id",(server.getCloud().getAwxInventoryId() == null ? "" : server.getCloud().getAwxInventoryId().toString() ));
 
         String cloudType = server.getCloud().getCloudType().toString();
 
@@ -341,9 +344,9 @@ public class JobService {
         }
 
         if(scheduleTime != null){
-            createJob(stop_server_identifier, server, params, new HashMap<>(), scheduleTime,null,null);
+            createJob(stop_server_identifier, server, params, new HashMap<>(), scheduleTime,null,null, (server.getCloud().getAwxInventoryId() == null ? "" : server.getCloud().getAwxInventoryId().toString() ));
         } else {
-            createJob(stop_server_identifier, server, params, new HashMap<>());
+            createJob(stop_server_identifier, server, params, new HashMap<>(), null, null, null, (server.getCloud().getAwxInventoryId() == null ? "" : server.getCloud().getAwxInventoryId().toString() ));
         }
     }
 
@@ -355,7 +358,6 @@ public class JobService {
         params.put("turned_off_at", new SimpleDateFormat("MM/dd/yy HH:mm:ss").format(new Date()));
         params.put("turned_off_by", AuthUtils.getUsername());
         params.put("turned_off_note", "Server wurde durch den Benutzer " + AuthUtils.getUsername() + " in der MCMP gerestarted.");
-        params.put("inventory_id",(server.getCloud().getAwxInventoryId() == null ? "" : server.getCloud().getAwxInventoryId().toString() ));
 
         String cloudType = server.getCloud().getCloudType().toString();
 
@@ -372,9 +374,9 @@ public class JobService {
         }
 
         if(scheduleTime != null){
-            createJob(restart_server_identifier, server, params, new HashMap<>(), scheduleTime,null,null);
+            createJob(restart_server_identifier, server, params, new HashMap<>(), scheduleTime,null,null, (server.getCloud().getAwxInventoryId() == null ? "" : server.getCloud().getAwxInventoryId().toString() ));
         } else {
-            createJob(restart_server_identifier, server, params, new HashMap<>());
+            createJob(restart_server_identifier, server, params, new HashMap<>(), null, null, null, (server.getCloud().getAwxInventoryId() == null ? "" : server.getCloud().getAwxInventoryId().toString() ));
         }
     }
 
@@ -385,7 +387,6 @@ public class JobService {
         params.put("vm_name", server.getName());
         params.put("cpus_new", cpu);
         params.put("memory_new", ram);
-        params.put("inventory_id",(server.getCloud().getAwxInventoryId() == null ? "" : server.getCloud().getAwxInventoryId().toString() ));
 
         String cloudType = server.getCloud().getCloudType().toString();
         if (cloudType == "VMWARE"){
@@ -416,7 +417,7 @@ public class JobService {
                 guiVars.put("scheduled_time", "Geplante Durchführungszeit: " + dateTime);
             }
         }
-        createJob(change_cpu_ram_identifier, server, params, guiVars, scheduleTime, tag, null);
+        createJob(change_cpu_ram_identifier, server, params, guiVars, scheduleTime, tag, null, (server.getCloud().getAwxInventoryId() == null ? "" : server.getCloud().getAwxInventoryId().toString() ));
     }
 
     public void createSnapshot(final Long serverId, final Integer duration, final String description, final boolean withShutdown, final String create_snapshot_identifier) {
@@ -428,7 +429,6 @@ public class JobService {
         params.put("TeamName", AuthUtils.getUsername().replace('.','_')); //TODO TEAMNAME nicht username (Wird nach ablöse des Snapshot Tools entfernt)
         params.put("time", duration);
         params.put("snapshot_description", description);
-        params.put("inventory_id",(server.getCloud().getAwxInventoryId() == null ? "" : server.getCloud().getAwxInventoryId().toString() ));
 
         String cloudType = server.getCloud().getCloudType().toString();
         if (cloudType == "VMWARE"){
@@ -446,7 +446,7 @@ public class JobService {
             awxSkipTag = "with_power_off, with_power_on";
         }
 
-        createJob(create_snapshot_identifier, server, params, new HashMap<>(), null, awxSkipTag);
+        createJob(create_snapshot_identifier, server, params, new HashMap<>(), null, awxSkipTag, (server.getCloud().getAwxInventoryId() == null ? "" : server.getCloud().getAwxInventoryId().toString() ));
     }
 
     public void deleteSnapshot(final Long serverId, final Long snapshotId, final String snapshotName, final String delete_snapshot_identifier){
@@ -456,7 +456,6 @@ public class JobService {
         params.put("vm_name", server.getName());
         params.put("state", "absent");
         params.put("TeamName", AuthUtils.getUsername()); //TODO TEAMNAME nicht username (Wird nach ablöse des Snapshot Tools entfernt)
-        params.put("inventory_id",(server.getCloud().getAwxInventoryId() == null ? "" : server.getCloud().getAwxInventoryId().toString() ));
 
         String cloudType = server.getCloud().getCloudType().toString();
         if (cloudType == "VMWARE"){
@@ -473,7 +472,7 @@ public class JobService {
             throw new IllegalArgumentException("Cloud type " + cloudType + " is not supported.");
         }
 
-        createJob(delete_snapshot_identifier, server, params, new HashMap<>());
+        createJob(delete_snapshot_identifier, server, params, new HashMap<>(), null, null, null, (server.getCloud().getAwxInventoryId() == null ? "" : server.getCloud().getAwxInventoryId().toString() ));
     }
 
     public void revertSnapshot(final Long serverId, final Long snapshotId, final String snapshotName, final String reverte_snapshot_identifier){
@@ -482,7 +481,6 @@ public class JobService {
         Map<String, Object> params = new HashMap<>();
         params.put("vm_name", server.getName());
         params.put("TeamName", AuthUtils.getUsername()); //TODO TEAMNAME nicht username (Wird nach ablöse des Snapshot Tools entfernt)
-        params.put("inventory_id",(server.getCloud().getAwxInventoryId() == null ? "" : server.getCloud().getAwxInventoryId().toString() ));
 
         String cloudType = server.getCloud().getCloudType().toString();
         if (cloudType == "VMWARE"){
@@ -501,7 +499,7 @@ public class JobService {
             throw new IllegalArgumentException("Cloud type " + cloudType + " is not supported.");
         }
 
-        createJob(reverte_snapshot_identifier, server, params, new HashMap<>());
+        createJob(reverte_snapshot_identifier, server, params, new HashMap<>(), null , null, (server.getCloud().getAwxInventoryId() == null ? "" : server.getCloud().getAwxInventoryId().toString() ));
     }
 
     // -----------------------------------------------------------------------------------------------------------------

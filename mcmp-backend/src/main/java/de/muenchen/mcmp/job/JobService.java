@@ -308,11 +308,11 @@ public class JobService {
         params.put("vm_name", server.getName());
 
         String cloudType = server.getCloud().getCloudType().toString();
-        if (cloudType == "VMWARE"){
+        if (Objects.equals(cloudType, "VMWARE")){
             params.put("vcenter_uuid", server.getCloud().getServerGui());
             params.put("vm_powerstate", "powered-on");
         }
-        else if (cloudType == "PROXMOX") {
+        else if (Objects.equals(cloudType, "PROXMOX")) {
             params.put("cluster_name", server.getCluster());
             params.put("vm_powerstate", "started");
         }
@@ -338,11 +338,11 @@ public class JobService {
 
         String cloudType = server.getCloud().getCloudType().toString();
 
-        if (cloudType == "VMWARE"){
+        if (Objects.equals(cloudType, "VMWARE")){
             params.put("vcenter_uuid", server.getCloud().getServerGui());
             params.put("vm_powerstate", "shutdown-guest");
         }
-        else if (cloudType == "PROXMOX") {
+        else if (Objects.equals(cloudType, "PROXMOX")) {
             params.put("cluster_name", server.getCluster());
             params.put("vm_powerstate", "stopped");
         }
@@ -368,11 +368,11 @@ public class JobService {
 
         String cloudType = server.getCloud().getCloudType().toString();
 
-        if (cloudType == "VMWARE"){
+        if (Objects.equals(cloudType, "VMWARE")){
             params.put("vcenter_uuid", server.getCloud().getServerGui());
             params.put("vm_powerstate", "reboot-guest");
         }
-        else if (cloudType == "PROXMOX") {
+        else if (Objects.equals(cloudType, "PROXMOX")) {
             params.put("cluster_name", server.getCluster());
             params.put("vm_powerstate", "restarted");
         }
@@ -396,10 +396,10 @@ public class JobService {
         params.put("memory_new", ram);
 
         String cloudType = server.getCloud().getCloudType().toString();
-        if (cloudType == "VMWARE"){
+        if (Objects.equals(cloudType, "VMWARE")){
             params.put("vcenter_uuid", server.getCloud().getServerGui());
         }
-        else if (cloudType == "PROXMOX") {
+        else if (Objects.equals(cloudType, "PROXMOX")) {
             params.put("cluster_name", server.getCluster());
         }
         else {
@@ -438,10 +438,10 @@ public class JobService {
         params.put("snapshot_description", description);
 
         String cloudType = server.getCloud().getCloudType().toString();
-        if (cloudType == "VMWARE"){
+        if (Objects.equals(cloudType, "VMWARE")){
             params.put("vcenter_uuid", server.getCloud().getServerGui());
         }
-        else if (cloudType == "PROXMOX") {
+        else if (Objects.equals(cloudType, "PROXMOX")) {
             params.put("cluster_name", server.getCluster());
         }
         else {
@@ -465,12 +465,12 @@ public class JobService {
         params.put("TeamName", AuthUtils.getUsername()); //TODO TEAMNAME nicht username (Wird nach ablöse des Snapshot Tools entfernt)
 
         String cloudType = server.getCloud().getCloudType().toString();
-        if (cloudType == "VMWARE"){
+        if (Objects.equals(cloudType, "VMWARE")){
             params.put("vcenter_uuid", server.getCloud().getServerGui());
             if (snapshotId == null) throw new MissingFormatArgumentException("Snapshot Id must be provided.");
             params.put("snapshot_id", snapshotId);
         }
-        else if (cloudType == "PROXMOX") {
+        else if (Objects.equals(cloudType, "PROXMOX")) {
             params.put("cluster_name", server.getCluster());
             if (snapshotName == null) throw new MissingFormatArgumentException("Snapshot Name must be provided.");
             params.put("snapshot_name", snapshotName);
@@ -490,13 +490,13 @@ public class JobService {
         params.put("TeamName", AuthUtils.getUsername()); //TODO TEAMNAME nicht username (Wird nach ablöse des Snapshot Tools entfernt)
 
         String cloudType = server.getCloud().getCloudType().toString();
-        if (cloudType == "VMWARE"){
+        if (Objects.equals(cloudType, "VMWARE")){
             params.put("vcenter_uuid", server.getCloud().getServerGui());
             params.put("state", "revert");
             if (snapshotId == null) throw new MissingFormatArgumentException("Snapshot Id must be provided.");
             params.put("snapshot_id", snapshotId);
         }
-        else if (cloudType == "PROXMOX") {
+        else if (Objects.equals(cloudType, "PROXMOX")) {
             params.put("cluster_name", server.getCluster());
             params.put("state", "rollback");
             if (snapshotName == null) throw new MissingFormatArgumentException("Snapshot Name must be provided.");

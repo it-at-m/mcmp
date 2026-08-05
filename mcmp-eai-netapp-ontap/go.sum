@@ -13,8 +13,8 @@ github.com/hashicorp/errwrap v1.1.0 h1:OxrOeh75EUXMY8TBjag2fzXGZ40LB6IKw45YeGUDY
 github.com/hashicorp/errwrap v1.1.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=
 github.com/hashicorp/go-multierror v1.1.1 h1:H5DkEtf6CXdFp0N0Em5UCwQpXMWke8IA0+lD48awMYo=
 github.com/hashicorp/go-multierror v1.1.1/go.mod h1:iw975J/qwKPdAO1clOe2L8331t/9/fmwbPZ6JB6eMoM=
-github.com/it-at-m/mcmp/mcmp-eai-common v0.0.0-20260726183052-85c140fc1199 h1:kPRp51w5EdpjeBX+RiEgA3osbk1RexNCaDhCEo/TlpY=
-github.com/it-at-m/mcmp/mcmp-eai-common v0.0.0-20260726183052-85c140fc1199/go.mod h1:+MMqkBTsYVWFE0GfXpffG5T/FKsVqUQguheHMYvGehM=
+github.com/it-at-m/mcmp/mcmp-eai-common v0.0.0-20260802201144-1d015c51e10a h1:mySaUT0SIobgDdcw02y29fryusU1SsWTpEYjoP3ZSsA=
+github.com/it-at-m/mcmp/mcmp-eai-common v0.0.0-20260802201144-1d015c51e10a/go.mod h1:YzF4NKVEpnpYJtYDles1gSw08mBvgXCJpCQEoun/wd4=
 github.com/kr/pretty v0.3.1 h1:flRD4NNwYAUpkphVc1HcthR4KEIFJ65n8Mw5qdRn3LE=
 github.com/kr/pretty v0.3.1/go.mod h1:hoEshYVHaxMs3cyo3Yncou5ZscifuDolrwPKZanG3xk=
 github.com/kr/text v0.2.0 h1:5Nx0Ya0ZqY2ygV366QzturHI13Jq95ApcVaJBhpS+AY=

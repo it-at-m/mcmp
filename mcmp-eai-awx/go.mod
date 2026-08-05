@@ -4,7 +4,7 @@ go 1.26.5
 
 require (
 	github.com/euerla/goawx v0.0.0-20260428183549-bdffcc4c68b8
-	github.com/it-at-m/mcmp/mcmp-eai-common v0.0.0-20260726183052-85c140fc1199
+	github.com/it-at-m/mcmp/mcmp-eai-common v0.0.0-20260802201144-1d015c51e10a
 	golang.org/x/oauth2 v0.36.0
 )
 

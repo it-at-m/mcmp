@@ -688,7 +688,7 @@ func checkJobArtifacts(artifacts interface{}) (*bool, *string, *string) {
 
 func createAwxJob(mcmpClient *db.Client, awxClients map[int64]*awx.AWX, job *db.Job) error {
 	logger.DebugPrintf("START - create awx job\n")
-	if !(job.AwxJobEnabled) {
+	if !job.AwxJobEnabled {
 		logger.Info("Job is not a awx job. Skipping creation of awx job.", "id", job.ID)
 		job.AwxStatus = db.AwxStatusSkipped
 		job.Status = db.JobStatusAwxCompleted
@@ -2277,7 +2277,6 @@ func fetchJobDetailsAndLink(ctx context.Context, awxClient *awx.AWX, apiEndpoint
 		}
 		return getErr
 	})
-
 	if err != nil {
 		// Check if the error is due to the unsupported type, which is not a network error.
 		if strings.Contains(err.Error(), "unsupported template type") {
@@ -2346,7 +2345,6 @@ func getFailedJobEventsExplanation(ctx context.Context, awxClient *awx.AWX, jobI
 		events, _, getErr = awxClient.JobService.GetJobEvents(jobID, params)
 		return getErr
 	})
-
 	if err != nil {
 		return fmt.Sprintf("Error fetching job events: %v", err)
 	}

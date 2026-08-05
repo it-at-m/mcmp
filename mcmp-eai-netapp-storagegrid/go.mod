@@ -3,7 +3,7 @@ module github.com/it-at-m/mcmp/mcmp-eai-netapp-storagegrid
 go 1.26.5
 
 require (
-	github.com/it-at-m/mcmp/mcmp-eai-common v0.0.0-20260726183052-85c140fc1199
+	github.com/it-at-m/mcmp/mcmp-eai-common v0.0.0-20260802201144-1d015c51e10a
 	golang.org/x/sync v0.22.0
 )
 

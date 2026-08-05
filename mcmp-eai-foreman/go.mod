@@ -2,7 +2,7 @@ module github.com/it-at-m/mcmp/mcmp-eai-foreman
 
 go 1.26.5
 
-require github.com/it-at-m/mcmp/mcmp-eai-common v0.0.0-20260726183052-85c140fc1199
+require github.com/it-at-m/mcmp/mcmp-eai-common v0.0.0-20260802201144-1d015c51e10a
 
 require (
 	github.com/fsnotify/fsnotify v1.10.1 // indirect

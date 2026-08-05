@@ -3,10 +3,11 @@ package processor
 import (
 	"context"
 	"fmt"
-	"mcmp-eai-proxmox/pkg/clients/pdm"
-	"mcmp-eai-proxmox/pkg/config"
 	"net/url"
 	"strings"
+
+	"mcmp-eai-proxmox/pkg/clients/pdm"
+	"mcmp-eai-proxmox/pkg/config"
 
 	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/logging"
 )

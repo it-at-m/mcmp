@@ -261,6 +261,12 @@
             size="small"
             @click.stop="toggleServerList(pool.name)"
           />
+          <loadbalancer-change-pool-members
+            v-if="lb.canEdit && lb.appservices.length === 1"
+            :lb="lb"
+            :pool="pool"
+            @click.stop
+          />
         </v-col>
       </v-row>
       <v-expand-transition>
@@ -320,9 +326,22 @@
         </div>
       </v-expand-transition>
     </template>
-    <v-row v-else>
+    <v-row
+      v-else
+      align="center"
+    >
       <v-col class="pt-0 text-grey">
         <p>Keine Pool-Member vorhanden.</p>
+      </v-col>
+      <v-col
+        v-if="lb.canEdit && lb.appservices.length === 1"
+        cols="auto"
+        class="pt-0"
+      >
+        <loadbalancer-change-pool-members
+          :lb="lb"
+          :pool="pool"
+        />
       </v-col>
     </v-row>
   </common-card>
@@ -347,6 +366,7 @@ import { ref } from "vue";
 
 import CommonCard from "@/components/common/CommonCard.vue";
 import InfoTooltip from "@/components/common/InfoTooltip.vue";
+import LoadbalancerChangePoolMembers from "@/components/Loadbalancer/LoadbalancerChangePoolMembers.vue";
 
 defineProps<{
   lb: LoadbalancerDetail;

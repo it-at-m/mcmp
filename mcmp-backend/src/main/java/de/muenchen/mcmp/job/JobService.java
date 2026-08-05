@@ -18,6 +18,11 @@ import de.muenchen.mcmp.greenit.shutdown.GreenItShutdownRepository;
 import de.muenchen.mcmp.infoblox.InfobloxService;
 import de.muenchen.mcmp.job.incident.JobIncidentSummary;
 import de.muenchen.mcmp.job.node.JobNodeHierarchy;
+import de.muenchen.mcmp.loadbalancer.LbPool;
+import de.muenchen.mcmp.loadbalancer.LbPoolMember;
+import de.muenchen.mcmp.loadbalancer.LbVirtualServer;
+import de.muenchen.mcmp.loadbalancer.LbVirtualServerPoolRef;
+import de.muenchen.mcmp.loadbalancer.LbVirtualServerRepository;
 import de.muenchen.mcmp.network.NetworkGroup;
 import de.muenchen.mcmp.network.NetworkGroupRepository;
 import de.muenchen.mcmp.security.AuthUtils;
@@ -46,6 +51,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -88,6 +94,7 @@ public class JobService {
     private final ServerRepository serverRepository;
     private final AppserviceRepository appserviceRepository;
     private final NetworkGroupRepository networkGroupRepository;
+    private final LbVirtualServerRepository lbVirtualServerRepository;
     private final GreenItRightsizingRepository greenItRightsizingRepository;
     private final GreenItShutdownRepository greenItShutdownRepository;
     private final AppservicesProperties appservicesProperties;
@@ -990,6 +997,89 @@ public class JobService {
         params.put("csw_enforced", appservice.getCswEnforced());
 
         createJobForNewServer(loadbalancer_f5_identifier, awxExtraVars.get("dns").toString(), appservice, params, null, false, null);
+    }
+
+    public void loadbalancerF5ChangePoolMembers(final Long lbVirtualServerId, final String poolName,
+                                                 final List<Map<String, Object>> added, final List<Map<String, Object>> removed,
+                                                 final String identifier) {
+        final LbVirtualServer lvs = lbVirtualServerRepository.findById(lbVirtualServerId)
+                .orElseThrow(() -> new NoSuchElementException("Loadbalancer not found: " + lbVirtualServerId));
+
+        if (lvs.getAppservices().size() != 1) {
+            throw new IllegalStateException("Pool members can only be changed for loadbalancers assigned to exactly one application service.");
+        }
+        final Appservice appservice = lvs.getAppservices().iterator().next();
+
+        final LbPool pool = lvs.getPoolRefs().stream()
+                .map(LbVirtualServerPoolRef::getPool)
+                .filter(p -> poolName.equals(p.getName()))
+                .findFirst()
+                .orElseThrow(() -> new NoSuchElementException("Pool " + poolName + " not found on this loadbalancer."));
+
+        final Set<String> removedKeys = removed.stream()
+                .map(r -> r.get("ip").toString().trim() + ":" + r.get("port").toString().trim())
+                .collect(Collectors.toSet());
+
+        final List<LbPoolMember> currentMembers = pool.getMembers() != null ? pool.getMembers() : List.of();
+        final List<Map<String, Object>> finalMembers = new ArrayList<>();
+        final Set<String> memberKeys = new HashSet<>();
+        final Set<String> matchedRemovedKeys = new HashSet<>();
+        for (final LbPoolMember member : currentMembers) {
+            final String key = member.getIp() + ":" + member.getPort();
+            if (removedKeys.contains(key)) {
+                matchedRemovedKeys.add(key);
+                continue;
+            }
+            memberKeys.add(key);
+            final Map<String, Object> memberMap = new HashMap<>();
+            memberMap.put("address", member.getIp());
+            memberMap.put("port", member.getPort());
+            memberMap.put("name", member.getServer() != null ? member.getServer().getName() : member.getIp());
+            finalMembers.add(memberMap);
+        }
+        if (!matchedRemovedKeys.equals(removedKeys)) {
+            throw new IllegalArgumentException("One or more members to remove were not found in the pool.");
+        }
+
+        for (final Map<String, Object> addedMember : added) {
+            final long addedServerId = Long.parseLong(addedMember.get("server_id").toString());
+            final int port = Integer.parseInt(addedMember.get("port").toString());
+            final Server server = getServerOrThrow(addedServerId);
+            final String ip = server.getGuestToolsIpAddress();
+            if (ip == null || ip.isBlank()) {
+                throw new IllegalArgumentException("Server " + server.getName() + " has no IP address and cannot be added as a pool member.");
+            }
+            final String key = ip + ":" + port;
+            if (!memberKeys.add(key)) {
+                throw new IllegalArgumentException("Member " + key + " is already part of the pool.");
+            }
+            final Map<String, Object> memberMap = new HashMap<>();
+            memberMap.put("address", ip);
+            memberMap.put("port", port);
+            memberMap.put("name", server.getName());
+            finalMembers.add(memberMap);
+        }
+
+        final Map<String, Object> params = new HashMap<>();
+        params.put("requester_username", AuthUtils.getUsername());
+        params.put("organisational_unit", AuthUtils.getCurrentUserInfo().department());
+        params.put("application_service", appservice.getName());
+        params.put("application_service_number", appservice.getNumber());
+        params.put("csw_enforced", appservice.getCswEnforced());
+        final Map<String, String> ibs342map = new HashMap<>();
+        switch (appservice.getUsedFor()) {
+            case "Production" -> ibs342map.put("environment", "prod");
+            case "Test", "Development" -> ibs342map.put("environment", "test");
+            case "Training" -> ibs342map.put("environment", "schulung");
+            default -> {}
+        }
+        params.put("ibs342", ibs342map);
+        params.put("pool_name", poolName);
+        final Map<String, Object> poolParam = new HashMap<>();
+        poolParam.put("members", finalMembers);
+        params.put("pool", poolParam);
+
+        createJobForNewServer(identifier, poolName, appservice, params, null, false, null);
     }
 
     // -----------------------------------------------------------------------------------------------------------------

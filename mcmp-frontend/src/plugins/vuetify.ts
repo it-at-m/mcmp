@@ -42,7 +42,7 @@ export default createVuetify({
           accent: "#3D74B6",
           success: "#0E810E",
           error: "#E41A0C",
-          do: "#7ba4d9",
+          do: "#3d74b6",
           btn_green: "#0E810E",
           btn_red: "#E41A0C",
           notice_red: "#E41A0C",

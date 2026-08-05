@@ -202,6 +202,21 @@ public class ServerService {
                 appConfigCacheService.isMaintenanceMode());
     }
 
+    public boolean canUserViewServer(final Long serverId) {
+        final UserRoles userRoles = AuthUtils.getCurrentUserRoles();
+        return repository.canUserViewServer(serverId,
+                userRoles.getUsername(),
+                userRoles.hasAdminRole(),
+                userRoles.hasReadonlyRole(),
+                userRoles.hasLinuxRole(),
+                userRoles.hasWindowsRole(),
+                userRoles.hasOracleRole(),
+                userRoles.hasNonOracleRole(),
+                userRoles.hasSecurityRole(),
+                userRoles.hasOperatorRole(),
+                userRoles.hasNetworkRole());
+    }
+
     public List<Server> findServersByMacAddress(final String macAddress) {
         if (macAddress == null || macAddress.isBlank()) {
             return List.of();

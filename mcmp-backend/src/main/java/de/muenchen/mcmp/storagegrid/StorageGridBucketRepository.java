@@ -76,14 +76,17 @@ public interface StorageGridBucketRepository extends JpaRepository<StorageGridBu
                                                      @Param("isStorage") boolean isStorage,
                                                      @Param("isOperator") boolean isOperator);
 
-    @Query("SELECT CASE WHEN :isAdmin = TRUE OR :isStorage = TRUE OR EXISTS (" +
+    @Query("SELECT CASE WHEN EXISTS (" +
+            "SELECT 1 FROM StorageGridBucket b JOIN b.storageGridAccount acc " +
+            "WHERE b.id = :id AND SIZE(acc.appservices) = 1" +
+            ") AND (:isAdmin = TRUE OR :isStorage = TRUE OR EXISTS (" +
             "SELECT 1 FROM StorageGridBucket b " +
             "JOIN b.storageGridAccount acc " +
             "JOIN acc.appservices a " +
             "JOIN a.changeGroup g " +
             "JOIN g.users u " +
             "WHERE b.id = :id AND u.username = :username" +
-            ") THEN TRUE ELSE FALSE END")
+            ")) THEN TRUE ELSE FALSE END")
     Boolean canUserEditBucket(@Param("id") Long id, @Param("username") String username,
                               @Param("isAdmin") boolean isAdmin, @Param("isStorage") boolean isStorage);
 

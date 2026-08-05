@@ -12,7 +12,7 @@ public class JobControllerTest {
 
     private static void validateDnsEntry(String dns) {
         try {
-            JobController controller = new JobController(null, null, null, null, null, null, null, null);
+            JobController controller = new JobController(null, null, null, null, null, null, null, null, null);
             java.lang.reflect.Method method = JobController.class.getDeclaredMethod("validateDnsEntry", String.class);
             method.setAccessible(true);
             method.invoke(controller, dns);

@@ -80,7 +80,8 @@
           <v-text-field
             v-model="toEditCopy.awxInventoryId"
             :rules="[
-              (v: string) => v === '' || /^\d+$/.test(v) || 'Nur Zahlen erlaubt.',
+              (v: string) =>
+                v === '' || /^\d+$/.test(v) || 'Nur Zahlen erlaubt.',
             ]"
           />
         </template>

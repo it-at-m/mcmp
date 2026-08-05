@@ -133,174 +133,130 @@
           />
         </div>
       </template>
-      <v-table
-        density="comfortable"
+      <v-data-table
+        v-model="selectedServers"
+        :headers="headers"
+        :items="servers"
+        :items-per-page="-1"
+        item-value="id"
+        density="compact"
         hover
+        show-select
+        hide-default-footer
         class="server-table"
       >
-        <thead>
-          <tr>
-            <th
-              class="text-center"
-              style="width: 50px"
-            >
-              <v-checkbox
-                :model-value="allServersSelected"
-                :indeterminate="someServersSelected && !allServersSelected"
-                hide-details
-                @update:model-value="toggleAllServers"
-              />
-            </th>
-            <th class="text-left">Typ</th>
-            <th class="text-left">Servername</th>
-            <th class="text-left">Status</th>
-            <th class="text-left">Betriebssystem</th>
-            <th class="text-left">Anwendungsservice</th>
-            <th class="text-left">CPUs</th>
-            <th class="text-left">RAM</th>
-            <th class="text-left">Disks</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="server in props.selectedAppservice.servers"
-            :key="server.id"
+        <template #item.serverKind="{ item }">
+          <v-tooltip
+            v-if="serverKindText(item.serverKind)"
+            :text="serverKindText(item.serverKind)"
           >
-            <td class="text-center">
-              <v-checkbox
-                :model-value="selectedServers.includes(Number(server.id))"
-                hide-details
-                @update:model-value="
-                  (value) => toggleServerSelection(server.id, value)
-                "
-              />
-            </td>
-            <td>
-              <v-tooltip
-                v-if="serverKindText(server.serverKind)"
-                :text="serverKindText(server.serverKind)"
+            <template #activator="{ props }">
+              <v-icon
+                v-bind="props"
+                size="small"
+                class="server-kind-icon"
               >
-                <template #activator="{ props }">
-                  <v-icon
-                    v-bind="props"
-                    size="small"
-                    class="server-kind-icon"
-                  >
-                    {{ serverKindIcon(server.serverKind) }}
-                  </v-icon>
-                </template>
-              </v-tooltip>
-            </td>
-            <td>
-              <div class="d-flex align-center">
-                <span class="font-weight-bold">
-                  <router-link :to="`/server/${server.id}`">
-                    {{ server.name }}
-                  </router-link>
-                </span>
-                <v-tooltip
-                  v-if="server.hasWarnings"
-                  location="top"
-                  text="Handlung erforderlich"
+                {{ serverKindIcon(item.serverKind) }}
+              </v-icon>
+            </template>
+          </v-tooltip>
+        </template>
+        <template #item.name="{ item }">
+          <div class="d-flex align-center">
+            <span class="font-weight-bold">
+              <router-link :to="`/server/${item.id}`">
+                {{ item.name }}
+              </router-link>
+            </span>
+            <v-tooltip
+              v-if="item.hasWarnings"
+              location="top"
+              text="Handlung erforderlich"
+            >
+              <template #activator="{ props: tooltipProps }">
+                <router-link
+                  :to="`/server/${item.id}`"
+                  class="d-flex align-center text-decoration-none"
                 >
-                  <template #activator="{ props: tooltipProps }">
-                    <router-link
-                      :to="`/server/${server.id}`"
-                      class="d-flex align-center text-decoration-none"
-                    >
-                      <v-icon
-                        v-bind="tooltipProps"
-                        :icon="mdiAlert"
-                        color="orange"
-                        size="20"
-                        class="ml-1"
-                      />
-                    </router-link>
-                  </template>
-                </v-tooltip>
-              </div>
-            </td>
-            <td>
-              <div class="d-flex align-center">
-                <div class="power-state-icon-inline mr-2">
                   <v-icon
-                    :color="
-                      server.powerState === 'poweredOn'
-                        ? 'btn_green'
-                        : server.powerState === 'poweredOff'
-                          ? 'btn_red'
-                          : 'accent'
-                    "
+                    v-bind="tooltipProps"
+                    :icon="mdiAlert"
+                    color="orange"
                     size="20"
-                  >
-                    {{
-                      server.powerState === "poweredOn"
-                        ? mdiPlayCircle
-                        : server.powerState === "poweredOff"
-                          ? mdiStopCircle
-                          : mdiPauseCircle
-                    }}
-                  </v-icon>
-                </div>
-                <span>
-                  {{
-                    server.powerState === "poweredOn"
-                      ? "Ein"
-                      : server.powerState === "poweredOff"
-                        ? "Aus"
-                        : "Standby"
-                  }}
-                </span>
-              </div>
-            </td>
-            <td>
-              <div class="d-flex align-center">
-                <os-cell
-                  :os-full-name="server.os || ''"
-                  size="small"
-                  class="os-icon-inline mr-2"
-                />
-                <span class="text-caption">
-                  {{ server.os }}
-                </span>
-              </div>
-            </td>
-            <td>
-              <div class="app-services-cell">
-                <template v-if="server.appserviceNames">
-                  <ul class="pl-4">
-                    <li
-                      v-for="(service, index) in server.appserviceNames.split(
-                        '|'
-                      )"
-                      :key="index"
-                    >
-                      {{ service.trim() }}
-                    </li>
-                  </ul>
-                </template>
-                <span v-else>-</span>
-              </div>
-            </td>
-            <td>
-              <span>
-                {{ server.numCpu }}
-              </span>
-            </td>
-            <td>
-              <span>
-                {{ formatter.formatMBtoGB(server.memoryMb ?? 0) }} GB
-              </span>
-            </td>
-            <td>
-              <span>
-                {{ formatter.formatBtoGB(server.vdisksCapacityInBytes ?? 0) }}
-                GB
-              </span>
-            </td>
-          </tr>
-        </tbody>
-      </v-table>
+                    class="ml-1"
+                  />
+                </router-link>
+              </template>
+            </v-tooltip>
+          </div>
+        </template>
+        <template #item.powerState="{ item }">
+          <div class="d-flex align-center">
+            <div class="power-state-icon-inline mr-2">
+              <v-icon
+                :color="
+                  item.powerState === 'poweredOn'
+                    ? 'btn_green'
+                    : item.powerState === 'poweredOff'
+                      ? 'btn_red'
+                      : 'accent'
+                "
+                size="20"
+              >
+                {{
+                  item.powerState === "poweredOn"
+                    ? mdiPlayCircle
+                    : item.powerState === "poweredOff"
+                      ? mdiStopCircle
+                      : mdiPauseCircle
+                }}
+              </v-icon>
+            </div>
+            <span>
+              {{
+                item.powerState === "poweredOn"
+                  ? "Ein"
+                  : item.powerState === "poweredOff"
+                    ? "Aus"
+                    : "Standby"
+              }}
+            </span>
+          </div>
+        </template>
+        <template #item.os="{ item }">
+          <div class="d-flex align-center">
+            <os-cell
+              :os-full-name="item.os || ''"
+              size="small"
+              class="os-icon-inline mr-2"
+            />
+            <span class="text-caption">
+              {{ item.os }}
+            </span>
+          </div>
+        </template>
+        <template #item.appserviceNames="{ item }">
+          <div class="app-services-cell">
+            <template v-if="item.appserviceNames">
+              <ul class="pl-4">
+                <li
+                  v-for="(service, index) in item.appserviceNames.split('|')"
+                  :key="index"
+                >
+                  {{ service.trim() }}
+                </li>
+              </ul>
+            </template>
+            <span v-else>-</span>
+          </div>
+        </template>
+        <template #item.memoryMb="{ item }">
+          {{ formatter.formatMBtoGB(item.memoryMb ?? 0) }} GB
+        </template>
+        <template #item.vdisksCapacityInBytes="{ item }">
+          {{ formatter.formatBtoGB(item.vdisksCapacityInBytes ?? 0) }} GB
+        </template>
+      </v-data-table>
     </common-card>
   </div>
 </template>
@@ -308,6 +264,7 @@
 <script setup lang="ts">
 import type Appservice from "@/types/Appservice.ts";
 import type Server from "@/types/Server.ts";
+import type { DataTableHeader } from "vuetify";
 
 import {
   mdiAlert,
@@ -377,6 +334,31 @@ const serverKindIcon = (kind?: string | null) => {
   }
 };
 
+const localeCompare = (a: unknown, b: unknown) =>
+  String(a ?? "")
+    .toLowerCase()
+    .localeCompare(String(b ?? "").toLowerCase());
+
+const numericCompare = (a: unknown, b: unknown) =>
+  Number(a ?? 0) - Number(b ?? 0);
+
+const headers: DataTableHeader[] = [
+  { title: "Typ", key: "serverKind", sort: localeCompare, width: 60 },
+  { title: "Servername", key: "name", sort: localeCompare },
+  { title: "Status", key: "powerState", sort: localeCompare },
+  { title: "Betriebssystem", key: "os", sort: localeCompare },
+  { title: "Anwendungsservice", key: "appserviceNames", sortable: false },
+  { title: "CPUs", key: "numCpu", sort: numericCompare },
+  { title: "RAM", key: "memoryMb", sort: numericCompare },
+  {
+    title: "Disks",
+    key: "vdisksCapacityInBytes",
+    sort: numericCompare,
+  },
+];
+
+const servers = computed(() => props.selectedAppservice?.servers || []);
+
 const selectedServers = ref<number[]>([]);
 const fullServerCache = ref<Map<number, Server | null>>(new Map());
 const snapshotCountCache = ref<Map<number, number | null>>(new Map());
@@ -428,44 +410,10 @@ watch(
   }
 );
 
-const allServersSelected = computed(() => {
-  if (!props.selectedAppservice?.servers?.length) return false;
-  const totalCount = (props.selectedAppservice.servers || []).length;
-  return totalCount > 0 && selectedServers.value.length === totalCount;
+watch(selectedServers, (newIds, oldIds) => {
+  const addedIds = newIds.filter((id) => !oldIds?.includes(id));
+  if (addedIds.length) preloadFullServers(addedIds);
 });
-
-const someServersSelected = computed(() => {
-  const totalCount = (props.selectedAppservice?.servers || []).length;
-  return (
-    selectedServers.value.length > 0 &&
-    selectedServers.value.length < totalCount
-  );
-});
-
-const toggleAllServers = (value: boolean | null) => {
-  const selected = !!value;
-  if (selected) {
-    const allIds = (props.selectedAppservice?.servers || []).map((s: any) =>
-      Number(s.id)
-    );
-    selectedServers.value = allIds;
-    preloadFullServers(allIds);
-  } else {
-    selectedServers.value = [];
-  }
-};
-
-const toggleServerSelection = (serverId: any, value: boolean | null) => {
-  const id = Number(serverId);
-  const shouldSelect = !!value;
-  const index = selectedServers.value.indexOf(id);
-  if (shouldSelect) {
-    if (index === -1) selectedServers.value.push(id);
-    loadFullServer(id);
-  } else {
-    if (index > -1) selectedServers.value.splice(index, 1);
-  }
-};
 
 const onBatchOrderCompleteDone = () => {
   selectedServers.value = [];

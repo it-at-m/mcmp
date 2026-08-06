@@ -137,7 +137,7 @@ public class JobController {
             @RequestParam(value = "userId", required = false) final Long userId,
             @RequestParam(value = "serverId", required = false) final Long serverId,
             @RequestParam(value = "appserviceId", required = false) final Long appserviceId,
-            @RequestParam(value = "actionIdentifier", required = false) final String actionIdentifier,
+            @RequestParam(value = "actionIdentifier", required = false) final List<String> actionIdentifier,
             @RequestParam(value = "statusIdentifier", required = false) final String statusIdentifier,
             @RequestParam(value = "awxVariables", required = false) final String awxVariables
     ) {

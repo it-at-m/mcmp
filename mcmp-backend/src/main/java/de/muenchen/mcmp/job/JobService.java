@@ -135,7 +135,7 @@ public class JobService {
         return jobRepository.findAllStatusIdentifiers();
     }
 
-    public Page<? extends JobListBasic> findAllJobsByRole(final int page, final int itemsPerPage, final String sortBy, final boolean sortDesc, final Long jobId, final Long awxJobId, final Instant createdFrom, final Instant createdTo, final Instant changeStartFrom, final Instant changeStartTo, final Long userId, final Long serverId, final Long appserviceId, final String actionIdentifier, final String statusIdentifier, final String awxVariables) {
+    public Page<? extends JobListBasic> findAllJobsByRole(final int page, final int itemsPerPage, final String sortBy, final boolean sortDesc, final Long jobId, final Long awxJobId, final Instant createdFrom, final Instant createdTo, final Instant changeStartFrom, final Instant changeStartTo, final Long userId, final Long serverId, final Long appserviceId, final List<String> actionIdentifier, final String statusIdentifier, final String awxVariables) {
         final Sort sort;
         if (sortBy != null && !sortBy.isBlank()) {
             String actualSortBy = SORT_MAPPINGS.getOrDefault(sortBy, sortBy);
@@ -146,9 +146,12 @@ public class JobService {
         int offset = (page - 1) * itemsPerPage;
         final Pageable pageable = new OffsetBasedPageRequest(offset, itemsPerPage, sort);
 
+        final boolean hasActionIdentifier = actionIdentifier != null && !actionIdentifier.isEmpty();
+        final List<String> actionIdentifierParam = hasActionIdentifier ? actionIdentifier : List.of("");
+
         final UserRoles userRoles = AuthUtils.getCurrentUserRoles();
         if (userRoles.hasAdminRole() || userRoles.hasSecurityRole()) {
-            return jobRepository.findAllJobsComplete(pageable, jobId, awxJobId, createdFrom, createdTo, changeStartFrom, changeStartTo, userId, serverId, appserviceId, actionIdentifier, statusIdentifier, awxVariables);
+            return jobRepository.findAllJobsComplete(pageable, jobId, awxJobId, createdFrom, createdTo, changeStartFrom, changeStartTo, userId, serverId, appserviceId, hasActionIdentifier, actionIdentifierParam, statusIdentifier, awxVariables);
         }
         return jobRepository.findAllJobsBasic(pageable, userId, serverId, appserviceId);
     }

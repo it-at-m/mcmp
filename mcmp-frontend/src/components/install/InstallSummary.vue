@@ -92,7 +92,7 @@
         <v-col>{{ instlServerDetails.cpu }}</v-col>
       </v-row>
       <v-row>
-        <v-col><strong>Arbeitspeicher:</strong></v-col>
+        <v-col><strong>Arbeitsspeicher:</strong></v-col>
         <v-col>{{ instlServerDetails.memory }} GB</v-col>
       </v-row>
       <v-row v-if="instlServerDetails.osType == OsType.Windows">

@@ -456,7 +456,7 @@ public class JobService {
             awxSkipTag = "with_power_off, with_power_on";
         }
 
-        createJob(create_snapshot_identifier, server, params, new HashMap<>(), null, awxSkipTag, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
+        createJob(create_snapshot_identifier, server, params, new HashMap<>(), null, null, awxSkipTag,(server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
     }
 
     public void deleteSnapshot(final Long serverId, final Long snapshotId, final String snapshotName, final String delete_snapshot_identifier){
@@ -509,7 +509,7 @@ public class JobService {
             throw new IllegalArgumentException("Cloud type " + cloudType + " is not supported.");
         }
 
-        createJob(reverte_snapshot_identifier, server, params, new HashMap<>(), null , null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
+        createJob(reverte_snapshot_identifier, server, params, new HashMap<>(), null , null, null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
     }
 
     // -----------------------------------------------------------------------------------------------------------------

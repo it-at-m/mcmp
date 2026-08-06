@@ -5,9 +5,13 @@
         <strong>CPUs*</strong>
         <v-number-input
           v-model="instlServerDetails.cpu"
-          :min="1"
+          :min="instlServerDetails.category?.label == 'PostgreSQL' ? 4 : 1"
           :max="8"
-          hint="Erlaubte Werte 1 bis 8"
+          :hint="
+            'Erlaubte Werte ' +
+            (instlServerDetails.category?.label == 'PostgreSQL' ? 4 : 1) +
+            ' bis 8'
+          "
           persistent-hint
           control-variant="split"
           variant="solo"

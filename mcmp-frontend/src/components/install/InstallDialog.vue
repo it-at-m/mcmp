@@ -240,8 +240,8 @@ function createDefaultInstallServerDetails(): installServerDetails {
     false,
     new NewServername("", "", "", "", 1),
     "",
-    8,
     2,
+    1,
     {
       [OsType.Windows]: {
         [categoryType.Standard]: [

@@ -88,7 +88,12 @@
           <v-col cols="12"></v-col>
         </v-col>
         <v-col
-          v-if="ram >= 100 || cpus >= 72"
+          v-if="!rightsize && (
+            (ram >= 100 &&
+              (formatter.calculateMBtoGB(server.memoryMb) < 100 ||
+                ram > formatter.calculateMBtoGB(server.memoryMb))) ||
+            cpus >= 72 && (server.numCpu < 72 || cpus > server.numCpu))
+          "
           cols="12"
         >
           <common-alert color="notice_red">
@@ -134,7 +139,7 @@
           <v-slider
             v-model="cpus"
             label="CPU"
-            :min="2"
+            :min="1"
             :max="server.numCpu > 72 ? server.numCpu : 72"
             step="1"
             :disabled="!isNonOracleUser && (server.dbAdabas || server.dbMssql)"
@@ -144,7 +149,7 @@
           <v-slider
             v-model="ram"
             label="RAM (GB)"
-            :min="4"
+            :min="2"
             :max="currentRam > 100 ? currentRam : 100"
             step="1"
           />
@@ -154,11 +159,11 @@
             v-model="cpus"
             label="Anzahl CPUs"
             type="number"
-            :min="2"
+            :min="1"
             :max="server.numCpu > 72 ? server.numCpu : 72"
             step="1"
             :rules="[
-              (v) => v >= 2 || 'CPU darf nicht kleiner 2 sein.',
+              (v) => v >= 1 || 'CPU darf nicht kleiner 1 sein.',
               (v) =>
                 v <= (server.numCpu > 72 ? server.numCpu : 72) ||
                 'CPU darf nicht größer ' +
@@ -173,10 +178,10 @@
             v-model="ram"
             label="Arbeitsspeicher (GB)"
             type="number"
-            :min="4"
+            :min="2"
             :max="currentRam > 100 ? currentRam : 100"
             :rules="[
-              (v) => v >= 4 || 'RAM darf nicht kleiner 4 sein.',
+              (v) => v >= 2 || 'RAM darf nicht kleiner 2 sein.',
               (v) =>
                 v <= (currentRam > 100 ? currentRam : 100) ||
                 'RAM darf nicht größer ' +
@@ -279,7 +284,7 @@ const isNonOracleUser = computed(() =>
 const form = ref<HTMLFormElement>();
 const dialog = ref(false);
 const cpus = ref<number>(
-  props.server.numCpu != undefined ? props.server.numCpu : 2
+  props.server.numCpu != undefined ? props.server.numCpu : 1
 );
 const currentRam = formatter.calculateMBtoGB(props.server.memoryMb);
 const ram = ref<number>(
@@ -295,9 +300,9 @@ watch(dialog, (newValue) => {
       cpus.value = props.server.numCpuRecommended;
       ram.value = props.server.memoryMbRecommended / 1024;
     } else {
-      cpus.value = props.server.numCpu != undefined ? props.server.numCpu : 2;
+      cpus.value = props.server.numCpu != undefined ? props.server.numCpu : 1;
       ram.value =
-        props.server.memoryMb != undefined ? props.server.memoryMb / 1024 : 4;
+        props.server.memoryMb != undefined ? props.server.memoryMb / 1024 : 2;
     }
     registerOpenDialog?.();
   } else {
@@ -339,9 +344,9 @@ function resetForm() {
   schedule.value = false;
   schedulePatchnight.value = false;
   rawDate.value = new Date();
-  cpus.value = props.server.numCpu != undefined ? props.server.numCpu : 2;
+  cpus.value = props.server.numCpu != undefined ? props.server.numCpu : 1;
   ram.value =
-    props.server.memoryMb != undefined ? props.server.memoryMb / 1024 : 4;
+    props.server.memoryMb != undefined ? props.server.memoryMb / 1024 : 2;
 }
 
 function save() {
@@ -364,16 +369,16 @@ watch(
   () => props.server,
   (newServer) => {
     if (newServer) {
-      cpus.value = newServer.numCpu || 2;
-      ram.value = newServer.memoryMb ? newServer.memoryMb / 1024 : 4;
+      cpus.value = newServer.numCpu || 1;
+      ram.value = newServer.memoryMb ? newServer.memoryMb / 1024 : 2;
     }
     if (props.rightsize) {
       cpus.value = props.server.numCpuRecommended;
       ram.value = props.server.memoryMbRecommended / 1024;
     } else {
-      cpus.value = props.server.numCpu != undefined ? props.server.numCpu : 2;
+      cpus.value = props.server.numCpu != undefined ? props.server.numCpu : 1;
       ram.value =
-        props.server.memoryMb != undefined ? props.server.memoryMb / 1024 : 4;
+        props.server.memoryMb != undefined ? props.server.memoryMb / 1024 : 2;
     }
   }
 );

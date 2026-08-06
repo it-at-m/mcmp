@@ -648,9 +648,9 @@ public class JobController {
 
         int ram = Integer.parseInt(ramObj.toString());
         int cpu = Integer.parseInt(cpuObj.toString());
-        if (cpu < 2 || cpu > 8 || ram < 4 || ram > 64) {
+        if (cpu < 1 || cpu > 8 || ram < 2 || ram > 64) {
             log.warn("Invalid CPU or RAM provided by user: {} for new RHEL10 Server Install", AuthUtils.getUsername());
-            throw new IllegalArgumentException("CPU must be between 2 and 8, RAM must be between 4 and 64 GB.");
+            throw new IllegalArgumentException("CPU must be between 1 and 8, RAM must be between 2 and 64 GB.");
         }
 
         long applicationServiceId = Integer.parseInt(applicationServiceIdObj.toString());
@@ -852,9 +852,9 @@ public class JobController {
 
         int ram = Integer.parseInt(ramObj.toString());
         int cpu = Integer.parseInt(cpuObj.toString());
-        if (cpu < 2 || cpu > 8 || ram < 4 || ram > 64) {
+        if (cpu < 1 || cpu > 8 || ram < 2 || ram > 64) {
             log.warn("Invalid CPU or RAM provided by user: {} for new Windows Server Install", AuthUtils.getUsername());
-            throw new IllegalArgumentException("CPU must be between 2 and 8, RAM must be between 4 and 64 GB.");
+            throw new IllegalArgumentException("CPU must be between 1 and 8, RAM must be between 2 and 64 GB.");
         }
 
         String osVersion = osVersionObj.toString();
@@ -937,9 +937,9 @@ public class JobController {
 
         int ram = Integer.parseInt(ramObj.toString());
         int cpu = Integer.parseInt(cpuObj.toString());
-        if (cpu < 2 || cpu > 8 || ram < 4 || ram > 64) {
+        if (cpu < 1 || cpu > 8 || ram < 2 || ram > 64) {
             log.warn("Invalid CPU or RAM provided by user: {} for new Windows Server Install", AuthUtils.getUsername());
-            throw new IllegalArgumentException("CPU must be between 2 and 8, RAM must be between 4 and 64 GB.");
+            throw new IllegalArgumentException("CPU must be between 1 and 8, RAM must be between 2 and 64 GB.");
         }
 
         String osVersion = osVersionObj.toString();
@@ -1961,9 +1961,9 @@ public class JobController {
         int cpu = Integer.parseInt(cpuObj.toString());
         int ram = Integer.parseInt(ramObj.toString());
 
-        if (cpu < 2 || (cpu > 72 && cpu > server.numCpu()) || ram < 4 || (ram > 72 && ram > server.memoryMb()*1024)) {
+        if (cpu < 1 || (cpu > 72 && cpu > server.numCpu()) || ram < 2 || (ram > 72 && ram > server.memoryMb()*1024)) {
             log.warn("Invalid CPU or RAM values provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
-            throw new IllegalArgumentException("CPU must be between 2 and 72, RAM must be between 4 and 100.");
+            throw new IllegalArgumentException("CPU must be between 1 and 72, RAM must be between 2 and 100.");
         }
 
         logCreatedJob(changeCpuRamIdentifier, serverId);

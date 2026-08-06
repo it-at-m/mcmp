@@ -306,6 +306,10 @@ public class ServerService {
         return repository.save(server);
     }
 
+    public void delete(final Server server) {
+        repository.delete(server);
+    }
+
     public List<ServerFullDTO> findAllPatchnightErrorServers() {
         return repository.findByPatchnightExitcodeNot((short) 0).stream().map(serverMapper::toFullDTOWithoutAppservices).toList();
     }
@@ -347,5 +351,9 @@ public class ServerService {
 
     public List<ServerDbDTO> findAllOracleServers() {
         return repository.findAllOracleServers();
+    }
+
+    public List<Server> findAllByCloudId(final Long cloudId) {
+        return repository.findAllByCloudId(cloudId);
     }
 }

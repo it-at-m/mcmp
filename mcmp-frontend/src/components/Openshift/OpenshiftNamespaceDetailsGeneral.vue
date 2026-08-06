@@ -21,9 +21,18 @@
     <v-row>
       <v-col
         cols="3"
-        class="pt-0"
+        class="pt-0 links"
       >
-        <p>{{ namespace.name }}</p>
+        <p v-if="namespace.webconsoleUrl">
+          <a
+            :href="namespace.webconsoleUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {{ namespace.name }}
+          </a>
+        </p>
+        <p v-else>-</p>
       </v-col>
       <v-col
         cols="3"
@@ -58,28 +67,6 @@
           <router-link :to="`/appservice/${firstAppservice.id}`">
             {{ firstAppservice.name }}
           </router-link>
-        </p>
-        <p v-else>-</p>
-      </v-col>
-    </v-row>
-    <v-row>
-      <v-col cols="3">
-        <h3>Openshift Cluster-GUI</h3>
-      </v-col>
-    </v-row>
-    <v-row>
-      <v-col
-        cols="3"
-        class="pt-0 links"
-      >
-        <p v-if="namespace.webconsoleUrl">
-          <a
-            :href="namespace.webconsoleUrl"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            {{ namespace.name }}
-          </a>
         </p>
         <p v-else>-</p>
       </v-col>

@@ -22,8 +22,9 @@ public class ServerController {
                                                  @RequestParam(name = "search", required = false) final String search,
                                                  @RequestParam(name = "status", required = false) final List<String> status,
                                                  @RequestParam(name = "os", required = false) final String os,
-                                                 @RequestParam(name = "favorites", required = false, defaultValue = "false") final boolean favorites) {
-        return serverService.getVisibleServers(offset, limit, sortBy, sortOrder, search, status, os, favorites);
+                                                 @RequestParam(name = "favorites", required = false, defaultValue = "false") final boolean favorites,
+                                                 @RequestParam(name = "installFailed", required = false, defaultValue = "false") final boolean installFailed) {
+        return serverService.getVisibleServers(offset, limit, sortBy, sortOrder, search, status, os, favorites, installFailed);
     }
 
     @GetMapping("/{serverId}")

@@ -32,7 +32,7 @@
             {{ namespace.name }}
           </a>
         </p>
-        <p v-else>-</p>
+        <p v-else>{{ namespace.name }}</p>
       </v-col>
       <v-col
         cols="3"

@@ -119,7 +119,6 @@ func (p *Processor) AggregateData(ctx context.Context) (*Cloud, error) {
 			NumCPU:              p.parseUint(vm.CPU.Topology.Sockets),
 			NumCoresPerSocket:   p.parseUint(vm.CPU.Topology.Cores),
 			NumOfThreads:        p.parseUint(vm.CPU.Topology.Threads),
-			OverallStatus:       &vm.Status,
 			GuestConfigFullName: stringPtrIfNotEmpty(guestName),
 			BootTime:            formatBootTime(vm.StartTime),
 		}

@@ -118,13 +118,15 @@ public interface OntapVolumeRepository extends JpaRepository<OntapVolume, Long> 
                                                          @Param("isStorage") boolean isStorage,
                                                          @Param("isOperator") boolean isOperator);
 
-    @Query("SELECT CASE WHEN :isAdmin = TRUE OR :isStorage = TRUE OR EXISTS (" +
+    @Query("SELECT CASE WHEN EXISTS (" +
+            "SELECT 1 FROM OntapVolume v WHERE v.volumeUuid = :uuid AND SIZE(v.appservices) = 1" +
+            ") AND (:isAdmin = TRUE OR :isStorage = TRUE OR EXISTS (" +
             "SELECT 1 FROM OntapVolume v " +
             "JOIN v.appservices a " +
             "JOIN a.changeGroup g " +
             "JOIN g.users u " +
             "WHERE v.volumeUuid = :uuid AND u.username = :username" +
-            ") THEN TRUE ELSE FALSE END")
+            ")) THEN TRUE ELSE FALSE END")
     Boolean canUserEditVolume(@Param("uuid") UUID uuid, @Param("username") String username,
                               @Param("isAdmin") boolean isAdmin, @Param("isStorage") boolean isStorage);
 

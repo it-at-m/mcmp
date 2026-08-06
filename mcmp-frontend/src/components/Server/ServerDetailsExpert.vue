@@ -178,10 +178,7 @@
     </v-row>
   </common-card>
   <common-card
-    v-if="
-      props.selectedServer.serverType === 'VM_VMWARE' ||
-      props.selectedServer.serverType === 'VM_PROXMOX'
-    "
+    v-if="props.selectedServer.serverType === 'VM_VMWARE'"
     title="Technische Informationen"
     top-margin="0"
   >
@@ -294,6 +291,133 @@
           >{{ mdiAlertCircle }}</v-icon
         >
       </v-col>
+      <v-col
+        cols="3"
+        class="pt-0"
+      >
+        <p>
+          {{
+            formatter.formatBooleanToGerman(
+              props.selectedServer.cpuHotAddEnabled
+            )
+          }}
+        </p>
+        <v-icon
+          v-if="!props.selectedServer.cpuHotAddEnabled"
+          color="_red"
+          >{{ mdiAlertCircle }}</v-icon
+        >
+      </v-col>
+      <v-col
+        cols="3"
+        class="pt-0"
+      >
+        <p>
+          {{
+            formatter.formatBooleanToGerman(
+              props.selectedServer.memoryHotAddEnabled
+            )
+          }}
+        </p>
+        <v-icon
+          v-if="!props.selectedServer.memoryHotAddEnabled"
+          color="_red"
+          >{{ mdiAlertCircle }}</v-icon
+        >
+      </v-col>
+      <v-col
+        cols="3"
+        class="pt-0"
+      >
+        <p>{{ uptime }}</p>
+      </v-col>
+    </v-row>
+  </common-card>
+  <common-card
+    v-if="props.selectedServer.serverType === 'VM_PROXMOX'"
+    title="Technische Informationen"
+    top-margin="0"
+  >
+    <v-row>
+      <v-col cols="3">
+        <h3>Machine Version</h3>
+      </v-col>
+      <v-col cols="3">
+        <h3>qemu Guest Agent</h3>
+      </v-col>
+      <v-col cols="3">
+        <h3>qemu Guest Agent Version</h3>
+      </v-col>
+    </v-row>
+    <v-row>
+      <v-col
+        cols="3"
+        class="pt-0"
+      >
+        <v-row class="ml-0 mt-0">
+          <p>{{ props.selectedServer.vmxVersion }}</p>
+          <v-tooltip
+            v-if="Number(props.selectedServer.vmxVersion) > VMX_VERSION_MINIMUM"
+            text="Version aktuell"
+          >
+            <template #activator="{ props: tooltipProps }">
+              <v-icon
+                v-bind="tooltipProps"
+                color="_green"
+                >{{ mdiCheckCircle }}</v-icon
+              >
+            </template>
+          </v-tooltip>
+          <v-tooltip
+            v-else
+            text="Version veraltet"
+          >
+            <template #activator="{ props: tooltipProps }">
+              <v-icon
+                v-bind="tooltipProps"
+                color="_red"
+                >{{ mdiAlertCircle }}</v-icon
+              >
+            </template>
+          </v-tooltip>
+        </v-row>
+      </v-col>
+      <v-col
+        cols="3"
+        class="pt-0"
+      >
+        <p
+          v-if="
+            props.selectedServer.guestToolsRunningStatus === 'guestToolsRunning'
+          "
+        >
+          Eingeschaltet
+        </p>
+        <p v-else>
+          Ausgeschaltet <v-icon color="_red">{{ mdiAlertCircle }}</v-icon>
+        </p>
+      </v-col>
+      <v-col
+        cols="3"
+        class="pt-0"
+      >
+        {{
+          formatter.ifEmptyReturnDash(props.selectedServer.guestToolsVersion)
+        }}
+      </v-col>
+    </v-row>
+    <v-row>
+      <v-col cols="3">
+        <h3>CPU Hot Add</h3>
+      </v-col>
+      <v-col cols="3">
+        <h3>Memory Hot Add</h3>
+      </v-col>
+      <v-col cols="3">
+        <h3>Uptime</h3>
+      </v-col>
+    </v-row>
+    <v-row>
       <v-col
         cols="3"
         class="pt-0"

@@ -36,7 +36,8 @@ public class CloudService {
                 cloudDTO.locked(),
                 cloudDTO.configInfobloxId(),
                 cloudDTO.configBaasId(),
-                cloudDTO.greenItEnabled()
+                cloudDTO.greenItEnabled(),
+                cloudDTO.awxInventoryId()
         );
     }
 

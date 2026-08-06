@@ -76,4 +76,7 @@ public class Cloud extends AbstractEntity {
     @ColumnDefault("false")
     @Column(name = "green_it_enabled", nullable = false)
     private boolean greenItEnabled = false;
+
+    @Column(name = "awx_inventory_id", nullable = false)
+    private Long awxInventoryId;
 }

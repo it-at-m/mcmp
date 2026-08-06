@@ -1,8 +1,13 @@
 package de.muenchen.mcmp.clients.cloud;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import de.muenchen.mcmp.server.ServerStatusType;
+import de.muenchen.mcmp.types.ServerKind;
+import de.muenchen.mcmp.types.ServerType;
 import lombok.Builder;
 
+import java.time.OffsetDateTime;
+import java.util.Collections;
 import java.util.List;
 
 @Builder
@@ -12,8 +17,8 @@ public record CloudImportDTO(
         @JsonProperty("servers") List<Server> servers
 ) {
     public record Server(
-            @JsonProperty("server_kind") String serverKind,
-            @JsonProperty("server_type") String serverType,
+            @JsonProperty("server_kind") ServerKind serverKind,
+            @JsonProperty("server_type") ServerType serverType,
             @JsonProperty("name") String name,
             @JsonProperty("uuid") String uuid,
             @JsonProperty("instance_uuid") String instanceUuid,
@@ -22,7 +27,7 @@ public record CloudImportDTO(
             @JsonProperty("host") String host,
             @JsonProperty("location") String location,
             @JsonProperty("power_state") String powerState,
-            @JsonProperty("memory_mb") Long memoryMB,
+            @JsonProperty("memory_mb") Integer memoryMB,
             @JsonProperty("num_cpu") Integer numCPU,
             @JsonProperty("num_cores_per_socket") Integer numCoresPerSocket,
             @JsonProperty("num_of_threads") Integer num_of_threads,
@@ -31,8 +36,8 @@ public record CloudImportDTO(
             @JsonProperty("cpu_hot_remove_enabled") Boolean cpuHotRemoveEnabled,
             @JsonProperty("cpu_topology") String cpuTopology,
             @JsonProperty("vmx_version") String vmxVersion,
-            @JsonProperty("overall_status") String overallStatus,
-            @JsonProperty("config_status") String configStatus,
+            @JsonProperty("overall_status") ServerStatusType overallStatus,
+            @JsonProperty("config_status") ServerStatusType configStatus,
             @JsonProperty("guest_config_id") String guestConfigId,
             @JsonProperty("guest_config_full_name") String guestConfigFullName,
             @JsonProperty("guest_tools_id") String guestToolsId,
@@ -56,13 +61,13 @@ public record CloudImportDTO(
             @JsonProperty("guest_tools_family_name") String guestToolsFamilyName,
             @JsonProperty("guest_tools_kernel_version") String guestToolsKernelVersion,
             @JsonProperty("guest_tools_pretty_name") String guestToolsPrettyName,
-            @JsonProperty("boot_time") String bootTime,
+            @JsonProperty("boot_time") OffsetDateTime bootTime,
             @JsonProperty("hot_plug_memory_limit") Long hotPlugMemoryLimit,
             @JsonProperty("hot_plug_memory_increment_size") Long hotPlugMemoryIncrementSize,
             @JsonProperty("dn") String dn,
             @JsonProperty("association") String association,
             @JsonProperty("memory_speed") Integer memorySpeed,
-            @JsonProperty("mfg_time") String mfgTime,
+            @JsonProperty("mfg_time") OffsetDateTime mfgTime,
             @JsonProperty("model") String model,
             @JsonProperty("num_of_adaptors") Integer numOfAdaptors,
             @JsonProperty("num_of_cores_enabled") Integer numOfCoresEnabled,
@@ -72,9 +77,60 @@ public record CloudImportDTO(
             @JsonProperty("ucsm_chassis_id") Integer chassisId,
             @JsonProperty("ucsm_chassis_slot_id") Integer slotId,
             @JsonProperty("ucsm_server_id") Integer serverId,
-            @JsonProperty("available_memory") Long availableMemory,
+            @JsonProperty("available_memory") Integer availableMemory,
             @JsonProperty("vendor") String vendor,
-            @JsonProperty("vid") String vid
+            @JsonProperty("vid") String vid,
+            @JsonProperty("snapshots") List<Snapshot> snapshots
+    ) {
+        public Server {
+            /* ensure we have a trimmed name */
+            if (name == null || name.isBlank()) {
+                name = uuid;
+            } else {
+                name = name.trim();
+            }
+
+            /* ensure we have a valid power state */
+            switch (powerState) {
+                case "poweredOn": // vmware
+                case "running":   // proxmox
+                case "on":        // ucs
+                case "up":        // olvm
+                    powerState = "poweredOn";
+                    break;
+                case "poweredOff": // vmware
+                case "stopped":    // proxmox
+                case "off":        // ucs
+                case "down":       // olvm
+                    powerState = "poweredOff";
+                    break;
+                default:
+                    powerState = "unknown";
+                    break;
+            }
+
+            /* remove various nulls */
+            if (serverKind == null) serverKind = ServerKind.UNKNOWN;
+            if (serverType == null) serverType = ServerType.UNKNOWN;
+            if (memoryMB == null) memoryMB = 0;
+            if (numCPU == null) numCPU = 0;
+            if (memoryHotAddEnabled == null) memoryHotAddEnabled = false;
+            if (cpuHotAddEnabled == null) cpuHotAddEnabled = false;
+            if (cpuHotRemoveEnabled == null) cpuHotRemoveEnabled = false;
+            if (overallStatus == null) overallStatus = ServerStatusType.gray;
+            if (configStatus == null) configStatus = ServerStatusType.gray;
+            if (snapshots == null) snapshots = Collections.emptyList();
+        }
+    }
+
+
+    public record Snapshot(
+            @JsonProperty("name") String name,
+            @JsonProperty("description") String description,
+            @JsonProperty("create_time") OffsetDateTime createTime,
+            @JsonProperty("quiesced") boolean quiesced,
+            @JsonProperty("state") String state,
+            @JsonProperty("replay_supported") boolean replaySupported
     ) {
     }
 }

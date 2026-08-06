@@ -40,4 +40,7 @@ public class KubernetesCluster extends AbstractEntity {
 
     @OneToMany(mappedBy = "cluster", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<KubernetesNamespace> namespaces = new LinkedHashSet<>();
+
+    @Column(name = "web_console_url", length = Integer.MAX_VALUE)
+    private String webConsoleUrl;
 }

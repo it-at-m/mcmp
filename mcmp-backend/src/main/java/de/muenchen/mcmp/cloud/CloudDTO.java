@@ -17,5 +17,6 @@ public record CloudDTO(
         boolean locked,
         Long configInfobloxId,
         Long configBaasId,
-        boolean greenItEnabled
+        boolean greenItEnabled,
+        Long awxInventoryId
 ) {}

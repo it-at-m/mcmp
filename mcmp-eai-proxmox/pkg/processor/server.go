@@ -3,23 +3,27 @@ package processor
 import (
 	"context"
 	"fmt"
-	"mcmp-eai-proxmox/pkg/clients/pdm"
 	"strconv"
 	"strings"
 	"time"
+
+	"mcmp-eai-proxmox/pkg/clients/pdm"
 )
 
 type (
-	ServerKind string
-	ServerType string
-	PowerState string
+	ServerKind    string
+	ServerType    string
+	PowerState    string
+	SnapshotState string
 )
 
 const (
-	ServerKindVirtual    ServerKind = "VIRTUAL"
-	ServerTypeProxmox    ServerType = "VM_PROXMOX"
-	PowerStatePoweredOn  PowerState = "poweredOn"
-	PowerStatePoweredOff PowerState = "poweredOff"
+	ServerKindVirtual    ServerKind    = "VIRTUAL"
+	ServerTypeProxmox    ServerType    = "VM_PROXMOX"
+	PowerStatePoweredOn  PowerState    = "poweredOn"
+	PowerStatePoweredOff PowerState    = "poweredOff"
+	SnapshotPoweredOn    SnapshotState = "poweredOn"
+	SnapshotPoweredOff   SnapshotState = "poweredOff"
 )
 
 // A Server represents a single virtualized server accepted by the MCMP
@@ -40,6 +44,15 @@ type Server struct {
 	CPUHotAddEnabled    bool       `json:"cpu_hot_add_enabled,omitempty"`    // If CPU hot-add is enabled.
 	BootTime            *time.Time `json:"boot_time,omitempty"`              // Time of last boot.
 	GuestConfigID       string     `json:"guest_config_id,omitempty"`        // Identifier of the configured operating system.
+	Snapshots           []Snapshot `json:"snapshots"`                        // Available Snapshots, excluding current.
+}
+
+// A Snapshot of a Server on the hypervisor.
+type Snapshot struct {
+	Name        string        `json:"name,omitempty"`        // Name of the snapshot.
+	Description string        `json:"description,omitempty"` // Description of the snapshot.
+	CreateTime  *time.Time    `json:"create_time,omitempty"` // Time of snapshot creation.
+	State       SnapshotState `json:"state,omitempty"`       // If the snapshot is powered on or off.
 }
 
 // ProcessServer processes a single server based on a pdm.Resource
@@ -49,29 +62,65 @@ type Server struct {
 // Processing may fail if the VM config can not be retrieved from PDM,
 // as the config is required to determine a useful server UUID.
 func (p *Processor) ProcessServer(ctx context.Context, res *pdm.Resource) (*Server, error) {
-	server := &Server{
+	server := Server{
 		ServerKind: ServerKindVirtual,
 		ServerType: ServerTypeProxmox,
 	}
-
-	server.Name = res.Name
-	server.VMID = strconv.FormatUint(res.VMID, 10)
 
 	nodeFQDN, ok := p.nodeFQDNs[res.Node]
 	if !ok {
 		return nil, fmt.Errorf("failed to process vm %d: failed to determine node FQDN of %s", res.VMID, res.Node)
 	}
-	server.Host = nodeFQDN
 
-	// ID schema: remote/<remote>/guest/<vmid>
-	ps := strings.Split(res.ID, "/")
-	if len(ps) > 1 {
-		server.Cluster = ps[1]
+	server.Name = res.Name
+	server.VMID = strconv.FormatUint(res.VMID, 10)
+	server.Host = nodeFQDN
+	server.NumCpu = uint32(res.MaxCPU)
+	server.MemoryMB = res.MaxMem / (1024 * 1024) // B->MiB
+
+	// impersonate VMware
+	switch res.Status {
+	case "running":
+		server.PowerState = PowerStatePoweredOn
+	case "stopped":
+		server.PowerState = PowerStatePoweredOff
 	}
 
+	bootTime := time.Now().Add(time.Duration(-res.Uptime) * time.Second)
+	server.BootTime = &bootTime
+
+	idPath := strings.Split(res.ID, "/")
+	if len(idPath) > 1 {
+		server.Cluster = idPath[1]
+	} else {
+		// can't proceed without cluster name
+		return nil, fmt.Errorf("failed to parse PDM-ID %s. name=%s", res.ID, res.Name)
+	}
+
+	if err := p.processVMConfig(ctx, res, &server); err != nil {
+		// can't proceed without uuid
+		return nil, err
+	}
+
+	if err := p.processSnapshots(ctx, res, &server); err != nil {
+		p.logger.Warn(err.Error(), "name", res.Name)
+	}
+
+	return &server, nil
+}
+
+// ProcessVMConfig processes a QEMU resource's VM config. This involves
+// an API call to the PDM instance.
+//
+// The result is written to the outparam server.
+//
+// An error is returned if the API call fails, which may happen if the
+// resource is invalid (e.g. not a QEMU VM) or if the processor is
+// missing the required permissions.
+func (p *Processor) processVMConfig(ctx context.Context, res *pdm.Resource, server *Server) error {
 	cfg, err := p.client.VMConfig(ctx, server.Cluster, res.VMID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch VM config: %w", err)
+		return fmt.Errorf("failed to fetch VM config: %w", err)
 	}
 
 	// since proxmox does not assign UUIDs to server objects, we use
@@ -85,26 +134,52 @@ func (p *Processor) ProcessServer(ctx context.Context, res *pdm.Resource) (*Serv
 		}
 	}
 
-	server.NumCpu = uint32(res.MaxCPU)
 	server.NumCoresPerSocket = cfg.Cores
 	server.CPUHotAddEnabled = strings.Contains(cfg.Hotplug, "cpu")
 	// hot removal of CPUs requires guest OS cooperation, so assume
 	// it's not supported
-	server.MemoryMB = res.MaxMem / (1024 * 1024) // B->MiB
 	server.MemoryHotAddEnabled = strings.Contains(cfg.Hotplug, "memory")
+	server.GuestConfigID = cfg.OSType
+	return nil
+}
 
-	bootTime := time.Now().Add(time.Duration(-res.Uptime) * time.Second)
-	server.BootTime = &bootTime
-
-	// impersonate VMware
-	switch res.Status {
-	case "running":
-		server.PowerState = PowerStatePoweredOn
-	case "stopped":
-		server.PowerState = PowerStatePoweredOff
+// ProcessSnapshots processes a QEMU resource's snapshots. This involves
+// an API call to the PDM instance.
+//
+// The results are written to the outparam server. The "current" snapshot
+// is not included in the snapshot list.
+//
+// An error is returned if the API call fails, which may happen if the
+// resource is invalid (e.g. not a QEMU VM) or if the processor
+// is missing the required permissions.
+func (p *Processor) processSnapshots(ctx context.Context, res *pdm.Resource, server *Server) error {
+	snapshots, err := p.client.Snapshots(ctx, server.Cluster, res.VMID)
+	if err != nil {
+		return fmt.Errorf("failed to fetch snapshots: %w", err)
 	}
 
-	server.GuestConfigID = cfg.OSType
+	server.Snapshots = make([]Snapshot, 0, len(snapshots)-1)
+	for _, snapshot := range snapshots {
+		if snapshot.Name == "current" {
+			continue
+		}
 
-	return server, nil
+		createTime := time.Unix(snapshot.Snaptime, 0)
+
+		var state SnapshotState
+		if snapshot.VMState {
+			state = SnapshotPoweredOn
+		} else {
+			state = SnapshotPoweredOff
+		}
+
+		server.Snapshots = append(server.Snapshots, Snapshot{
+			Name:        snapshot.Name,
+			Description: snapshot.Description,
+			CreateTime:  &createTime,
+			State:       state,
+		})
+	}
+
+	return nil
 }

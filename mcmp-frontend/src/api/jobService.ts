@@ -176,7 +176,7 @@ export default {
     serverId: number | null = null,
     appserviceId: number | null = null,
     awxVariables: string | null = null,
-    actionIdentifier: string | null = null,
+    actionIdentifier: string[] | null = null,
     statusIdentifier: string | null = null
   ): Promise<Page<JobList>> {
     loading.value = true;
@@ -198,7 +198,8 @@ export default {
     if (serverId) params.append("serverId", serverId.toString());
     if (appserviceId) params.append("appserviceId", appserviceId.toString());
     if (awxVariables) params.append("awxVariables", awxVariables);
-    if (actionIdentifier) params.append("actionIdentifier", actionIdentifier);
+    if (actionIdentifier && actionIdentifier.length)
+      params.append("actionIdentifier", actionIdentifier.join(","));
     if (statusIdentifier) params.append("statusIdentifier", statusIdentifier);
 
     return fetch(

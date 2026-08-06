@@ -32,7 +32,8 @@ public interface CloudRepository extends JpaRepository<Cloud, Long> {
           config_baas_id,
           green_it_enabled,
           created_at,
-          updated_at
+          updated_at,
+          awx_inventory_id
         ) VALUES (
           :name,
           :fqdn,
@@ -48,7 +49,8 @@ public interface CloudRepository extends JpaRepository<Cloud, Long> {
           :configBaasId,
           :greenItEnabled,
           CURRENT_TIMESTAMP,
-          CURRENT_TIMESTAMP
+          CURRENT_TIMESTAMP,
+          :awxInventoryId
         )
         """, nativeQuery = true)
     void insertConfig(
@@ -65,7 +67,8 @@ public interface CloudRepository extends JpaRepository<Cloud, Long> {
             @Param("locked") boolean locked,
             @Param("configInfobloxId") Long configInfobloxId,
             @Param("configBaasId") Long configBaasId,
-            @Param("greenItEnabled") boolean greenItEnabled
+            @Param("greenItEnabled") boolean greenItEnabled,
+            @Param("awxInventoryId") Long awxInventroyId
     );
 
     @Modifying

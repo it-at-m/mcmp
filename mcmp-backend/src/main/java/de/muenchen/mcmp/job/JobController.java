@@ -3,6 +3,7 @@ package de.muenchen.mcmp.job;
 import de.muenchen.mcmp.appservice.AppserviceService;
 import de.muenchen.mcmp.job.incident.JobIncidentSummary;
 import de.muenchen.mcmp.job.node.JobNodeHierarchy;
+import de.muenchen.mcmp.loadbalancer.LoadbalancerService;
 import de.muenchen.mcmp.mountPoint.MountPointService;
 import de.muenchen.mcmp.network.NetworkService;
 import de.muenchen.mcmp.security.AuthUtils;
@@ -47,6 +48,7 @@ public class JobController {
     private final SnapshotService snapshotService;
     private final UnifiedStorageService unifiedStorageService;
     private final UserService userService;
+    private final LoadbalancerService loadbalancerService;
 
     public static final String VMWARE_START_SERVER = "VMWARE_START_SERVER";
     public static final String VMWARE_STOP_SERVER = "VMWARE_STOP_SERVER";
@@ -88,6 +90,7 @@ public class JobController {
     public static final String ANSIBLE_USER_REMOVE = "ANSIBLE_USER_REMOVE";
 
     public static final String LOADBALANCER_F5 = "LOADBALANCER_F5";
+    public static final String LOADBALANCER_F5_CHANGE_POOL_MEMBERS = "LOADBALANCER_F5_CHANGE_POOL_MEMBERS";
 
     public static final String GREEN_IT_VMWARE_SHUTDOWN = "GREEN_IT_VMWARE_SHUTDOWN";
     public static final String GREEN_IT_VMWARE_RIGHTSIZE = "GREEN_IT_VMWARE_RIGHTSIZE";
@@ -134,7 +137,7 @@ public class JobController {
             @RequestParam(value = "userId", required = false) final Long userId,
             @RequestParam(value = "serverId", required = false) final Long serverId,
             @RequestParam(value = "appserviceId", required = false) final Long appserviceId,
-            @RequestParam(value = "actionIdentifier", required = false) final String actionIdentifier,
+            @RequestParam(value = "actionIdentifier", required = false) final List<String> actionIdentifier,
             @RequestParam(value = "statusIdentifier", required = false) final String statusIdentifier,
             @RequestParam(value = "awxVariables", required = false) final String awxVariables
     ) {
@@ -1221,6 +1224,85 @@ public class JobController {
 
         logCreatedJob(LOADBALANCER_F5, serverId);
         jobService.loadbalancerF5(awxExtraVars, LOADBALANCER_F5);
+    }
+
+    @PostMapping("/create/" + LOADBALANCER_F5_CHANGE_POOL_MEMBERS)
+    public void loadbalancerF5ChangePoolMembers(@RequestParam(name = "serverId") final Long serverId,
+                                                 @RequestBody final Map<String, Object> awxExtraVars) {
+        Object lbVirtualServerIdObj = awxExtraVars.get("lb_virtual_server_id");
+        if (lbVirtualServerIdObj == null) {
+            throw new MissingFormatArgumentException("Loadbalancer ID must be provided.");
+        }
+        final long lbVirtualServerId;
+        try {
+            lbVirtualServerId = Long.parseLong(lbVirtualServerIdObj.toString());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Loadbalancer ID is invalid.");
+        }
+
+        if (!loadbalancerService.canUserEditLoadbalancer(lbVirtualServerId)) {
+            logTriedToCreateJob(LOADBALANCER_F5_CHANGE_POOL_MEMBERS, serverId);
+            throw new AccessDeniedException("You are not allowed to change pool members for this loadbalancer.");
+        }
+
+        Object poolNameObj = awxExtraVars.get("pool_name");
+        if (poolNameObj == null || poolNameObj.toString().isBlank()) {
+            throw new MissingFormatArgumentException("Pool name must be provided.");
+        }
+        String poolName = poolNameObj.toString().trim();
+
+        List<Map<String, Object>> addedList = awxExtraVars.get("added") != null
+                ? requireListOfMap(awxExtraVars.get("added"), "Added members")
+                : List.of();
+        List<Map<String, Object>> removedList = awxExtraVars.get("removed") != null
+                ? requireListOfMap(awxExtraVars.get("removed"), "Removed members")
+                : List.of();
+
+        if (addedList.isEmpty() && removedList.isEmpty()) {
+            throw new IllegalArgumentException("At least one member change must be provided.");
+        }
+        if (addedList.size() > 50 || removedList.size() > 50) {
+            throw new IllegalArgumentException("At most 50 members may be changed at once.");
+        }
+
+        for (Map<String, Object> added : addedList) {
+            Object addedServerIdObj = added.get("server_id");
+            Object portObj = added.get("port");
+            if (addedServerIdObj == null || portObj == null) {
+                throw new MissingFormatArgumentException("Server ID and port must be provided for added members.");
+            }
+            final long addedServerId;
+            final int port;
+            try {
+                addedServerId = Long.parseLong(addedServerIdObj.toString());
+                port = Integer.parseInt(portObj.toString());
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Server ID and port must be valid numbers.");
+            }
+            if (port < 1 || port > 65535) {
+                throw new IllegalArgumentException("Port must be between 1 and 65535.");
+            }
+            if (!serverService.canUserViewServer(addedServerId)) {
+                logTriedToCreateJob(LOADBALANCER_F5_CHANGE_POOL_MEMBERS, addedServerId);
+                throw new AccessDeniedException("You are not allowed to add one of the selected servers as a pool member.");
+            }
+        }
+
+        for (Map<String, Object> removed : removedList) {
+            Object ipObj = removed.get("ip");
+            Object portObj = removed.get("port");
+            if (ipObj == null || ipObj.toString().isBlank() || portObj == null) {
+                throw new MissingFormatArgumentException("IP and port must be provided for removed members.");
+            }
+            try {
+                Integer.parseInt(portObj.toString());
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Port must be a valid number.");
+            }
+        }
+
+        logCreatedJob(LOADBALANCER_F5_CHANGE_POOL_MEMBERS, serverId);
+        jobService.loadbalancerF5ChangePoolMembers(lbVirtualServerId, poolName, addedList, removedList, LOADBALANCER_F5_CHANGE_POOL_MEMBERS);
     }
 
 

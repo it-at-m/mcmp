@@ -5,7 +5,7 @@ go 1.26.5
 require (
 	github.com/euerla/goawx v0.0.0-20260428183549-bdffcc4c68b8
 	github.com/google/uuid v1.6.0
-	github.com/it-at-m/mcmp/mcmp-eai-common v0.0.0-20260726183052-85c140fc1199
+	github.com/it-at-m/mcmp/mcmp-eai-common v0.0.0-20260802201144-1d015c51e10a
 	golang.org/x/oauth2 v0.36.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
@@ -30,6 +30,6 @@ require (
 	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.40.0 // indirect
-	gorm.io/driver/postgres v1.6.0 // indirect
+	gorm.io/driver/postgres v1.6.2 // indirect
 	gorm.io/gorm v1.31.2 // indirect
 )

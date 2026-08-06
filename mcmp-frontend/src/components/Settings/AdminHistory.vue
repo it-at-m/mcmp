@@ -87,6 +87,7 @@
             density="compact"
             hide-details
             clearable
+            multiple
           />
         </v-col>
         <v-col
@@ -195,7 +196,7 @@ const searchJobId = ref("");
 const searchAwxJobId = ref("");
 const searchUsername = ref<UserAutocomplete | null>(null);
 const searchServerName = ref<ServerAutocomplete | null>(null);
-const searchActionIdentifier = ref("");
+const searchActionIdentifier = ref<string[]>([]);
 const searchStatusIdentifier = ref("");
 const searchAwxVariables = ref("");
 const searchCreatedAtFrom = ref<string | null>(null);
@@ -289,7 +290,9 @@ function fetchHistory() {
       searchServerName.value?.id || null,
       null,
       searchAwxVariables.value === "" ? null : searchAwxVariables.value,
-      searchActionIdentifier.value === "" ? null : searchActionIdentifier.value,
+      searchActionIdentifier.value.length === 0
+        ? null
+        : searchActionIdentifier.value,
       searchStatusIdentifier.value === "" ? null : searchStatusIdentifier.value
     )
     .then((res) => {

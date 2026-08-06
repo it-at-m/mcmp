@@ -21,9 +21,18 @@
     <v-row>
       <v-col
         cols="3"
-        class="pt-0"
+        class="pt-0 links"
       >
-        <p>{{ namespace.name }}</p>
+        <p v-if="namespace.webconsoleUrl">
+          <a
+            :href="namespace.webconsoleUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {{ namespace.name }}
+          </a>
+        </p>
+        <p v-else>-</p>
       </v-col>
       <v-col
         cols="3"

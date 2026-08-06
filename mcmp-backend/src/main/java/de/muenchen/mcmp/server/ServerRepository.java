@@ -376,6 +376,55 @@ public interface ServerRepository extends JpaRepository<Server, Long> {
                               @Param("hasNonOracleRole") boolean hasNonOracleRole,
                               @Param("isMaintenanceMode") boolean isMaintenanceMode);
 
+    @Query(value = """
+    WITH srv AS (
+        SELECT s.id
+        FROM cmp.server s
+        WHERE s.id = :serverId
+    )
+    SELECT (
+        EXISTS (SELECT 1 FROM srv)
+        AND (
+            :isAdmin
+            OR :isReadonly
+            OR :hasSecurityRole
+            OR :hasOperatorRole
+            OR :hasNetworkRole
+            OR EXISTS (
+                SELECT 1 FROM cmp.server s
+                WHERE s.id = :serverId
+                  AND (
+                      (:hasLinuxRole AND s.role_linux)
+                      OR (:hasWindowsRole AND s.role_windows)
+                      OR (:hasOracleRole AND s.role_oracle)
+                      OR (:hasNonOracleRole AND s.role_non_oracle)
+                  )
+            )
+            OR EXISTS (
+                SELECT 1
+                FROM cmp.server_assignment sa2
+                JOIN cmp.appservice a2 ON sa2.appservice_id = a2.id
+                JOIN cmp."group" g ON a2.change_group_id = g.id
+                JOIN cmp.group_membership gm ON g.id = gm.group_id
+                JOIN cmp.user u ON gm.user_id = u.id
+                WHERE sa2.server_id = :serverId
+                  AND u.username = :username
+            )
+        )
+    ) AS has_permission
+    """, nativeQuery = true)
+    boolean canUserViewServer(@Param("serverId") Long serverId,
+                              @Param("username") String username,
+                              @Param("isAdmin") boolean isAdmin,
+                              @Param("isReadonly") boolean isReadonly,
+                              @Param("hasLinuxRole") boolean hasLinuxRole,
+                              @Param("hasWindowsRole") boolean hasWindowsRole,
+                              @Param("hasOracleRole") boolean hasOracleRole,
+                              @Param("hasNonOracleRole") boolean hasNonOracleRole,
+                              @Param("hasSecurityRole") boolean hasSecurityRole,
+                              @Param("hasOperatorRole") boolean hasOperatorRole,
+                              @Param("hasNetworkRole") boolean hasNetworkRole);
+
 
     @Query(value = """
 SELECT DISTINCT s.id as id,

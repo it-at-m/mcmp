@@ -75,14 +75,16 @@ public interface OntapQtreeRepository extends JpaRepository<OntapQtree, Long> {
                                                        @Param("isStorage") boolean isStorage,
                                                        @Param("isOperator") boolean isOperator);
 
-    @Query("SELECT CASE WHEN :isAdmin = TRUE OR :isStorage = TRUE OR EXISTS (" +
+    @Query("SELECT CASE WHEN EXISTS (" +
+            "SELECT 1 FROM OntapQtree q WHERE q.id = :id AND SIZE(q.appservices) = 1" +
+            ") AND (:isAdmin = TRUE OR :isStorage = TRUE OR EXISTS (" +
             "SELECT 1 FROM OntapQtree q " +
             "JOIN q.volume v " +
             "JOIN q.appservices a " +
             "JOIN a.changeGroup g " +
             "JOIN g.users u " +
             "WHERE q.id = :id AND v.ontapCifsShares IS EMPTY AND u.username = :username" +
-            ") THEN TRUE ELSE FALSE END")
+            ")) THEN TRUE ELSE FALSE END")
     Boolean canUserEditQtree(@Param("id") Long id, @Param("username") String username,
                              @Param("isAdmin") boolean isAdmin, @Param("isStorage") boolean isStorage);
 

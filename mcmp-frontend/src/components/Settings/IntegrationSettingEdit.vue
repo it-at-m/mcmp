@@ -75,6 +75,17 @@
           />
         </template>
 
+        <template v-if="toEditCopy?.type == 'cloud'">
+          <strong>AWX Inventory ID</strong>
+          <v-text-field
+            v-model="toEditCopy.awxInventoryId"
+            :rules="[
+              (v: string) =>
+                v === '' || /^\d+$/.test(v) || 'Nur Zahlen erlaubt.',
+            ]"
+          />
+        </template>
+
         <template v-if="toEditCopy?.type == 'snow'">
           <strong>Client Authentifizierungs URL</strong>
           <v-text-field

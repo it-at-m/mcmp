@@ -48,7 +48,7 @@ const (
 	ServerTypeOther                            = "OTHER"
 	ServerTypeCiscoRackUnit                    = "CISCO_RACK_UNIT"
 	ServerTypeCiscoBlade                       = "CISCO_BLADE"
-	ServerTypeVmVcenter                        = "VM_VMWARE"
+	ServerTypeVmVmware                         = "VM_VMWARE"
 	ServerTypeVmProxmox                        = "VM_PROXMOX"
 	ServerTypeVmOpenshiftVirtualization        = "VM_OPENSHIFT_VIRTUALIZATION"
 	ServerTypeVmOlvm                           = "VM_OLVM"
@@ -1230,7 +1230,7 @@ func processVM(db *gorm.DB, cloud Cloud, vm mo.VirtualMachine,
 		BootTime:                              vm.Runtime.BootTime,
 		Locked:                                serverLocked,
 		ServerKind:                            ServerKindVirtual,
-		ServerType:                            ServerTypeVmVcenter,
+		ServerType:                            ServerTypeVmVmware,
 	}
 
 	// Thread-sicherer Zugriff auf existingVMs

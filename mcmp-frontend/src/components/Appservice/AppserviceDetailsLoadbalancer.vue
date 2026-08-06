@@ -12,9 +12,9 @@
       :headers="headers"
       :items="loadbalancers"
       :items-per-page="-1"
+      density="compact"
       class="elevation-1"
       hide-default-footer
-      disable-sort
     >
       <template #item.name="{ item }">
         <div class="links">

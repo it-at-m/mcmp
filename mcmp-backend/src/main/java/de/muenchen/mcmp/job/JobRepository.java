@@ -222,7 +222,7 @@ public interface JobRepository extends JpaRepository<Job, Long> {
     AND (CAST(:userId AS bigint) IS NULL OR j.user_id = :userId)
     AND (CAST(:serverId AS bigint) IS NULL OR j.server_id = :serverId)
     AND (CAST(:appserviceId AS bigint) IS NULL OR j.appservice_id = :appserviceId)
-    AND (CAST(:actionIdentifier AS text) IS NULL OR j.action_identifier = :actionIdentifier)
+    AND (CAST(:hasActionIdentifier AS boolean) = false OR j.action_identifier IN (:actionIdentifier))
     AND (CAST(:statusIdentifier AS text) IS NULL OR CAST(j.status AS text) = :statusIdentifier)
     AND (CAST(:awxVariables AS text) IS NULL OR j.awx_variables ILIKE CONCAT('%', :awxVariables, '%'))
     """,
@@ -238,7 +238,7 @@ public interface JobRepository extends JpaRepository<Job, Long> {
     AND (CAST(:userId AS bigint) IS NULL OR j.user_id = :userId)
     AND (CAST(:serverId AS bigint) IS NULL OR j.server_id = :serverId)
     AND (CAST(:appserviceId AS bigint) IS NULL OR j.appservice_id = :appserviceId)
-    AND (CAST(:actionIdentifier AS text) IS NULL OR j.action_identifier = :actionIdentifier)
+    AND (CAST(:hasActionIdentifier AS boolean) = false OR j.action_identifier IN (:actionIdentifier))
     AND (CAST(:statusIdentifier AS text) IS NULL OR CAST(j.status AS text) = :statusIdentifier)
     AND (CAST(:awxVariables AS text) IS NULL OR j.awx_variables ILIKE CONCAT('%', :awxVariables, '%'))
     """, nativeQuery = true)
@@ -252,7 +252,8 @@ public interface JobRepository extends JpaRepository<Job, Long> {
                                               @Param("userId") Long userId,
                                               @Param("serverId") Long serverId,
                                               @Param("appserviceId") Long appserviceId,
-                                              @Param("actionIdentifier") String actionIdentifier,
+                                              @Param("hasActionIdentifier") boolean hasActionIdentifier,
+                                              @Param("actionIdentifier") List<String> actionIdentifier,
                                               @Param("statusIdentifier") String statusIdentifier,
                                               @Param("awxVariables") String awxVariables);
 

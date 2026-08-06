@@ -18,6 +18,11 @@ import de.muenchen.mcmp.greenit.shutdown.GreenItShutdownRepository;
 import de.muenchen.mcmp.infoblox.InfobloxService;
 import de.muenchen.mcmp.job.incident.JobIncidentSummary;
 import de.muenchen.mcmp.job.node.JobNodeHierarchy;
+import de.muenchen.mcmp.loadbalancer.LbPool;
+import de.muenchen.mcmp.loadbalancer.LbPoolMember;
+import de.muenchen.mcmp.loadbalancer.LbVirtualServer;
+import de.muenchen.mcmp.loadbalancer.LbVirtualServerPoolRef;
+import de.muenchen.mcmp.loadbalancer.LbVirtualServerRepository;
 import de.muenchen.mcmp.network.NetworkGroup;
 import de.muenchen.mcmp.network.NetworkGroupRepository;
 import de.muenchen.mcmp.security.AuthUtils;
@@ -46,6 +51,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -88,6 +94,7 @@ public class JobService {
     private final ServerRepository serverRepository;
     private final AppserviceRepository appserviceRepository;
     private final NetworkGroupRepository networkGroupRepository;
+    private final LbVirtualServerRepository lbVirtualServerRepository;
     private final GreenItRightsizingRepository greenItRightsizingRepository;
     private final GreenItShutdownRepository greenItShutdownRepository;
     private final AppservicesProperties appservicesProperties;
@@ -128,7 +135,7 @@ public class JobService {
         return jobRepository.findAllStatusIdentifiers();
     }
 
-    public Page<? extends JobListBasic> findAllJobsByRole(final int page, final int itemsPerPage, final String sortBy, final boolean sortDesc, final Long jobId, final Long awxJobId, final Instant createdFrom, final Instant createdTo, final Instant changeStartFrom, final Instant changeStartTo, final Long userId, final Long serverId, final Long appserviceId, final String actionIdentifier, final String statusIdentifier, final String awxVariables) {
+    public Page<? extends JobListBasic> findAllJobsByRole(final int page, final int itemsPerPage, final String sortBy, final boolean sortDesc, final Long jobId, final Long awxJobId, final Instant createdFrom, final Instant createdTo, final Instant changeStartFrom, final Instant changeStartTo, final Long userId, final Long serverId, final Long appserviceId, final List<String> actionIdentifier, final String statusIdentifier, final String awxVariables) {
         final Sort sort;
         if (sortBy != null && !sortBy.isBlank()) {
             String actualSortBy = SORT_MAPPINGS.getOrDefault(sortBy, sortBy);
@@ -139,9 +146,12 @@ public class JobService {
         int offset = (page - 1) * itemsPerPage;
         final Pageable pageable = new OffsetBasedPageRequest(offset, itemsPerPage, sort);
 
+        final boolean hasActionIdentifier = actionIdentifier != null && !actionIdentifier.isEmpty();
+        final List<String> actionIdentifierParam = hasActionIdentifier ? actionIdentifier : List.of("");
+
         final UserRoles userRoles = AuthUtils.getCurrentUserRoles();
         if (userRoles.hasAdminRole() || userRoles.hasSecurityRole()) {
-            return jobRepository.findAllJobsComplete(pageable, jobId, awxJobId, createdFrom, createdTo, changeStartFrom, changeStartTo, userId, serverId, appserviceId, actionIdentifier, statusIdentifier, awxVariables);
+            return jobRepository.findAllJobsComplete(pageable, jobId, awxJobId, createdFrom, createdTo, changeStartFrom, changeStartTo, userId, serverId, appserviceId, hasActionIdentifier, actionIdentifierParam, statusIdentifier, awxVariables);
         }
         return jobRepository.findAllJobsBasic(pageable, userId, serverId, appserviceId);
     }
@@ -175,6 +185,10 @@ public class JobService {
     }
 
     public void createJob(final String actionIdentifier, Server server, Map<String, Object> awxExtraVars, Map<String, Object> guiVars, Instant scheduleTime, String awxJobTags, String awxSkipTags) {
+        createJob(actionIdentifier, server, awxExtraVars, guiVars,null, awxJobTags, awxSkipTags, null);
+    }
+
+    public void createJob(final String actionIdentifier, Server server, Map<String, Object> awxExtraVars, Map<String, Object> guiVars, Instant scheduleTime, String awxJobTags, String awxSkipTags, String awxInventroyId) {
         Action action = getActionOrThrow(actionIdentifier);
 
         checkActionEnabled(action);
@@ -229,6 +243,7 @@ public class JobService {
 
         if (awxJobTags != null){job.setAwxJobTags((action.getAwxJobTags().isEmpty()) ? awxJobTags : action.getAwxJobTags() + "," + awxJobTags);}
         if (awxSkipTags != null){job.setAwxSkipTags((action.getAwxSkipTags().isEmpty()) ? awxSkipTags : action.getAwxSkipTags() + "," + awxSkipTags);}
+        if (awxInventroyId != null){job.setAwxInventoryId(Integer.valueOf(awxInventroyId));}
 
         if(scheduleTime != null){
             job.setChangeStartDate(scheduleTime);
@@ -296,12 +311,11 @@ public class JobService {
         params.put("vm_name", server.getName());
 
         String cloudType = server.getCloud().getCloudType().toString();
-
-        if (cloudType == "VMWARE"){
+        if (Objects.equals(cloudType, "VMWARE")){
             params.put("vcenter_uuid", server.getCloud().getServerGui());
             params.put("vm_powerstate", "powered-on");
         }
-        else if (cloudType == "PROXMOX") {
+        else if (Objects.equals(cloudType, "PROXMOX")) {
             params.put("cluster_name", server.getCluster());
             params.put("vm_powerstate", "started");
         }
@@ -310,9 +324,9 @@ public class JobService {
         }
 
         if(scheduleTime != null){
-            createJob(start_server_identifier, server, params, new HashMap<>(), scheduleTime,null,null);
+            createJob(start_server_identifier, server, params, new HashMap<>(), scheduleTime,null,null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
         } else {
-            createJob(start_server_identifier, server, params, new HashMap<>());
+            createJob(start_server_identifier, server, params, new HashMap<>(), null, null, null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
         }
     }
 
@@ -327,11 +341,11 @@ public class JobService {
 
         String cloudType = server.getCloud().getCloudType().toString();
 
-        if (cloudType == "VMWARE"){
+        if (Objects.equals(cloudType, "VMWARE")){
             params.put("vcenter_uuid", server.getCloud().getServerGui());
             params.put("vm_powerstate", "shutdown-guest");
         }
-        else if (cloudType == "PROXMOX") {
+        else if (Objects.equals(cloudType, "PROXMOX")) {
             params.put("cluster_name", server.getCluster());
             params.put("vm_powerstate", "stopped");
         }
@@ -340,9 +354,9 @@ public class JobService {
         }
 
         if(scheduleTime != null){
-            createJob(stop_server_identifier, server, params, new HashMap<>(), scheduleTime,null,null);
+            createJob(stop_server_identifier, server, params, new HashMap<>(), scheduleTime,null,null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
         } else {
-            createJob(stop_server_identifier, server, params, new HashMap<>());
+            createJob(stop_server_identifier, server, params, new HashMap<>(), null, null, null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
         }
     }
 
@@ -357,11 +371,11 @@ public class JobService {
 
         String cloudType = server.getCloud().getCloudType().toString();
 
-        if (cloudType == "VMWARE"){
+        if (Objects.equals(cloudType, "VMWARE")){
             params.put("vcenter_uuid", server.getCloud().getServerGui());
             params.put("vm_powerstate", "reboot-guest");
         }
-        else if (cloudType == "PROXMOX") {
+        else if (Objects.equals(cloudType, "PROXMOX")) {
             params.put("cluster_name", server.getCluster());
             params.put("vm_powerstate", "restarted");
         }
@@ -370,9 +384,9 @@ public class JobService {
         }
 
         if(scheduleTime != null){
-            createJob(restart_server_identifier, server, params, new HashMap<>(), scheduleTime,null,null);
+            createJob(restart_server_identifier, server, params, new HashMap<>(), scheduleTime,null,null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
         } else {
-            createJob(restart_server_identifier, server, params, new HashMap<>());
+            createJob(restart_server_identifier, server, params, new HashMap<>(), null, null, null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
         }
     }
 
@@ -385,10 +399,10 @@ public class JobService {
         params.put("memory_new", ram);
 
         String cloudType = server.getCloud().getCloudType().toString();
-        if (cloudType == "VMWARE"){
+        if (Objects.equals(cloudType, "VMWARE")){
             params.put("vcenter_uuid", server.getCloud().getServerGui());
         }
-        else if (cloudType == "PROXMOX") {
+        else if (Objects.equals(cloudType, "PROXMOX")) {
             params.put("cluster_name", server.getCluster());
         }
         else {
@@ -413,7 +427,7 @@ public class JobService {
                 guiVars.put("scheduled_time", "Geplante Durchführungszeit: " + dateTime);
             }
         }
-        createJob(change_cpu_ram_identifier, server, params, guiVars, scheduleTime, tag, null);
+        createJob(change_cpu_ram_identifier, server, params, guiVars, scheduleTime, tag, null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
     }
 
     public void createSnapshot(final Long serverId, final Integer duration, final String description, final boolean withShutdown, final String create_snapshot_identifier) {
@@ -427,10 +441,10 @@ public class JobService {
         params.put("snapshot_description", description);
 
         String cloudType = server.getCloud().getCloudType().toString();
-        if (cloudType == "VMWARE"){
+        if (Objects.equals(cloudType, "VMWARE")){
             params.put("vcenter_uuid", server.getCloud().getServerGui());
         }
-        else if (cloudType == "PROXMOX") {
+        else if (Objects.equals(cloudType, "PROXMOX")) {
             params.put("cluster_name", server.getCluster());
         }
         else {
@@ -442,7 +456,7 @@ public class JobService {
             awxSkipTag = "with_power_off, with_power_on";
         }
 
-        createJob(create_snapshot_identifier, server, params, new HashMap<>(), null, awxSkipTag);
+        createJob(create_snapshot_identifier, server, params, new HashMap<>(), null, awxSkipTag, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
     }
 
     public void deleteSnapshot(final Long serverId, final Long snapshotId, final String snapshotName, final String delete_snapshot_identifier){
@@ -454,12 +468,12 @@ public class JobService {
         params.put("TeamName", AuthUtils.getUsername()); //TODO TEAMNAME nicht username (Wird nach ablöse des Snapshot Tools entfernt)
 
         String cloudType = server.getCloud().getCloudType().toString();
-        if (cloudType == "VMWARE"){
+        if (Objects.equals(cloudType, "VMWARE")){
             params.put("vcenter_uuid", server.getCloud().getServerGui());
             if (snapshotId == null) throw new MissingFormatArgumentException("Snapshot Id must be provided.");
             params.put("snapshot_id", snapshotId);
         }
-        else if (cloudType == "PROXMOX") {
+        else if (Objects.equals(cloudType, "PROXMOX")) {
             params.put("cluster_name", server.getCluster());
             if (snapshotName == null) throw new MissingFormatArgumentException("Snapshot Name must be provided.");
             params.put("snapshot_name", snapshotName);
@@ -468,7 +482,7 @@ public class JobService {
             throw new IllegalArgumentException("Cloud type " + cloudType + " is not supported.");
         }
 
-        createJob(delete_snapshot_identifier, server, params, new HashMap<>());
+        createJob(delete_snapshot_identifier, server, params, new HashMap<>(), null, null, null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
     }
 
     public void revertSnapshot(final Long serverId, final Long snapshotId, final String snapshotName, final String reverte_snapshot_identifier){
@@ -479,13 +493,13 @@ public class JobService {
         params.put("TeamName", AuthUtils.getUsername()); //TODO TEAMNAME nicht username (Wird nach ablöse des Snapshot Tools entfernt)
 
         String cloudType = server.getCloud().getCloudType().toString();
-        if (cloudType == "VMWARE"){
+        if (Objects.equals(cloudType, "VMWARE")){
             params.put("vcenter_uuid", server.getCloud().getServerGui());
             params.put("state", "revert");
             if (snapshotId == null) throw new MissingFormatArgumentException("Snapshot Id must be provided.");
             params.put("snapshot_id", snapshotId);
         }
-        else if (cloudType == "PROXMOX") {
+        else if (Objects.equals(cloudType, "PROXMOX")) {
             params.put("cluster_name", server.getCluster());
             params.put("state", "rollback");
             if (snapshotName == null) throw new MissingFormatArgumentException("Snapshot Name must be provided.");
@@ -495,7 +509,7 @@ public class JobService {
             throw new IllegalArgumentException("Cloud type " + cloudType + " is not supported.");
         }
 
-        createJob(reverte_snapshot_identifier, server, params, new HashMap<>());
+        createJob(reverte_snapshot_identifier, server, params, new HashMap<>(), null , null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
     }
 
     // -----------------------------------------------------------------------------------------------------------------
@@ -986,6 +1000,89 @@ public class JobService {
         params.put("csw_enforced", appservice.getCswEnforced());
 
         createJobForNewServer(loadbalancer_f5_identifier, awxExtraVars.get("dns").toString(), appservice, params, null, false, null);
+    }
+
+    public void loadbalancerF5ChangePoolMembers(final Long lbVirtualServerId, final String poolName,
+                                                 final List<Map<String, Object>> added, final List<Map<String, Object>> removed,
+                                                 final String identifier) {
+        final LbVirtualServer lvs = lbVirtualServerRepository.findById(lbVirtualServerId)
+                .orElseThrow(() -> new NoSuchElementException("Loadbalancer not found: " + lbVirtualServerId));
+
+        if (lvs.getAppservices().size() != 1) {
+            throw new IllegalStateException("Pool members can only be changed for loadbalancers assigned to exactly one application service.");
+        }
+        final Appservice appservice = lvs.getAppservices().iterator().next();
+
+        final LbPool pool = lvs.getPoolRefs().stream()
+                .map(LbVirtualServerPoolRef::getPool)
+                .filter(p -> poolName.equals(p.getName()))
+                .findFirst()
+                .orElseThrow(() -> new NoSuchElementException("Pool " + poolName + " not found on this loadbalancer."));
+
+        final Set<String> removedKeys = removed.stream()
+                .map(r -> r.get("ip").toString().trim() + ":" + r.get("port").toString().trim())
+                .collect(Collectors.toSet());
+
+        final List<LbPoolMember> currentMembers = pool.getMembers() != null ? pool.getMembers() : List.of();
+        final List<Map<String, Object>> finalMembers = new ArrayList<>();
+        final Set<String> memberKeys = new HashSet<>();
+        final Set<String> matchedRemovedKeys = new HashSet<>();
+        for (final LbPoolMember member : currentMembers) {
+            final String key = member.getIp() + ":" + member.getPort();
+            if (removedKeys.contains(key)) {
+                matchedRemovedKeys.add(key);
+                continue;
+            }
+            memberKeys.add(key);
+            final Map<String, Object> memberMap = new HashMap<>();
+            memberMap.put("address", member.getIp());
+            memberMap.put("port", member.getPort());
+            memberMap.put("name", member.getServer() != null ? member.getServer().getName() : member.getIp());
+            finalMembers.add(memberMap);
+        }
+        if (!matchedRemovedKeys.equals(removedKeys)) {
+            throw new IllegalArgumentException("One or more members to remove were not found in the pool.");
+        }
+
+        for (final Map<String, Object> addedMember : added) {
+            final long addedServerId = Long.parseLong(addedMember.get("server_id").toString());
+            final int port = Integer.parseInt(addedMember.get("port").toString());
+            final Server server = getServerOrThrow(addedServerId);
+            final String ip = server.getGuestToolsIpAddress();
+            if (ip == null || ip.isBlank()) {
+                throw new IllegalArgumentException("Server " + server.getName() + " has no IP address and cannot be added as a pool member.");
+            }
+            final String key = ip + ":" + port;
+            if (!memberKeys.add(key)) {
+                throw new IllegalArgumentException("Member " + key + " is already part of the pool.");
+            }
+            final Map<String, Object> memberMap = new HashMap<>();
+            memberMap.put("address", ip);
+            memberMap.put("port", port);
+            memberMap.put("name", server.getName());
+            finalMembers.add(memberMap);
+        }
+
+        final Map<String, Object> params = new HashMap<>();
+        params.put("requester_username", AuthUtils.getUsername());
+        params.put("organisational_unit", AuthUtils.getCurrentUserInfo().department());
+        params.put("application_service", appservice.getName());
+        params.put("application_service_number", appservice.getNumber());
+        params.put("csw_enforced", appservice.getCswEnforced());
+        final Map<String, String> ibs342map = new HashMap<>();
+        switch (appservice.getUsedFor()) {
+            case "Production" -> ibs342map.put("environment", "prod");
+            case "Test", "Development" -> ibs342map.put("environment", "test");
+            case "Training" -> ibs342map.put("environment", "schulung");
+            default -> {}
+        }
+        params.put("ibs342", ibs342map);
+        params.put("pool_name", poolName);
+        final Map<String, Object> poolParam = new HashMap<>();
+        poolParam.put("members", finalMembers);
+        params.put("pool", poolParam);
+
+        createJobForNewServer(identifier, poolName, appservice, params, null, false, null);
     }
 
     // -----------------------------------------------------------------------------------------------------------------

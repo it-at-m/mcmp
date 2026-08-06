@@ -202,6 +202,21 @@ public class ServerService {
                 appConfigCacheService.isMaintenanceMode());
     }
 
+    public boolean canUserViewServer(final Long serverId) {
+        final UserRoles userRoles = AuthUtils.getCurrentUserRoles();
+        return repository.canUserViewServer(serverId,
+                userRoles.getUsername(),
+                userRoles.hasAdminRole(),
+                userRoles.hasReadonlyRole(),
+                userRoles.hasLinuxRole(),
+                userRoles.hasWindowsRole(),
+                userRoles.hasOracleRole(),
+                userRoles.hasNonOracleRole(),
+                userRoles.hasSecurityRole(),
+                userRoles.hasOperatorRole(),
+                userRoles.hasNetworkRole());
+    }
+
     public List<Server> findServersByMacAddress(final String macAddress) {
         if (macAddress == null || macAddress.isBlank()) {
             return List.of();
@@ -291,6 +306,10 @@ public class ServerService {
         return repository.save(server);
     }
 
+    public void delete(final Server server) {
+        repository.delete(server);
+    }
+
     public List<ServerFullDTO> findAllPatchnightErrorServers() {
         return repository.findByPatchnightExitcodeNot((short) 0).stream().map(serverMapper::toFullDTOWithoutAppservices).toList();
     }
@@ -332,5 +351,9 @@ public class ServerService {
 
     public List<ServerDbDTO> findAllOracleServers() {
         return repository.findAllOracleServers();
+    }
+
+    public List<Server> findAllByCloudId(final Long cloudId) {
+        return repository.findAllByCloudId(cloudId);
     }
 }

@@ -93,6 +93,16 @@ public class KubernetesNamespaceService {
         final boolean canEdit = Boolean.TRUE.equals(repository.canUserEditNamespace(
                 id, userRoles.getUsername(), userRoles.hasAdminRole()));
 
+        String webconsoleUrl = null;
+        if (namespace.getCluster() != null && namespace.getCluster().getWebConsoleUrl() != null) {
+            webconsoleUrl = namespace.getCluster().getWebConsoleUrl().trim();
+            if (webconsoleUrl.endsWith("/")) {
+                webconsoleUrl += namespace.getName();
+            } else {
+                webconsoleUrl += "/" + namespace.getName();
+            }
+        }
+
         return KubernetesNamespaceDetailDTO.builder()
                 .id(namespace.getId())
                 .name(namespace.getName())
@@ -102,6 +112,7 @@ public class KubernetesNamespaceService {
                 .k8sUid(namespace.getK8sUid())
                 .environment(namespace.getEnvironment() != null ? namespace.getEnvironment().name() : null)
                 .clusterName(namespace.getCluster() != null ? namespace.getCluster().getName() : null)
+                .webconsoleUrl(webconsoleUrl)
                 .appservices(appservices.stream()
                         .map(a -> new KubernetesAppserviceRefDTO(a.getId(), a.getName()))
                         .sorted(Comparator.comparing(KubernetesAppserviceRefDTO::name))

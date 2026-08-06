@@ -17,7 +17,7 @@ public class JobServiceTest {
     public void testMergeJsonStrings() throws JsonProcessingException {
         ObjectMapper objectMapper = new ObjectMapper();
         JobService jobService = new JobService(
-                null, null, null, null, null, null, null, null, null, null, null, null
+                null, null, null, null, null, null, null, null, null, null, null, null, null
         );
 
         // Erstes JSON-Objekt (awxExtraVars)
@@ -56,7 +56,7 @@ public class JobServiceTest {
     @Test
     public void testChechmkDowntimeEndtimeDateConversion() {
         JobService jobService = new JobService(
-                null, null, null, null, null, null, null, null, null, null, null, null
+                null, null, null, null, null, null, null, null, null, null, null, null, null
         );
 
         // Testfall 1: Gültiges Datum

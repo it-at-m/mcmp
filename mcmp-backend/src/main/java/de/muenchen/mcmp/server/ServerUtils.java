@@ -2,6 +2,7 @@ package de.muenchen.mcmp.server;
 
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Locale;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -49,8 +50,8 @@ public final class ServerUtils {
     /**
      * Converts a serial number to a standard UUID string if it matches the VMware serial format.
      *
-     * <p>If the input does not represent a VMware serial, or conversion/validation fails, the original
-     * input is returned unchanged.</p>
+     * <p>If the input does not represent a VMware serial, or conversion/validation fails, a lower case
+     * version of the original input is returned.</p>
      *
      * <p><b>Null handling:</b> This method does not throw on {@code null}; it will return {@code null}
      * if the provided {@code serial} is {@code null}.</p>
@@ -59,13 +60,17 @@ public final class ServerUtils {
      * @return a standard UUID string if conversion succeeds; otherwise the original {@code serial}
      */
     public static String convertSerialToUUID(final String serial) {
+        if (serial == null)
+            return null;
+
         if (isValidVmwareSerial(serial)) {
             var uuid = convertVmwareSerialToUuid(serial);
             if (uuid != null) {
                 return uuid;
             }
         }
-        return serial;
+
+        return serial.toLowerCase(Locale.ENGLISH);
     }
 
 

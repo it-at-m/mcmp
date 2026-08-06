@@ -349,7 +349,6 @@ func (sp *ServiceProcessor) processHostWorker(ctx context.Context, client Forema
 		sp.debugPrintf("Successfully processed and transformed host: %s", mcmpHost.Name)
 		resultChan <- mcmpHost
 	}
-
 }
 
 // transformForemanHostToMCMP transforms a Foreman host into the standardized MCMP host structure.
@@ -619,7 +618,7 @@ func (sp *ServiceProcessor) ExportForemanDataToFile(ctx context.Context, filenam
 	}
 
 	// Write JSON data to file with appropriate permissions (owner read/write, group/others read)
-	err = os.WriteFile(filename, []byte(jsonString), 0644)
+	err = os.WriteFile(filename, []byte(jsonString), 0o644)
 	if err != nil {
 		return fmt.Errorf("error writing file %s: %w", filename, err)
 	}

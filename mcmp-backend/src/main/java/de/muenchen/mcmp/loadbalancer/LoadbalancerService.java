@@ -75,9 +75,7 @@ public class LoadbalancerService {
         final LbVirtualServer lvs = repository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Loadbalancer not found: " + id));
 
-        final UserRoles userRoles = AuthUtils.getCurrentUserRoles();
-        final boolean canEdit = Boolean.TRUE.equals(repository.canUserEditLoadbalancer(
-                id, userRoles.getUsername(), userRoles.hasAdminRole(), userRoles.hasLoadbalancerRole()));
+        final boolean canEdit = canUserEditLoadbalancer(id);
 
         final List<LbVirtualServerPoolRef> poolRefs =
                 lvs.getPoolRefs() != null ? lvs.getPoolRefs() : Collections.emptyList();
@@ -134,6 +132,12 @@ public class LoadbalancerService {
                         .collect(Collectors.toList()))
                 .canEdit(canEdit)
                 .build();
+    }
+
+    public boolean canUserEditLoadbalancer(final Long lbVirtualServerId) {
+        final UserRoles userRoles = AuthUtils.getCurrentUserRoles();
+        return Boolean.TRUE.equals(repository.canUserEditLoadbalancer(
+                lbVirtualServerId, userRoles.getUsername(), userRoles.hasAdminRole(), userRoles.hasLoadbalancerRole()));
     }
 
     public List<LbVirtualServerListDTO> getLoadbalancersByAppserviceId(final Long appserviceId) {

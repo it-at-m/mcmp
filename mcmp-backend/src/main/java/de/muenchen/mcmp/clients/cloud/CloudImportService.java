@@ -6,6 +6,8 @@ import de.muenchen.mcmp.cloud.CloudDTO;
 import de.muenchen.mcmp.cloud.CloudService;
 import de.muenchen.mcmp.server.Server;
 import de.muenchen.mcmp.server.ServerService;
+import de.muenchen.mcmp.snapshot.Snapshot;
+import de.muenchen.mcmp.snapshot.SnapshotRepository;
 import de.muenchen.mcmp.types.CloudType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +25,7 @@ import java.util.stream.Collectors;
 public class CloudImportService {
     private final CloudService cloudService;
     private final ServerService serverService;
+    private final SnapshotRepository snapshotRepository;
 
     public void importCloudData(final CloudImportDTO cloudDTO) {
         log.info("Starting Cloud import process for {} servers.", cloudDTO.servers().size());
@@ -36,6 +39,10 @@ public class CloudImportService {
         final Map<String, Server> existingServers = serverService.findAllByCloudId(cloud.getId())
                 .stream()
                 .collect(Collectors.toMap(Server::getUuid, Function.identity()));
+
+        final Map<Long, Map<String, Snapshot>> existingSnapshots = snapshotRepository.findByServerCloudId(cloud.getId())
+                .stream()
+                .collect(Collectors.groupingBy(Snapshot::getServerId, Collectors.toMap(Snapshot::getName, Function.identity())));
 
         // Keep track of UUIDs to handle duplicates.
         final Set<String> importedUuids = new HashSet<>();
@@ -67,12 +74,38 @@ public class CloudImportService {
 
                     updated++;
                 }
+
+                // Synchronize snapshots
+                final Map<String, Snapshot> snapshots = existingSnapshots.get(server.getId());
+                final Set<String> importedNames = new HashSet<>();
+
+                for (final var snapshotDTO : dto.snapshots()) {
+                    importedNames.add(snapshotDTO.name());
+                    var snapshot = snapshots != null ? snapshots.get(snapshotDTO.name()) : null;
+                    if (snapshot != null) {
+                        saveSnapshot(applySnapshotChanges(snapshot, snapshotDTO));
+                    } else {
+                        saveSnapshot(buildNewSnapshot(snapshotDTO, server));
+                    }
+                }
+
+                if (snapshots != null) {
+                    for (final var snapshot : snapshots.values()) {
+                        if (!importedNames.contains(snapshot.getName())) {
+                            deleteSnapshot(snapshot);
+                        }
+                    }
+                }
             } else {
                 server = saveServer(buildNewServer(dto, cloud));
                 if (server == null)
                     continue;
 
                 inserted++;
+
+                for (final var snapshotDTO : dto.snapshots()) {
+                    saveSnapshot(buildNewSnapshot(snapshotDTO, server));
+                }
             }
         }
 
@@ -112,6 +145,37 @@ public class CloudImportService {
         } catch (final Exception e) {
             log.error("Fehler beim Löschen von Server uuid={}, name={}: {}",
                     server.getUuid(), server.getName(), e.getMessage());
+            return false;
+        }
+    }
+
+    @SuppressWarnings("UnusedReturnValue")
+    private Snapshot saveSnapshot(final Snapshot snapshot) {
+        try {
+            return snapshotRepository.save(snapshot);
+        } catch (final ObjectOptimisticLockingFailureException ex) {
+            log.warn("Versionskonflikt beim Update von Snapshot name={}, serverID={} – wird beim nächsten Import erneut versucht.",
+                    snapshot.getName(), snapshot.getServerId());
+            return null;
+        } catch (final Exception e) {
+            log.error("Fehler beim Update von Snapshot name={}, serverID={}: {}",
+                    snapshot.getName(), snapshot.getServerId(), e.getMessage());
+            return null;
+        }
+    }
+
+    @SuppressWarnings("UnusedReturnValue")
+    private boolean deleteSnapshot(final Snapshot snapshot) {
+        try {
+            snapshotRepository.delete(snapshot);
+            return true;
+        } catch (final ObjectOptimisticLockingFailureException ex) {
+            log.warn("Versionskonflikt beim Löschen von Snapshot name={}, serverID={} – wird beim nächsten Import erneut versucht.",
+                    snapshot.getName(), snapshot.getServerId());
+            return false;
+        } catch (final Exception e) {
+            log.error("Fehler beim Löschen von Snapshot name={}, serverID={}: {}",
+                    snapshot.getName(), snapshot.getServerId(), e.getMessage());
             return false;
         }
     }
@@ -328,6 +392,22 @@ public class CloudImportService {
         }
 
         return server;
+    }
+
+    private Snapshot applySnapshotChanges(Snapshot snapshot, final CloudImportDTO.Snapshot dto) {
+        snapshot.setName(dto.name());
+        snapshot.setDescription(dto.description());
+        snapshot.setCreateTime(dto.createTime());
+        snapshot.setQuiesced(dto.quiesced());
+        snapshot.setReplaySupported(dto.replaySupported());
+        return snapshot;
+    }
+
+    private Snapshot buildNewSnapshot(final CloudImportDTO.Snapshot dto, final Server server) {
+        final Snapshot snapshot = new Snapshot();
+        snapshot.setSnapshotId(Math.abs(dto.name().hashCode()));
+        snapshot.setServerId(server.getId());
+        return applySnapshotChanges(snapshot, dto);
     }
 
     /**

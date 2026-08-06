@@ -122,3 +122,15 @@ public record CloudImportDTO(
             if (snapshots == null) snapshots = Collections.emptyList();
         }
     }
+
+
+    public record Snapshot(
+            @JsonProperty("name") String name,
+            @JsonProperty("description") String description,
+            @JsonProperty("create_time") OffsetDateTime createTime,
+            @JsonProperty("quiesced") boolean quiesced,
+            @JsonProperty("state") String state,
+            @JsonProperty("replay_supported") boolean replaySupported
+    ) {
+    }
+}

@@ -47,5 +47,12 @@ public interface SnapshotRepository extends JpaRepository<Snapshot, Long> {
                                   @Param("hasSecurityRole") boolean hasSecurityRole,
                                   @Param("hasOperatorRole") boolean hasOperatorRole,
                                   @Param("hasNetworkRole") boolean hasNetworkRole);
-}
 
+    @Query(value = """
+        SELECT snapshot.*
+        FROM cmp.snapshot snapshot
+        JOIN cmp.server server ON snapshot.server_id = server.id
+        WHERE server.cloud_id = :cloudId
+    """, nativeQuery = true)
+    List<Snapshot> findByServerCloudId(@Param("cloudId") Long cloudId);
+}

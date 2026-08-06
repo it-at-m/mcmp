@@ -18,8 +18,7 @@ export default {
     search: string,
     status: string[],
     os: string,
-    favorites: boolean,
-    installFailed = false
+    favorites: boolean
   ): Promise<Page<ServerList>> {
     const params = new URLSearchParams({
       offset: offset.toString(),
@@ -29,7 +28,6 @@ export default {
       status: status.join(","),
       os: os,
       favorites: favorites.toString(),
-      installFailed: installFailed.toString(),
     });
 
     const trimmedSearch = search?.trim();

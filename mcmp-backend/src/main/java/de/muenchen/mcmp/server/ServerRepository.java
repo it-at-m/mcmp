@@ -93,12 +93,6 @@ public interface ServerRepository extends JpaRepository<Server, Long> {
               JOIN cmp.user u_fav ON ufs.user_id = u_fav.id
               WHERE ufs.server_id = s.id AND u_fav.username = :username
             ))
-        AND (:installFailed = FALSE OR EXISTS (
-              SELECT 1 FROM cmp.job j
-              WHERE j.server_id = s.id
-                AND j.status = 'failed'
-                AND j.action_identifier IN ('LINUX_RHEL10_SERVER', 'LINUX_RHEL9_SERVER', 'WINDOWS_SERVER_2022', 'WINDOWS_SERVER_2025', 'WINDOWS_SERVER')
-            ))
         ORDER BY
             CASE WHEN EXISTS (
                 SELECT 1 FROM cmp.user_favorite_server ufs
@@ -149,12 +143,6 @@ public interface ServerRepository extends JpaRepository<Server, Long> {
                              JOIN cmp.user u_fav ON ufs.user_id = u_fav.id
                              WHERE ufs.server_id = s.id AND u_fav.username = :username
                          ))
-    AND (:installFailed = FALSE OR EXISTS (
-          SELECT 1 FROM cmp.job j
-          WHERE j.server_id = s.id
-            AND j.status = 'failed'
-            AND j.action_identifier IN ('LINUX_RHEL10_SERVER', 'LINUX_RHEL9_SERVER', 'WINDOWS_SERVER_2022', 'WINDOWS_SERVER_2025', 'WINDOWS_SERVER')
-        ))
     """, nativeQuery = true)
     Page<ServerList> findVisibleServers(@Param("username") String username,
                                         @Param("isAdmin") boolean isAdmin,
@@ -178,7 +166,6 @@ public interface ServerRepository extends JpaRepository<Server, Long> {
                                         @Param("unmanaged") boolean unmanaged,
                                         @Param("noAppservice") boolean noAppservice,
                                         @Param("favorites") boolean favorites,
-                                        @Param("installFailed") boolean installFailed,
                                         @Param("sortBy") String sortBy,
                                         @Param("sortOrder") String sortOrder,
                                         Pageable pageable);

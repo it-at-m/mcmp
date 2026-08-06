@@ -35,13 +35,11 @@ public class ServerService {
 
     public Page<ServerListDTO> getVisibleServers(final int offset, final int limit,
                                                  final String sortBy, final String sortOrder, final String search,
-                                                 final List<String> status, final String os, final boolean favorites,
-                                                 final boolean installFailed) {
+                                                 final List<String> status, final String os, final boolean favorites) {
         final Pageable pageable = (limit == -1) ? Pageable.unpaged() : new OffsetBasedPageRequest(offset, limit);
         final UserRoles userRoles = AuthUtils.getCurrentUserRoles();
         final OsFilter osFilter = new OsFilter(os);
         final boolean noAppservice = "no-appservice".equals(os);
-        final boolean effectiveInstallFailed = installFailed && (userRoles.hasAdminRole() || userRoles.hasOperatorRole());
         String cleanedSearch = null;
         if (search != null) {
             cleanedSearch = search.trim()
@@ -72,7 +70,6 @@ public class ServerService {
                 osFilter.isUnmanaged(),
                 noAppservice,
                 favorites,
-                effectiveInstallFailed,
                 sortBy,
                 sortOrder,
                 pageable

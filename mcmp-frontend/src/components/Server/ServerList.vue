@@ -22,10 +22,7 @@
         <div class="header-container">
           <v-badge
             :model-value="
-              statusFilter.length !== 0 ||
-              osFilter !== '' ||
-              favoritesFilter ||
-              installFailedFilter
+              statusFilter.length !== 0 || osFilter !== '' || favoritesFilter
             "
             dot
           >
@@ -73,19 +70,6 @@
                     <v-checkbox
                       v-model="favoritesFilter"
                       label="Favoriten"
-                      density="compact"
-                      hide-details
-                      color="primary"
-                    />
-                  </v-list-item>
-                  <v-list-item
-                    v-if="isOperatorOrAdmin"
-                    density="compact"
-                    class="py-0"
-                  >
-                    <v-checkbox
-                      v-model="installFailedFilter"
-                      label="Installation fehlgeschlagen"
                       density="compact"
                       hide-details
                       color="primary"
@@ -326,7 +310,6 @@ import serverService from "@/api/serverService";
 import ScrollableListTable from "@/components/common/ScrollableListTable.vue";
 import OsCell from "@/components/Server/OsCell.vue";
 import { APPSERVICE_EXPLAIN_URL } from "@/constants.ts";
-import { useUserStore } from "@/stores/user.ts";
 
 const props = defineProps<{
   selected: ServerList[];
@@ -336,19 +319,8 @@ const props = defineProps<{
   initialSearch?: string;
 }>();
 
-const userStore = useUserStore();
-const isOperatorOrAdmin = computed(() => {
-  const authorities = userStore.getUser?.authorities ?? [];
-  return (
-    authorities.includes("ROLE_OPERATOR") || authorities.includes("ROLE_ADMIN")
-  );
-});
-
 const favoritesFilter = ref(
   localStorage.getItem("mcmp_favorites_filter") === "true"
-);
-const installFailedFilter = ref(
-  localStorage.getItem("mcmp_install_failed_filter") === "true"
 );
 const loadingServer = ref(false);
 const servers = ref<ServerList[]>([]);
@@ -435,28 +407,20 @@ async function toggleFavorite(server: any) {
   }
 }
 
-watch(
-  [statusFilter, osFilter, favoritesFilter, installFailedFilter],
-  async () => {
-    currentPage.value = 1;
-    await loadServers(
-      1,
-      statusFilter.value,
-      osFilter.value,
-      favoritesFilter.value,
-      installFailedFilter.value
-    );
-    await nextTick();
-    tableRef.value?.triggerObserveScroll();
-  }
-);
+watch([statusFilter, osFilter, favoritesFilter], async () => {
+  currentPage.value = 1;
+  await loadServers(
+    1,
+    statusFilter.value,
+    osFilter.value,
+    favoritesFilter.value
+  );
+  await nextTick();
+  tableRef.value?.triggerObserveScroll();
+});
 
 watch(favoritesFilter, (newValue) => {
   localStorage.setItem("mcmp_favorites_filter", String(newValue));
-});
-
-watch(installFailedFilter, (newValue) => {
-  localStorage.setItem("mcmp_install_failed_filter", String(newValue));
 });
 
 watch(statusFilter, (newVal) => {
@@ -481,13 +445,7 @@ watch(
 function updateSortBy(newSortBy: { key: string; order: "asc" | "desc" }[]) {
   sortBy.value = newSortBy;
   currentPage.value = 1;
-  loadServers(
-    1,
-    statusFilter.value,
-    osFilter.value,
-    favoritesFilter.value,
-    installFailedFilter.value
-  );
+  loadServers(1, statusFilter.value, osFilter.value, favoritesFilter.value);
   nextTick(() => tableRef.value?.triggerObserveScroll());
 }
 
@@ -508,8 +466,7 @@ async function onLoadMore() {
     currentPage.value,
     statusFilter.value,
     osFilter.value,
-    favoritesFilter.value,
-    installFailedFilter.value
+    favoritesFilter.value
   );
 }
 
@@ -517,8 +474,7 @@ async function loadServers(
   page = 1,
   status: string[] = [],
   os = "",
-  favorites = false,
-  installFailed = false
+  favorites = false
 ) {
   loadingServer.value = true;
   const offset = (page - 1) * itemsPerPage.value;
@@ -536,8 +492,7 @@ async function loadServers(
       search.value,
       status,
       os,
-      favorites,
-      installFailed && isOperatorOrAdmin.value
+      favorites
     );
     if (page === 1) {
       servers.value = res.content;
@@ -586,8 +541,7 @@ watch(search, () => {
       1,
       statusFilter.value,
       osFilter.value,
-      favoritesFilter.value,
-      installFailedFilter.value
+      favoritesFilter.value
     );
     await nextTick();
     tableRef.value?.triggerObserveScroll();
@@ -606,8 +560,7 @@ onMounted(async () => {
     1,
     statusFilter.value,
     osFilter.value,
-    favoritesFilter.value,
-    installFailedFilter.value
+    favoritesFilter.value
   );
 });
 

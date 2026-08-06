@@ -364,7 +364,7 @@
               <v-icon
                 v-bind="tooltipProps"
                 color="_green"
-                >{{ mdiCheckCircle }}</v-icon
+              >{{ mdiCheckCircle }}</v-icon
               >
             </template>
           </v-tooltip>
@@ -376,7 +376,7 @@
               <v-icon
                 v-bind="tooltipProps"
                 color="_red"
-                >{{ mdiAlertCircle }}</v-icon
+              >{{ mdiAlertCircle }}</v-icon
               >
             </template>
           </v-tooltip>

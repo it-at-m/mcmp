@@ -476,7 +476,7 @@ public class JobService {
         else if (Objects.equals(cloudType, "PROXMOX")) {
             params.put("cluster_name", server.getCluster());
             if (snapshotName == null) throw new MissingFormatArgumentException("Snapshot Name must be provided.");
-            params.put("snapshot_name", snapshotName);
+            params.put("snapname", snapshotName);
         }
         else {
             throw new IllegalArgumentException("Cloud type " + cloudType + " is not supported.");
@@ -503,7 +503,7 @@ public class JobService {
             params.put("cluster_name", server.getCluster());
             params.put("state", "rollback");
             if (snapshotName == null) throw new MissingFormatArgumentException("Snapshot Name must be provided.");
-            params.put("snapshot_name", snapshotName);
+            params.put("snapname", snapshotName);
         }
         else {
             throw new IllegalArgumentException("Cloud type " + cloudType + " is not supported.");

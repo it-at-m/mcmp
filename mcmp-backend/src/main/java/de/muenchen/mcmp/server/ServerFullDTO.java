@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 @Builder
-public record ServerFullDTO(
+public record  ServerFullDTO(
         Long id,
         Cloud cloud,
         String uuid,
@@ -151,5 +151,13 @@ public record ServerFullDTO(
         String vid,
         Map<String, String> serverCustomAttributes,
         Float cpuUtil,
-        Float memUsedPercent
+        Float memUsedPercent,
+        Boolean memoryAllocationExpandableReservation,
+        Long memoryAllocationLimit,
+        Long memoryAllocationOverheadLimit,
+        Long memoryAllocationReservation,
+        Boolean cpuAllocationExpandableReservation,
+        Long cpuAllocationLimit,
+        Long cpuAllocationOverheadLimit,
+        Long cpuAllocationReservation
 ) {}

@@ -42,6 +42,17 @@
       <v-row class="mb-1">
         <v-col
           v-if="
+            server.cpuAllocationExpandableReservation || server.memoryAllocationExpandableReservation
+          "
+          cols="12"
+        >
+          <common-alert color="notice_red">
+            <h4>Hinweis:</h4>
+            Bei diesem Server liegt eine Reservierung des Arbeitsspeichers oder der CPU vor. Diese wird automatisch auf den neu bestellten Wert geändert. Bei Fragen wenden Sie sich an IBS41.
+          </common-alert>
+        </v-col>
+        <v-col
+          v-if="
             server.dbPostgres &&
             ram != formatter.calculateMBtoGB(server.memoryMb)
           "

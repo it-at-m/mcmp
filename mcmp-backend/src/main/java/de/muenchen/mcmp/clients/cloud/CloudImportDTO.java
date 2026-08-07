@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import de.muenchen.mcmp.server.ServerStatusType;
 import de.muenchen.mcmp.types.ServerKind;
 import de.muenchen.mcmp.types.ServerType;
+import jakarta.persistence.Column;
 import lombok.Builder;
 
 import java.time.OffsetDateTime;
@@ -80,7 +81,15 @@ public record CloudImportDTO(
             @JsonProperty("available_memory") Integer availableMemory,
             @JsonProperty("vendor") String vendor,
             @JsonProperty("vid") String vid,
-            @JsonProperty("snapshots") List<Snapshot> snapshots
+            @JsonProperty("snapshots") List<Snapshot> snapshots ,
+            @JsonProperty("memory_allocation_expandable_reservation") Boolean memoryAllocationExpandableReservation,
+            @JsonProperty("memory_allocation_limit") Long memoryAllocationLimit,
+            @JsonProperty("memory_allocation_overhead_limit") Long memoryAllocationOverheadLimit,
+            @JsonProperty("memory_allocation_reservation") Long memoryAllocationReservation,
+            @JsonProperty("cpu_allocation_expandable_reservation") Boolean cpuAllocationExpandableReservation,
+            @JsonProperty("cpu_allocation_limit")  Long cpuAllocationLimit,
+            @JsonProperty("cpu_allocation_overhead_limit") Long cpuAllocationOverheadLimit,
+            @JsonProperty("cpu_allocation_reservation") Long cpuAllocationReservation
     ) {
         public Server {
             /* ensure we have a trimmed name */

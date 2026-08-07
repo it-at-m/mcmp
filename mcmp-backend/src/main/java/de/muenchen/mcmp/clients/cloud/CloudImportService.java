@@ -291,7 +291,15 @@ public class CloudImportService {
                 || !Objects.equals(existing.getVendor(), dto.vendor())
                 || !Objects.equals(existing.getVid(), dto.vid())
                 || !Objects.equals(existing.getServerKind(), dto.serverKind())
-                || !Objects.equals(existing.getServerType(), dto.serverType());
+                || !Objects.equals(existing.getServerType(), dto.serverType())
+                || !Objects.equals(existing.getMemoryAllocationExpandableReservation(), dto.memoryAllocationExpandableReservation())
+                || !Objects.equals(existing.getMemoryAllocationLimit(), dto.memoryAllocationLimit())
+                || !Objects.equals(existing.getMemoryAllocationOverheadLimit(), dto.memoryAllocationOverheadLimit())
+                || !Objects.equals(existing.getMemoryAllocationReservation(), dto.memoryAllocationReservation())
+                || !Objects.equals(existing.getCpuAllocationExpandableReservation(), dto.cpuAllocationExpandableReservation())
+                || !Objects.equals(existing.getCpuAllocationLimit(), dto.cpuAllocationLimit())
+                || !Objects.equals(existing.getCpuAllocationOverheadLimit(), dto.memoryAllocationOverheadLimit())
+                || !Objects.equals(existing.getCpuAllocationReservation(), dto.cpuAllocationReservation());
     }
 
     private void applyChanges(final Server server, final CloudImportDTO.Server dto) {
@@ -377,6 +385,14 @@ public class CloudImportService {
         server.setVid(dto.vid());
         server.setServerKind(dto.serverKind());
         server.setServerType(dto.serverType());
+        server.setMemoryAllocationExpandableReservation(dto.memoryAllocationExpandableReservation());
+        server.setMemoryAllocationReservation(dto.memoryAllocationReservation());
+        server.setMemoryAllocationLimit(dto.memoryAllocationLimit());
+        server.setMemoryAllocationOverheadLimit(dto.memoryAllocationOverheadLimit());
+        server.setCpuAllocationExpandableReservation(dto.cpuAllocationExpandableReservation());
+        server.setCpuAllocationLimit(dto.cpuAllocationLimit());
+        server.setCpuAllocationOverheadLimit(dto.cpuAllocationOverheadLimit());
+        server.setCpuAllocationReservation(dto.cpuAllocationReservation());
     }
 
     private Server buildNewServer(final CloudImportDTO.Server dto, final Cloud cloud) {

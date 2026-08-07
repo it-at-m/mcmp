@@ -5,6 +5,7 @@ import de.muenchen.mcmp.types.CloudType;
 import de.muenchen.mcmp.types.ServerKind;
 import de.muenchen.mcmp.types.ServerRightsizingType;
 import de.muenchen.mcmp.types.ServerType;
+import jakarta.persistence.Column;
 
 import java.time.Instant;
 
@@ -159,4 +160,13 @@ public interface ServerWithPermissions {
 
     Float getCpuUtil();
     Float getMemUsedPercent();
+
+    Boolean getMemoryAllocationExpandableReservation();
+    Long getMemoryAllocationLimit();
+    Long getMemoryAllocationOverheadLimit();
+    Long getMemoryAllocationReservation();
+    Boolean getCpuAllocationExpandableReservation();
+    Long getCpuAllocationLimit();
+    Long getCpuAllocationOverheadLimit();
+    Long getCpuAllocationReservation();
 }

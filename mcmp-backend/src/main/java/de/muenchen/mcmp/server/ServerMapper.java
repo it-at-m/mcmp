@@ -243,6 +243,14 @@ public interface ServerMapper {
                 .locked(dto.locked())
                 .cpuUtil(dto.cpuUtil())
                 .memUsedPercent(dto.memUsedPercent())
+                .memoryAllocationExpandableReservation(dto.memoryAllocationExpandableReservation())
+                .memoryAllocationLimit(dto.memoryAllocationLimit())
+                .memoryAllocationOverheadLimit(dto.memoryAllocationOverheadLimit())
+                .memoryAllocationReservation(dto.memoryAllocationReservation())
+                .cpuAllocationExpandableReservation(dto.cpuAllocationExpandableReservation())
+                .cpuAllocationLimit(dto.cpuAllocationLimit())
+                .cpuAllocationOverheadLimit(dto.cpuAllocationOverheadLimit())
+                .cpuAllocationReservation(dto.cpuAllocationReservation())
                 .build();
     }
 

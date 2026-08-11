@@ -146,7 +146,7 @@ func (m *MockSnowClient) GetVMwareInstanceData() ([]snow.ConfigurationItemWithAp
 	return nil, nil
 }
 
-func (m *MockSnowClient) GetServerForVMwareInstance(vmInstanceSysID string) (snow.Server, error) {
+func (m *MockSnowClient) GetServerForVMwareInstance(_ string) (snow.Server, error) {
 	return snow.Server{}, nil
 }
 

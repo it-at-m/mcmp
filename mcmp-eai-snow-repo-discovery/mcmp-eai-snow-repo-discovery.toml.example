@@ -1,0 +1,53 @@
+# =============================================================================
+# Logging Configuration
+# =============================================================================
+[LOGGING]
+Level      = "INFO"   # Log level: DEBUG, INFO, WARN, ERROR
+Output     = "file"   # Output destination: console, file, both
+Format     = "plain"  # Output format: text, json, plain
+Filename   = "/var/log/mcmp-eai-snow-repo-discovery.log"
+MaxSize    = 10       # Maximum file size in MB before rotation
+MaxBackups = 7        # Number of old log files to retain
+MaxAge     = 30       # Maximum age in days for log files
+Compress   = true     # Compress rotated log files
+
+# =============================================================================
+# MCMP API Configuration
+# OAuth2 client credentials for authentication with the MCMP backend
+# =============================================================================
+[[MCMP]]
+OAuthUrl          = 'http://kubernetes1.docker.internal:8100/auth'
+OAuthRealm        = 'local_realm'
+OAuthClientId     = 'local'
+OAuthClientSecret = 'client_secret'
+ApiEndpoint       = 'http://mcmp1.example.org/clients/eai-backend-service/repo/import'
+
+[[MCMP]]
+OAuthUrl          = 'http://kubernetes2.docker.internal:8100/auth'
+OAuthRealm        = 'local_realm'
+OAuthClientId     = 'local'
+OAuthClientSecret = 'client_secret'
+ApiEndpoint       = 'https://mcmp2.example.org/clients/eai-backend-service/repo/import'
+
+# =============================================================================
+# ServiceNow Configuration
+# =============================================================================
+[SERVICENOW]
+OAuthUrl            = 'https://example.service-now.com/oauth_token.do'
+OAuthClientId       = 'local'
+OAuthClientSecret   = 'client_secret'
+ApiEndpoint         = 'https://snow.example.org'
+ProxyUrl            = 'http://proxy.example.com:80'
+EnableTLSVerify     = true
+WaitBetweenRequests = "2s"  # Optional: Pause between requests (e.g. "500ms", "1s"). Defaults to "2s" if not set.
+
+# =============================================================================
+# Linux Repo Configuration
+# =============================================================================
+[[REPO]]
+Enabled              = false
+RepoUrl              = "https://repo1.example.com"
+
+[[REPO]]
+Enabled              = false
+RepoUrl              = "https://repo2.example.com"

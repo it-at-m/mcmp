@@ -50,10 +50,10 @@ public interface RepositoryRepository extends JpaRepository<Repository, Long> {
     @Modifying
     @Transactional
     @Query(value = """
-            UPDATE cmp.repository 
-            SET locked = TRUE, 
+            UPDATE cmp.repository
+            SET locked = TRUE,
                 repository_url = NULL,
-                updated_at = CURRENT_TIMESTAMP 
+                updated_at = CURRENT_TIMESTAMP
             WHERE name = :name
             """, nativeQuery = true)
     void lockRepository(@Param("name") String name);
@@ -82,12 +82,12 @@ public interface RepositoryRepository extends JpaRepository<Repository, Long> {
     @Modifying
     @Transactional
     @Query(value = """
-                UPDATE cmp.repository 
-                SET snow_name = :snowName, 
-                    snow_sys_id = :snowSysId, 
-                    snow_sys_class = :snowSysClass, 
-                    snow_last_discovered = :snowLastDiscovered, 
-                    updated_at = CURRENT_TIMESTAMP 
+                UPDATE cmp.repository
+                SET snow_name = :snowName,
+                    snow_sys_id = :snowSysId,
+                    snow_sys_class = :snowSysClass,
+                    snow_last_discovered = :snowLastDiscovered,
+                    updated_at = CURRENT_TIMESTAMP
                 WHERE id = :id
                 """, nativeQuery = true)
     void updateSnowFields(@Param("id") Long id,
@@ -104,8 +104,8 @@ public interface RepositoryRepository extends JpaRepository<Repository, Long> {
     @Modifying
     @Transactional
     @Query(value = """
-                DELETE FROM cmp.repository_has_appservices 
-                WHERE repository_id = :repositoryId 
+                DELETE FROM cmp.repository_has_appservices
+                WHERE repository_id = :repositoryId
                 AND appservice_id NOT IN (SELECT id FROM cmp.appservice WHERE number IN :numbers)
                 """, nativeQuery = true)
     void deleteObsoleteAppServiceAssociations(@Param("repositoryId") Long repositoryId, @Param("numbers") List<String> numbers);

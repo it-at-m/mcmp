@@ -45,7 +45,6 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -55,7 +54,6 @@ import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Slf4j
 @Service
@@ -102,9 +100,6 @@ public class SnowService {
     private final DatabaseInstanceRepository databaseInstanceRepository;
     private final DatabasePdbInstanceRepository databasePdbInstanceRepository;
     private final SnowServerCache snowServerCache;
-
-    @PersistenceContext
-    private EntityManager entityManager;
 
     @Autowired
     @Lazy
@@ -778,7 +773,7 @@ public class SnowService {
         final Map<String, OntapQtree> qtreeMap = allQtrees.stream()
                 .filter(q -> q.getVolume() != null && q.getVolume().getVolumeUuid() != null && q.getQtreeId() != null)
                 .collect(Collectors.toMap(
-                        q -> q.getVolume().getVolumeUuid().toString() + ":" + q.getQtreeId(),
+                        q -> q.getVolume().getVolumeUuid() + ":" + q.getQtreeId(),
                         Function.identity(),
                         (existing, replacement) -> existing
                 ));
@@ -1090,7 +1085,6 @@ public class SnowService {
         // Update AppServices on LbVirtualServer level
         for (Map.Entry<Long, Set<String>> entry : vsToAppServices.entrySet()) {
             Long vsId = entry.getKey();
-            List<String> appServiceNumbers = new ArrayList<>(entry.getValue());
             updateVsAppServiceAssociations(vsId, new ArrayList<>(entry.getValue()));
         }
     }

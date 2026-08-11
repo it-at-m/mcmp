@@ -12,6 +12,7 @@ export interface OpenshiftNamespaceDetail {
   k8sUid: string | null;
   environment: string | null;
   clusterName: string | null;
+  clusterEnvironment: string | null;
   webconsoleUrl: string | null;
   appservices: OpenshiftAppserviceRef[];
   canEdit: boolean;

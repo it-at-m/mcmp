@@ -36,7 +36,7 @@
         </div>
       </template>
       <template #item.environment="{ item }">
-        {{ formatEnvironment(item.environment) }}
+        {{ formatter.formatOpenshiftClusterEnvironment(item.environment) }}
       </template>
       <template #no-data>
         <v-row />
@@ -71,6 +71,7 @@ import { computed, nextTick, onMounted, ref, watch } from "vue";
 
 import openshiftService from "@/api/openshiftService";
 import ScrollableListTable from "@/components/common/ScrollableListTable.vue";
+import { useFormatter } from "@/composables/formatter.ts";
 
 interface SortByEntry {
   key: string;
@@ -101,6 +102,7 @@ const search = ref(props.initialSearch ?? "");
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const tableRef = ref<{ triggerObserveScroll: () => void } | null>(null);
+const formatter = useFormatter();
 
 const headers = ref<DataTableHeader[]>([
   { title: "Name", key: "name", align: "start", sortable: true },
@@ -142,12 +144,6 @@ function onRowKeydown({
   if (key === "f" || key === "F") {
     toggleFavorite(item);
   }
-}
-
-function formatEnvironment(environment: string) {
-  if (environment === "K") return "test";
-  if (environment === "P") return "prod";
-  return environment;
 }
 
 async function toggleFavorite(item: OpenshiftNamespaceListItem) {

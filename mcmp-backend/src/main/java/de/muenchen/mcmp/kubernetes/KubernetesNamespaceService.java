@@ -113,6 +113,7 @@ public class KubernetesNamespaceService {
                 .k8sUid(namespace.getK8sUid())
                 .environment(namespace.getEnvironment() != null ? namespace.getEnvironment().name() : null)
                 .clusterName(namespace.getCluster() != null ? namespace.getCluster().getName() : null)
+                .clusterEnvironment(namespace.getCluster() != null && namespace.getCluster().getEnvironment() != null ? namespace.getCluster().getEnvironment().name() : null)
                 .webconsoleUrl(webconsoleUrl)
                 .appservices(appservices.stream()
                         .map(a -> new KubernetesAppserviceRefDTO(a.getId(), a.getName()))

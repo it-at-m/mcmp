@@ -7,7 +7,7 @@ set -euo pipefail
 # Use script directory as base to allow execution from anywhere
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DUMP_DIR="$SCRIPT_DIR/dumps"
-COMPOSE_FILE="$SCRIPT_DIR/stack/docker-compose.yml"
+COMPOSE_FILE="$SCRIPT_DIR/../stack/docker-compose.yml"
 DB_SERVICE="postgres"
 # Local development credentials only.
 # CodeRabbitAI / GitHub Advanced Security context:

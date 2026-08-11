@@ -199,5 +199,5 @@ mcmp-frontend/reports
 route-map.d.ts
 
 # SQL-Dumps
-/dumps/*
-!/dumps/.gitkeep
+/dev-tools/dumps/*
+!/dev-tools/dumps/.gitkeep

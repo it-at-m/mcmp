@@ -112,9 +112,7 @@ The exported JSON body follows this schema:
       "class_name": "x_lam_lhm_packag_0_cmdb_ci_package_repository",
       "error_count": 0,
       "warning_count": 0
-    },
-
-
+    }
   ]
 }
 ```

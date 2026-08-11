@@ -776,7 +776,7 @@ public class JobService {
         boolean nonOss = false;
 
         if (appservice.getBusinessServiceNumbers() == null || appservice.getBusinessServiceNumbers().isEmpty()) {
-            throw new BusinessValidationException("Dem Anwendungsservice muss mindestens ein Business Service mit einer BSN-Nummer zugeordnet sein, um einen Windows Server bestellen zu können.");
+            throw new BusinessValidationException("Der Windows Server kann nicht bestellt werden, da dem ausgewählten Anwendungsservice kein Serviceangebot zugeordnet ist. Bitte lassen Sie das Serviceangebot in ServiceNow ergänzen.");
         }
 
         List<String> bsnList = List.of(appservice.getBusinessServiceNumbers().split(","));

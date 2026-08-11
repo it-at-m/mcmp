@@ -48,6 +48,7 @@ public class KubernetesNamespaceService {
         ).map(proj -> KubernetesNamespaceListDTO.builder()
                 .id(proj.getId())
                 .name(proj.getName())
+                .environment(proj.getEnvironment())
                 .isFavorite(Boolean.TRUE.equals(proj.getIsFavorite()))
                 .build());
     }

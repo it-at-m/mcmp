@@ -101,6 +101,12 @@ const tableRef = ref<{ triggerObserveScroll: () => void } | null>(null);
 
 const headers = ref<DataTableHeader[]>([
   { title: "Name", key: "name", align: "start", sortable: true },
+  {
+    title: "Cluster",
+    key: "environment",
+    align: "start",
+    sortable: false,
+  },
 ]);
 
 const currentSort = computed<SortByEntry>(

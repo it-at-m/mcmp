@@ -28,8 +28,10 @@ const (
 	urlLockedRightsize = "%s/api/x_lam_lhm_cmp/cmdb/cmdb_ci_vmware_instance/locked-rightsize"
 	urlVMwareServer    = "%s/api/x_lam_lhm_cmp/cmdb/cmdb_ci_vmware_instance/%s/cmdb_ci_server"
 
-	urlCmdbKeyValue  = "%s/api/x_lam_lhm_api_gw/foundation/data/table/cmdb_key_value"
-	urlCmdbDataTable = "%s/api/x_lam_lhm_api_gw/cmdb/data/table/%s"
+	urlCmdbKeyValue       = "%s/api/x_lam_lhm_api_gw/foundation/data/table/cmdb_key_value"
+	urlCmdbDataTable      = "%s/api/x_lam_lhm_api_gw/cmdb/data/table/%s"
+	urlOraclePdbToServer  = "%s/api/x_lam_lhm_api_gw/view/data/table/x_lam_lhm_api_gw_oracle_pdb_to_server"
+	urlDbInstanceToServer = "%s/api/x_lam_lhm_api_gw/view/data/table/x_lam_lhm_api_gw_db_instance_to_server"
 
 	urlIdentifyReconcile = "%s/api/now/identifyreconcile/enhanced"
 )
@@ -83,13 +85,14 @@ func NewClient(config ClientConfig) (*Client, error) {
 	c.urlTag = fmt.Sprintf(urlTag, config.ApiEndpoint)
 	c.urlCmdbCi = fmt.Sprintf(urlCmdbCi, config.ApiEndpoint)
 	c.urlGroup = fmt.Sprintf(urlGroup, config.ApiEndpoint)
-	//	c.urlVMwareInstance = fmt.Sprintf(urlVMwareInstance, config.ApiEndpoint)
 	c.urlLockedShutdown = fmt.Sprintf(urlLockedShutdown, config.ApiEndpoint)
 	c.urlLockedRightsize = fmt.Sprintf(urlLockedRightsize, config.ApiEndpoint)
 	c.urlVMwareServer = fmt.Sprintf(urlVMwareServer, config.ApiEndpoint, "%s")
 	c.urlCmdbKeyValue = fmt.Sprintf(urlCmdbKeyValue, config.ApiEndpoint)
 	c.urlCmdbDataTable = fmt.Sprintf(urlCmdbDataTable, config.ApiEndpoint, "%s")
 	c.urlIdentifyReconcile = fmt.Sprintf(urlIdentifyReconcile, config.ApiEndpoint)
+	c.urlOraclePdbToServer = fmt.Sprintf(urlOraclePdbToServer, config.ApiEndpoint)
+	c.urlDbInstanceToServer = fmt.Sprintf(urlDbInstanceToServer, config.ApiEndpoint)
 
 	// Configure secure TLS settings
 	tlsConfig := &tls.Config{
@@ -727,6 +730,112 @@ func (c *Client) getConfigurationItemsWithAppServices(tableName string, query st
 	return results, nil
 }
 
+// GetOraclePdbToServerMapping retrieves the mapping between Oracle PDBs, Oracle Instances, and Servers.
+// It returns two maps:
+// Map1: key orapdb_sys_id, value = set (map[string]struct{}) of orainstance_sys_id
+// Map2: key orapdb_sys_id, value = set (map[string]struct{}) of server_sys_id
+func (c *Client) GetOraclePdbToServerMapping() (map[string]map[string]struct{}, map[string]map[string]struct{}, error) {
+	requestUrl := c.urlOraclePdbToServer + "?sysparm_fields=orapdb_sys_id,orainstance_sys_id,server_sys_id"
+	resp, err := c.getRequest(requestUrl)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	resp = strings.TrimSpace(resp)
+	if resp == "" {
+		return make(map[string]map[string]struct{}), make(map[string]map[string]struct{}), nil
+	}
+
+	var response OraclePdbToServerResponse
+	err = json.Unmarshal([]byte(resp), &response)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to unmarshal oracle pdb mapping: %w", err)
+	}
+
+	pdbToInstance := make(map[string]map[string]struct{})
+	pdbToServer := make(map[string]map[string]struct{})
+
+	for _, item := range response.Result {
+		if item.OraPdbSysID == "" {
+			continue
+		}
+
+		// Fill PDB to Instance Map
+		if item.OraInstanceSysID != "" {
+			if _, ok := pdbToInstance[item.OraPdbSysID]; !ok {
+				pdbToInstance[item.OraPdbSysID] = make(map[string]struct{})
+			}
+			pdbToInstance[item.OraPdbSysID][item.OraInstanceSysID] = struct{}{}
+		}
+
+		// Fill PDB to Server Map
+		if item.ServerSysID != "" {
+			if _, ok := pdbToServer[item.OraPdbSysID]; !ok {
+				pdbToServer[item.OraPdbSysID] = make(map[string]struct{})
+			}
+			pdbToServer[item.OraPdbSysID][item.ServerSysID] = struct{}{}
+		}
+	}
+
+	return pdbToInstance, pdbToServer, nil
+}
+
+// GetDbInstanceToServerMapping retrieves the mapping between Database Instances and Servers.
+// It returns a map where the key is dbinstance_sys_id and the value is a set (map[string]struct{}) of server_sys_id.
+func (c *Client) GetDbInstanceToServerMapping() (map[string]map[string]struct{}, error) {
+	requestUrl := c.urlDbInstanceToServer + "?sysparm_fields=dbinstance_sys_id,server_sys_id"
+	resp, err := c.getRequest(requestUrl)
+	if err != nil {
+		return nil, err
+	}
+
+	resp = strings.TrimSpace(resp)
+	if resp == "" {
+		return make(map[string]map[string]struct{}), nil
+	}
+
+	var response DbInstanceToServerResponse
+	err = json.Unmarshal([]byte(resp), &response)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal db instance mapping: %w", err)
+	}
+
+	dbToServers := make(map[string]map[string]struct{})
+
+	for _, item := range response.Result {
+		if item.DbInstanceSysID == "" {
+			continue
+		}
+
+		if item.ServerSysID != "" {
+			if _, ok := dbToServers[item.DbInstanceSysID]; !ok {
+				dbToServers[item.DbInstanceSysID] = make(map[string]struct{})
+			}
+			dbToServers[item.DbInstanceSysID][item.ServerSysID] = struct{}{}
+		}
+	}
+
+	return dbToServers, nil
+}
+
+// GetKubernetesNamespaceData retrieves data for Kubernetes Namespaces.
+func (c *Client) GetPackageRepositoryData() ([]ConfigurationItemWithAppServices, error) {
+	fields := []string{
+		"sys_id",
+		"name",
+		"sys_class_name",
+		"last_discovered",
+		"life_cycle_stage",
+		"life_cycle_stage_status",
+	}
+
+	return c.getConfigurationItemsWithAppServices(
+		"x_lam_lhm_packag_0_cmdb_ci_package_repository",
+		"life_cycle_stageISEMPTY^ORlife_cycle_stage=Operational",
+		fields,
+	)
+}
+
 // GetKubernetesNamespaceData retrieves data for Kubernetes Namespaces.
 func (c *Client) GetKubernetesNamespaceData() ([]ConfigurationItemWithAppServices, error) {
 	fields := []string{
@@ -895,6 +1004,134 @@ func (c *Client) GetCmdbCiServerData() ([]ConfigurationItemWithAppServices, erro
 	return c.getConfigurationItemsWithAppServices(
 		"cmdb_ci_server",
 		"life_cycle_stageISEMPTY^ORlife_cycle_stage=Operational",
+		fields,
+	)
+}
+
+func (c *Client) GetCmdbCiDbOraPdbInstance() ([]ConfigurationItemWithAppServices, error) {
+	fields := []string{
+		"sys_id",
+		"name",
+		"sys_class_name",
+		"last_discovered",
+		"life_cycle_stage",
+		"life_cycle_stage_status",
+		"sid",
+	}
+
+	return c.getConfigurationItemsWithAppServices(
+		"cmdb_ci_db_ora_pdb_instance",
+		"duplicate_ofISEMPTY^life_cycle_stageISEMPTY^ORlife_cycle_stage=Operational",
+		fields,
+	)
+}
+
+func (c *Client) GetCmdbCiDbOraInstance() ([]ConfigurationItemWithAppServices, error) {
+	fields := []string{
+		"sys_id",
+		"name",
+		"sys_class_name",
+		"last_discovered",
+		"life_cycle_stage",
+		"life_cycle_stage_status",
+		"install_directory",
+		"running_process_command",
+		"sid",
+		"tcp_port",
+		"version",
+		"pfile",
+	}
+
+	return c.getConfigurationItemsWithAppServices(
+		"cmdb_ci_db_ora_instance",
+		"duplicate_ofISEMPTY^life_cycle_stageISEMPTY^ORlife_cycle_stage=Operational",
+		fields,
+	)
+}
+
+func (c *Client) GetCmdbCiDbMySQLInstance() ([]ConfigurationItemWithAppServices, error) {
+	fields := []string{
+		"sys_id",
+		"name",
+		"sys_class_name",
+		"last_discovered",
+		"life_cycle_stage",
+		"life_cycle_stage_status",
+		"install_directory",
+		"running_process_command",
+		"config_file",
+		"tcp_port",
+		"version",
+	}
+
+	return c.getConfigurationItemsWithAppServices(
+		"cmdb_ci_db_mysql_instance",
+		"duplicate_ofISEMPTY^life_cycle_stageISEMPTY^ORlife_cycle_stage=Operational",
+		fields,
+	)
+}
+
+func (c *Client) GetCmdbCiDbPostgreSQLInstance() ([]ConfigurationItemWithAppServices, error) {
+	fields := []string{
+		"sys_id",
+		"name",
+		"sys_class_name",
+		"last_discovered",
+		"life_cycle_stage",
+		"life_cycle_stage_status",
+		"install_directory",
+		"running_process_command",
+		"config_file",
+		"tcp_port",
+		"version",
+	}
+
+	return c.getConfigurationItemsWithAppServices(
+		"cmdb_ci_db_postgresql_instance",
+		"duplicate_ofISEMPTY^life_cycle_stageISEMPTY^ORlife_cycle_stage=Operational",
+		fields,
+	)
+}
+
+func (c *Client) GetCmdbCiDbMongoDbInstance() ([]ConfigurationItemWithAppServices, error) {
+	fields := []string{
+		"sys_id",
+		"name",
+		"sys_class_name",
+		"last_discovered",
+		"life_cycle_stage",
+		"life_cycle_stage_status",
+		"running_process_command",
+		"config_file",
+		"tcp_port",
+		"version",
+	}
+
+	return c.getConfigurationItemsWithAppServices(
+		"cmdb_ci_db_mongodb_instance",
+		"duplicate_ofISEMPTY^life_cycle_stageISEMPTY^ORlife_cycle_stage=Operational",
+		fields,
+	)
+}
+
+func (c *Client) GetCmdbCiDbMSSQLInstance() ([]ConfigurationItemWithAppServices, error) {
+	fields := []string{
+		"sys_id",
+		"name",
+		"sys_class_name",
+		"last_discovered",
+		"life_cycle_stage",
+		"life_cycle_stage_status",
+		"install_directory",
+		"running_process_command",
+		"tcp_port",
+		"version",
+		"instance_name",
+	}
+
+	return c.getConfigurationItemsWithAppServices(
+		"cmdb_ci_db_mssql_instance",
+		"duplicate_ofISEMPTY^life_cycle_stageISEMPTY^ORlife_cycle_stage=Operational",
 		fields,
 	)
 }

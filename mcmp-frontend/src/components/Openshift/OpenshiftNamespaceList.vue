@@ -35,6 +35,9 @@
           <span>{{ item.name }}</span>
         </div>
       </template>
+      <template #item.environment="{ item }">
+        {{ formatEnvironment(item.environment) }}
+      </template>
       <template #no-data>
         <v-row />
         <v-row>
@@ -139,6 +142,12 @@ function onRowKeydown({
   if (key === "f" || key === "F") {
     toggleFavorite(item);
   }
+}
+
+function formatEnvironment(environment: string) {
+  if (environment === "K") return "test";
+  if (environment === "P") return "prod";
+  return environment;
 }
 
 async function toggleFavorite(item: OpenshiftNamespaceListItem) {

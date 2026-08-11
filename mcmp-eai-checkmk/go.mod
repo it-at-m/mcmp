@@ -2,7 +2,7 @@ module github.com/it-at-m/mcmp/mcmp-eai-checkmk
 
 go 1.26.5
 
-require github.com/it-at-m/mcmp/mcmp-eai-common v0.0.0-20260802201144-1d015c51e10a
+require github.com/it-at-m/mcmp/mcmp-eai-common v0.0.0-20260806141551-a01815a32fc3
 
 require (
 	github.com/fsnotify/fsnotify v1.10.1 // indirect
@@ -17,6 +17,6 @@ require (
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/text v0.40.0 // indirect
+	golang.org/x/text v0.41.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )

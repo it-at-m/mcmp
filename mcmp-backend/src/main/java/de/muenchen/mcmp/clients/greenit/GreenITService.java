@@ -39,6 +39,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -775,7 +776,21 @@ public class GreenITService {
         return serverMetricsService.findServerIdsWithMetricsAndGreenItEnabled();
     }
 
-    public void processRightsizeRecommendations(final RightsizingRequestDTO rightsizingServerDTOList) {
+    /**
+     * Returns a list of server IDs, names and there recommended CPUs and Memory Settings for Green IT.
+     *
+     * @return a list of server IDs, names and there recommended CPUs and Memory
+     */
+    public List<RightsizingRecommendationsDTO> getRightsizeRecommendations(){
+        List<RightsizingRecommendationsDTO> rightsizingServerDTOs = new ArrayList<>();
+        for (Long serverId : serverMetricsService.findServerIdsWithMetricsAndGreenItEnabled()){
+            final Server server = serverService.findById(serverId).orElseThrow(() -> new EntityNotFoundException("Server not found: " + serverId));
+            rightsizingServerDTOs.add(new RightsizingRecommendationsDTO(server.getId(), server.getName(), server.getNumCpuRecommended(), server.getMemoryMbRecommended()));
+        }
+        return rightsizingServerDTOs;
+    }
+
+    public void processRightsizeRecommendations(final RightsizingServerListDTO rightsizingServerDTOList) {
         int count = 1;
         for (RightsizingServerDTO rightsizingServerDTO: rightsizingServerDTOList.servers()){
             final Server server = serverService.findById(rightsizingServerDTO.id()).orElseThrow(() -> new EntityNotFoundException("Server not found: " + rightsizingServerDTO.id()));

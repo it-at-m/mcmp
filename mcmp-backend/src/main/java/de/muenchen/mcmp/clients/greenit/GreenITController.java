@@ -1,8 +1,6 @@
 package de.muenchen.mcmp.clients.greenit;
 
-import de.muenchen.mcmp.clients.greenit.vmware.rightsizing.RightsizingRequestDTO;
-import de.muenchen.mcmp.clients.greenit.vmware.rightsizing.VMwareRightsizeMailResponseDTO;
-import de.muenchen.mcmp.clients.greenit.vmware.rightsizing.VMwareRightsizeRequestDTO;
+import de.muenchen.mcmp.clients.greenit.vmware.rightsizing.*;
 import de.muenchen.mcmp.clients.greenit.vmware.shutdown.VMwareShutdownMailResponseDTO;
 import de.muenchen.mcmp.clients.greenit.vmware.shutdown.VMwareShutdownRequestDTO;
 import de.muenchen.mcmp.security.HasApiRole;
@@ -68,9 +66,16 @@ public class GreenITController {
     @HasApiRole
     @PostMapping("/vmware/server/rightsizing")
     @ResponseStatus(HttpStatus.CREATED)
-    public void processRightsizeRecommendations(@Valid @RequestBody final RightsizingRequestDTO rightsizingServerDTOList) {
+    public void processRightsizeRecommendations(@Valid @RequestBody final RightsizingServerListDTO rightsizingServerDTOList) {
         log.info("Received resource recommendation request: {}", rightsizingServerDTOList);
         greenITService.processRightsizeRecommendations(rightsizingServerDTOList);
+    }
+
+    @HasApiRole
+    @GetMapping("/vmware/rightsizing/recommendations")
+    public ResponseEntity<List<RightsizingRecommendationsDTO>> getRightsizeRecommendations() {
+        log.info("Received request for Rightsizing recommendations");
+        return ResponseEntity.ok(greenITService.getRightsizeRecommendations());
     }
 
     /**

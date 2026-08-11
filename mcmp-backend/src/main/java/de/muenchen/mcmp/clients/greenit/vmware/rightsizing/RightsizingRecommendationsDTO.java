@@ -12,9 +12,15 @@ public record RightsizingRecommendationsDTO(
     @JsonProperty("name")
     String name,
 
-    @JsonProperty("num_cpu")
-    int numCpu,
+    @JsonProperty("currentCPU")
+    Integer currentCPU,
 
-    @JsonProperty("memory_mb")
-    int memoryMb
+    @JsonProperty("newCPU")
+    Integer newCPU,
+
+    @JsonProperty("currentRAM")
+    Integer currentRAM,
+
+    @JsonProperty("newRAM")
+    Integer newRAM
 ) {}

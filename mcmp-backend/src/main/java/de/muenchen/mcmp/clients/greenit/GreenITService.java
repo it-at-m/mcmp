@@ -120,8 +120,9 @@ public class GreenITService {
      * @throws de.muenchen.mcmp.exception.GreenITServerLockedException if the server is locked due to pending/recently rejected changes
      */
     public GreenITResponseDTO processVmwareRightsizing(final VMwareRightsizeRequestDTO request) {
-        final Server server = findServerOrThrow(request.vcenterShortCode(), request.serverUuid());
+        final Server server = findServerOrThrow(request.vcenterShortCode(), request.serverId(), null);
 
+        //TODO Maybe only send Server ID and Time
         final GreenItRightsizing rightsizing = GreenItRightsizing.builder()
                 .vmName(server.getName())
                 .startTime(request.startTime())
@@ -168,7 +169,7 @@ public class GreenITService {
      * @throws de.muenchen.mcmp.exception.GreenITServerLockedException if the server is locked due to pending/recently rejected changes
      */
     public GreenITResponseDTO processVmwareShutdown(final VMwareShutdownRequestDTO request) {
-        final Server server = findServerOrThrow(request.vcenterShortCode(), request.serverUuid());
+        final Server server = findServerOrThrow(request.vcenterShortCode(), null, request.serverUuid());
 
         final GreenItShutdown shutdown = GreenItShutdown.builder()
                 .vmName(server.getName())
@@ -623,16 +624,25 @@ public class GreenITService {
      * <p>The error message includes both identifiers to support troubleshooting and client-side correction.</p>
      *
      * @param vcenterShortCode vCenter short code used for partitioning/lookup
-     * @param serverUuid       server UUID used for unique identification
+     * @param serverId       server MCMP ID used for unique identification
+     * @param serverUuid    server UUID used for unique identification (for old way)
      * @return the resolved {@code Server}
      * @throws de.muenchen.mcmp.exception.ServerNotFoundException if no server matches the given identifiers
      */
-    private Server findServerOrThrow(final String vcenterShortCode, final String serverUuid) {
-        return serverService.findServerByVcenterShortCodeAndUuidOptional(vcenterShortCode, serverUuid)
-                .orElseThrow(() -> {
-                    final String errorMessage = "Server not found for vCenter short code '%s' and UUID '%s'.".formatted(vcenterShortCode, serverUuid);
-                    return new ServerNotFoundException(errorMessage);
-                });
+    private Server findServerOrThrow(final String vcenterShortCode, final Long serverId, final String serverUuid) {
+        if (serverId != null){
+            return serverService.findById(serverId)
+                    .orElseThrow(() -> {
+                        final String errorMessage = "Server not found for vCenter short code '%s' and ID '%s'.".formatted(vcenterShortCode, serverId);
+                        return new ServerNotFoundException(errorMessage);
+                    });
+        } else { // TODO must be removed after shutdown has also moved
+            return serverService.findServerByVcenterShortCodeAndUuidOptional(vcenterShortCode, serverUuid)
+                    .orElseThrow(() -> {
+                        final String errorMessage = "Server not found for vCenter short code '%s' and UUID '%s'.".formatted(vcenterShortCode, serverUuid);
+                        return new ServerNotFoundException(errorMessage);
+                    });
+        }
     }
 
     /**
@@ -785,7 +795,13 @@ public class GreenITService {
         List<RightsizingRecommendationsDTO> rightsizingServerDTOs = new ArrayList<>();
         for (Long serverId : serverMetricsService.findServerIdsWithMetricsAndGreenItEnabled()){
             final Server server = serverService.findById(serverId).orElseThrow(() -> new EntityNotFoundException("Server not found: " + serverId));
-            rightsizingServerDTOs.add(new RightsizingRecommendationsDTO(server.getId(), server.getName(), server.getNumCpuRecommended(), server.getMemoryMbRecommended()));
+            rightsizingServerDTOs.add(new RightsizingRecommendationsDTO(
+                    server.getId(),
+                    server.getName(),
+                    server.getNumCpu(),
+                    server.getNumCpuRecommended(),
+                    server.getMemoryMb(),
+                    server.getMemoryMbRecommended()));
         }
         return rightsizingServerDTOs;
     }

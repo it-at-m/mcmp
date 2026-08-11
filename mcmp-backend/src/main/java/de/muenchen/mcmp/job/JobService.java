@@ -10,6 +10,7 @@ import de.muenchen.mcmp.appservice.AppserviceNameAndSysId;
 import de.muenchen.mcmp.appservice.AppserviceRepository;
 import de.muenchen.mcmp.common.OffsetBasedPageRequest;
 import de.muenchen.mcmp.configuration.AppservicesProperties;
+import de.muenchen.mcmp.exception.BusinessValidationException;
 import de.muenchen.mcmp.exception.GreenITIllegalArgumentException;
 import de.muenchen.mcmp.greenit.rightsizing.GreenItRightsizing;
 import de.muenchen.mcmp.greenit.rightsizing.GreenItRightsizingRepository;
@@ -775,7 +776,7 @@ public class JobService {
         boolean nonOss = false;
 
         if (appservice.getBusinessServiceNumbers() == null || appservice.getBusinessServiceNumbers().isEmpty()) {
-            throw new IllegalArgumentException("The Applicationservice must be assigned to at least one Business Service to order a Windows Server.");
+            throw new BusinessValidationException("Dem Anwendungsservice muss mindestens ein Business Service mit einer BSN-Nummer zugeordnet sein, um einen Windows Server bestellen zu können.");
         }
 
         List<String> bsnList = List.of(appservice.getBusinessServiceNumbers().split(","));
@@ -844,7 +845,7 @@ public class JobService {
         } else if (osVersion.equals("Windows Server 2022")) {
             params.put("image", "w2022tmpl_latest");
         } else {
-            throw new IllegalArgumentException("Unsupported operating system version: " + osVersion);
+            throw new BusinessValidationException("Unsupported operating system version: " + osVersion);
         }
         params.put("cpus", cpu);
         params.put("memory_mb", ram * 1024);

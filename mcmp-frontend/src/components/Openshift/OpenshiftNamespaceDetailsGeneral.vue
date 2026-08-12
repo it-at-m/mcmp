@@ -32,13 +32,19 @@
             {{ namespace.name }}
           </a>
         </p>
-        <p v-else>-</p>
+        <p v-else>{{ namespace.name }}</p>
       </v-col>
       <v-col
         cols="3"
         class="pt-0"
       >
-        <p>{{ formatter.formatOpenshiftClusterName(namespace.clusterName) }}</p>
+        <p>
+          {{
+            formatter.formatOpenshiftClusterEnvironment(
+              namespace.clusterEnvironment
+            )
+          }}
+        </p>
       </v-col>
       <v-col
         cols="3"

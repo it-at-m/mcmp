@@ -26,6 +26,13 @@ import java.util.stream.Collectors;
 @Slf4j
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(BusinessValidationException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public String handleBusinessValidationException(final BusinessValidationException ex) {
+        log.warn("Business validation failed: {}", ex.getMessage());
+        return ex.getMessage();
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public String handleIllegalArgumentException(final IllegalArgumentException ex) {

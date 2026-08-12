@@ -699,8 +699,13 @@ func (p *Processor) calculateRecommendedCPU(vmName string, currentCPU int, cpuUt
 			result = max(result, 4)
 		}
 	} else {
-		// All other servers: never go below 2 cores
-		result = max(result, 2)
+		if currentCPU <= 2 {
+			// Already at or below minimum — never downsize
+			result = currentCPU
+		} else {
+			// Above minimum — don't go below 2 cores
+			result = max(result, 2)
+		}
 	}
 
 	// Never recommend less than half the current allocation, regardless of server class.
@@ -765,10 +770,23 @@ func (p *Processor) calculateRecommendedMemory(vmName string, currentMemoryMB in
 	// Round to nearest 1024MB increment (common VM memory sizing)
 	result := int((recommendedMemoryMB+512)/1024) * 1024
 
-	if reDB.MatchString(vmName) && result < 6*1024 {
-		result = 6 * 1024
-	} else if result < 4*1024 {
-		result = 4 * 1024
+	// db-server: special RAM floor rules
+	if reDB.MatchString(vmName) {
+		if result < 6*1024 {
+			// Already at or below minimum — never downsize
+			result = currentMemoryMB * 1024
+		} else {
+			// Above minimum — don't go below 6 GB
+			result = max(result, 6)
+		}
+	} else {
+		if currentMemoryMB*1024 < 4 {
+			// Already at or below minimum — never downsize
+			result = currentMemoryMB * 1024
+		} else {
+			// Above minimum — don't go below 4 GB
+			result = max(result, 4)
+		}
 	}
 
 	// Never recommend less than half the current allocation, regardless of server class.

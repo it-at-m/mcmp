@@ -23,18 +23,21 @@ type (
 	}
 
 	SnowData struct {
-		EaiInfo              app.EaiMetadata       `json:"eai_info"`
-		Users                []User                `json:"users"`
-		Groups               []Group               `json:"groups"`
-		CmdbCIs              []ServerCI            `json:"cis"`
-		AppServices          []AppService          `json:"app_services"`
-		KubernetesClusterCIs []KubernetesClusterCI `json:"kubernetes_clusters"`
-		StorageServerCIs     []ServerCI            `json:"storage_server"`
-		StorageVolumeCIs     []StorageCI           `json:"storage_volumes"`
-		StorageQTreeCIs      []StorageCI           `json:"storage_qtrees"`
-		StorageAccountCIs    []CloudObjectCI       `json:"storage_accounts"`
-		StorageBucketCIs     []CloudObjectCI       `json:"storage_buckets"`
-		LbServiceCI          []LbServiceCI         `json:"lb_services"`
+		EaiInfo                app.EaiMetadata       `json:"eai_info"`
+		Users                  []User                `json:"users"`
+		Groups                 []Group               `json:"groups"`
+		CmdbCIs                []ServerCI            `json:"cis"`
+		AppServices            []AppService          `json:"app_services"`
+		KubernetesClusterCIs   []KubernetesClusterCI `json:"kubernetes_clusters"`
+		StorageServerCIs       []ServerCI            `json:"storage_server"`
+		StorageVolumeCIs       []StorageCI           `json:"storage_volumes"`
+		StorageQTreeCIs        []StorageCI           `json:"storage_qtrees"`
+		StorageAccountCIs      []CloudObjectCI       `json:"storage_accounts"`
+		StorageBucketCIs       []CloudObjectCI       `json:"storage_buckets"`
+		LbServiceCI            []LbServiceCI         `json:"lb_services"`
+		DatabaseInstanceCIs    []DatabaseCI          `json:"database_instances"`
+		DatabasePdbInstanceCIs []DatabaseCI          `json:"database_pdb_instances"`
+		PackageRepositoryCIs   []PackageRepositoryCI `json:"package_repositories"`
 	}
 
 	User struct {
@@ -150,6 +153,16 @@ type (
 		AppServiceNumbers    []string `json:"app_service_number,omitempty"`
 	}
 
+	PackageRepositoryCI struct {
+		Name                 string   `json:"name,omitempty"`
+		SysID                string   `json:"sys_id,omitempty"`
+		SysClass             string   `json:"sys_class,omitempty"`
+		LifeCycleStage       string   `json:"life_cycle_stage,omitempty"`
+		LifeCycleStageStatus string   `json:"life_cycle_stage_status,omitempty"`
+		LastDiscovered       string   `json:"last_discovered,omitempty"`
+		AppServiceNumbers    []string `json:"app_service_number,omitempty"`
+	}
+
 	AppService struct {
 		SysID                  string   `json:"sys_id,omitempty"`
 		Name                   string   `json:"name,omitempty"`
@@ -166,6 +179,29 @@ type (
 		CloudObjectStorageCI   []string `json:"cloud_object_storage_cis,omitempty"`
 		StorageVolumeCIs       []string `json:"storage_volume_cis,omitempty"`
 		LbServiceCIs           []string `json:"lb_service_cis,omitempty"`
+	}
+
+	DatabaseCI struct {
+		Name                  string   `json:"name,omitempty"`
+		SysID                 string   `json:"sys_id,omitempty"`
+		SysClass              string   `json:"sys_class,omitempty"`
+		LastDiscovered        string   `json:"last_discovered,omitempty"`
+		LifeCycleStage        string   `json:"life_cycle_stage,omitempty"`
+		LifeCycleStageStatus  string   `json:"life_cycle_stage_status,omitempty"`
+		InstallDirectory      string   `json:"install_directory,omitempty"`
+		RunningProcessCommand string   `json:"running_process_command,omitempty"`
+		TcpPort               string   `json:"tcp_port,omitempty"`
+		Version               string   `json:"version,omitempty"`
+		Sid                   string   `json:"sid,omitempty"`
+		ConfigFile            string   `json:"config_file,omitempty"`
+		InstanceName          string   `json:"instance_name,omitempty"`
+		PFile                 string   `json:"pfile,omitempty"`
+		PFileProtocol         string   `json:"pfile_protocol,omitempty"`
+		PFileHost             string   `json:"pfile_host,omitempty"`
+		PFilePort             string   `json:"pfile_port,omitempty"`
+		DBInstanceSysID       []string `json:"db_instance_sys_id,omitempty"`
+		ServerSysID           []string `json:"server_sys_id,omitempty"`
+		AppServiceNumbers     []string `json:"app_service_number,omitempty"`
 	}
 )
 

@@ -5,9 +5,13 @@
         <strong>CPUs*</strong>
         <v-number-input
           v-model="instlServerDetails.cpu"
-          :min="2"
+          :min="instlServerDetails.category?.label == 'PostgreSQL' ? 4 : 1"
           :max="8"
-          hint="Erlaubte Werte 2 bis 8"
+          :hint="
+            'Erlaubte Werte ' +
+            (instlServerDetails.category?.label == 'PostgreSQL' ? 4 : 1) +
+            ' bis 8'
+          "
           persistent-hint
           control-variant="split"
           variant="solo"
@@ -15,14 +19,14 @@
         </v-number-input>
       </v-col>
       <v-col>
-        <strong>Arbeitspeicher in GB*</strong>
+        <strong>Arbeitsspeicher in GB*</strong>
         <v-number-input
           v-model="instlServerDetails.memory"
-          :min="instlServerDetails.category?.label == 'OracleDB' ? 6 : 4"
+          :min="instlServerDetails.category?.label == 'OracleDB' ? 6 : 2"
           :max="64"
           :hint="
             'Erlaubte Werte ' +
-            (instlServerDetails.category?.label == 'OracleDB' ? 6 : 4) +
+            (instlServerDetails.category?.label == 'OracleDB' ? 6 : 2) +
             ' bis 64'
           "
           persistent-hint

@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -49,10 +50,10 @@ public interface RepositoryRepository extends JpaRepository<Repository, Long> {
     @Modifying
     @Transactional
     @Query(value = """
-            UPDATE cmp.repository 
-            SET locked = TRUE, 
+            UPDATE cmp.repository
+            SET locked = TRUE,
                 repository_url = NULL,
-                updated_at = CURRENT_TIMESTAMP 
+                updated_at = CURRENT_TIMESTAMP
             WHERE name = :name
             """, nativeQuery = true)
     void lockRepository(@Param("name") String name);
@@ -77,4 +78,47 @@ public interface RepositoryRepository extends JpaRepository<Repository, Long> {
 
     @Query(value = "SELECT EXISTS(SELECT 1 FROM cmp.repository_assignment WHERE repository_id = :repositoryId AND server_id = :serverId)", nativeQuery = true)
     boolean existsAssignment(@Param("repositoryId") Long repositoryId, @Param("serverId") Long serverId);
+
+    @Modifying
+    @Transactional
+    @Query(value = """
+                UPDATE cmp.repository
+                SET snow_name = :snowName,
+                    snow_sys_id = :snowSysId,
+                    snow_sys_class = :snowSysClass,
+                    snow_last_discovered = :snowLastDiscovered,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = :id
+                """, nativeQuery = true)
+    void updateSnowFields(@Param("id") Long id,
+                          @Param("snowName") String snowName,
+                          @Param("snowSysId") String snowSysId,
+                          @Param("snowSysClass") String snowSysClass,
+                          @Param("snowLastDiscovered") OffsetDateTime snowLastDiscovered);
+
+    @Modifying
+    @Transactional
+    @Query(value = "DELETE FROM cmp.repository_has_appservices WHERE repository_id = :repositoryId", nativeQuery = true)
+    void deleteAppServiceAssociations(@Param("repositoryId") Long repositoryId);
+
+    @Modifying
+    @Transactional
+    @Query(value = """
+                DELETE FROM cmp.repository_has_appservices
+                WHERE repository_id = :repositoryId
+                AND appservice_id NOT IN (SELECT id FROM cmp.appservice WHERE number IN :numbers)
+                """, nativeQuery = true)
+    void deleteObsoleteAppServiceAssociations(@Param("repositoryId") Long repositoryId, @Param("numbers") List<String> numbers);
+
+    @Modifying
+    @Transactional
+    @Query(value = """
+                INSERT INTO cmp.repository_has_appservices (repository_id, appservice_id)
+                SELECT :repositoryId, id FROM cmp.appservice WHERE number IN :numbers
+                ON CONFLICT DO NOTHING
+                """, nativeQuery = true)
+    void addAppServiceAssociations(@Param("repositoryId") Long repositoryId, @Param("numbers") List<String> numbers);
+
+    @Query("SELECT DISTINCT r FROM Repository r LEFT JOIN FETCH r.appservices")
+    List<Repository> findAllWithAppservices();
 }

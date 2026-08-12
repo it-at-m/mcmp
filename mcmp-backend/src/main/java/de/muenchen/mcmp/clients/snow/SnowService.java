@@ -2,6 +2,10 @@ package de.muenchen.mcmp.clients.snow;
 
 import de.muenchen.mcmp.appservice.Appservice;
 import de.muenchen.mcmp.appservice.AppserviceRepository;
+import de.muenchen.mcmp.database.DatabaseInstance;
+import de.muenchen.mcmp.database.DatabaseInstanceRepository;
+import de.muenchen.mcmp.database.DatabasePdbInstance;
+import de.muenchen.mcmp.database.DatabasePdbInstanceRepository;
 import de.muenchen.mcmp.group.Group;
 import de.muenchen.mcmp.group.GroupRepository;
 import de.muenchen.mcmp.kubernetes.KubernetesCluster;
@@ -13,6 +17,8 @@ import de.muenchen.mcmp.loadbalancer.LbVirtualServerCi;
 import de.muenchen.mcmp.loadbalancer.LbVirtualServerCiRepository;
 import de.muenchen.mcmp.loadbalancer.LbVirtualServerRepository;
 import de.muenchen.mcmp.ontap.*;
+import de.muenchen.mcmp.repository.Repository;
+import de.muenchen.mcmp.repository.RepositoryRepository;
 import de.muenchen.mcmp.server.Server;
 import de.muenchen.mcmp.server.ServerRepository;
 import de.muenchen.mcmp.server.matching.ServerMatcher;
@@ -23,9 +29,7 @@ import de.muenchen.mcmp.storagegrid.StorageGridBucketRepository;
 import de.muenchen.mcmp.types.EnvironmentType;
 import de.muenchen.mcmp.user.User;
 import de.muenchen.mcmp.user.UserRepository;
-import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityNotFoundException;
-import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -90,10 +94,10 @@ public class SnowService {
     private final LbVirtualServerCiRepository lbVirtualServerCiRepository;
     private final KubernetesClusterRepository kubernetesClusterRepository;
     private final KubernetesNamespaceRepository kubernetesNamespaceRepository;
+    private final RepositoryRepository repositoryRepository;
+    private final DatabaseInstanceRepository databaseInstanceRepository;
+    private final DatabasePdbInstanceRepository databasePdbInstanceRepository;
     private final SnowServerCache snowServerCache;
-
-    @PersistenceContext
-    private EntityManager entityManager;
 
     @Autowired
     @Lazy
@@ -108,7 +112,6 @@ public class SnowService {
         }
     }
 
-    //@Transactional()
     public void importServiceNowData(final SnowDataRequestDTO data) {
         try {
             self.processSnowUser(data.users());
@@ -122,6 +125,9 @@ public class SnowService {
             self.processSnowStorageGridBuckets(data.storageBuckets());
             self.processSnowLbServices(data.lbServices());
             self.processSnowKubernetesClusters(data.kubernetesClusters());
+            self.processSnowPackageRepositories(data.packageRepositories());
+            self.processSnowDatabaseInstances(data.databaseInstances());
+            self.processSnowDatabasePdbInstances(data.databasePdbInstances());
             log.info("Successfully completed ServiceNow data processing");
         } catch (Exception e) {
             int users = data != null && data.users() != null ? data.users().size() : 0;
@@ -133,8 +139,11 @@ public class SnowService {
             int storageQTrees = data != null && data.storageQTrees() != null ? data.storageQTrees().size() : 0;
             int lbServices = data != null && data.lbServices() != null ? data.lbServices().size() : 0;
             int kubernetesClusters = data != null && data.kubernetesClusters() != null ? data.kubernetesClusters().size() : 0;
+            int packageRepositories = data != null && data.packageRepositories() != null ? data.packageRepositories().size() : 0;
+            int databaseInstances = data != null && data.databaseInstances() != null ? data.databaseInstances().size() : 0;
+            int databasePdbInstances = data != null && data.databasePdbInstances() != null ? data.databasePdbInstances().size() : 0;
 
-            log.error("ServiceNow import failed (users={}, groups={}, cis={}, appServices={}, storageServers={}, storageVolumes={}, storageQTrees={}, lbServices={}, kubernetesClusters={})", users, groups, cis, apps, storage, storageVolumes, storageQTrees, lbServices, kubernetesClusters, e);
+            log.error("ServiceNow import failed (users={}, groups={}, cis={}, appServices={}, storageServers={}, storageVolumes={}, storageQTrees={}, lbServices={}, packageRepositories={}, databaseInstances={}, databasePdbInstances={}, kubernetesClusters={})", users, groups, cis, apps, storage, storageVolumes, storageQTrees, lbServices, packageRepositories, databaseInstances, databasePdbInstances, kubernetesClusters, e);
 
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "ServiceNow import failed", e);
         }
@@ -762,7 +771,7 @@ public class SnowService {
         final Map<String, OntapQtree> qtreeMap = allQtrees.stream()
                 .filter(q -> q.getVolume() != null && q.getVolume().getVolumeUuid() != null && q.getQtreeId() != null)
                 .collect(Collectors.toMap(
-                        q -> q.getVolume().getVolumeUuid().toString() + ":" + q.getQtreeId(),
+                        q -> q.getVolume().getVolumeUuid() + ":" + q.getQtreeId(),
                         Function.identity(),
                         (existing, replacement) -> existing
                 ));
@@ -1074,8 +1083,358 @@ public class SnowService {
         // Update AppServices on LbVirtualServer level
         for (Map.Entry<Long, Set<String>> entry : vsToAppServices.entrySet()) {
             Long vsId = entry.getKey();
-            List<String> appServiceNumbers = new ArrayList<>(entry.getValue());
             updateVsAppServiceAssociations(vsId, new ArrayList<>(entry.getValue()));
+        }
+    }
+
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    protected void processSnowPackageRepositories(List<SnowDataRequestDTO.PackageRepositoryDTO> packageRepositories) {
+        if (packageRepositories == null || packageRepositories.isEmpty()) {
+            return;
+        }
+
+        final List<Repository> allRepos = repositoryRepository.findAllWithAppservices();
+
+        // Map for SysId lookup
+        final Map<String, Repository> repoBySysId = allRepos.stream()
+                .filter(r -> r.getSnowSysId() != null)
+                .collect(Collectors.toMap(Repository::getSnowSysId, Function.identity()));
+
+        // Map for Name lookup (fallback)
+        final Map<String, Repository> repoByName = allRepos.stream()
+                .collect(Collectors.toMap(Repository::getName, Function.identity(), (existing, replacement) -> existing));
+
+        final Map<Long, Set<String>> existingAssociations = allRepos.stream()
+                .collect(Collectors.toMap(
+                        Repository::getId,
+                        r -> r.getAppservices().stream()
+                                .map(Appservice::getNumber)
+                                .collect(Collectors.toSet())
+                ));
+
+        final Set<Long> importedRepoIds = new HashSet<>();
+
+        for (final SnowDataRequestDTO.PackageRepositoryDTO dto : packageRepositories) {
+            if (dto.sysId() == null || dto.name() == null) {
+                continue;
+            }
+
+            try {
+                Repository repo = repoBySysId.get(dto.sysId());
+                if (repo == null) {
+                    repo = repoByName.get(dto.name());
+                }
+
+                if (repo != null) {
+                    importedRepoIds.add(repo.getId());
+                    final OffsetDateTime lastDiscovered = parseSnowDateTime(dto.lastDiscovered());
+
+                    if (!Objects.equals(repo.getSnowName(), dto.name()) ||
+                            !Objects.equals(repo.getSnowSysId(), dto.sysId()) ||
+                            !Objects.equals(repo.getSnowSysClass(), dto.sysClass()) ||
+                            isTimeChanged(repo.getSnowLastDiscovered(), lastDiscovered)) {
+
+                        repositoryRepository.updateSnowFields(
+                                repo.getId(),
+                                dto.name(),
+                                dto.sysId(),
+                                dto.sysClass(),
+                                lastDiscovered
+                        );
+                        log.debug("Updated Snow fields for Repository: {}", dto.name());
+                    }
+
+                    updateRepoAppServiceAssociations(repo.getId(), dto.appServiceNumber(), existingAssociations.get(repo.getId()));
+                }
+            } catch (Exception e) {
+                log.error("Failed to process package repository: sys_id={}, name={}", dto.sysId(), dto.name(), e);
+            }
+        }
+
+        for (final Repository repo : allRepos) {
+            if (!importedRepoIds.contains(repo.getId())) {
+                if (repo.getSnowSysId() != null || repo.getSnowName() != null || repo.getSnowSysClass() != null) {
+                    try {
+                        repositoryRepository.updateSnowFields(repo.getId(), null, null, null, null);
+                        repositoryRepository.deleteAppServiceAssociations(repo.getId());
+                        log.debug("Cleared Snow fields and associations for Repository: {}", repo.getName());
+                    } catch (Exception e) {
+                        log.error("Failed to clear Snow fields and associations for Repository: id={}, name={}", repo.getId(), repo.getName(), e);
+                    }
+                }
+            }
+        }
+    }
+
+    private void updateRepoAppServiceAssociations(Long repoId, List<String> incomingNumbers, Set<String> currentNumbers) {
+        final List<String> cleanIncoming = incomingNumbers != null ? incomingNumbers : Collections.emptyList();
+        final Set<String> incomingSet = new HashSet<>(cleanIncoming);
+        final Set<String> currentSet = currentNumbers != null ? currentNumbers : Collections.emptySet();
+
+        if (!currentSet.equals(incomingSet)) {
+            if (cleanIncoming.isEmpty()) {
+                repositoryRepository.deleteAppServiceAssociations(repoId);
+            } else {
+                repositoryRepository.deleteObsoleteAppServiceAssociations(repoId, cleanIncoming);
+                repositoryRepository.addAppServiceAssociations(repoId, cleanIncoming);
+            }
+            log.debug("Synchronized AppService associations for repo ID {}: {} incoming numbers", repoId, cleanIncoming.size());
+        }
+    }
+
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    protected void processSnowDatabaseInstances(List<SnowDataRequestDTO.DatabaseInstanceDTO> databaseInstances) {
+        if (databaseInstances == null) {
+            databaseInstances = Collections.emptyList();
+        }
+
+        final List<DatabaseInstance> allDatabaseInstances = databaseInstanceRepository.findAllWithAppservicesAndServers();
+
+        final Map<String, DatabaseInstance> databaseInstanceBySysId = allDatabaseInstances.stream()
+                .filter(databaseInstance -> databaseInstance.getSnowSysId() != null)
+                .collect(Collectors.toMap(DatabaseInstance::getSnowSysId, Function.identity(), (existing, replacement) -> existing));
+
+       final Set<Long> importedDatabaseInstanceIds = new HashSet<>();
+
+        for (final SnowDataRequestDTO.DatabaseInstanceDTO dto : databaseInstances) {
+            if (dto == null || dto.sysId() == null || dto.sysId().isBlank()) {
+                continue;
+            }
+
+            try {
+                DatabaseInstance databaseInstance = databaseInstanceBySysId.get(dto.sysId());
+                final OffsetDateTime lastDiscovered = parseSnowDateTime(dto.lastDiscovered());
+
+                if (databaseInstance == null) {
+                    databaseInstanceRepository.insertIfNotExists(
+                            dto.name(),
+                            dto.sysId(),
+                            dto.sysClass(),
+                            lastDiscovered,
+                            dto.version()
+                    );
+
+                    final Optional<DatabaseInstance> newDatabaseInstance = databaseInstanceRepository.findBySnowSysIdWithAppservicesAndServers(dto.sysId());
+                    if (newDatabaseInstance.isEmpty()) {
+                        log.warn("DatabaseInstance was not created or found after insert: sys_id={}", dto.sysId());
+                        continue;
+                    }
+
+                    importedDatabaseInstanceIds.add(newDatabaseInstance.get().getId());
+                    updateDatabaseInstanceAppServiceAssociations(newDatabaseInstance.get(), dto.appServiceNumber());
+                    updateDatabaseInstanceServerAssociations(newDatabaseInstance.get(), dto.serverSysIds());
+
+                    log.debug("Created DatabaseInstance from Snow import: sys_id={}, name={}", dto.sysId(), dto.name());
+                    continue;
+                }
+
+                importedDatabaseInstanceIds.add(databaseInstance.getId());
+
+                if (!Objects.equals(databaseInstance.getSnowName(), dto.name()) ||
+                        !Objects.equals(databaseInstance.getSnowSysClass(), dto.sysClass()) ||
+                        !Objects.equals(databaseInstance.getSnowLastDiscovered(), lastDiscovered) ||
+                        !Objects.equals(databaseInstance.getSnowVersion(), dto.version())) {
+
+                    databaseInstanceRepository.updateSnowFields(
+                            databaseInstance.getId(),
+                            dto.name(),
+                            dto.sysClass(),
+                            lastDiscovered,
+                            dto.version()
+                    );
+
+                    log.debug("Updated Snow fields for DatabaseInstance: sys_id={}, name={}", dto.sysId(), dto.name());
+                }
+
+                updateDatabaseInstanceAppServiceAssociations(databaseInstance, dto.appServiceNumber());
+                updateDatabaseInstanceServerAssociations(databaseInstance, dto.serverSysIds());
+            } catch (Exception e) {
+                log.error("Failed to process database instance: sys_id={}, name={}", dto.sysId(), dto.name(), e);
+            }
+        }
+
+        for (final DatabaseInstance databaseInstance : allDatabaseInstances) {
+            if (!importedDatabaseInstanceIds.contains(databaseInstance.getId())) {
+                try {
+                    databaseInstanceRepository.deleteAppServiceAssociations(databaseInstance.getId());
+                    databaseInstanceRepository.deleteServerAssociations(databaseInstance.getId());
+                    databaseInstanceRepository.deleteDatabaseInstanceById(databaseInstance.getId());
+                    log.debug("Deleted DatabaseInstance not present in Snow import: id={}, sys_id={}, name={}",
+                            databaseInstance.getId(), databaseInstance.getSnowSysId(), databaseInstance.getSnowName());
+                } catch (Exception e) {
+                    log.error("Failed to delete DatabaseInstance: id={}, sys_id={}, name={}",
+                            databaseInstance.getId(), databaseInstance.getSnowSysId(), databaseInstance.getSnowName(), e);
+                }
+            }
+        }
+    }
+
+    private void updateDatabaseInstanceAppServiceAssociations(DatabaseInstance databaseInstance, List<String> incomingNumbers) {
+        final List<String> cleanIncoming = incomingNumbers != null ? incomingNumbers : Collections.emptyList();
+        final Set<String> incomingSet = new HashSet<>(cleanIncoming);
+        final Set<String> currentSet = databaseInstance.getAppservices().stream()
+                .map(Appservice::getNumber)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        if (!currentSet.equals(incomingSet)) {
+            if (cleanIncoming.isEmpty()) {
+                databaseInstanceRepository.deleteAppServiceAssociations(databaseInstance.getId());
+            } else {
+                databaseInstanceRepository.deleteObsoleteAppServiceAssociations(databaseInstance.getId(), cleanIncoming);
+                databaseInstanceRepository.addAppServiceAssociations(databaseInstance.getId(), cleanIncoming);
+            }
+            log.debug("Synchronized AppService associations for DatabaseInstance ID {}: {} incoming numbers",
+                    databaseInstance.getId(), cleanIncoming.size());
+        }
+    }
+
+    private void updateDatabaseInstanceServerAssociations(DatabaseInstance databaseInstance, List<String> incomingServerSysIds) {
+        final List<String> cleanIncoming = incomingServerSysIds != null ? incomingServerSysIds : Collections.emptyList();
+        final Set<String> incomingSet = new HashSet<>(cleanIncoming);
+        final Set<String> currentSet = databaseInstance.getServers().stream()
+                .map(Server::getSnowServerSysId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        if (!currentSet.equals(incomingSet)) {
+            if (cleanIncoming.isEmpty()) {
+                databaseInstanceRepository.deleteServerAssociations(databaseInstance.getId());
+            } else {
+                databaseInstanceRepository.deleteObsoleteServerAssociations(databaseInstance.getId(), cleanIncoming);
+                databaseInstanceRepository.addServerAssociations(databaseInstance.getId(), cleanIncoming);
+            }
+            log.debug("Synchronized Server associations for DatabaseInstance ID {}: {} incoming server sys_ids",
+                    databaseInstance.getId(), cleanIncoming.size());
+        }
+    }
+
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    protected void processSnowDatabasePdbInstances(List<SnowDataRequestDTO.DatabasePdbInstanceDTO> databasePdbInstances) {
+        if (databasePdbInstances == null) {
+            databasePdbInstances = Collections.emptyList();
+        }
+
+        final List<DatabasePdbInstance> allDatabasePdbInstances = databasePdbInstanceRepository.findAllWithAppservicesAndDatabaseInstances();
+
+        final Map<String, DatabasePdbInstance> databasePdbInstanceBySysId = allDatabasePdbInstances.stream()
+                .filter(databasePdbInstance -> databasePdbInstance.getSnowSysId() != null)
+                .collect(Collectors.toMap(DatabasePdbInstance::getSnowSysId, Function.identity(), (existing, replacement) -> existing));
+
+        final Set<Long> importedDatabasePdbInstanceIds = new HashSet<>();
+
+        for (final SnowDataRequestDTO.DatabasePdbInstanceDTO dto : databasePdbInstances) {
+            if (dto == null || dto.sysId() == null || dto.sysId().isBlank()) {
+                continue;
+            }
+
+            try {
+                DatabasePdbInstance databasePdbInstance = databasePdbInstanceBySysId.get(dto.sysId());
+                final OffsetDateTime lastDiscovered = parseSnowDateTime(dto.lastDiscovered());
+
+                if (databasePdbInstance == null) {
+                    databasePdbInstanceRepository.insertIfNotExists(
+                            dto.name(),
+                            dto.sysId(),
+                            dto.sysClass(),
+                            lastDiscovered,
+                            dto.sid()
+                    );
+
+                    final Optional<DatabasePdbInstance> newDatabasePdbInstance =
+                            databasePdbInstanceRepository.findBySnowSysIdWithAppservicesAndDatabaseInstances(dto.sysId());
+
+                    if (newDatabasePdbInstance.isEmpty()) {
+                        log.warn("DatabasePdbInstance was not created or found after insert: sys_id={}", dto.sysId());
+                        continue;
+                    }
+
+                    importedDatabasePdbInstanceIds.add(newDatabasePdbInstance.get().getId());
+                    updateDatabasePdbInstanceAppServiceAssociations(newDatabasePdbInstance.get(), dto.appServiceNumber());
+                    updateDatabasePdbInstanceDatabaseInstanceAssociations(newDatabasePdbInstance.get(), dto.databaseInstanceSysIds());
+
+                    log.debug("Created DatabasePdbInstance from Snow import: sys_id={}, name={}", dto.sysId(), dto.name());
+                    continue;
+                }
+
+                importedDatabasePdbInstanceIds.add(databasePdbInstance.getId());
+
+                if (!Objects.equals(databasePdbInstance.getSnowName(), dto.name()) ||
+                        !Objects.equals(databasePdbInstance.getSnowSysClass(), dto.sysClass()) ||
+                        !Objects.equals(databasePdbInstance.getSnowLastDiscovered(), lastDiscovered) ||
+                        !Objects.equals(databasePdbInstance.getSnowPdb(), dto.sid())) {
+
+                    databasePdbInstanceRepository.updateSnowFields(
+                            databasePdbInstance.getId(),
+                            dto.name(),
+                            dto.sysClass(),
+                            lastDiscovered,
+                            dto.sid()
+                    );
+
+                    log.debug("Updated Snow fields for DatabasePdbInstance: sys_id={}, name={}", dto.sysId(), dto.name());
+                }
+
+                updateDatabasePdbInstanceAppServiceAssociations(databasePdbInstance, dto.appServiceNumber());
+                updateDatabasePdbInstanceDatabaseInstanceAssociations(databasePdbInstance, dto.databaseInstanceSysIds());
+            } catch (Exception e) {
+                log.error("Failed to process database pdb instance: sys_id={}, name={}", dto.sysId(), dto.name(), e);
+            }
+        }
+
+        for (final DatabasePdbInstance databasePdbInstance : allDatabasePdbInstances) {
+            if (!importedDatabasePdbInstanceIds.contains(databasePdbInstance.getId())) {
+                try {
+                    databasePdbInstanceRepository.deleteAppServiceAssociations(databasePdbInstance.getId());
+                    databasePdbInstanceRepository.deleteDatabaseInstanceAssociations(databasePdbInstance.getId());
+                    databasePdbInstanceRepository.deleteDatabasePdbInstanceById(databasePdbInstance.getId());
+                    log.debug("Deleted DatabasePdbInstance not present in Snow import: id={}, sys_id={}, name={}",
+                            databasePdbInstance.getId(), databasePdbInstance.getSnowSysId(), databasePdbInstance.getSnowName());
+                } catch (Exception e) {
+                    log.error("Failed to delete DatabasePdbInstance: id={}, sys_id={}, name={}",
+                            databasePdbInstance.getId(), databasePdbInstance.getSnowSysId(), databasePdbInstance.getSnowName(), e);
+                }
+            }
+        }
+    }
+
+    private void updateDatabasePdbInstanceAppServiceAssociations(DatabasePdbInstance databasePdbInstance, List<String> incomingNumbers) {
+        final List<String> cleanIncoming = incomingNumbers != null ? incomingNumbers : Collections.emptyList();
+        final Set<String> incomingSet = new HashSet<>(cleanIncoming);
+        final Set<String> currentSet = databasePdbInstance.getAppservices().stream()
+                .map(Appservice::getNumber)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        if (!currentSet.equals(incomingSet)) {
+            if (cleanIncoming.isEmpty()) {
+                databasePdbInstanceRepository.deleteAppServiceAssociations(databasePdbInstance.getId());
+            } else {
+                databasePdbInstanceRepository.deleteObsoleteAppServiceAssociations(databasePdbInstance.getId(), cleanIncoming);
+                databasePdbInstanceRepository.addAppServiceAssociations(databasePdbInstance.getId(), cleanIncoming);
+            }
+            log.debug("Synchronized AppService associations for DatabasePdbInstance ID {}: {} incoming numbers",
+                    databasePdbInstance.getId(), cleanIncoming.size());
+        }
+    }
+
+    private void updateDatabasePdbInstanceDatabaseInstanceAssociations(DatabasePdbInstance databasePdbInstance, List<String> incomingDatabaseInstanceSysIds) {
+        final List<String> cleanIncoming = incomingDatabaseInstanceSysIds != null ? incomingDatabaseInstanceSysIds : Collections.emptyList();
+        final Set<String> incomingSet = new HashSet<>(cleanIncoming);
+        final Set<String> currentSet = databasePdbInstance.getDatabaseInstances().stream()
+                .map(DatabaseInstance::getSnowSysId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        if (!currentSet.equals(incomingSet)) {
+            if (cleanIncoming.isEmpty()) {
+                databasePdbInstanceRepository.deleteDatabaseInstanceAssociations(databasePdbInstance.getId());
+            } else {
+                databasePdbInstanceRepository.deleteObsoleteDatabaseInstanceAssociations(databasePdbInstance.getId(), cleanIncoming);
+                databasePdbInstanceRepository.addDatabaseInstanceAssociations(databasePdbInstance.getId(), cleanIncoming);
+            }
+            log.debug("Synchronized DatabaseInstance associations for DatabasePdbInstance ID {}: {} incoming database instance sys_ids",
+                    databasePdbInstance.getId(), cleanIncoming.size());
         }
     }
 

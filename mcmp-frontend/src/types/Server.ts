@@ -1,5 +1,9 @@
 import type { Cloud } from "@/types/Cloud";
 
+
+
+
+
 export interface AppserviceNameAndSysId {
   id: number;
   name: string;
@@ -149,6 +153,8 @@ export default class Server {
     public os: string,
     public serverCustomAttributes: Record<string, string>,
     public cpuUtil: number,
-    public memUsedPercent: number
+    public memUsedPercent: number,
+    public memoryAllocationExpandableReservation : boolean,
+    public cpuAllocationExpandableReservation : boolean,
   ) {}
 }

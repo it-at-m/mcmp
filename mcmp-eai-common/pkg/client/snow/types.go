@@ -28,19 +28,20 @@ type (
 
 	Client struct {
 		*logging.DebugLogger
-		httpClient           HttpClient
-		urlAppservice        string
-		urlTag               string
-		urlCmdbCi            string
-		urlGroup             string
-		urlVMwareInstance    string
-		urlLockedShutdown    string
-		urlLockedRightsize   string
-		urlVMwareServer      string
-		urlCmdbKeyValue      string
-		urlCmdbDataTable     string
-		urlIdentifyReconcile string
-		debug                bool
+		httpClient            HttpClient
+		urlAppservice         string
+		urlTag                string
+		urlCmdbCi             string
+		urlGroup              string
+		urlLockedShutdown     string
+		urlLockedRightsize    string
+		urlVMwareServer       string
+		urlCmdbKeyValue       string
+		urlCmdbDataTable      string
+		urlIdentifyReconcile  string
+		urlOraclePdbToServer  string
+		urlDbInstanceToServer string
+		debug                 bool
 	}
 
 	GetCmdbDataTableParams struct {
@@ -188,6 +189,25 @@ type (
 		ErrorCount           int    `json:"errorCount"`
 		WarningCount         int    `json:"warningCount"`
 		InputIndices         []int  `json:"inputIndices"`
+	}
+
+	OraclePdbToServer struct {
+		OraPdbSysID      string `json:"orapdb_sys_id"`
+		OraInstanceSysID string `json:"orainstance_sys_id"`
+		ServerSysID      string `json:"server_sys_id"`
+	}
+
+	OraclePdbToServerResponse struct {
+		Result []OraclePdbToServer `json:"result"`
+	}
+
+	DbInstanceToServer struct {
+		DbInstanceSysID string `json:"dbinstance_sys_id"`
+		ServerSysID     string `json:"server_sys_id"`
+	}
+
+	DbInstanceToServerResponse struct {
+		Result []DbInstanceToServer `json:"result"`
 	}
 )
 

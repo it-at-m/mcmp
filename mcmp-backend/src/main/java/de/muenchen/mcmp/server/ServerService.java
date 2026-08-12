@@ -338,6 +338,7 @@ public class ServerService {
         return serverRepository.findByForemanSourceAndForemanId(source, foremanId);
     }
 
+    // TODO must be removed after shutdown has also moved
     public Optional<Server> findServerByVcenterShortCodeAndUuidOptional(String vcenterShortCode, String uuid) {
         return serverRepository.findServerByVcenterShortCodeAndUuidOptional(vcenterShortCode, uuid);
     }

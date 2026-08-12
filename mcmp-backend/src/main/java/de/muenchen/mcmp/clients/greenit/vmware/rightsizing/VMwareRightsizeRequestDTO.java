@@ -25,8 +25,10 @@ public record VMwareRightsizeRequestDTO(
         @JsonDeserialize(using = BerlinDateTimeDeserializer.class)
         OffsetDateTime startTime,
 
-        @JsonProperty("server_uuid")
-        @NotBlank
+        @JsonProperty("server_id")
+        Long serverId,
+
+        @JsonProperty("server_uuid") //TODO must be removed after shutdown is also moved
         String serverUuid,
 
         @JsonProperty("vKenner")

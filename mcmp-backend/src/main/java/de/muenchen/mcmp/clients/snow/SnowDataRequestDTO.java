@@ -56,7 +56,19 @@ public record SnowDataRequestDTO(
 
         @JsonProperty("kubernetes_clusters")
         @Valid
-        List<KubernetesClusterDTO> kubernetesClusters
+        List<KubernetesClusterDTO> kubernetesClusters,
+
+        @JsonProperty("package_repositories")
+        @Valid
+        List<PackageRepositoryDTO> packageRepositories,
+
+        @JsonProperty("database_instances")
+        @Valid
+        List<DatabaseInstanceDTO> databaseInstances,
+
+        @JsonProperty("database_pdb_instances")
+        @Valid
+        List<DatabasePdbInstanceDTO> databasePdbInstances
 ) {
 
     @Builder
@@ -367,4 +379,34 @@ public record SnowDataRequestDTO(
             @JsonProperty("app_service_number") List<String> appServiceNumber
     ) {}
 
+    @Builder
+    public record PackageRepositoryDTO(
+            @JsonProperty("name") String name,
+            @JsonProperty("sys_id") @NotNull String sysId,
+            @JsonProperty("sys_class") String sysClass,
+            @JsonProperty("last_discovered") String lastDiscovered,
+            @JsonProperty("app_service_number") List<String> appServiceNumber
+    ) {}
+
+    @Builder
+    public record DatabaseInstanceDTO(
+            @JsonProperty("name") String name,
+            @JsonProperty("sys_id") @NotNull String sysId,
+            @JsonProperty("sys_class") String sysClass,
+            @JsonProperty("last_discovered") String lastDiscovered,
+            @JsonProperty("version") String version,
+            @JsonProperty("server_sys_id") List<String> serverSysIds,
+            @JsonProperty("app_service_number") List<String> appServiceNumber
+    ) {}
+
+    @Builder
+    public record DatabasePdbInstanceDTO(
+            @JsonProperty("name") String name,
+            @JsonProperty("sys_id") @NotNull String sysId,
+            @JsonProperty("sys_class") String sysClass,
+            @JsonProperty("last_discovered") String lastDiscovered,
+            @JsonProperty("sid") String sid,
+            @JsonProperty("db_instance_sys_id") List<String> databaseInstanceSysIds,
+            @JsonProperty("app_service_number") List<String> appServiceNumber
+    ) {}
 }

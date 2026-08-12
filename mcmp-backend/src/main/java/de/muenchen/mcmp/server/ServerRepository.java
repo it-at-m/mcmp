@@ -663,6 +663,7 @@ ORDER BY s.name ASC
                                         @Param("numCpu") final int numCpu,
                                         @Param("memoryMb") final int memoryMb);
 
+    // TODO must be removed after shutdown has also moved
     @Query(value = """
         SELECT s.*
         FROM cmp.server s

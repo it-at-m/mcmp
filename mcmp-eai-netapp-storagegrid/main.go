@@ -10,6 +10,7 @@ import (
 	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/app"
 	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/client/mcmp"
 	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/config"
+	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/datasource"
 	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/logging"
 	"github.com/it-at-m/mcmp/mcmp-eai-netapp-storagegrid/pkg/client/netapp/storagegrid"
 	"github.com/it-at-m/mcmp/mcmp-eai-netapp-storagegrid/pkg/client/source"
@@ -34,7 +35,7 @@ var (
 type Config struct {
 	LOGGING     logging.LogConfig
 	STORAGEGRID []storagegrid.Config // Renamed from ONTAP to STORAGEGRID
-	MCMP        mcmp.Config          // MCMP API configuration
+	MCMP        []mcmp.Config        // Support for multiple MCMP endpoints
 	GENERAL     struct {
 		Timeout int // Timeout in seconds, default 300
 	}
@@ -99,15 +100,21 @@ func run(ctx context.Context) error {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
 
-	// Initialize MCMP Client
-	mcmpConfig := cfg.MCMP.ToClientConfig()
-	mcmpConfig.RequestTimeout = 30 * time.Second
-	mcmpClient, err := mcmp.NewClient(ctx, mcmpConfig, logger)
-	if err != nil {
-		return fmt.Errorf("failed to create mcmp client: %w", err)
+	// 1. Initialize all MCMP Clients
+	var mcmpClients []datasource.JSONSender
+	var apiEndpoints []string
+	for _, mcmpCfg := range cfg.MCMP {
+		mcmpClientConfig := mcmpCfg.ToClientConfig()
+		mcmpClientConfig.RequestTimeout = 30 * time.Second
+		mcmpClient, err := mcmp.NewClient(ctx, mcmpClientConfig, logger)
+		if err != nil {
+			return fmt.Errorf("failed to create mcmp client for %s: %w", mcmpCfg.ApiEndpoint, err)
+		}
+		mcmpClients = append(mcmpClients, mcmpClient)
+		apiEndpoints = append(apiEndpoints, mcmpCfg.ApiEndpoint)
 	}
 
-	// Prepare data sources
+	// 2. Prepare data sources
 	var sources []app.DataSource[*storagegrid.StorageGridData]
 	for _, sgConfig := range cfg.STORAGEGRID {
 		sgClient, err := storagegrid.NewClient(sgConfig, logger)
@@ -126,8 +133,8 @@ func run(ctx context.Context) error {
 			sgConfig.Hostname,
 			sgConfig.Enabled,
 			dataProcessor,
-			mcmpClient,
-			cfg.MCMP.ApiEndpoint,
+			mcmpClients,
+			apiEndpoints,
 			logger,
 		))
 	}
@@ -153,8 +160,13 @@ func (c *Config) validate() error {
 			return fmt.Errorf("STORAGEGRID[%d]: %w", i, err)
 		}
 	}
-	if err := c.MCMP.Validate(); err != nil {
-		return err
+	if len(c.MCMP) == 0 {
+		return fmt.Errorf("at least one MCMP configuration is required")
+	}
+	for i, mc := range c.MCMP {
+		if err := mc.Validate(); err != nil {
+			return fmt.Errorf("MCMP[%d]: %w", i, err)
+		}
 	}
 	return nil
 }

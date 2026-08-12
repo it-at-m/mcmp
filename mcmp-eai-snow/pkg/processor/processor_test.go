@@ -146,12 +146,48 @@ func (m *MockSnowClient) GetVMwareInstanceData() ([]snow.ConfigurationItemWithAp
 	return nil, nil
 }
 
-func (m *MockSnowClient) GetServerForVMwareInstance(vmInstanceSysID string) (snow.Server, error) {
+func (m *MockSnowClient) GetServerForVMwareInstance(_ string) (snow.Server, error) {
 	return snow.Server{}, nil
 }
 
 func (m *MockSnowClient) GetCmdbCiServerData() ([]snow.ConfigurationItemWithAppServices, error) {
 	return nil, nil
+}
+
+func (m *MockSnowClient) GetPackageRepositoryData() ([]snow.ConfigurationItemWithAppServices, error) {
+	return nil, nil
+}
+
+func (m *MockSnowClient) GetCmdbCiDbOraPdbInstance() ([]snow.ConfigurationItemWithAppServices, error) {
+	return nil, nil
+}
+
+func (m *MockSnowClient) GetCmdbCiDbOraInstance() ([]snow.ConfigurationItemWithAppServices, error) {
+	return nil, nil
+}
+
+func (m *MockSnowClient) GetCmdbCiDbMySQLInstance() ([]snow.ConfigurationItemWithAppServices, error) {
+	return nil, nil
+}
+
+func (m *MockSnowClient) GetCmdbCiDbPostgreSQLInstance() ([]snow.ConfigurationItemWithAppServices, error) {
+	return nil, nil
+}
+
+func (m *MockSnowClient) GetCmdbCiDbMongoDbInstance() ([]snow.ConfigurationItemWithAppServices, error) {
+	return nil, nil
+}
+
+func (m *MockSnowClient) GetCmdbCiDbMSSQLInstance() ([]snow.ConfigurationItemWithAppServices, error) {
+	return nil, nil
+}
+
+func (m *MockSnowClient) GetDbInstanceToServerMapping() (map[string]map[string]struct{}, error) {
+	return make(map[string]map[string]struct{}), nil
+}
+
+func (m *MockSnowClient) GetOraclePdbToServerMapping() (map[string]map[string]struct{}, map[string]map[string]struct{}, error) {
+	return make(map[string]map[string]struct{}), make(map[string]map[string]struct{}), nil
 }
 
 func (m *MockSnowClient) GetKubernetesNamespaceKeyValues() (map[string]snow.ConfigurationItemWithAppServices, error) {

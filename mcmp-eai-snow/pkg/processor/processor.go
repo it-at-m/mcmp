@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -39,6 +40,16 @@ type SnowClientInterface interface {
 	GetLbServiceData() ([]snow.ConfigurationItemWithAppServices, error)
 	GetVMwareInstanceData() ([]snow.ConfigurationItemWithAppServices, error)
 	GetCmdbCiServerData() ([]snow.ConfigurationItemWithAppServices, error)
+	GetPackageRepositoryData() ([]snow.ConfigurationItemWithAppServices, error)
+	GetCmdbCiDbOraPdbInstance() ([]snow.ConfigurationItemWithAppServices, error)
+	GetCmdbCiDbOraInstance() ([]snow.ConfigurationItemWithAppServices, error)
+	GetCmdbCiDbMySQLInstance() ([]snow.ConfigurationItemWithAppServices, error)
+	GetCmdbCiDbPostgreSQLInstance() ([]snow.ConfigurationItemWithAppServices, error)
+	GetCmdbCiDbMongoDbInstance() ([]snow.ConfigurationItemWithAppServices, error)
+	GetCmdbCiDbMSSQLInstance() ([]snow.ConfigurationItemWithAppServices, error)
+	GetDbInstanceToServerMapping() (map[string]map[string]struct{}, error)
+	GetOraclePdbToServerMapping() (map[string]map[string]struct{}, map[string]map[string]struct{}, error)
+
 	// EnableDebug activates debug logging for the ServiceNow client
 	EnableDebug()
 }
@@ -63,17 +74,20 @@ type (
 		// appServices holds the final list of processed application services
 		appServices []mcmp.AppService
 
-		k8sClusters     map[string]*mcmp.KubernetesClusterCI
-		storageServers  map[string]*mcmp.ServerCI
-		storageVolumes  map[string]*mcmp.StorageCI
-		storageQTrees   map[string]*mcmp.StorageCI
-		storageAccounts map[string]*mcmp.CloudObjectCI
-		storageBuckets  map[string]*mcmp.CloudObjectCI
-		lbServices      map[string]*mcmp.LbServiceCI
+		k8sClusters         map[string]*mcmp.KubernetesClusterCI
+		storageServers      map[string]*mcmp.ServerCI
+		storageVolumes      map[string]*mcmp.StorageCI
+		storageQTrees       map[string]*mcmp.StorageCI
+		storageAccounts     map[string]*mcmp.CloudObjectCI
+		storageBuckets      map[string]*mcmp.CloudObjectCI
+		lbServices          map[string]*mcmp.LbServiceCI
+		packageRepositories map[string]*mcmp.PackageRepositoryCI
+		dbInstances         map[string]*mcmp.DatabaseCI
+		dbPdbInstances      map[string]*mcmp.DatabaseCI
+		lockedShutdownMap   map[string]string
+		lockedRightsizeMap  map[string]string
 		// debug controls whether debug logging is enabled
-		lockedShutdownMap  map[string]string
-		lockedRightsizeMap map[string]string
-		debug              bool
+		debug bool
 	}
 )
 
@@ -88,19 +102,22 @@ type (
 //   - *ServiceProcessor: Fully initialized processor ready for data processing
 func NewServiceProcessor(snowClient SnowClientInterface, debug bool) *ServiceProcessor {
 	return &ServiceProcessor{
-		snowClient:      snowClient,
-		userMap:         make(map[string]*mcmp.User),
-		groupMap:        make(map[string]*mcmp.Group),
-		ciMap:           make(map[string]*mcmp.ServerCI),
-		k8sClusters:     make(map[string]*mcmp.KubernetesClusterCI),
-		storageServers:  make(map[string]*mcmp.ServerCI),
-		storageVolumes:  make(map[string]*mcmp.StorageCI),
-		storageQTrees:   make(map[string]*mcmp.StorageCI),
-		storageAccounts: make(map[string]*mcmp.CloudObjectCI),
-		storageBuckets:  make(map[string]*mcmp.CloudObjectCI),
-		lbServices:      make(map[string]*mcmp.LbServiceCI),
-		appServices:     make([]mcmp.AppService, 0),
-		debug:           debug,
+		snowClient:          snowClient,
+		userMap:             make(map[string]*mcmp.User),
+		groupMap:            make(map[string]*mcmp.Group),
+		ciMap:               make(map[string]*mcmp.ServerCI),
+		k8sClusters:         make(map[string]*mcmp.KubernetesClusterCI),
+		storageServers:      make(map[string]*mcmp.ServerCI),
+		storageVolumes:      make(map[string]*mcmp.StorageCI),
+		storageQTrees:       make(map[string]*mcmp.StorageCI),
+		storageAccounts:     make(map[string]*mcmp.CloudObjectCI),
+		storageBuckets:      make(map[string]*mcmp.CloudObjectCI),
+		lbServices:          make(map[string]*mcmp.LbServiceCI),
+		packageRepositories: make(map[string]*mcmp.PackageRepositoryCI),
+		dbInstances:         make(map[string]*mcmp.DatabaseCI),
+		dbPdbInstances:      make(map[string]*mcmp.DatabaseCI),
+		appServices:         make([]mcmp.AppService, 0),
+		debug:               debug,
 	}
 }
 
@@ -150,6 +167,18 @@ func (sp *ServiceProcessor) ProcessAppServices() error {
 	err = sp.ProcessStorageS3Buckets()
 	if err != nil {
 		return fmt.Errorf("error processing storage S3 buckets: %w", err)
+	}
+	err = sp.ProcessDatabaseInstances()
+	if err != nil {
+		return fmt.Errorf("error processing database instances: %w", err)
+	}
+	err = sp.ProcessDatabasePdbInstances()
+	if err != nil {
+		return fmt.Errorf("error processing database pdb instances: %w", err)
+	}
+	err = sp.ProcessPackageRepositories()
+	if err != nil {
+		return fmt.Errorf("error processing package repositories: %w", err)
 	}
 
 	sp.lockedShutdownMap, err = sp.snowClient.GetLockedShutdown()
@@ -553,6 +582,8 @@ func (sp *ServiceProcessor) debugPrintf(format string, a ...interface{}) {
 func (sp *ServiceProcessor) GetSnowData() mcmp.SnowData {
 	storageVolumes := mapToSlice(sp.storageVolumes)
 	storageQTrees := mapToSlice(sp.storageQTrees)
+	databaseInstances := mapToSlice(sp.dbInstances)
+	databasePdbInstances := mapToSlice(sp.dbPdbInstances)
 
 	// Sort helper for StorageCI
 	sortCIs := func(cis []mcmp.StorageCI) {
@@ -567,18 +598,35 @@ func (sp *ServiceProcessor) GetSnowData() mcmp.SnowData {
 	sortCIs(storageVolumes)
 	sortCIs(storageQTrees)
 
+	sort.Slice(databaseInstances, func(i, j int) bool {
+		if databaseInstances[i].SysClass != databaseInstances[j].SysClass {
+			return databaseInstances[i].SysClass < databaseInstances[j].SysClass
+		}
+		return databaseInstances[i].Name < databaseInstances[j].Name
+	})
+
+	sort.Slice(databasePdbInstances, func(i, j int) bool {
+		if databasePdbInstances[i].SysClass != databasePdbInstances[j].SysClass {
+			return databasePdbInstances[i].SysClass < databasePdbInstances[j].SysClass
+		}
+		return databasePdbInstances[i].Name < databasePdbInstances[j].Name
+	})
+
 	return mcmp.SnowData{
-		Users:                mapToSlice(sp.userMap),
-		Groups:               mapToSlice(sp.groupMap),
-		CmdbCIs:              mapToSlice(sp.ciMap),
-		AppServices:          sp.appServices,
-		KubernetesClusterCIs: mapToSlice(sp.k8sClusters),
-		StorageServerCIs:     mapToSlice(sp.storageServers),
-		StorageVolumeCIs:     mapToSlice(sp.storageVolumes),
-		StorageQTreeCIs:      mapToSlice(sp.storageQTrees),
-		StorageAccountCIs:    mapToSlice(sp.storageAccounts),
-		StorageBucketCIs:     mapToSlice(sp.storageBuckets),
-		LbServiceCI:          mapToSlice(sp.lbServices),
+		Users:                  mapToSlice(sp.userMap),
+		Groups:                 mapToSlice(sp.groupMap),
+		CmdbCIs:                mapToSlice(sp.ciMap),
+		AppServices:            sp.appServices,
+		KubernetesClusterCIs:   mapToSlice(sp.k8sClusters),
+		StorageServerCIs:       mapToSlice(sp.storageServers),
+		StorageVolumeCIs:       mapToSlice(sp.storageVolumes),
+		StorageQTreeCIs:        mapToSlice(sp.storageQTrees),
+		StorageAccountCIs:      mapToSlice(sp.storageAccounts),
+		StorageBucketCIs:       mapToSlice(sp.storageBuckets),
+		LbServiceCI:            mapToSlice(sp.lbServices),
+		PackageRepositoryCIs:   mapToSlice(sp.packageRepositories),
+		DatabaseInstanceCIs:    databaseInstances,
+		DatabasePdbInstanceCIs: databasePdbInstances,
 	}
 }
 
@@ -906,6 +954,153 @@ func (sp *ServiceProcessor) ProcessLbServices() error {
 		sp.lbServices[sysID] = lbServiceCI
 	}
 	return nil
+}
+
+// ProcessLbServices fetches and transforms Loadbalancer Service data from ServiceNow.
+func (sp *ServiceProcessor) ProcessPackageRepositories() error {
+	dataList, err := sp.snowClient.GetPackageRepositoryData()
+	if err != nil {
+		return fmt.Errorf("error loading package repositories: %w", err)
+	}
+
+	for _, data := range dataList {
+		sysID := data.GetSysID()
+		packageRepositoryCI := &mcmp.PackageRepositoryCI{
+			Name:                 data.GetName(),
+			SysID:                sysID,
+			SysClass:             data.GetSysClassName(),
+			LifeCycleStage:       data.GetLifeCycleStage(),
+			LifeCycleStageStatus: data.GetLifeCycleStageStatus(),
+			LastDiscovered:       data.GetLastDiscovered(),
+			AppServiceNumbers:    data.GetAppServiceNumbers(),
+		}
+		sp.packageRepositories[sysID] = packageRepositoryCI
+	}
+	return nil
+}
+
+func (sp *ServiceProcessor) ProcessDatabaseInstances() error {
+	dbToServers, err := sp.snowClient.GetDbInstanceToServerMapping()
+	if err != nil {
+		return fmt.Errorf("error loading db instance mapping: %w", err)
+	}
+
+	fetchFuncs := []func() ([]snow.ConfigurationItemWithAppServices, error){
+		sp.snowClient.GetCmdbCiDbOraInstance,
+		sp.snowClient.GetCmdbCiDbMySQLInstance,
+		sp.snowClient.GetCmdbCiDbPostgreSQLInstance,
+		sp.snowClient.GetCmdbCiDbMongoDbInstance,
+		sp.snowClient.GetCmdbCiDbMSSQLInstance,
+	}
+
+	for _, fetch := range fetchFuncs {
+		dataList, err := fetch()
+		if err != nil {
+			return err
+		}
+
+		for _, data := range dataList {
+			sysID := data.GetSysID()
+			if sysID == "" {
+				continue
+			}
+
+			dbInstance := sp.createDatabaseCI(data)
+
+			if servers, ok := dbToServers[sysID]; ok {
+				for srvID := range servers {
+					dbInstance.ServerSysID = append(dbInstance.ServerSysID, srvID)
+				}
+				sort.Strings(dbInstance.ServerSysID)
+			}
+
+			sp.dbInstances[sysID] = dbInstance
+		}
+	}
+	return nil
+}
+
+// ProcessDatabasePdbInstances fetches and transforms Oracle PDB data from ServiceNow.
+func (sp *ServiceProcessor) ProcessDatabasePdbInstances() error {
+	pdbToInstance, pdbToServer, err := sp.snowClient.GetOraclePdbToServerMapping()
+	if err != nil {
+		return fmt.Errorf("error loading oracle pdb mapping: %w", err)
+	}
+
+	dataList, err := sp.snowClient.GetCmdbCiDbOraPdbInstance()
+	if err != nil {
+		return err
+	}
+
+	for _, data := range dataList {
+		sysID := data.GetSysID()
+		if sysID == "" {
+			continue
+		}
+
+		dbInstance := sp.createDatabaseCI(data)
+
+		if instances, ok := pdbToInstance[sysID]; ok {
+			for instID := range instances {
+				dbInstance.DBInstanceSysID = append(dbInstance.DBInstanceSysID, instID)
+			}
+			sort.Strings(dbInstance.DBInstanceSysID)
+		}
+
+		if servers, ok := pdbToServer[sysID]; ok {
+			for srvID := range servers {
+				dbInstance.ServerSysID = append(dbInstance.ServerSysID, srvID)
+			}
+			sort.Strings(dbInstance.ServerSysID)
+		}
+
+		sp.dbPdbInstances[sysID] = dbInstance
+	}
+	return nil
+}
+
+func (sp *ServiceProcessor) createDatabaseCI(data snow.ConfigurationItemWithAppServices) *mcmp.DatabaseCI {
+	res := data.RawCI
+	dbInstance := &mcmp.DatabaseCI{
+		Name:                  data.GetName(),
+		SysID:                 data.GetSysID(),
+		SysClass:              data.GetSysClassName(),
+		LastDiscovered:        data.GetLastDiscovered(),
+		LifeCycleStage:        data.GetLifeCycleStage(),
+		LifeCycleStageStatus:  data.GetLifeCycleStageStatus(),
+		InstallDirectory:      sp.getStringValue(res, "install_directory"),
+		RunningProcessCommand: sp.getStringValue(res, "running_process_command"),
+		TcpPort:               sp.getStringValue(res, "tcp_port"),
+		Version:               sp.getStringValue(res, "version"),
+		Sid:                   sp.getStringValue(res, "sid"),
+		ConfigFile:            sp.getStringValue(res, "config_file"),
+		InstanceName:          sp.getStringValue(res, "instance_name"),
+		PFile:                 sp.getStringValue(res, "pfile"),
+		AppServiceNumbers:     data.GetAppServiceNumbers(),
+	}
+
+	if dbInstance.PFile != "" {
+		sp.parseOraclePFile(dbInstance)
+	}
+	return dbInstance
+}
+
+// parseOraclePFile extracts protocol, host and port from an Oracle pfile/connection descriptor string.
+func (sp *ServiceProcessor) parseOraclePFile(db *mcmp.DatabaseCI) {
+	// Common Oracle descriptor patterns: (PROTOCOL=tcp), (HOST=myhost), (PORT=1521)
+	protocolRegex := regexp.MustCompile(`(?i)PROTOCOL\s*=\s*([^)\s]+)`)
+	hostRegex := regexp.MustCompile(`(?i)HOST\s*=\s*([^)\s]+)`)
+	portRegex := regexp.MustCompile(`(?i)PORT\s*=\s*([^)\s]+)`)
+
+	if match := protocolRegex.FindStringSubmatch(db.PFile); len(match) > 1 {
+		db.PFileProtocol = strings.ToLower(match[1])
+	}
+	if match := hostRegex.FindStringSubmatch(db.PFile); len(match) > 1 {
+		db.PFileHost = match[1]
+	}
+	if match := portRegex.FindStringSubmatch(db.PFile); len(match) > 1 {
+		db.PFilePort = match[1]
+	}
 }
 
 func (sp *ServiceProcessor) getStringValue(m map[string]any, key string) string {

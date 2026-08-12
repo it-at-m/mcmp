@@ -35,6 +35,9 @@
           <span>{{ item.name }}</span>
         </div>
       </template>
+      <template #item.environment="{ item }">
+        {{ formatter.formatOpenshiftClusterEnvironment(item.environment) }}
+      </template>
       <template #no-data>
         <v-row />
         <v-row>
@@ -68,6 +71,7 @@ import { computed, nextTick, onMounted, ref, watch } from "vue";
 
 import openshiftService from "@/api/openshiftService";
 import ScrollableListTable from "@/components/common/ScrollableListTable.vue";
+import { useFormatter } from "@/composables/formatter.ts";
 
 interface SortByEntry {
   key: string;
@@ -98,9 +102,16 @@ const search = ref(props.initialSearch ?? "");
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const tableRef = ref<{ triggerObserveScroll: () => void } | null>(null);
+const formatter = useFormatter();
 
 const headers = ref<DataTableHeader[]>([
   { title: "Name", key: "name", align: "start", sortable: true },
+  {
+    title: "Cluster",
+    key: "environment",
+    align: "start",
+    sortable: false,
+  },
 ]);
 
 const currentSort = computed<SortByEntry>(

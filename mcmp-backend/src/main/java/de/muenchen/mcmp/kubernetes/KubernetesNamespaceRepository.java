@@ -42,7 +42,7 @@ public interface KubernetesNamespaceRepository extends JpaRepository<KubernetesN
             kn.id                AS id,
             kn.name              AS name,
             kc.name              AS "clusterName",
-            kn.environment       AS environment,
+            kc.environment       AS environment,
             (
                 SELECT a.name
                 FROM cmp.kubernetes_namespace_has_appservices knha2
@@ -88,7 +88,9 @@ public interface KubernetesNamespaceRepository extends JpaRepository<KubernetesN
     ORDER BY
         CASE WHEN "isFavorite" THEN 0 ELSE 1 END ASC,
         CASE WHEN :sortOrder = 'desc' AND :sortBy = 'name' THEN name END DESC,
+        CASE WHEN :sortOrder = 'desc' AND :sortBy = 'name' THEN environment END DESC NULLS LAST,
         CASE WHEN :sortOrder = 'asc'  AND :sortBy = 'name' THEN name END ASC,
+        CASE WHEN :sortOrder = 'asc'  AND :sortBy = 'name' THEN environment END ASC NULLS LAST,
         CASE WHEN :sortOrder = 'desc' AND :sortBy = 'clusterName' THEN "clusterName" END DESC NULLS LAST,
         CASE WHEN :sortOrder = 'asc'  AND :sortBy = 'clusterName' THEN "clusterName" END ASC NULLS LAST
     """,

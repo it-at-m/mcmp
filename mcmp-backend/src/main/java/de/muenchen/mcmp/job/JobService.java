@@ -10,6 +10,7 @@ import de.muenchen.mcmp.appservice.AppserviceNameAndSysId;
 import de.muenchen.mcmp.appservice.AppserviceRepository;
 import de.muenchen.mcmp.common.OffsetBasedPageRequest;
 import de.muenchen.mcmp.configuration.AppservicesProperties;
+import de.muenchen.mcmp.exception.BusinessValidationException;
 import de.muenchen.mcmp.exception.GreenITIllegalArgumentException;
 import de.muenchen.mcmp.greenit.rightsizing.GreenItRightsizing;
 import de.muenchen.mcmp.greenit.rightsizing.GreenItRightsizingRepository;
@@ -456,7 +457,7 @@ public class JobService {
             awxSkipTag = "with_power_off, with_power_on";
         }
 
-        createJob(create_snapshot_identifier, server, params, new HashMap<>(), null, awxSkipTag, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
+        createJob(create_snapshot_identifier, server, params, new HashMap<>(), null, null, awxSkipTag,(server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
     }
 
     public void deleteSnapshot(final Long serverId, final Long snapshotId, final String snapshotName, final String delete_snapshot_identifier){
@@ -476,7 +477,7 @@ public class JobService {
         else if (Objects.equals(cloudType, "PROXMOX")) {
             params.put("cluster_name", server.getCluster());
             if (snapshotName == null) throw new MissingFormatArgumentException("Snapshot Name must be provided.");
-            params.put("snapshot_name", snapshotName);
+            params.put("snapname", snapshotName);
         }
         else {
             throw new IllegalArgumentException("Cloud type " + cloudType + " is not supported.");
@@ -503,13 +504,13 @@ public class JobService {
             params.put("cluster_name", server.getCluster());
             params.put("state", "rollback");
             if (snapshotName == null) throw new MissingFormatArgumentException("Snapshot Name must be provided.");
-            params.put("snapshot_name", snapshotName);
+            params.put("snapname", snapshotName);
         }
         else {
             throw new IllegalArgumentException("Cloud type " + cloudType + " is not supported.");
         }
 
-        createJob(reverte_snapshot_identifier, server, params, new HashMap<>(), null , null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
+        createJob(reverte_snapshot_identifier, server, params, new HashMap<>(), null , null, null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
     }
 
     // -----------------------------------------------------------------------------------------------------------------
@@ -775,7 +776,7 @@ public class JobService {
         boolean nonOss = false;
 
         if (appservice.getBusinessServiceNumbers() == null || appservice.getBusinessServiceNumbers().isEmpty()) {
-            throw new IllegalArgumentException("The Applicationservice must be assigned to at least one Business Service to order a Windows Server.");
+            throw new BusinessValidationException("Der Windows Server kann nicht bestellt werden, da dem ausgewählten Anwendungsservice kein Serviceangebot zugeordnet ist. Bitte lassen Sie das Serviceangebot in ServiceNow ergänzen.");
         }
 
         List<String> bsnList = List.of(appservice.getBusinessServiceNumbers().split(","));
@@ -844,7 +845,7 @@ public class JobService {
         } else if (osVersion.equals("Windows Server 2022")) {
             params.put("image", "w2022tmpl_latest");
         } else {
-            throw new IllegalArgumentException("Unsupported operating system version: " + osVersion);
+            throw new BusinessValidationException("Unsupported operating system version: " + osVersion);
         }
         params.put("cpus", cpu);
         params.put("memory_mb", ram * 1024);

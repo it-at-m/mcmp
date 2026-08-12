@@ -430,17 +430,6 @@ onMounted(async () => {
   getApplicationServiceClasses(true);
 });
 
-watch(
-  () => props.instlServerDetails.osType,
-  (newOsType) => {
-    if (newOsType == OsType.Windows) {
-      props.instlServerDetails.memory = 8;
-    } else if (newOsType == OsType.Linux) {
-      props.instlServerDetails.memory = 4;
-    }
-  }
-);
-
 watch(nonPostgresOption, (newVal) => {
   if (newVal === "lcm") {
     if (!props.instlServerDetails.nonPostgresReason?.startsWith(LCM_PREFIX)) {

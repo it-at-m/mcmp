@@ -11,10 +11,15 @@ import de.muenchen.mcmp.snapshot.SnapshotRepository;
 import de.muenchen.mcmp.types.CloudType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -83,7 +88,8 @@ public class CloudImportService {
                     importedNames.add(snapshotDTO.name());
                     var snapshot = snapshots != null ? snapshots.get(snapshotDTO.name()) : null;
                     if (snapshot != null) {
-                        saveSnapshot(applySnapshotChanges(snapshot, snapshotDTO));
+                        if (snapshotHasChanges(snapshot, snapshotDTO))
+                            saveSnapshot(applySnapshotChanges(snapshot, snapshotDTO));
                     } else {
                         saveSnapshot(buildNewSnapshot(snapshotDTO, server));
                     }
@@ -285,7 +291,15 @@ public class CloudImportService {
                 || !Objects.equals(existing.getVendor(), dto.vendor())
                 || !Objects.equals(existing.getVid(), dto.vid())
                 || !Objects.equals(existing.getServerKind(), dto.serverKind())
-                || !Objects.equals(existing.getServerType(), dto.serverType());
+                || !Objects.equals(existing.getServerType(), dto.serverType())
+                || !Objects.equals(existing.getMemoryAllocationExpandableReservation(), dto.memoryAllocationExpandableReservation())
+                || !Objects.equals(existing.getMemoryAllocationLimit(), dto.memoryAllocationLimit())
+                || !Objects.equals(existing.getMemoryAllocationOverheadLimit(), dto.memoryAllocationOverheadLimit())
+                || !Objects.equals(existing.getMemoryAllocationReservation(), dto.memoryAllocationReservation())
+                || !Objects.equals(existing.getCpuAllocationExpandableReservation(), dto.cpuAllocationExpandableReservation())
+                || !Objects.equals(existing.getCpuAllocationLimit(), dto.cpuAllocationLimit())
+                || !Objects.equals(existing.getCpuAllocationOverheadLimit(), dto.memoryAllocationOverheadLimit())
+                || !Objects.equals(existing.getCpuAllocationReservation(), dto.cpuAllocationReservation());
     }
 
     private void applyChanges(final Server server, final CloudImportDTO.Server dto) {
@@ -371,6 +385,14 @@ public class CloudImportService {
         server.setVid(dto.vid());
         server.setServerKind(dto.serverKind());
         server.setServerType(dto.serverType());
+        server.setMemoryAllocationExpandableReservation(dto.memoryAllocationExpandableReservation());
+        server.setMemoryAllocationReservation(dto.memoryAllocationReservation());
+        server.setMemoryAllocationLimit(dto.memoryAllocationLimit());
+        server.setMemoryAllocationOverheadLimit(dto.memoryAllocationOverheadLimit());
+        server.setCpuAllocationExpandableReservation(dto.cpuAllocationExpandableReservation());
+        server.setCpuAllocationLimit(dto.cpuAllocationLimit());
+        server.setCpuAllocationOverheadLimit(dto.cpuAllocationOverheadLimit());
+        server.setCpuAllocationReservation(dto.cpuAllocationReservation());
     }
 
     private Server buildNewServer(final CloudImportDTO.Server dto, final Cloud cloud) {
@@ -394,10 +416,19 @@ public class CloudImportService {
         return server;
     }
 
+    private boolean snapshotHasChanges(final Snapshot existing, final CloudImportDTO.Snapshot dto) {
+        return !Objects.equals(existing.getName(), dto.name())
+                || !Objects.equals(existing.getDescription(), dto.description())
+                || !Objects.equals(existing.getCreateTime(), dto.createTime())
+                || !Objects.equals(existing.isQuiesced(), dto.quiesced())
+                || !Objects.equals(existing.isReplaySupported(), dto.replaySupported());
+    }
+
     private Snapshot applySnapshotChanges(Snapshot snapshot, final CloudImportDTO.Snapshot dto) {
         snapshot.setName(dto.name());
         snapshot.setDescription(dto.description());
         snapshot.setCreateTime(dto.createTime());
+        snapshot.setRetentionPeriod(calculateSnapshotRetentionTime(dto.name(), snapshot.getCreateTime()));
         snapshot.setQuiesced(dto.quiesced());
         snapshot.setReplaySupported(dto.replaySupported());
         return snapshot;
@@ -408,6 +439,50 @@ public class CloudImportService {
         snapshot.setSnapshotId(Math.abs(dto.name().hashCode()));
         snapshot.setServerId(server.getId());
         return applySnapshotChanges(snapshot, dto);
+    }
+
+
+    /**
+     * Calculate a Snapshot's retention period based on naming convention.
+     *
+     * <p>The following formats are recognized:</p>
+     * <ul>
+     *   <li>
+     *     <code>###YYYYMMDD###</code>, where Y, M and D are digits, is
+     *     parsed as the date YYYY-MM-DD.
+     *   </li>
+     *   <li>
+     *     <code>###n###</code>, where n is any other number, is parsed
+     *     as an offset from the creation date of n hours.
+     *   </li>
+     *   <li>
+     *     If the name does not match any of the previous patterns,
+     *     the date five days after creation of the snapshot is returned.
+     *   </li>
+     * </ul>
+     *
+     * @param name       the name of the snapshot.
+     * @param createTime the creation time of the snapshot
+     * @return the retention period/deletion date of the snapshot.
+     */
+    public static OffsetDateTime calculateSnapshotRetentionTime(String name, OffsetDateTime createTime) {
+        try {
+            final var retention = StringUtils.substringBetween(name, "###");
+            try {
+                return LocalDate.parse(retention, DateTimeFormatter.ofPattern("yyyyMMdd"))
+                        .atTime(0, 0)
+                        .atOffset(ZoneOffset.UTC);
+            } catch (DateTimeParseException ignored) {
+            }
+
+            try {
+                return createTime.plusHours(Long.parseLong(retention));
+            } catch (NumberFormatException ignored) {
+            }
+        } catch (NullPointerException ignored) {
+        }
+
+        return createTime.plusDays(5);
     }
 
     /**

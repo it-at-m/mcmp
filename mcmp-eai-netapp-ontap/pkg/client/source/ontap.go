@@ -3,7 +3,6 @@ package source
 import (
 	"fmt"
 
-	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/client/mcmp"
 	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/datasource"
 	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/logging"
 	"github.com/it-at-m/mcmp/mcmp-eai-netapp-ontap/pkg/client/netapp/ontap"
@@ -17,8 +16,8 @@ func NewOntapSource(
 	hostname string,
 	enabled bool,
 	processor *processor.Processor,
-	mcmpClient *mcmp.Client,
-	apiEndpoint string,
+	mcmpClients []datasource.JSONSender,
+	apiEndpoints []string,
 	logger logging.Logger,
 ) *datasource.JsonFileSource[*ontap.OntapData] {
 	return &datasource.JsonFileSource[*ontap.OntapData]{
@@ -26,8 +25,8 @@ func NewOntapSource(
 		Enabled:        enabled,
 		ExportFilename: fmt.Sprintf(exportFilePattern, hostname),
 		Logger:         logger,
-		McmpClient:     mcmpClient,
-		ApiEndpoint:    apiEndpoint,
+		McmpClients:    mcmpClients,
+		ApiEndpoints:   apiEndpoints,
 		Fetcher:        processor.AggregateData,
 	}
 }

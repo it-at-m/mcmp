@@ -10,6 +10,7 @@ import (
 	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/app"
 	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/client/mcmp"
 	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/config"
+	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/datasource"
 	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/logging"
 	"github.com/it-at-m/mcmp/mcmp-eai-netapp-ontap/pkg/client/netapp/ontap"
 	"github.com/it-at-m/mcmp/mcmp-eai-netapp-ontap/pkg/client/source"
@@ -34,7 +35,7 @@ var (
 type Config struct {
 	LOGGING logging.LogConfig
 	ONTAP   []ontap.Config
-	MCMP    mcmp.Config // MCMP API configuration
+	MCMP    []mcmp.Config // MCMP API configurations for multiple endpoints
 	GENERAL struct {
 		Timeout int // Timeout in seconds, default 300
 	}
@@ -99,15 +100,21 @@ func run(ctx context.Context) error {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
 
-	// Initialize MCMP Client
-	mcmpConfig := cfg.MCMP.ToClientConfig()
-	mcmpConfig.RequestTimeout = 30 * time.Second
-	mcmpClient, err := mcmp.NewClient(ctx, mcmpConfig, logger)
-	if err != nil {
-		return fmt.Errorf("failed to create mcmp client: %w", err)
+	// 1. Initialize all MCMP Clients
+	var mcmpClients []datasource.JSONSender
+	var apiEndpoints []string
+	for _, mcmpCfg := range cfg.MCMP {
+		mcmpConfig := mcmpCfg.ToClientConfig()
+		mcmpConfig.RequestTimeout = 30 * time.Second
+		mcmpClient, err := mcmp.NewClient(ctx, mcmpConfig, logger)
+		if err != nil {
+			return fmt.Errorf("failed to create mcmp client for %s: %w", mcmpCfg.ApiEndpoint, err)
+		}
+		mcmpClients = append(mcmpClients, mcmpClient)
+		apiEndpoints = append(apiEndpoints, mcmpCfg.ApiEndpoint)
 	}
 
-	// Prepare data sources
+	// 2. Prepare data sources (one ONTAP client/fetch per source, but multiple targets)
 	var sources []app.DataSource[*ontap.OntapData]
 	for _, ontapConfig := range cfg.ONTAP {
 
@@ -122,18 +129,17 @@ func run(ctx context.Context) error {
 			continue
 		}
 
-		// Use the new Factory / Constructor
 		sources = append(sources, source.NewOntapSource(
 			ontapConfig.Hostname,
 			ontapConfig.Enabled,
 			dataProcessor,
-			mcmpClient,
-			cfg.MCMP.ApiEndpoint,
+			mcmpClients,
+			apiEndpoints,
 			logger,
 		))
 	}
 
-	// Start generic EAI runner
+	// 3. Start generic EAI runner
 	return app.RunEAI(ctx, app.EAIConfig{
 		AppName:     appName,
 		LockEnabled: true,
@@ -154,8 +160,13 @@ func (c *Config) validate() error {
 			return fmt.Errorf("ONTAP[%d]: %w", i, err)
 		}
 	}
-	if err := c.MCMP.Validate(); err != nil {
-		return err
+	if len(c.MCMP) == 0 {
+		return fmt.Errorf("at least one MCMP configuration is required")
+	}
+	for i, mc := range c.MCMP {
+		if err := mc.Validate(); err != nil {
+			return fmt.Errorf("MCMP[%d]: %w", i, err)
+		}
 	}
 	return nil
 }

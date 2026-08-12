@@ -42,9 +42,16 @@ VerifyTLS = false
 # MCMP API Configuration
 # OAuth2 client credentials for authentication with the MCMP backend
 # =============================================================================
-[MCMP]
-OAuthUrl          = "https://keycloak.example.com/auth"
-OAuthRealm        = "mcmp"
-OAuthClientId     = "<your-client-id>"
-OAuthClientSecret = "<your-client-secret>"
-ApiEndpoint       = "https://mcmp-api.example.com/api/v1/netapp/storagegrid/update"
+[[MCMP]]
+OAuthUrl          = 'http://kubernetes1.docker.internal:8100/auth'
+OAuthRealm        = 'local_realm'
+OAuthClientId     = 'local'
+OAuthClientSecret = 'client_secret'
+ApiEndpoint       = "https://mcmp1.example.com/clients/eai-backend-service/netapp/storagegrid/update"
+
+[[MCMP]]
+OAuthUrl          = 'http://kubernetes2.docker.internal:8100/auth'
+OAuthRealm        = 'local_realm'
+OAuthClientId     = 'local'
+OAuthClientSecret = 'client_secret'
+ApiEndpoint       = 'https://mcmp2.example.org/clients/eai-backend-service/netapp/storagegrid/update'

@@ -42,13 +42,16 @@
       <v-row class="mb-1">
         <v-col
           v-if="
-            server.cpuAllocationExpandableReservation || server.memoryAllocationExpandableReservation
+            server.cpuAllocationExpandableReservation ||
+            server.memoryAllocationExpandableReservation
           "
           cols="12"
         >
           <common-alert color="notice_red">
             <h4>Hinweis:</h4>
-            Bei diesem Server liegt eine Reservierung des Arbeitsspeichers oder der CPU vor. Diese wird automatisch auf den neu bestellten Wert geändert. Bei Fragen wenden Sie sich an IBS41.
+            Bei diesem Server liegt eine Reservierung des Arbeitsspeichers oder
+            der CPU vor. Diese wird automatisch auf den neu bestellten Wert
+            geändert. Bei Fragen wenden Sie sich an IBS41.
           </common-alert>
         </v-col>
         <v-col
@@ -99,11 +102,12 @@
           <v-col cols="12"></v-col>
         </v-col>
         <v-col
-          v-if="!rightsize && (
-            (ram >= 100 &&
+          v-if="
+            !rightsize &&
+            ((ram >= 100 &&
               (formatter.calculateMBtoGB(server.memoryMb) < 100 ||
                 ram > formatter.calculateMBtoGB(server.memoryMb))) ||
-            cpus >= 72 && (server.numCpu < 72 || cpus > server.numCpu))
+              (cpus >= 72 && (server.numCpu < 72 || cpus > server.numCpu)))
           "
           cols="12"
         >
@@ -308,7 +312,13 @@ const ram = ref<number>(
 watch(dialog, (newValue) => {
   if (newValue) {
     if (props.rightsize) {
-      cpus.value = props.server.numCpuRecommended;
+      cpus.value =
+        !isNonOracleUser.value &&
+        (props.server.dbAdabas || props.server.dbMssql)
+          ? props.server.numCpu != undefined
+            ? props.server.numCpu
+            : 1
+          : props.server.numCpuRecommended;
       ram.value = props.server.memoryMbRecommended / 1024;
     } else {
       cpus.value = props.server.numCpu != undefined ? props.server.numCpu : 1;
@@ -384,7 +394,13 @@ watch(
       ram.value = newServer.memoryMb ? newServer.memoryMb / 1024 : 2;
     }
     if (props.rightsize) {
-      cpus.value = props.server.numCpuRecommended;
+      cpus.value =
+        !isNonOracleUser.value &&
+        (props.server.dbAdabas || props.server.dbMssql)
+          ? props.server.numCpu != undefined
+            ? props.server.numCpu
+            : 1
+          : props.server.numCpuRecommended;
       ram.value = props.server.memoryMbRecommended / 1024;
     } else {
       cpus.value = props.server.numCpu != undefined ? props.server.numCpu : 1;

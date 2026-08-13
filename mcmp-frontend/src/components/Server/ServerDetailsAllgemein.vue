@@ -582,6 +582,10 @@ const props = defineProps<{
   selectedServer: Server;
 }>();
 
+const emit = defineEmits<{
+  changed: [];
+}>();
+
 const firstAppservice = computed(
   () => props.selectedServer.appservices?.[0] ?? null
 );
@@ -624,17 +628,21 @@ function change_cpu_ram(
   scheduleTime: string | null,
   schedulePatchnight: boolean
 ) {
-  jobService.startJob(
-    loading,
-    props.selectedServer.cloud.cloudType + "_CHANGE_CPU_RAM",
-    props.selectedServer.id,
-    {
-      cpu: cpus,
-      ram: ram,
-      scheduleTime: scheduleTime != null ? scheduleTime : undefined,
-      schedulePatchnight: schedulePatchnight,
-    }
-  );
+  jobService
+    .startJob(
+      loading,
+      props.selectedServer.cloud.cloudType + "_CHANGE_CPU_RAM",
+      props.selectedServer.id,
+      {
+        cpu: cpus,
+        ram: ram,
+        scheduleTime: scheduleTime != null ? scheduleTime : undefined,
+        schedulePatchnight: schedulePatchnight,
+      }
+    )
+    .then(() => {
+      emit("changed");
+    });
 }
 
 const isCpuInCooldown = computed(() => {

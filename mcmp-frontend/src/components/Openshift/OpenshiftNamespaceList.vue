@@ -35,8 +35,10 @@
           <span>{{ item.name }}</span>
         </div>
       </template>
-      <template #item.environment="{ item }">
-        {{ formatter.formatOpenshiftClusterEnvironment(item.environment) }}
+      <template #item.clusterEnvironment="{ item }">
+        {{
+          formatter.formatOpenshiftClusterEnvironment(item.clusterEnvironment)
+        }}
       </template>
       <template #no-data>
         <v-row />
@@ -108,7 +110,7 @@ const headers = ref<DataTableHeader[]>([
   { title: "Name", key: "name", align: "start", sortable: true },
   {
     title: "Cluster",
-    key: "environment",
+    key: "clusterEnvironment",
     align: "start",
     sortable: false,
   },

@@ -36,13 +36,13 @@ public interface KubernetesNamespaceRepository extends JpaRepository<KubernetesN
     Optional<KubernetesNamespace> findByIdWithDetails(@Param("id") Long id);
 
     @Query(value = """
-    SELECT id, name, "clusterName", environment, appserviceName, "isFavorite"
+    SELECT id, name, "clusterName", "clusterEnvironment", appserviceName, "isFavorite"
     FROM (
         SELECT DISTINCT
             kn.id                AS id,
             kn.name              AS name,
             kc.name              AS "clusterName",
-            kc.environment       AS environment,
+            kc.environment       AS "clusterEnvironment",
             (
                 SELECT a.name
                 FROM cmp.kubernetes_namespace_has_appservices knha2
@@ -88,9 +88,9 @@ public interface KubernetesNamespaceRepository extends JpaRepository<KubernetesN
     ORDER BY
         CASE WHEN "isFavorite" THEN 0 ELSE 1 END ASC,
         CASE WHEN :sortOrder = 'desc' AND :sortBy = 'name' THEN name END DESC,
-        CASE WHEN :sortOrder = 'desc' AND :sortBy = 'name' THEN environment END DESC NULLS LAST,
+        CASE WHEN :sortOrder = 'desc' AND :sortBy = 'name' THEN "clusterEnvironment" END DESC NULLS LAST,
         CASE WHEN :sortOrder = 'asc'  AND :sortBy = 'name' THEN name END ASC,
-        CASE WHEN :sortOrder = 'asc'  AND :sortBy = 'name' THEN environment END ASC NULLS LAST,
+        CASE WHEN :sortOrder = 'asc'  AND :sortBy = 'name' THEN "clusterEnvironment" END ASC NULLS LAST,
         CASE WHEN :sortOrder = 'desc' AND :sortBy = 'clusterName' THEN "clusterName" END DESC NULLS LAST,
         CASE WHEN :sortOrder = 'asc'  AND :sortBy = 'clusterName' THEN "clusterName" END ASC NULLS LAST
     """,
@@ -141,7 +141,8 @@ public interface KubernetesNamespaceRepository extends JpaRepository<KubernetesN
     SELECT DISTINCT
         kn.id       AS id,
         kn.name     AS name,
-        kc.name     AS "clusterName"
+        kc.name     AS "clusterName",
+        kc.environment AS "clusterEnvironment"
     FROM cmp.kubernetes_namespace kn
     JOIN cmp.kubernetes_cluster kc ON kn.cluster_id = kc.id
     JOIN cmp.kubernetes_namespace_has_appservices knha ON knha.kubernetes_namespace_id = kn.id

@@ -111,6 +111,10 @@ const props = defineProps<{
   parentDisabledTooltip?: string;
 }>();
 
+const emit = defineEmits<{
+  save: [];
+}>();
+
 const validationRules = useRules();
 const registerOpenDialog = inject<() => void>("registerOpenDialog");
 const unregisterOpenDialog = inject<() => void>("unregisterOpenDialog");
@@ -153,8 +157,8 @@ const isDisabled = computed(() => {
   if (!props.server) return true;
   return (
     (props.snapshotCount ?? 0) > 0 ||
-    props.server.cloud?.cloudType !== "VMWARE" &&
-    props.server.cloud?.cloudType !== "PROXMOX"
+    (props.server.cloud?.cloudType !== "VMWARE" &&
+      props.server.cloud?.cloudType !== "PROXMOX")
   );
 });
 
@@ -191,6 +195,7 @@ function save() {
 
       dialog.value = false;
       unregisterOpenDialog?.();
+      emit("save");
       resetForm();
     }
   });

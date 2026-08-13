@@ -117,7 +117,7 @@ import type { OpenshiftNamespaceDetail } from "@/types/OpenshiftNamespaceDetail"
 import type { OpenshiftNamespaceListItem } from "@/types/OpenshiftNamespaceListItem";
 
 import { mdiHome, mdiKubernetes } from "@mdi/js";
-import { onMounted, onUnmounted, ref, watch } from "vue";
+import { onMounted, onUnmounted, provide, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 import openshiftService from "@/api/openshiftService";
@@ -141,6 +141,14 @@ const tab = ref("Allgemeines");
 const openshiftSearch = ref("");
 const loadingDetails = ref(false);
 const scrollContainer = ref<HTMLElement | null>(null);
+
+const hasOpenDialog = ref(false);
+provide("registerOpenDialog", () => {
+  hasOpenDialog.value = true;
+});
+provide("unregisterOpenDialog", () => {
+  hasOpenDialog.value = false;
+});
 
 const { allCardsExpanded, toggleAllCards } = useCollapsibleCards(tab);
 useTabQuerySync(tab);

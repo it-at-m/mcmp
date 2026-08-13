@@ -164,7 +164,7 @@ import {
   mdiPencil,
   mdiPlus,
 } from "@mdi/js";
-import { onUnmounted, ref, watch } from "vue";
+import { onUnmounted, provide, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 import appserviceService from "@/api/appserviceService";
@@ -198,6 +198,14 @@ const currentPage = ref(1);
 const currentItemsPerPage = ref(10);
 const currentSortBy = ref<string | null>(null);
 const currentSortDesc = ref(false);
+
+const hasOpenDialog = ref(false);
+provide("registerOpenDialog", () => {
+  hasOpenDialog.value = true;
+});
+provide("unregisterOpenDialog", () => {
+  hasOpenDialog.value = false;
+});
 
 const { allCardsExpanded, toggleAllCards } =
   useCollapsibleCards(tabAppservices);

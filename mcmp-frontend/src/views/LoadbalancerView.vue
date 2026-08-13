@@ -141,7 +141,7 @@ import type { LoadbalancerDetail } from "@/types/LoadbalancerDetail";
 import type { LoadbalancerListItem } from "@/types/LoadbalancerListItem";
 
 import { mdiCallSplit, mdiHome, mdiScriptText, mdiSitemap } from "@mdi/js";
-import { onMounted, onUnmounted, ref, watch } from "vue";
+import { onMounted, onUnmounted, provide, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 import loadbalancerService from "@/api/loadbalancerService";
@@ -167,6 +167,14 @@ const tab = ref("Allgemeines");
 const loadbalancerSearch = ref("");
 const loadingDetails = ref(false);
 const scrollContainer = ref<HTMLElement | null>(null);
+
+const hasOpenDialog = ref(false);
+provide("registerOpenDialog", () => {
+  hasOpenDialog.value = true;
+});
+provide("unregisterOpenDialog", () => {
+  hasOpenDialog.value = false;
+});
 
 const { allCardsExpanded, toggleAllCards } = useCollapsibleCards(tab);
 useTabQuerySync(tab);

@@ -20,7 +20,7 @@
 <script setup lang="ts">
 import type JobList from "@/types/JobList.ts";
 
-import { onMounted, onUnmounted, ref, watch } from "vue";
+import { onMounted, onUnmounted, provide, ref, watch } from "vue";
 
 import jobService from "@/api/jobService";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -35,6 +35,14 @@ const currentPage = ref(1);
 const itemsPerPage = ref(10);
 const sortBy = ref<string | null>("id");
 const sortDesc = ref(true);
+
+const hasOpenDialog = ref(false);
+provide("registerOpenDialog", () => {
+  hasOpenDialog.value = true;
+});
+provide("unregisterOpenDialog", () => {
+  hasOpenDialog.value = false;
+});
 
 const emit = defineEmits<{
   getNotification: [];
@@ -87,8 +95,10 @@ function startAutoRefresh() {
   }
 
   refreshInterval.value = setInterval(() => {
-    fetchHistory();
-    resetNotification();
+    if (!hasOpenDialog.value) {
+      fetchHistory();
+      resetNotification();
+    }
   }, 60000);
 }
 

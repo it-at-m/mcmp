@@ -172,6 +172,7 @@ import {
   defineAsyncComponent,
   onMounted,
   onUnmounted,
+  provide,
   ref,
   watch,
 } from "vue";
@@ -207,6 +208,14 @@ const tab = ref("Allgemeines");
 const storageSearch = ref("");
 const loadingDetails = ref(false);
 const scrollContainer = ref<HTMLElement | null>(null);
+
+const hasOpenDialog = ref(false);
+provide("registerOpenDialog", () => {
+  hasOpenDialog.value = true;
+});
+provide("unregisterOpenDialog", () => {
+  hasOpenDialog.value = false;
+});
 
 const { allCardsExpanded, toggleAllCards } = useCollapsibleCards(tab);
 useTabQuerySync(tab);

@@ -181,7 +181,7 @@ import {
   mdiPuzzle,
   mdiRocketLaunch,
 } from "@mdi/js";
-import { computed, nextTick, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, provide, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 
 import Actions from "@/components/Settings/actions.vue";
@@ -199,6 +199,14 @@ const userStore = useUserStore();
 const router = useRouter();
 const tab = ref("History");
 const historyKey = ref(0);
+
+const hasOpenDialog = ref(false);
+provide("registerOpenDialog", () => {
+  hasOpenDialog.value = true;
+});
+provide("unregisterOpenDialog", () => {
+  hasOpenDialog.value = false;
+});
 
 const isAdmin = computed(
   () => !!userStore.getUser?.authorities?.includes("ROLE_ADMIN")

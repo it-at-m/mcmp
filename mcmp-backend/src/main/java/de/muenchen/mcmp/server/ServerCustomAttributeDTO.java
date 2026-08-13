@@ -6,4 +6,4 @@ import lombok.Builder;
 public record ServerCustomAttributeDTO(
         String name,
         String value
-){};
+){}

@@ -260,11 +260,10 @@ function makeJobCall() {
 
     loading.value = true;
     const promises = servers.map((server) =>
-      jobService.startJob(
-        loading,
-        (props.jobToCall?.includes("DELETE")
-          ? ""
-          : server.cloud.cloudType + "_") + props.jobToCall,
+      jobService
+        .startJob(
+          loading,
+          props.jobToCall,
         server.id,
         schedule.value ? { scheduleTime: rawDate.value.toISOString() } : {}
       )
@@ -290,9 +289,7 @@ function makeJobCall() {
   jobService
     .startJob(
       loading,
-      (props.jobToCall?.includes("DELETE")
-        ? ""
-        : props.server?.cloud.cloudType + "_") + props.jobToCall,
+      props.jobToCall,
       props.server!.id,
       schedule.value ? { scheduleTime: rawDate.value.toISOString() } : {}
     )

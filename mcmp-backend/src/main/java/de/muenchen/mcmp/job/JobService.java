@@ -31,6 +31,7 @@ import de.muenchen.mcmp.security.UserRoles;
 import de.muenchen.mcmp.server.Server;
 import de.muenchen.mcmp.server.ServerRepository;
 import de.muenchen.mcmp.storage.UnifiedStorageItemDto;
+import de.muenchen.mcmp.types.CloudType;
 import de.muenchen.mcmp.types.DbType;
 import de.muenchen.mcmp.user.User;
 import de.muenchen.mcmp.user.UserRepository;
@@ -311,12 +312,12 @@ public class JobService {
         Map<String, Object> params = new HashMap<>();
         params.put("vm_name", server.getName());
 
-        String cloudType = server.getCloud().getCloudType().toString();
-        if (Objects.equals(cloudType, "VMWARE")){
+        CloudType cloudType = server.getCloud().getCloudType();
+        if (cloudType == CloudType.VMWARE){
             params.put("vcenter_uuid", server.getCloud().getServerGui());
             params.put("vm_powerstate", "powered-on");
         }
-        else if (Objects.equals(cloudType, "PROXMOX")) {
+        else if (cloudType == CloudType.PROXMOX) {
             params.put("cluster_name", server.getCluster());
             params.put("vm_powerstate", "started");
         }
@@ -325,9 +326,9 @@ public class JobService {
         }
 
         if(scheduleTime != null){
-            createJob(start_server_identifier, server, params, new HashMap<>(), scheduleTime,null,null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
+            createJob(cloudType.name() + '_'  + start_server_identifier, server, params, new HashMap<>(), scheduleTime,null,null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
         } else {
-            createJob(start_server_identifier, server, params, new HashMap<>(), null, null, null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
+            createJob(cloudType.name() + '_'  + start_server_identifier, server, params, new HashMap<>(), null, null, null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
         }
     }
 
@@ -340,13 +341,12 @@ public class JobService {
         params.put("turned_off_by", AuthUtils.getUsername());
         params.put("turned_off_note", "Server wurde durch den Benutzer " + AuthUtils.getUsername() + " in der MCMP gestoppt.");
 
-        String cloudType = server.getCloud().getCloudType().toString();
-
-        if (Objects.equals(cloudType, "VMWARE")){
+        CloudType cloudType = server.getCloud().getCloudType();
+        if (cloudType == CloudType.VMWARE){
             params.put("vcenter_uuid", server.getCloud().getServerGui());
             params.put("vm_powerstate", "shutdown-guest");
         }
-        else if (Objects.equals(cloudType, "PROXMOX")) {
+        else if (cloudType == CloudType.PROXMOX){
             params.put("cluster_name", server.getCluster());
             params.put("vm_powerstate", "stopped");
         }
@@ -355,9 +355,9 @@ public class JobService {
         }
 
         if(scheduleTime != null){
-            createJob(stop_server_identifier, server, params, new HashMap<>(), scheduleTime,null,null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
+            createJob(cloudType.name() + '_'  + stop_server_identifier, server, params, new HashMap<>(), scheduleTime,null,null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
         } else {
-            createJob(stop_server_identifier, server, params, new HashMap<>(), null, null, null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
+            createJob(cloudType.name() + '_'  + stop_server_identifier, server, params, new HashMap<>(), null, null, null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
         }
     }
 
@@ -370,13 +370,12 @@ public class JobService {
         params.put("turned_off_by", AuthUtils.getUsername());
         params.put("turned_off_note", "Server wurde durch den Benutzer " + AuthUtils.getUsername() + " in der MCMP gerestarted.");
 
-        String cloudType = server.getCloud().getCloudType().toString();
-
-        if (Objects.equals(cloudType, "VMWARE")){
+        CloudType cloudType = server.getCloud().getCloudType();
+        if (cloudType == CloudType.VMWARE){
             params.put("vcenter_uuid", server.getCloud().getServerGui());
             params.put("vm_powerstate", "reboot-guest");
         }
-        else if (Objects.equals(cloudType, "PROXMOX")) {
+        else if (cloudType == CloudType.PROXMOX){
             params.put("cluster_name", server.getCluster());
             params.put("vm_powerstate", "restarted");
         }
@@ -385,9 +384,9 @@ public class JobService {
         }
 
         if(scheduleTime != null){
-            createJob(restart_server_identifier, server, params, new HashMap<>(), scheduleTime,null,null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
+            createJob(cloudType.name() + '_'  + restart_server_identifier, server, params, new HashMap<>(), scheduleTime,null,null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
         } else {
-            createJob(restart_server_identifier, server, params, new HashMap<>(), null, null, null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
+            createJob(cloudType.name() + '_'  + restart_server_identifier, server, params, new HashMap<>(), null, null, null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
         }
     }
 
@@ -399,11 +398,11 @@ public class JobService {
         params.put("cpus_new", cpu);
         params.put("memory_new", ram);
 
-        String cloudType = server.getCloud().getCloudType().toString();
-        if (Objects.equals(cloudType, "VMWARE")){
+        CloudType cloudType = server.getCloud().getCloudType();
+        if (cloudType == CloudType.VMWARE){
             params.put("vcenter_uuid", server.getCloud().getServerGui());
         }
-        else if (Objects.equals(cloudType, "PROXMOX")) {
+        else if (cloudType == CloudType.PROXMOX){
             params.put("cluster_name", server.getCluster());
         }
         else {
@@ -428,7 +427,7 @@ public class JobService {
                 guiVars.put("scheduled_time", "Geplante Durchführungszeit: " + dateTime);
             }
         }
-        createJob(change_cpu_ram_identifier, server, params, guiVars, scheduleTime, tag, null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
+        createJob(cloudType.name() + '_'  + change_cpu_ram_identifier, server, params, guiVars, scheduleTime, tag, null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
     }
 
     public void createSnapshot(final Long serverId, final Integer duration, final String description, final boolean withShutdown, final String create_snapshot_identifier) {
@@ -441,11 +440,11 @@ public class JobService {
         params.put("time", duration);
         params.put("snapshot_description", description);
 
-        String cloudType = server.getCloud().getCloudType().toString();
-        if (Objects.equals(cloudType, "VMWARE")){
+        CloudType cloudType = server.getCloud().getCloudType();
+        if (cloudType == CloudType.VMWARE){
             params.put("vcenter_uuid", server.getCloud().getServerGui());
         }
-        else if (Objects.equals(cloudType, "PROXMOX")) {
+        else if (cloudType == CloudType.PROXMOX){
             params.put("cluster_name", server.getCluster());
         }
         else {
@@ -457,7 +456,7 @@ public class JobService {
             awxSkipTag = "with_power_off, with_power_on";
         }
 
-        createJob(create_snapshot_identifier, server, params, new HashMap<>(), null, null, awxSkipTag,(server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
+        createJob(cloudType.name() + '_'  + create_snapshot_identifier, server, params, new HashMap<>(), null, null, awxSkipTag,(server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
     }
 
     public void deleteSnapshot(final Long serverId, final Long snapshotId, final String snapshotName, final String delete_snapshot_identifier){
@@ -468,13 +467,13 @@ public class JobService {
         params.put("state", "absent");
         params.put("TeamName", AuthUtils.getUsername()); //TODO TEAMNAME nicht username (Wird nach ablöse des Snapshot Tools entfernt)
 
-        String cloudType = server.getCloud().getCloudType().toString();
-        if (Objects.equals(cloudType, "VMWARE")){
+        CloudType cloudType = server.getCloud().getCloudType();
+        if (cloudType == CloudType.VMWARE){
             params.put("vcenter_uuid", server.getCloud().getServerGui());
             if (snapshotId == null) throw new MissingFormatArgumentException("Snapshot Id must be provided.");
             params.put("snapshot_id", snapshotId);
         }
-        else if (Objects.equals(cloudType, "PROXMOX")) {
+        else if (cloudType == CloudType.PROXMOX){
             params.put("cluster_name", server.getCluster());
             if (snapshotName == null) throw new MissingFormatArgumentException("Snapshot Name must be provided.");
             params.put("snapname", snapshotName);
@@ -483,7 +482,7 @@ public class JobService {
             throw new IllegalArgumentException("Cloud type " + cloudType + " is not supported.");
         }
 
-        createJob(delete_snapshot_identifier, server, params, new HashMap<>(), null, null, null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
+        createJob(cloudType.name() + '_'  + delete_snapshot_identifier, server, params, new HashMap<>(), null, null, null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
     }
 
     public void revertSnapshot(final Long serverId, final Long snapshotId, final String snapshotName, final String reverte_snapshot_identifier){
@@ -493,14 +492,14 @@ public class JobService {
         params.put("vm_name", server.getName());
         params.put("TeamName", AuthUtils.getUsername()); //TODO TEAMNAME nicht username (Wird nach ablöse des Snapshot Tools entfernt)
 
-        String cloudType = server.getCloud().getCloudType().toString();
-        if (Objects.equals(cloudType, "VMWARE")){
+        CloudType cloudType = server.getCloud().getCloudType();
+        if (cloudType == CloudType.VMWARE){
             params.put("vcenter_uuid", server.getCloud().getServerGui());
             params.put("state", "revert");
             if (snapshotId == null) throw new MissingFormatArgumentException("Snapshot Id must be provided.");
             params.put("snapshot_id", snapshotId);
         }
-        else if (Objects.equals(cloudType, "PROXMOX")) {
+        else if (cloudType == CloudType.PROXMOX) {
             params.put("cluster_name", server.getCluster());
             params.put("state", "rollback");
             if (snapshotName == null) throw new MissingFormatArgumentException("Snapshot Name must be provided.");
@@ -510,7 +509,7 @@ public class JobService {
             throw new IllegalArgumentException("Cloud type " + cloudType + " is not supported.");
         }
 
-        createJob(reverte_snapshot_identifier, server, params, new HashMap<>(), null , null, null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
+        createJob(cloudType.name() + '_'  + reverte_snapshot_identifier, server, params, new HashMap<>(), null , null, null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
     }
 
     // -----------------------------------------------------------------------------------------------------------------

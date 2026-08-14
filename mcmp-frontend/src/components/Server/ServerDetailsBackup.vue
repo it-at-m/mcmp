@@ -307,7 +307,7 @@ function getBackupTypeFromServerName(serverName: string): string {
 function deleteSnapshot(snapshot: Snapshot) {
   jobService.startJob(
     jobLoading,
-    props.selectedServer.cloud.cloudType + "_DELETE_SNAPSHOT",
+    "DELETE_SNAPSHOT",
     props.selectedServer.id,
     {
       snapshotId: snapshot.snapshotId,
@@ -319,7 +319,7 @@ function deleteSnapshot(snapshot: Snapshot) {
 function revertSnapshot(snapshot: Snapshot) {
   jobService.startJob(
     jobLoading,
-    props.selectedServer.cloud.cloudType + "_REVERT_SNAPSHOT",
+    "REVERT_SNAPSHOT",
     props.selectedServer.id,
     {
       snapshotId: snapshot.snapshotId,

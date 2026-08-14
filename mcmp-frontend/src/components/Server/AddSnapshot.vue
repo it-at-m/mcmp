@@ -172,7 +172,7 @@ function save() {
         servers.forEach((server: Server) => {
           jobService.startJob(
             loading,
-            server.cloud.cloudType + "_CREATE_SNAPSHOT",
+            "CREATE_SNAPSHOT",
             server.id,
             {
               duration: days.value,
@@ -184,7 +184,7 @@ function save() {
       } else if (props.server) {
         jobService.startJob(
           loading,
-          props.server.cloud.cloudType + "_CREATE_SNAPSHOT",
+          "CREATE_SNAPSHOT",
           props.server.id,
           {
             duration: days.value,

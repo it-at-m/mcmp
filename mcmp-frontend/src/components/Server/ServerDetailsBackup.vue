@@ -25,6 +25,7 @@
       <add-snapshot
         v-if="
           selectedServer.canEdit &&
+          !selectedServer.locked &&
           (selectedServer.cloud?.cloudType == 'VMWARE' ||
             selectedServer.cloud?.cloudType == 'PROXMOX')
         "
@@ -53,6 +54,7 @@
       </template>
       <template #item.edit="{ item }">
         <delete-revert-snapshot
+          v-if="!props.selectedServer.locked"
           :snapshot="item"
           action="revert"
           :job-to-call="
@@ -61,6 +63,7 @@
           @save="revertSnapshot(item)"
         />
         <delete-revert-snapshot
+          v-if="!props.selectedServer.locked"
           :snapshot="item"
           action="delete"
           :job-to-call="

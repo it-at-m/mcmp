@@ -156,6 +156,7 @@ const isDisabled = computed(() => {
   // Einzelserver-Logik wie vorher
   if (!props.server) return true;
   return (
+    props.server.locked ||
     (props.snapshotCount ?? 0) > 0 ||
     (props.server.cloud?.cloudType !== "VMWARE" &&
       props.server.cloud?.cloudType !== "PROXMOX")
@@ -215,7 +216,7 @@ function openDialog() {
     dialog.value = true;
     registerOpenDialog?.();
   } else {
-    if ((props.snapshotCount ?? 0) > 0) {
+    if (isDisabled.value) {
       dialog.value = false;
     } else {
       dialog.value = true;
@@ -253,6 +254,9 @@ const tooltipText = computed(() => {
 
   if ((props.snapshotCount ?? 0) > 0) {
     return "Es ist max 1 Snapshot erlaubt.";
+  }
+  if (props.server?.locked) {
+    return "Server ist gesperrt.";
   }
   if (
     props.server?.cloud?.cloudType != "VMWARE" &&

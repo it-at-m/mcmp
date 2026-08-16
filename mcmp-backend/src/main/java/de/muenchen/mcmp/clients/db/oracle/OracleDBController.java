@@ -1,5 +1,7 @@
 package de.muenchen.mcmp.clients.db.oracle;
 
+import de.muenchen.mcmp.database.DatabasePdbInstanceRepository;
+import de.muenchen.mcmp.database.DatabasePdbInstanceServerDTO;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -7,8 +9,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import de.muenchen.mcmp.server.ServerService;
-import de.muenchen.mcmp.server.ServerDbDTO;
 import de.muenchen.mcmp.security.HasApiRole;
 
 import java.util.List;
@@ -19,7 +19,7 @@ import java.util.List;
 @Slf4j
 public class OracleDBController {
 
-    private final ServerService serverService;
+    private final DatabasePdbInstanceRepository databasePdbInstanceRepository;
 
     /**
      * Simple health check endpoint for the Oracle DB EAI API.
@@ -40,8 +40,8 @@ public class OracleDBController {
      */
     @HasApiRole
     @GetMapping("/servers")
-    public ResponseEntity<List<ServerDbDTO>> getAllOracleServers() {
+    public ResponseEntity<List<DatabasePdbInstanceServerDTO>> getAllOracleServers() {
         log.info("Received request to fetch all Oracle servers for EAI");
-        return ResponseEntity.ok(serverService.findAllOracleServers());
+        return ResponseEntity.ok(databasePdbInstanceRepository.findManagedPoweredOnOracleServerPdbInstances());
     }
 }

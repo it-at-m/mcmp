@@ -350,10 +350,6 @@ public class ServerService {
         return serverRepository.findForAutocomplete(query);
     }
 
-    public List<ServerDbDTO> findAllOracleServers() {
-        return repository.findAllOracleServers();
-    }
-
     public List<Server> findAllByCloudId(final Long cloudId) {
         return repository.findAllByCloudId(cloudId);
     }

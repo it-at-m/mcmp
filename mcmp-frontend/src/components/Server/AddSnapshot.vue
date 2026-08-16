@@ -111,6 +111,10 @@ const props = defineProps<{
   parentDisabledTooltip?: string;
 }>();
 
+const emit = defineEmits<{
+  save: [];
+}>();
+
 const validationRules = useRules();
 const registerOpenDialog = inject<() => void>("registerOpenDialog");
 const unregisterOpenDialog = inject<() => void>("unregisterOpenDialog");
@@ -152,9 +156,10 @@ const isDisabled = computed(() => {
   // Einzelserver-Logik wie vorher
   if (!props.server) return true;
   return (
+    props.server.locked ||
     (props.snapshotCount ?? 0) > 0 ||
-    props.server.cloud?.cloudType !== "VMWARE" &&
-    props.server.cloud?.cloudType !== "PROXMOX"
+    (props.server.cloud?.cloudType !== "VMWARE" &&
+      props.server.cloud?.cloudType !== "PROXMOX")
   );
 });
 
@@ -167,7 +172,7 @@ function save() {
         servers.forEach((server: Server) => {
           jobService.startJob(
             loading,
-            server.cloud.cloudType + "_CREATE_SNAPSHOT",
+            "CREATE_SNAPSHOT",
             server.id,
             {
               duration: days.value,
@@ -179,7 +184,7 @@ function save() {
       } else if (props.server) {
         jobService.startJob(
           loading,
-          props.server.cloud.cloudType + "_CREATE_SNAPSHOT",
+          "CREATE_SNAPSHOT",
           props.server.id,
           {
             duration: days.value,
@@ -191,6 +196,7 @@ function save() {
 
       dialog.value = false;
       unregisterOpenDialog?.();
+      emit("save");
       resetForm();
     }
   });
@@ -210,7 +216,7 @@ function openDialog() {
     dialog.value = true;
     registerOpenDialog?.();
   } else {
-    if ((props.snapshotCount ?? 0) > 0) {
+    if (isDisabled.value) {
       dialog.value = false;
     } else {
       dialog.value = true;
@@ -248,6 +254,9 @@ const tooltipText = computed(() => {
 
   if ((props.snapshotCount ?? 0) > 0) {
     return "Es ist max 1 Snapshot erlaubt.";
+  }
+  if (props.server?.locked) {
+    return "Server ist gesperrt.";
   }
   if (
     props.server?.cloud?.cloudType != "VMWARE" &&

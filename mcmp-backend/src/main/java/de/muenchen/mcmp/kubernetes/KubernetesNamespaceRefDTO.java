@@ -6,5 +6,6 @@ import lombok.Builder;
 public record KubernetesNamespaceRefDTO(
         Long id,
         String name,
-        String clusterName
+        String clusterName,
+        String clusterEnvironment
 ) {}

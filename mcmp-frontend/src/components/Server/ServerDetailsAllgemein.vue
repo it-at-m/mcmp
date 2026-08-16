@@ -582,6 +582,10 @@ const props = defineProps<{
   selectedServer: Server;
 }>();
 
+const emit = defineEmits<{
+  changed: [];
+}>();
+
 const firstAppservice = computed(
   () => props.selectedServer.appservices?.[0] ?? null
 );
@@ -626,7 +630,7 @@ function change_cpu_ram(
 ) {
   jobService.startJob(
     loading,
-    props.selectedServer.cloud.cloudType + "_CHANGE_CPU_RAM",
+    "CHANGE_CPU_RAM",
     props.selectedServer.id,
     {
       cpu: cpus,

@@ -248,7 +248,7 @@ import {
   mdiTools,
   mdiWhiteBalanceSunny,
 } from "@mdi/js";
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, provide, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { useTheme } from "vuetify";
 
@@ -271,6 +271,14 @@ const userStore = useUserStore();
 const route = useRoute();
 
 const theme = useTheme();
+
+// Global fallback for dialog tracking
+provide("registerOpenDialog", () => {
+  /* Intentionally empty */
+});
+provide("unregisterOpenDialog", () => {
+  /* Intentionally empty */
+});
 
 const rail = ref(true);
 

@@ -6,6 +6,6 @@ import lombok.Builder;
 public record KubernetesNamespaceListDTO(
         Long id,
         String name,
-        String environment,
+        String clusterEnvironment,
         boolean isFavorite
 ) {}

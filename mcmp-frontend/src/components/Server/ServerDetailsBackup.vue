@@ -25,6 +25,7 @@
       <add-snapshot
         v-if="
           selectedServer.canEdit &&
+          !selectedServer.locked &&
           (selectedServer.cloud?.cloudType == 'VMWARE' ||
             selectedServer.cloud?.cloudType == 'PROXMOX')
         "
@@ -53,6 +54,7 @@
       </template>
       <template #item.edit="{ item }">
         <delete-revert-snapshot
+          v-if="!props.selectedServer.locked"
           :snapshot="item"
           action="revert"
           :job-to-call="
@@ -61,6 +63,7 @@
           @save="revertSnapshot(item)"
         />
         <delete-revert-snapshot
+          v-if="!props.selectedServer.locked"
           :snapshot="item"
           action="delete"
           :job-to-call="
@@ -304,7 +307,7 @@ function getBackupTypeFromServerName(serverName: string): string {
 function deleteSnapshot(snapshot: Snapshot) {
   jobService.startJob(
     jobLoading,
-    props.selectedServer.cloud.cloudType + "_DELETE_SNAPSHOT",
+    "DELETE_SNAPSHOT",
     props.selectedServer.id,
     {
       snapshotId: snapshot.snapshotId,
@@ -316,7 +319,7 @@ function deleteSnapshot(snapshot: Snapshot) {
 function revertSnapshot(snapshot: Snapshot) {
   jobService.startJob(
     jobLoading,
-    props.selectedServer.cloud.cloudType + "_REVERT_SNAPSHOT",
+    "REVERT_SNAPSHOT",
     props.selectedServer.id,
     {
       snapshotId: snapshot.snapshotId,

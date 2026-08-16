@@ -122,7 +122,7 @@ const router = createRouter({
   },
 });
 
-router.beforeEach(async (to, from, next) => {
+router.beforeEach(async (to) => {
   const userStore = useUserStore();
 
   if (to.path === "/") {
@@ -134,12 +134,10 @@ router.beforeEach(async (to, from, next) => {
     const target = userStore.getLoginPage?.replace(/^"|"$/g, "").trim();
 
     if (target && target !== "/") {
-      return next(target);
+      return target;
     }
-    return next("/appservice"); // Fallback, falls keine Custom-Seite gesetzt ist
+    return "/appservice"; // Fallback, falls keine Custom-Seite gesetzt ist
   }
-
-  next();
 });
 
 if (import.meta.hot) {

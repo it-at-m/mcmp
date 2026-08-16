@@ -35,12 +35,13 @@ import StatusChip from "@/components/common/StatusChip.vue";
 withDefaults(
   defineProps<{
     canEdit?: boolean;
-    assignedCount: number;
+    assignedCount?: number;
     loading?: boolean;
     entityLabel: string;
   }>(),
   {
     canEdit: false,
+    assignedCount: 0,
     loading: false,
   }
 );

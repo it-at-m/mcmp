@@ -227,7 +227,7 @@ async function onDialogConfirm() {
       servers.forEach((server: Server) => {
         jobService.startJob(
           loading,
-          server.cloud.cloudType + "_STOP_SERVER",
+          "STOP_SERVER",
           server.id,
           {
             scheduleTime: stopDate.value.toISOString(),
@@ -235,7 +235,7 @@ async function onDialogConfirm() {
         );
         jobService.startJob(
           loading,
-          server.cloud.cloudType + "_START_SERVER",
+          "START_SERVER",
           server.id,
           {
             scheduleTime: startDate.value.toISOString(),
@@ -245,7 +245,7 @@ async function onDialogConfirm() {
     } else if (props.server) {
       await jobService.startJob(
         loading,
-        props.server.cloud.cloudType + "_STOP_SERVER",
+        "STOP_SERVER",
         props.server.id,
         {
           scheduleTime: stopDate.value.toISOString(),
@@ -253,7 +253,7 @@ async function onDialogConfirm() {
       );
       await jobService.startJob(
         loading,
-        props.server.cloud.cloudType + "_START_SERVER",
+        "START_SERVER",
         props.server.id,
         {
           scheduleTime: startDate.value.toISOString(),

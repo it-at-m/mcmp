@@ -23,8 +23,10 @@
           </router-link>
         </div>
       </template>
-      <template #item.clusterName="{ item }">
-        {{ formatter.formatOpenshiftClusterName(item.clusterName) }}
+      <template #item.clusterEnvironment="{ item }">
+        {{
+          formatter.formatOpenshiftClusterEnvironment(item.clusterEnvironment)
+        }}
       </template>
     </v-data-table>
   </common-card>
@@ -55,7 +57,7 @@ const namespaceCount = computed(() => namespaces.value.length);
 
 const headers = [
   { title: "Name", key: "name" },
-  { title: "Cluster", key: "clusterName" },
+  { title: "Cluster", key: "clusterEnvironment" },
 ];
 
 async function loadNamespaces(appservice: Appservice | null) {

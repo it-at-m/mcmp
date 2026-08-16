@@ -68,15 +68,15 @@ func run(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
+	// Configuration validation
+	if validationErr := cfg.validate(); validationErr != nil {
+		return fmt.Errorf("invalid configuration: %w", validationErr)
+	}
+
 	// Initialize Logger using the centralized setup from common
 	logger, err = logging.SetupGlobalLogger(cfg.LOGGING)
 	if err != nil {
 		return fmt.Errorf("failed to initialize logger: %w", err)
-	}
-
-	// Configuration validation
-	if validationErr := cfg.validate(); validationErr != nil {
-		return fmt.Errorf("invalid configuration: %w", validationErr)
 	}
 
 	var mcmpClients []datasource.JSONSender

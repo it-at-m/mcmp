@@ -1,10 +1,10 @@
 module github.com/it-at-m/mcmp/mcmp-eai-netapp-ontap
 
-go 1.26.5
+go 1.26.6
 
 require (
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/it-at-m/mcmp/mcmp-eai-common v0.0.0-20260806141551-a01815a32fc3
+	github.com/it-at-m/mcmp/mcmp-eai-common v0.0.0-20260816191156-528da6eaeaf4
 	golang.org/x/sync v0.22.0
 )
 

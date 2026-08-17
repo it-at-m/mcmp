@@ -1,0 +1,40 @@
+# =============================================================================
+# Logging Configuration
+# =============================================================================
+[LOGGING]
+Level      = "INFO"   # Log level: DEBUG, INFO, WARN, ERROR
+Output     = "file"   # Output destination: console, file, both
+Format     = "plain"  # Output format: text, json, plain
+Filename   = "/var/log/mcmp-eai-db-oracle.log"
+MaxSize    = 10       # Maximum file size in MB before rotation
+MaxBackups = 7        # Number of old log files to retain
+MaxAge     = 30       # Maximum age in days for log files
+Compress   = true     # Compress rotated log files
+
+# =============================================================================
+# MCMP API Configuration
+# =============================================================================
+[[MCMP]]
+OAuthUrl              = "https://keycloak.example.com/auth"
+OAuthRealm            = "local_realm"
+OAuthClientId         = "<client-id>"
+OAuthClientSecret     = "<client-secret>"
+ApiEndpoint           = "http://localhost:8083/clients/eai-backend-service/db/oracle/import"
+DiscoveryBackend      = true
+OracleServerEndpoint  = "http://localhost:8083/clients/eai-backend-service/db/oracle/servers"
+
+[[MCMP]]
+OAuthUrl              = "https://keycloak-secondary.example.com/auth"
+OAuthRealm            = "local_realm"
+OAuthClientId         = "<client-id>"
+OAuthClientSecret     = "<client-secret>"
+ApiEndpoint           = "http://secondary:8083/clients/eai-backend-service/db/oracle/import"
+DiscoveryBackend      = false
+
+# =============================================================================
+# Processor Configuration
+# =============================================================================
+[PROCESSOR]
+WorkerCount    = 10    # Number of parallel workers (adjust based on available resources)
+OracleUser     = "<USERNAME>"
+OraclePassword = "<PASSWORD>"

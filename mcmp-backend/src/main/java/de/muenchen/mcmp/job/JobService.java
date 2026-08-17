@@ -187,7 +187,7 @@ public class JobService {
     }
 
     public void createJob(final String actionIdentifier, Server server, Map<String, Object> awxExtraVars, Map<String, Object> guiVars, Instant scheduleTime, String awxJobTags, String awxSkipTags) {
-        createJob(actionIdentifier, server, awxExtraVars, guiVars,null, awxJobTags, awxSkipTags, null);
+        createJob(actionIdentifier, server, awxExtraVars, guiVars, scheduleTime, awxJobTags, awxSkipTags, null);
     }
 
     public void createJob(final String actionIdentifier, Server server, Map<String, Object> awxExtraVars, Map<String, Object> guiVars, Instant scheduleTime, String awxJobTags, String awxSkipTags, String awxInventroyId) {

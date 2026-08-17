@@ -6,6 +6,7 @@ use (
 	./mcmp-eai-baas
 	./mcmp-eai-checkmk
 	./mcmp-eai-common
+	./mcmp-eai-db-oracle
 	./mcmp-eai-foreman
 	./mcmp-eai-loadbalancer
 	./mcmp-eai-netapp-ontap

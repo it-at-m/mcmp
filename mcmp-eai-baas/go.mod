@@ -1,9 +1,9 @@
 module github.com/it-at-m/mcmp/mcmp-eai-baas
 
-go 1.26.5
+go 1.26.6
 
 require (
-	github.com/it-at-m/mcmp/mcmp-eai-common v0.0.0-20260806141551-a01815a32fc3
+	github.com/it-at-m/mcmp/mcmp-eai-common v0.0.0-20260816191156-528da6eaeaf4
 	golang.org/x/crypto v0.55.0
 	gorm.io/driver/postgres v1.6.2
 	gorm.io/gorm v1.31.2

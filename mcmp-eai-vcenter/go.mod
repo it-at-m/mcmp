@@ -1,9 +1,9 @@
 module github.com/it-at-m/mcmp/mcmp-eai-vcenter
 
-go 1.26.5
+go 1.26.6
 
 require (
-	github.com/it-at-m/mcmp/mcmp-eai-common v0.0.0-20260806141551-a01815a32fc3
+	github.com/it-at-m/mcmp/mcmp-eai-common v0.0.0-20260816191156-528da6eaeaf4
 	github.com/stretchr/testify v1.11.1
 	github.com/vmware/govmomi v0.55.1
 	golang.org/x/crypto v0.55.0

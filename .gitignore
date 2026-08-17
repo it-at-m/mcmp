@@ -201,3 +201,5 @@ route-map.d.ts
 # SQL-Dumps
 /dev-tools/dumps/*
 !/dev-tools/dumps/.gitkeep
+
+.aiassistant

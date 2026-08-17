@@ -1,4 +1,4 @@
-go 1.26.5
+go 1.26.6
 
 use (
 	./mcmp-callback-server
@@ -6,7 +6,6 @@ use (
 	./mcmp-eai-baas
 	./mcmp-eai-checkmk
 	./mcmp-eai-common
-	./mcmp-eai-snow-repo-discovery
 	./mcmp-eai-foreman
 	./mcmp-eai-loadbalancer
 	./mcmp-eai-netapp-ontap
@@ -18,6 +17,7 @@ use (
 	./mcmp-eai-rightsizing
 	./mcmp-eai-scheduler
 	./mcmp-eai-snow
+	./mcmp-eai-snow-repo-discovery
 	./mcmp-eai-ucs
 	./mcmp-eai-vcenter
 )

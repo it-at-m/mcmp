@@ -1,10 +1,10 @@
 module github.com/it-at-m/mcmp/mcmp-eai-snow
 
-go 1.26.5
+go 1.26.6
 
 require (
 	github.com/google/uuid v1.6.0
-	github.com/it-at-m/mcmp/mcmp-eai-common v0.0.0-20260806141551-a01815a32fc3
+	github.com/it-at-m/mcmp/mcmp-eai-common v0.0.0-20260816191156-528da6eaeaf4
 	github.com/spf13/viper v1.21.0
 	golang.org/x/oauth2 v0.36.0
 )

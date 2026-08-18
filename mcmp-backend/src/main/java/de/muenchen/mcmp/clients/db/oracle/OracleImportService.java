@@ -6,7 +6,6 @@ import de.muenchen.mcmp.utils.DateTimeUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -38,7 +37,6 @@ public class OracleImportService {
         final long startTime = System.currentTimeMillis();
         log.info("Starting optimized in-memory Oracle DB import synchronization for {} databases.", dto.databases().size());
 
-        // 1. Alle FQDN + PDB Zuordnungen direkt in die Lookup-Map laden (ohne Zwischenspeicherung der Liste)
         final Map<String, Long> lookupMap = databasePdbInstanceRepository
                 .findManagedPoweredOnOracleServerPdbInstances()
                 .stream()
@@ -49,18 +47,15 @@ public class OracleImportService {
                         (existing, replacement) -> existing
                 ));
 
-        // 2. Alle DatabasePdbInstances auf einmal laden (Key: id)
         final Map<Long, DatabasePdbInstance> pdbInstanceMap = databasePdbInstanceRepository.findAll().stream()
                 .collect(Collectors.toMap(DatabasePdbInstance::getId, Function.identity()));
 
-        // 3. Alle Users und Tablespaces auf einmal laden und nach pdbInstanceId gruppieren
         final Map<Long, List<DatabasePdbUser>> usersByPdbId = databasePdbUserRepository.findAll().stream()
                 .collect(Collectors.groupingBy(u -> u.getDatabasePdbInstance().getId()));
 
         final Map<Long, List<DatabasePdbTablespace>> tablespacesByPdbId = databasePdbTablespaceRepository.findAll().stream()
                 .collect(Collectors.groupingBy(t -> t.getDatabasePdbInstance().getId()));
 
-        // Listen für Batch-Persistierung
         final List<DatabasePdbUser> usersToSave = new ArrayList<>();
         final List<DatabasePdbUser> usersToDelete = new ArrayList<>();
         final List<DatabasePdbTablespace> tablespacesToSave = new ArrayList<>();
@@ -126,7 +121,6 @@ public class OracleImportService {
             }
         }
 
-        // 4. Batch-Operationen ausführen (nur falls Änderungen vorliegen)
         if (!usersToSave.isEmpty()) {
             databasePdbUserRepository.saveAll(usersToSave);
         }
@@ -167,8 +161,8 @@ public class OracleImportService {
                     !Objects.equals(pdbInstance.getPdbHostName(), row.hostName()) ||
                     !Objects.equals(pdbInstance.getPdbCharacterset(), row.characterset()) ||
                     !Objects.equals(pdbInstance.getPdbDatabaseType(), row.databaseType()) ||
-                    !DateTimeUtils.isDateTimeEqualUTC(pdbInstance.getPdbStartupTime(), startupTime) ||
-                    !DateTimeUtils.isDateTimeEqualUTC(pdbInstance.getPdbCollectedAt(), collectedAt);
+                    DateTimeUtils.isDateTimeDifferentUTC(pdbInstance.getPdbStartupTime(), startupTime) ||
+                    DateTimeUtils.isDateTimeDifferentUTC(pdbInstance.getPdbCollectedAt(), collectedAt);
 
 
             if (changed) {

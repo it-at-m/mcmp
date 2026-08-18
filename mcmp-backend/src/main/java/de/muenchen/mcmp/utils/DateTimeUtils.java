@@ -17,14 +17,14 @@ public final class DateTimeUtils {
      *
      * @param dt1 First OffsetDateTime to compare
      * @param dt2 Second OffsetDateTime to compare
-     * @return true if both represent the same point in time up to milliseconds in UTC, false otherwise
+     * @return true if both represent different points in time, false if they are equal
      */
-    public static boolean isDateTimeEqualUTC(final OffsetDateTime dt1, final OffsetDateTime dt2) {
+    public static boolean isDateTimeDifferentUTC(final OffsetDateTime dt1, final OffsetDateTime dt2) {
         if (dt1 == null && dt2 == null) {
-            return true;
+            return false;
         }
         if (dt1 == null || dt2 == null) {
-            return false;
+            return true;
         }
 
         final Instant instant1 = dt1.withOffsetSameInstant(ZoneOffset.UTC)
@@ -35,6 +35,6 @@ public final class DateTimeUtils {
                 .truncatedTo(ChronoUnit.MILLIS)
                 .toInstant();
 
-        return instant1.equals(instant2);
+        return !instant1.equals(instant2);
     }
 }

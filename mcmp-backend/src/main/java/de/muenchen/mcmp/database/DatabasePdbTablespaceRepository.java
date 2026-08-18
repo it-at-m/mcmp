@@ -6,5 +6,4 @@ import java.util.List;
 
 public interface DatabasePdbTablespaceRepository extends JpaRepository<DatabasePdbTablespace, Long> {
 
-    List<DatabasePdbTablespace> findAllByDatabasePdbInstanceId(Long databasePdbInstanceId);
 }

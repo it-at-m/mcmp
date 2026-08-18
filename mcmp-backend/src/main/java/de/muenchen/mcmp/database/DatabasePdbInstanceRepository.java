@@ -183,21 +183,4 @@ public interface DatabasePdbInstanceRepository extends JpaRepository<DatabasePdb
               AND s.power_state = 'poweredOn'
             """, nativeQuery = true)
     List<DatabasePdbInstanceServerDTO> findManagedPoweredOnOracleServerPdbInstances();
-
-    @Query(value = """
-                SELECT LOWER(s.fqdn) AS fqdn,
-                       LOWER(dipdbi.snow_pdb) AS pdb,
-                       dipdbi.id AS pdbInstanceId
-                FROM cmp.server s
-                JOIN cmp.server_has_database_instances sdi
-                    ON sdi.server_id = s.id
-                JOIN cmp.database_instance_has_database_pdb_instances dipdb
-                    ON dipdb.database_instance_id = sdi.database_instance_id
-                JOIN cmp.database_pdb_instance dipdbi
-                    ON dipdbi.id = dipdb.database_pdb_instance_id
-                WHERE s.managed = true
-                  AND s.db_oracle = true
-                """, nativeQuery = true)
-    List<DatabasePdbInstanceServerDTO> findAllOracleServerPdbInstanceLookups();
-
 }

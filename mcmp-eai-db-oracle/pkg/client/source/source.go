@@ -3,7 +3,6 @@ package source
 import (
 	"fmt"
 
-	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/client/mcmp"
 	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/datasource"
 	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/logging"
 	"github.com/it-at-m/mcmp/mcmp-eai-db-oracle/pkg/processor"
@@ -11,7 +10,7 @@ import (
 
 const exportFilePattern = "oracle_export_%s.json"
 
-type OracleSource = datasource.JsonFileSource[*mcmp.OracleExport]
+type OracleSource = datasource.JsonFileSource[*processor.OracleExport]
 
 func NewOracleSource(
 	hostname string,

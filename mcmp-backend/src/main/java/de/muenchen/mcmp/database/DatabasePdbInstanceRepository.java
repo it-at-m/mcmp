@@ -76,6 +76,28 @@ public interface DatabasePdbInstanceRepository extends JpaRepository<DatabasePdb
     @Modifying
     @Transactional
     @Query(value = """
+                UPDATE cmp.database_pdb_instance
+                SET pdb_name = :pdbName,
+                    pdb_host_name = :pdbHostName,
+                    pdb_characterset = :pdbCharacterset,
+                    pdb_database_type = :pdbDatabaseType,
+                    pdb_startup_time = :pdbStartupTime,
+                    pdb_collected_at = :pdbCollectedAt,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = :id
+                """, nativeQuery = true)
+    void updateInstanceInfo(@Param("id") Long id,
+                            @Param("pdbName") String pdbName,
+                            @Param("pdbHostName") String pdbHostName,
+                            @Param("pdbCharacterset") String pdbCharacterset,
+                            @Param("pdbDatabaseType") String pdbDatabaseType,
+                            @Param("pdbStartupTime") OffsetDateTime pdbStartupTime,
+                            @Param("pdbCollectedAt") OffsetDateTime pdbCollectedAt);
+
+
+    @Modifying
+    @Transactional
+    @Query(value = """
             DELETE FROM cmp.database_pdb_instance_has_appservices
             WHERE database_pdb_instance_id = :databasePdbInstanceId
             """, nativeQuery = true)
@@ -147,7 +169,8 @@ public interface DatabasePdbInstanceRepository extends JpaRepository<DatabasePdb
 
     @Query(value = """
             SELECT s.fqdn AS fqdn,
-                   dipdbi.snow_pdb AS pdb
+                   dipdbi.snow_pdb AS pdb,
+                   dipdbi.id AS pdbInstanceId
             FROM cmp.server s
             JOIN cmp.server_has_database_instances sdi
                 ON sdi.server_id = s.id
@@ -160,5 +183,21 @@ public interface DatabasePdbInstanceRepository extends JpaRepository<DatabasePdb
               AND s.power_state = 'poweredOn'
             """, nativeQuery = true)
     List<DatabasePdbInstanceServerDTO> findManagedPoweredOnOracleServerPdbInstances();
+
+    @Query(value = """
+                SELECT LOWER(s.fqdn) AS fqdn,
+                       LOWER(dipdbi.snow_pdb) AS pdb,
+                       dipdbi.id AS pdbInstanceId
+                FROM cmp.server s
+                JOIN cmp.server_has_database_instances sdi
+                    ON sdi.server_id = s.id
+                JOIN cmp.database_instance_has_database_pdb_instances dipdb
+                    ON dipdb.database_instance_id = sdi.database_instance_id
+                JOIN cmp.database_pdb_instance dipdbi
+                    ON dipdbi.id = dipdb.database_pdb_instance_id
+                WHERE s.managed = true
+                  AND s.db_oracle = true
+                """, nativeQuery = true)
+    List<DatabasePdbInstanceServerDTO> findAllOracleServerPdbInstanceLookups();
 
 }

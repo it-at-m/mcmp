@@ -8,6 +8,7 @@ import de.muenchen.mcmp.temporaryPrivileges.TemporaryPrivilegeService;
 import de.muenchen.mcmp.user.User;
 import de.muenchen.mcmp.user.UserRepository;
 import de.muenchen.mcmp.user.UserService;
+import de.muenchen.mcmp.utils.DateTimeUtils;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -187,8 +188,8 @@ public class AwxController {
                     TemporaryPrivilege tp = existingPrivilege.get();
 
                     // Update timestamps if they changed
-                    if (!isDateTimeEqualUTC(tp.getExpiresAt(), expiresAt) ||
-                            !isDateTimeEqualUTC(tp.getGrantedAt(), grantedAt)) {
+                    if (!DateTimeUtils.isDateTimeEqualUTC(tp.getExpiresAt(), expiresAt) ||
+                            !DateTimeUtils.isDateTimeEqualUTC(tp.getGrantedAt(), grantedAt)) {
 
                         tp.setExpiresAt(expiresAt);
                         tp.setGrantedAt(grantedAt);
@@ -280,7 +281,7 @@ public class AwxController {
                 final OffsetDateTime expiresAt = parseValidUntil(hostDTO.validUntil());
 
                 // ONLY execute update if values change to reduce DB load
-                if (!server.getMaintenanceMode() || !isDateTimeEqualUTC(server.getMaintenanceModeExpiresAt(), expiresAt)) {
+                if (!server.getMaintenanceMode() || !DateTimeUtils.isDateTimeEqualUTC(server.getMaintenanceModeExpiresAt(), expiresAt)) {
                     // ROBUST UPDATE: We use direct update via query here.
                     // This ignores "Optimistic Locking" errors caused by vCenter updates,
                     // since we explicitly write only these two fields.
@@ -385,37 +386,5 @@ public class AwxController {
      */
     private String formatDateTime(OffsetDateTime dateTime) {
         return dateTime != null ? dateTime.format(DATE_TIME_FORMATTER) : null;
-    }
-
-    /**
-     * Compares two OffsetDateTime objects after converting them to UTC.
-     * This ignores timezone differences and compares the actual points in time.
-     *
-     * This method is crucial for the import process to avoid creating duplicate
-     * temporary privileges when the same data is imported multiple times with
-     * potentially different timezone representations.
-     *
-     * @param dt1 First OffsetDateTime to compare
-     * @param dt2 Second OffsetDateTime to compare
-     * @return true if both represent the same point in time in UTC, false otherwise
-     */
-    private boolean isDateTimeEqualUTC(OffsetDateTime dt1, OffsetDateTime dt2) {
-        if (dt1 == null && dt2 == null) {
-            return true;
-        }
-        if (dt1 == null || dt2 == null) {
-            return false;
-        }
-
-        // Convert both to UTC, truncate to millis and then compare instants
-        final java.time.Instant instant1 = dt1.withOffsetSameInstant(ZoneOffset.UTC)
-                .truncatedTo(ChronoUnit.MILLIS)
-                .toInstant();
-
-        final java.time.Instant instant2 = dt2.withOffsetSameInstant(ZoneOffset.UTC)
-                .truncatedTo(ChronoUnit.MILLIS)
-                .toInstant();
-
-        return instant1.equals(instant2);
     }
 }

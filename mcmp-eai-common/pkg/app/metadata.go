@@ -79,5 +79,7 @@ func FinalizeMetadata(meta *EaiMetadata) {
 	}
 	meta.EndTime = time.Now()
 	meta.Duration = meta.EndTime.Sub(meta.StartTime).String()
-	meta.Status = "SUCCESS"
+	if meta.Status == "" || meta.Status == "RUNNING" {
+		meta.Status = "SUCCESS"
+	}
 }

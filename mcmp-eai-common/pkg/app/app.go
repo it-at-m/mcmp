@@ -69,7 +69,12 @@ func RunEAI[T any](ctx context.Context, cfg EAIConfig, sources []DataSource[T], 
 			}
 
 			if holder, ok := any(data).(MetadataHolder); ok {
-				holder.SetEaiMetadata(NewEaiMetadata(cfg.AppName, startTime))
+				existingMeta := holder.GetEaiMetadata()
+				meta := NewEaiMetadata(cfg.AppName, startTime)
+				if existingMeta.Status != "" && existingMeta.Status != "RUNNING" {
+					meta.Status = existingMeta.Status
+				}
+				holder.SetEaiMetadata(meta)
 			}
 
 			if err := src.ProcessData(ctx, data); err != nil {

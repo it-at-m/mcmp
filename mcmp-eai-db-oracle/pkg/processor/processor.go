@@ -227,6 +227,10 @@ func (p *Processor) FetchDatabaseMetrics(ctx context.Context) (*OracleExport, er
 		return nil, fmt.Errorf("%w: %d databases", ErrAllServersFailed, errorCount)
 	}
 
+	if errorCount > 0 {
+		export.Status = "ERROR"
+	}
+
 	return export, nil
 }
 
@@ -263,7 +267,7 @@ func (p *Processor) processDatabase(ctx context.Context, server mcmp.OracleServe
 		rows, err := db.QueryContext(ctx, q.SQL)
 		if err != nil {
 			p.logger.Error("Query failed", "server", server.FQDN, "query", q.Name, "error", err)
-			continue
+			return OracleDatabaseMetrics{}, fmt.Errorf("query %s failed for %s: %w", q.Name, server.FQDN, err)
 		}
 
 		cols, _ := rows.Columns()

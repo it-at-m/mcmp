@@ -4,6 +4,7 @@ import de.muenchen.mcmp.appservice.AppserviceService;
 import de.muenchen.mcmp.job.incident.JobIncidentSummary;
 import de.muenchen.mcmp.job.node.JobNodeHierarchy;
 import de.muenchen.mcmp.loadbalancer.LoadbalancerService;
+import de.muenchen.mcmp.mountPoint.MountPointDTO;
 import de.muenchen.mcmp.mountPoint.MountPointService;
 import de.muenchen.mcmp.network.NetworkService;
 import de.muenchen.mcmp.security.AuthUtils;
@@ -652,7 +653,16 @@ public class JobController {
             logicalName = mountPointPath.substring(mountPointPath.lastIndexOf('/') + 1);
         }
         else {
-            if (newSize < (mountPointService.getMountPointByServerIdAndPath(serverId, mountPointPath).capacityInBytes() / (1024 * 1024 * 1024)) ||
+            MountPointDTO existingMountPoint = mountPointService.getMountPointByServerIdAndPath(serverId, mountPointPath);
+            if (existingMountPoint == null) {
+                log.warn("Mountpoint {} not found for serverId: {} requested by user: {}", mountPointPath, serverId, AuthUtils.getUsername());
+                throw new IllegalArgumentException("Mountpoint not found.");
+            }
+            if (!Boolean.TRUE.equals(existingMountPoint.editable())) {
+                log.warn("User {} tried to change non-editable mountpoint {} for serverId: {}", AuthUtils.getUsername(), mountPointPath, serverId);
+                throw new AccessDeniedException("This mountpoint is not editable and cannot be changed.");
+            }
+            if (newSize < (existingMountPoint.capacityInBytes() / (1024 * 1024 * 1024)) ||
                     newSize > 2000) {
                 log.warn("Invalid size provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
                 throw new IllegalArgumentException("New Size could not be smaller then the old size and not bigger then 2000 GB.");

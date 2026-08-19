@@ -260,10 +260,9 @@ function makeJobCall() {
 
     loading.value = true;
     const promises = servers.map((server) =>
-      jobService
-        .startJob(
-          loading,
-          props.jobToCall,
+      jobService.startJob(
+        loading,
+        props.jobToCall,
         server.id,
         schedule.value ? { scheduleTime: rawDate.value.toISOString() } : {}
       )

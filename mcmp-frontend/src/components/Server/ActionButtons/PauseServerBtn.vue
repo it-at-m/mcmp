@@ -225,40 +225,20 @@ async function onDialogConfirm() {
     if (props.isBatchOperation) {
       const servers = props.selectedServers || [];
       servers.forEach((server: Server) => {
-        jobService.startJob(
-          loading,
-          "STOP_SERVER",
-          server.id,
-          {
-            scheduleTime: stopDate.value.toISOString(),
-          }
-        );
-        jobService.startJob(
-          loading,
-          "START_SERVER",
-          server.id,
-          {
-            scheduleTime: startDate.value.toISOString(),
-          }
-        );
+        jobService.startJob(loading, "STOP_SERVER", server.id, {
+          scheduleTime: stopDate.value.toISOString(),
+        });
+        jobService.startJob(loading, "START_SERVER", server.id, {
+          scheduleTime: startDate.value.toISOString(),
+        });
       });
     } else if (props.server) {
-      await jobService.startJob(
-        loading,
-        "STOP_SERVER",
-        props.server.id,
-        {
-          scheduleTime: stopDate.value.toISOString(),
-        }
-      );
-      await jobService.startJob(
-        loading,
-        "START_SERVER",
-        props.server.id,
-        {
-          scheduleTime: startDate.value.toISOString(),
-        }
-      );
+      await jobService.startJob(loading, "STOP_SERVER", props.server.id, {
+        scheduleTime: stopDate.value.toISOString(),
+      });
+      await jobService.startJob(loading, "START_SERVER", props.server.id, {
+        scheduleTime: startDate.value.toISOString(),
+      });
     }
 
     emit("change");

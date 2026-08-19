@@ -628,17 +628,12 @@ function change_cpu_ram(
   scheduleTime: string | null,
   schedulePatchnight: boolean
 ) {
-  jobService.startJob(
-    loading,
-    "CHANGE_CPU_RAM",
-    props.selectedServer.id,
-    {
-      cpu: cpus,
-      ram: ram,
-      scheduleTime: scheduleTime != null ? scheduleTime : undefined,
-      schedulePatchnight: schedulePatchnight,
-    }
-  );
+  jobService.startJob(loading, "CHANGE_CPU_RAM", props.selectedServer.id, {
+    cpu: cpus,
+    ram: ram,
+    scheduleTime: scheduleTime != null ? scheduleTime : undefined,
+    schedulePatchnight: schedulePatchnight,
+  });
 }
 
 const isCpuInCooldown = computed(() => {

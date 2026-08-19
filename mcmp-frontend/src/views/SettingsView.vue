@@ -97,6 +97,16 @@
                 <v-icon size="x-large">{{ mdiHeartPulse }}</v-icon>
               </template>
             </v-tab>
+
+            <v-tab
+              v-if="isAdmin"
+              value="ErrorLog"
+            >
+              Error Logs
+              <template #prepend>
+                <v-icon size="x-large">{{ mdiAlertCircleOutline }}</v-icon>
+              </template>
+            </v-tab>
           </v-tabs>
         </v-row>
 
@@ -163,6 +173,13 @@
           >
             <app-config />
           </v-tabs-window-item>
+
+          <v-tabs-window-item
+            v-if="isAdmin"
+            value="ErrorLog"
+          >
+            <error-log />
+          </v-tabs-window-item>
         </v-tabs-window>
       </v-col>
     </v-row>
@@ -172,6 +189,7 @@
 <script setup lang="ts">
 import {
   mdiAccountCog,
+  mdiAlertCircleOutline,
   mdiChartBar,
   mdiCogOutline,
   mdiCurrencyEur,
@@ -188,6 +206,7 @@ import Actions from "@/components/Settings/actions.vue";
 import AdminHistory from "@/components/Settings/AdminHistory.vue";
 import adminUsers from "@/components/Settings/adminUsers.vue";
 import AppConfig from "@/components/Settings/appConfig.vue";
+import ErrorLog from "@/components/Settings/ErrorLog.vue";
 import IntegrationSettings from "@/components/Settings/IntegrationSettings.vue";
 import JobStatistics from "@/components/Settings/JobStatistics.vue";
 import NetworkGroup from "@/components/Settings/NetworkGroup.vue";

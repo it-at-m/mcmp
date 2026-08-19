@@ -152,3 +152,5 @@ greenit:
   filename-rightsize: "GreenIT_rightsizing"
   filename-power-off: "GreenIT_shutdown"
 
+error-log:
+  retention-days: 30

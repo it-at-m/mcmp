@@ -5,6 +5,8 @@ import de.muenchen.mcmp.appservice.AppserviceService;
 import de.muenchen.mcmp.cloud.Cloud;
 import de.muenchen.mcmp.errorlog.ErrorLogService;
 import de.muenchen.mcmp.loadbalancer.LoadbalancerService;
+import de.muenchen.mcmp.loadbalancer.UnifiedLoadbalancer;
+import de.muenchen.mcmp.loadbalancer.UnifiedLoadbalancerPoolDTO;
 import de.muenchen.mcmp.mountPoint.MountPointService;
 import de.muenchen.mcmp.network.NetworkService;
 import de.muenchen.mcmp.ontap.OntapCifsShareAclListDto;
@@ -296,6 +298,14 @@ class JobControllerValidRequestsTest {
     @Test
     void loadbalancerF5ChangePoolMembers_validPayload_succeeds() throws Exception {
         when(loadbalancerService.canUserEditLoadbalancer(anyLong())).thenReturn(true);
+        when(loadbalancerService.getLoadbalancerById(anyLong())).thenReturn(
+                UnifiedLoadbalancer.builder()
+                        .wafEnabled(false)
+                        .pools(List.of(UnifiedLoadbalancerPoolDTO.builder()
+                                .name("pool1")
+                                .members(List.of())
+                                .build()))
+                        .build());
         perform("LOADBALANCER_F5_CHANGE_POOL_MEMBERS",
                 "{\"lb_virtual_server_id\":123,\"pool_name\":\"pool1\",\"removed\":[{\"ip\":\"10.0.0.1\",\"port\":443}]}");
     }

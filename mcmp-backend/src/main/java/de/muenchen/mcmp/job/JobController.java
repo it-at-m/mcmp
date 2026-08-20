@@ -4,6 +4,9 @@ import de.muenchen.mcmp.appservice.AppserviceService;
 import de.muenchen.mcmp.job.incident.JobIncidentSummary;
 import de.muenchen.mcmp.job.node.JobNodeHierarchy;
 import de.muenchen.mcmp.loadbalancer.LoadbalancerService;
+import de.muenchen.mcmp.loadbalancer.UnifiedLoadbalancer;
+import de.muenchen.mcmp.loadbalancer.UnifiedLoadbalancerMemberDTO;
+import de.muenchen.mcmp.loadbalancer.UnifiedLoadbalancerPoolDTO;
 import de.muenchen.mcmp.mountPoint.MountPointDTO;
 import de.muenchen.mcmp.mountPoint.MountPointService;
 import de.muenchen.mcmp.network.NetworkService;
@@ -1337,6 +1340,20 @@ public class JobController {
         }
         String poolName = poolNameObj.toString().trim();
 
+        final UnifiedLoadbalancer loadbalancer = loadbalancerService.getLoadbalancerById(lbVirtualServerId);
+        if (loadbalancer.wafEnabled()) {
+            logTriedToCreateJob(LOADBALANCER_F5_CHANGE_POOL_MEMBERS, serverId);
+            throw new AccessDeniedException("Pool members cannot be changed for a loadbalancer with WAF enabled.");
+        }
+        final UnifiedLoadbalancerPoolDTO pool = loadbalancer.pools().stream()
+                .filter(p -> poolName.equals(p.name()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Pool not found: " + poolName));
+        if (isCapPool(pool)) {
+            logTriedToCreateJob(LOADBALANCER_F5_CHANGE_POOL_MEMBERS, serverId);
+            throw new AccessDeniedException("Pool members cannot be changed for a pool with CAP members.");
+        }
+
         List<Map<String, Object>> addedList = awxExtraVars.get("added") != null
                 ? requireListOfMap(awxExtraVars.get("added"), "Added members")
                 : List.of();
@@ -1391,6 +1408,24 @@ public class JobController {
         jobService.loadbalancerF5ChangePoolMembers(lbVirtualServerId, poolName, addedList, removedList, LOADBALANCER_F5_CHANGE_POOL_MEMBERS);
     }
 
+    // Mirrors the CAP-Ingress port ranges used by the frontend (isCapPool in loadbalancerPool.ts)
+    // so that CAP-managed pools can't be edited through this endpoint either.
+    private static final List<int[]> CAP_PORT_RANGES = List.of(
+            new int[]{32201, 32207},
+            new int[]{32301, 32307},
+            new int[]{32401, 32407}
+    );
+
+    private static boolean isCapPort(final int port) {
+        return CAP_PORT_RANGES.stream().anyMatch(range -> port >= range[0] && port <= range[1]);
+    }
+
+    private static boolean isCapPool(final UnifiedLoadbalancerPoolDTO pool) {
+        final List<UnifiedLoadbalancerMemberDTO> members = pool.members();
+        return members != null && !members.isEmpty()
+                && members.stream().allMatch(m -> m.serverId() == null)
+                && members.stream().allMatch(m -> isCapPort(m.port()));
+    }
 
     // -----------------------------------------------------------------------------------------------------------------
     // Storage JOBs

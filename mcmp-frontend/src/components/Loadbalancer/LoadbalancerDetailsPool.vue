@@ -233,7 +233,7 @@
             type="info"
             density="compact"
           >
-            Loadbalancer zeigt auf CAP Ingress - Funktionsgruppe
+            Loadbalancer Pool zeigt auf CAP Ingress - Funktionsgruppe
             {{ capFunktionsgruppe(pool) }} ->
             <a
               class="cap-alert-link"
@@ -367,6 +367,7 @@ import { ref } from "vue";
 import CommonCard from "@/components/common/CommonCard.vue";
 import InfoTooltip from "@/components/common/InfoTooltip.vue";
 import LoadbalancerChangePoolMembers from "@/components/Loadbalancer/LoadbalancerChangePoolMembers.vue";
+import { isCapPool } from "@/util/loadbalancerPool";
 
 defineProps<{
   lb: LoadbalancerDetail;
@@ -406,16 +407,6 @@ function poolHasHttpMonitor(pool: LoadbalancerPool): boolean {
   return !!pool.monitors?.some((m) => m.type?.toLowerCase().includes("http"));
 }
 
-const CAP_PORT_RANGES: [number, number][] = [
-  [32201, 32207],
-  [32301, 32307],
-  [32401, 32407],
-];
-
-function isCapPort(port: number): boolean {
-  return CAP_PORT_RANGES.some(([from, to]) => port >= from && port <= to);
-}
-
 const CAP_FUNKTIONSGRUPPEN: Record<string, string> = {
   "01": "Web2Tier",
   "02": "EAI",
@@ -428,14 +419,6 @@ const CAP_FUNKTIONSGRUPPEN: Record<string, string> = {
 function capFunktionsgruppe(pool: LoadbalancerPool): string {
   const suffix = String(pool.members[0]?.port ?? "").slice(-2);
   return CAP_FUNKTIONSGRUPPEN[suffix] ?? "-";
-}
-
-function isCapPool(pool: LoadbalancerPool): boolean {
-  return (
-    pool.members.length > 0 &&
-    pool.members.every((m) => !m.serverId) &&
-    pool.members.every((m) => isCapPort(m.port))
-  );
 }
 
 function poolTypeLabel(pool: LoadbalancerPool): string {

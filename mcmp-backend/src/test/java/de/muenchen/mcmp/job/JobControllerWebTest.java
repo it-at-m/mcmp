@@ -8,6 +8,9 @@ import de.muenchen.mcmp.config.app.MaintenanceModeInterceptor;
 import de.muenchen.mcmp.configuration.nfcconverter.NfcRequestFilter;
 import de.muenchen.mcmp.errorlog.ErrorLogService;
 import de.muenchen.mcmp.loadbalancer.LoadbalancerService;
+import de.muenchen.mcmp.loadbalancer.UnifiedLoadbalancer;
+import de.muenchen.mcmp.loadbalancer.UnifiedLoadbalancerMemberDTO;
+import de.muenchen.mcmp.loadbalancer.UnifiedLoadbalancerPoolDTO;
 import de.muenchen.mcmp.mountPoint.MountPointDTO;
 import de.muenchen.mcmp.mountPoint.MountPointService;
 import de.muenchen.mcmp.network.NetworkService;
@@ -258,6 +261,14 @@ class JobControllerWebTest {
     @Test
     void loadbalancerPoolMembers_addedMemberRequiresEditNotJustView_isBlocked() throws Exception {
         when(loadbalancerService.canUserEditLoadbalancer(anyLong())).thenReturn(true);
+        when(loadbalancerService.getLoadbalancerById(anyLong())).thenReturn(
+                UnifiedLoadbalancer.builder()
+                        .wafEnabled(false)
+                        .pools(List.of(UnifiedLoadbalancerPoolDTO.builder()
+                                .name("pool1")
+                                .members(List.of())
+                                .build()))
+                        .build());
         when(serverService.canUserEditServer(SERVER_ID)).thenReturn(false);
         when(serverService.canUserViewServer(SERVER_ID)).thenReturn(true); // The user can only view the server.
 
@@ -269,6 +280,54 @@ class JobControllerWebTest {
                 .andExpect(status().isForbidden());
 
         verify(serverService).canUserEditServer(SERVER_ID);
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void loadbalancerPoolMembers_wafEnabled_isBlocked() throws Exception {
+        when(loadbalancerService.canUserEditLoadbalancer(anyLong())).thenReturn(true);
+        when(loadbalancerService.getLoadbalancerById(anyLong())).thenReturn(
+                UnifiedLoadbalancer.builder()
+                        .wafEnabled(true)
+                        .pools(List.of(UnifiedLoadbalancerPoolDTO.builder()
+                                .name("pool1")
+                                .members(List.of())
+                                .build()))
+                        .build());
+
+        mockMvc.perform(post("/job/create/LOADBALANCER_F5_CHANGE_POOL_MEMBERS").param("serverId", "-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"lb_virtual_server_id":123,"pool_name":"pool1",
+                                 "removed":[{"ip":"10.0.0.1","port":443}]}"""))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void loadbalancerPoolMembers_capPool_isBlocked() throws Exception {
+        when(loadbalancerService.canUserEditLoadbalancer(anyLong())).thenReturn(true);
+        when(loadbalancerService.getLoadbalancerById(anyLong())).thenReturn(
+                UnifiedLoadbalancer.builder()
+                        .wafEnabled(false)
+                        .pools(List.of(UnifiedLoadbalancerPoolDTO.builder()
+                                .name("pool1")
+                                .members(List.of(UnifiedLoadbalancerMemberDTO.builder()
+                                        .ip("10.0.0.1")
+                                        .port(32201)
+                                        .serverId(null)
+                                        .build()))
+                                .build()))
+                        .build());
+
+        mockMvc.perform(post("/job/create/LOADBALANCER_F5_CHANGE_POOL_MEMBERS").param("serverId", "-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"lb_virtual_server_id":123,"pool_name":"pool1",
+                                 "removed":[{"ip":"10.0.0.1","port":32201}]}"""))
+                .andExpect(status().isForbidden());
+
         verifyNoInteractions(jobService);
     }
 

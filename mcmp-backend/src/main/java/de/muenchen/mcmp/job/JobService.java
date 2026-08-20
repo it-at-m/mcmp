@@ -983,12 +983,14 @@ public class JobService {
         // remove all members that still have key 'ports' instead of 'port'
         memberList.removeIf(member -> member.containsKey("ports"));
 
-        Map<String, Object> params = new HashMap<>(awxExtraVars);
+        Map<String, Object> params = new HashMap<>();
+        params.put("dns", awxExtraVars.get("dns"));
+        params.put("listener", listenerMaps);
+        params.put("server_pools", serverPools);
         params.put("requester_username", AuthUtils.getUsername());
         params.put("organisational_unit", AuthUtils.getCurrentUserInfo().department());
         params.put("application_service", appservice.getName());
         params.put("application_service_number", appservice.getNumber());
-        params.remove("appservice");
         Map<String, String> ibs342map = new HashMap<>();
         switch (appservice.getUsedFor()) {
             case "Production" -> ibs342map.put("environment", "prod");

@@ -38,9 +38,11 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
           cache: 'maven'
-      - name: Build Backend & EAI Modules
+      - name: Build & Test Backend
         run: |
-          mvn -B -ntp clean compile -f mcmp-backend/pom.xml
+          mvn -B -ntp clean verify -f mcmp-backend/pom.xml
+      - name: Build EAI Modules
+        run: |
           mvn -B -ntp clean compile -f mcmp-eai-infoblox/pom.xml
 
   build-frontend:

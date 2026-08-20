@@ -1,26 +1,29 @@
 <template>
   <div class="scrollable-list-table-root">
     <div class="search-container">
-      <v-text-field
-        v-model="searchModel"
-        :label="searchLabel"
-        :prepend-inner-icon="mdiMagnify"
-        variant="outlined"
-        density="comfortable"
-        hide-details
-        class="material-search-field"
-        rounded
-        clearable
-      >
-        <!-- Vuetify Tooltip wird nur gerendert, wenn der String übergeben wurde -->
-        <v-tooltip
-          v-if="searchTooltip"
-          activator="parent"
-          location="top"
+      <div class="search-row">
+        <v-text-field
+          v-model="searchModel"
+          :label="searchLabel"
+          :prepend-inner-icon="mdiMagnify"
+          variant="outlined"
+          density="comfortable"
+          hide-details
+          class="material-search-field"
+          rounded
+          clearable
         >
-          {{ searchTooltip }}
-        </v-tooltip>
-      </v-text-field>
+          <!-- Vuetify Tooltip wird nur gerendert, wenn der String übergeben wurde -->
+          <v-tooltip
+            v-if="searchTooltip"
+            activator="parent"
+            location="top"
+          >
+            {{ searchTooltip }}
+          </v-tooltip>
+        </v-text-field>
+        <slot name="search-actions" />
+      </div>
     </div>
 
     <div
@@ -450,9 +453,16 @@ defineExpose({ resetSelection, triggerObserveScroll });
     inset 0 -2px 0 0 #a6a4a6;
 }
 
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .material-search-field {
   width: 100%;
   max-width: 100%;
+  flex: 1 1 auto;
 }
 
 :deep(.material-search-field) {

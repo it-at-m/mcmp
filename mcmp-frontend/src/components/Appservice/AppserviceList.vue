@@ -18,6 +18,24 @@
       @load-more="onLoadMore"
       @row-keydown="onRowKeydown"
     >
+      <template #search-actions>
+        <v-tooltip
+          text="Appservices exportieren"
+          location="top"
+        >
+          <template #activator="{ props: tooltipProps }">
+            <v-btn
+              v-bind="tooltipProps"
+              :icon="mdiFileExportOutline"
+              variant="flat"
+              density="comfortable"
+              aria-label="Appservices exportieren"
+              @click="exportDialog = true"
+            />
+          </template>
+        </v-tooltip>
+      </template>
+
       <template #[`item.name`]="{ item }">
         <div class="appservice-name-cell">
           <v-btn
@@ -72,6 +90,8 @@
         </v-row>
       </template>
     </scrollable-list-table>
+
+    <appservice-export-dialog v-model="exportDialog" />
   </div>
 </template>
 
@@ -79,10 +99,11 @@
 import type AppserviceList from "@/types/AppserviceList.ts";
 import type { DataTableHeader } from "vuetify";
 
-import { mdiStar, mdiStarOutline } from "@mdi/js";
+import { mdiFileExportOutline, mdiStar, mdiStarOutline } from "@mdi/js";
 import { nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 
 import appserviceService from "@/api/appserviceService.ts";
+import AppserviceExportDialog from "@/components/Appservice/AppserviceExportDialog.vue";
 import ScrollableListTable from "@/components/common/ScrollableListTable.vue";
 import { APPSERVICE_EXPLAIN_URL } from "@/constants.ts";
 
@@ -106,6 +127,7 @@ const emit = defineEmits<{
 }>();
 
 const loading = ref(false);
+const exportDialog = ref(false);
 const search = ref(props.initialSearch ?? "");
 const curOffset = ref(0);
 const itemsAvailableToLoad = ref(0);

@@ -238,29 +238,6 @@ watch(
 </script>
 
 <style scoped>
-.action-btn {
-  min-width: 120px;
-  height: 44px;
-  border-radius: 12px;
-  font-weight: 600;
-  text-transform: none;
-  letter-spacing: 0.5px;
-  transition: all 0.3s ease;
-}
-
-.cancel-btn {
-  border: 2px solid #90a4ae;
-  /* noinspection CssUnresolvedCustomProperty */
-  color: rgb(var(--v-theme-cancel));
-}
-
-.cancel-btn:hover {
-  /* noinspection CssUnresolvedCustomProperty */
-  background: rgb(var(--v-theme-bg_light));
-  border-color: #90a4ae;
-  transform: translateY(-1px);
-}
-
 .confirm-btn {
   background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
   box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);

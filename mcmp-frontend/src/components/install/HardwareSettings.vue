@@ -177,13 +177,3 @@ watch(
   }
 );
 </script>
-<style scoped>
-.links a,
-.links a:visited,
-.links a:hover,
-.links a:active {
-  /* noinspection CssUnresolvedCustomProperty */
-  color: rgb(var(--v-theme-link));
-  text-decoration: none;
-}
-</style>

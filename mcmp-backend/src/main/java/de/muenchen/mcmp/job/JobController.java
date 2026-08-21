@@ -88,6 +88,7 @@ public class JobController {
 
     public static final String LOADBALANCER_F5 = "LOADBALANCER_F5";
     public static final String LOADBALANCER_F5_CHANGE_POOL_MEMBERS = "LOADBALANCER_F5_CHANGE_POOL_MEMBERS";
+    public static final String LOADBALANCER_F5_DELETE = "LOADBALANCER_F5_DELETE";
 
     public static final String GREEN_IT_VMWARE_SHUTDOWN = "GREEN_IT_VMWARE_SHUTDOWN";
     public static final String GREEN_IT_VMWARE_RIGHTSIZE = "GREEN_IT_VMWARE_RIGHTSIZE";
@@ -1406,6 +1407,35 @@ public class JobController {
 
         logCreatedJob(LOADBALANCER_F5_CHANGE_POOL_MEMBERS, serverId);
         jobService.loadbalancerF5ChangePoolMembers(lbVirtualServerId, poolName, addedList, removedList, LOADBALANCER_F5_CHANGE_POOL_MEMBERS);
+    }
+
+    @PostMapping("/create/" + LOADBALANCER_F5_DELETE)
+    public void loadbalancerF5Delete(@RequestParam(name = "serverId") final Long serverId,
+                                      @RequestBody final Map<String, Object> awxExtraVars) {
+        Object lbVirtualServerIdObj = awxExtraVars.get("lb_virtual_server_id");
+        if (lbVirtualServerIdObj == null) {
+            throw new MissingFormatArgumentException("Loadbalancer ID must be provided.");
+        }
+        final long lbVirtualServerId;
+        try {
+            lbVirtualServerId = Long.parseLong(lbVirtualServerIdObj.toString());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Loadbalancer ID is invalid.");
+        }
+
+        if (!loadbalancerService.canUserEditLoadbalancer(lbVirtualServerId)) {
+            logTriedToCreateJob(LOADBALANCER_F5_DELETE, serverId);
+            throw new AccessDeniedException("You are not allowed to delete this loadbalancer.");
+        }
+
+        final UnifiedLoadbalancer loadbalancer = loadbalancerService.getLoadbalancerById(lbVirtualServerId);
+        if (loadbalancer.wafEnabled()) {
+            logTriedToCreateJob(LOADBALANCER_F5_DELETE, serverId);
+            throw new AccessDeniedException("A loadbalancer with WAF enabled cannot be deleted.");
+        }
+
+        logCreatedJob(LOADBALANCER_F5_DELETE, serverId);
+        jobService.loadbalancerF5Delete(lbVirtualServerId, LOADBALANCER_F5_DELETE);
     }
 
     // Mirrors the CAP-Ingress port ranges used by the frontend (isCapPool in loadbalancerPool.ts)

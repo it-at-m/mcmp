@@ -418,12 +418,3 @@ watch([rawDate], async () => {
 </script>
 
 <!--suppress CssUnresolvedCustomProperty -->
-<style scoped>
-.links a,
-.links a:visited,
-.links a:hover,
-.links a:active {
-  color: rgb(var(--v-theme-link));
-  text-decoration: none;
-}
-</style>

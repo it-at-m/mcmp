@@ -41,21 +41,7 @@
           class="right-panel-inner"
         >
           <div class="right-panel-sticky">
-            <detail-page-header
-              :appservice-id="selectedDetail.appservices?.[0]?.id ?? null"
-              :appservice-name="selectedDetail.appservices?.[0]?.name ?? null"
-              :appservice-count="selectedDetail.appservices?.length ?? 0"
-              :current-icon="mdiSitemap"
-              :current-label="selectedDetail.name"
-            >
-              <template #statusChips>
-                <appservice-assignment-status-chips
-                  :can-edit="selectedDetail.canEdit"
-                  :assigned-count="selectedDetail.appservices?.length ?? 0"
-                  entity-label="Loadbalancer"
-                />
-              </template>
-            </detail-page-header>
+            <selected-loadbalancer-actions-and-status :lb="selectedDetail" />
             <v-row>
               <v-col class="d-flex align-center">
                 <v-tabs
@@ -140,18 +126,17 @@
 import type { LoadbalancerDetail } from "@/types/LoadbalancerDetail";
 import type { LoadbalancerListItem } from "@/types/LoadbalancerListItem";
 
-import { mdiCallSplit, mdiHome, mdiScriptText, mdiSitemap } from "@mdi/js";
+import { mdiCallSplit, mdiHome, mdiScriptText } from "@mdi/js";
 import { onMounted, onUnmounted, provide, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 import loadbalancerService from "@/api/loadbalancerService";
-import AppserviceAssignmentStatusChips from "@/components/common/AppserviceAssignmentStatusChips.vue";
 import CollapseAllCardsButton from "@/components/common/CollapseAllCardsButton.vue";
-import DetailPageHeader from "@/components/common/DetailPageHeader.vue";
 import LoadbalancerDetailsGeneral from "@/components/Loadbalancer/LoadbalancerDetailsGeneral.vue";
 import LoadbalancerDetailsIrules from "@/components/Loadbalancer/LoadbalancerDetailsIrules.vue";
 import LoadbalancerDetailsPool from "@/components/Loadbalancer/LoadbalancerDetailsPool.vue";
 import LoadbalancerList from "@/components/Loadbalancer/LoadbalancerList.vue";
+import SelectedLoadbalancerActionsAndStatus from "@/components/Loadbalancer/SelectedLoadbalancerActionsAndStatus.vue";
 import { useCollapsibleCards } from "@/composables/useCollapsibleCards";
 import { useScrollRestoration } from "@/composables/useScrollRestoration";
 import { useTabQuerySync } from "@/composables/useTabQuerySync";
@@ -313,175 +298,3 @@ onUnmounted(() => {
   document.removeEventListener("touchend", stopResize);
 });
 </script>
-
-<style scoped>
-.split-container {
-  height: calc(100dvh - var(--v-layout-top));
-  min-height: 0;
-  padding: 0;
-  margin: 0;
-  overflow: hidden;
-}
-
-.split-view {
-  display: flex;
-  height: 100%;
-  min-height: 0;
-  width: 100%;
-  overflow: hidden;
-}
-
-.left-panel {
-  flex-shrink: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  /* noinspection CssUnresolvedCustomProperty */
-  background-color: var(--v-theme-surface);
-  /* noinspection CssUnresolvedCustomProperty */
-  border-right: 1px solid var(--v-theme-on-surface-variant);
-  min-width: 200px;
-  max-width: 800px;
-}
-
-.right-panel {
-  flex: 1 1 auto;
-  min-width: 0;
-  min-height: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  /* noinspection CssUnresolvedCustomProperty */
-  background-color: var(--v-theme-surface);
-}
-
-.right-panel-inner {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
-}
-
-.right-panel-sticky {
-  flex-shrink: 0;
-}
-
-.right-panel-scroll {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-}
-
-.split-handle {
-  width: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  cursor: col-resize;
-  user-select: none;
-  border: 0;
-  z-index: 10;
-  opacity: 0.8;
-  margin-left: 0.2em;
-  margin-right: 0.2em;
-}
-
-.split-handle-bar {
-  position: absolute;
-  top: 50%;
-  width: 2px;
-  height: 2%;
-  /* noinspection CssUnresolvedCustomProperty */
-  background: rgb(var(--v-theme-text));
-  opacity: 0.8;
-  border-radius: 24px;
-  z-index: 1;
-}
-
-.split-handle-bar.left {
-  left: 2px;
-}
-
-.split-handle-bar.right {
-  right: 2px;
-}
-
-.split-handle::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 15%;
-  width: 2px;
-  height: 70%;
-  /* noinspection CssUnresolvedCustomProperty */
-  background: rgb(var(--v-theme-text));
-  transform: translateX(-50%);
-  z-index: 0;
-  border-radius: 1px;
-  opacity: 0.6;
-}
-
-@media print {
-  .left-panel,
-  .split-handle {
-    display: none !important;
-  }
-
-  .right-panel {
-    width: 100% !important;
-    height: auto !important;
-    overflow: visible !important;
-  }
-
-  .split-container,
-  .split-view {
-    display: block !important;
-    height: auto !important;
-    overflow: visible !important;
-  }
-}
-
-@media (max-width: 768px) {
-  .split-handle {
-    width: 18px;
-
-    &:hover {
-      width: 22px;
-    }
-
-    &:active {
-      width: 26px !important;
-    }
-  }
-
-  .split-view.resizing .split-handle {
-    width: 30px !important;
-  }
-}
-
-@media (hover: none) {
-  .split-handle {
-    width: 20px;
-    background: linear-gradient(
-      to right,
-      #f0f0f0 0%,
-      #d8d8d8 50%,
-      #f0f0f0 100%
-    );
-    border-color: #999;
-
-    &::before {
-      color: #555;
-    }
-
-    &::after {
-      background: #666;
-      width: 2px;
-      opacity: 0.8;
-    }
-  }
-}
-</style>

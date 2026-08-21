@@ -310,6 +310,14 @@ class JobControllerValidRequestsTest {
                 "{\"lb_virtual_server_id\":123,\"pool_name\":\"pool1\",\"removed\":[{\"ip\":\"10.0.0.1\",\"port\":443}]}");
     }
 
+    @Test
+    void loadbalancerF5Delete_validPayload_succeeds() throws Exception {
+        when(loadbalancerService.canUserEditLoadbalancer(anyLong())).thenReturn(true);
+        when(loadbalancerService.getLoadbalancerById(anyLong())).thenReturn(
+                UnifiedLoadbalancer.builder().wafEnabled(false).build());
+        perform("LOADBALANCER_F5_DELETE", "{\"lb_virtual_server_id\":123}");
+    }
+
     // -----------------------------------------------------------------------------------------------------------------
     // Storage jobs
     // -----------------------------------------------------------------------------------------------------------------

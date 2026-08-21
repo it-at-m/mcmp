@@ -332,6 +332,32 @@ class JobControllerWebTest {
     }
 
     @Test
+    void loadbalancerF5Delete_userCannotEditLoadbalancer_isBlocked() throws Exception {
+        when(loadbalancerService.canUserEditLoadbalancer(anyLong())).thenReturn(false);
+
+        mockMvc.perform(post("/job/create/LOADBALANCER_F5_DELETE").param("serverId", "-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"lb_virtual_server_id\":123}"))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void loadbalancerF5Delete_wafEnabled_isBlocked() throws Exception {
+        when(loadbalancerService.canUserEditLoadbalancer(anyLong())).thenReturn(true);
+        when(loadbalancerService.getLoadbalancerById(anyLong())).thenReturn(
+                UnifiedLoadbalancer.builder().wafEnabled(true).build());
+
+        mockMvc.perform(post("/job/create/LOADBALANCER_F5_DELETE").param("serverId", "-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"lb_virtual_server_id\":123}"))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
     void loadbalancerF5_create_appserviceOwnershipIsVisibilityBased_byDesign() throws Exception {
         Appservice appservice = new Appservice();
         appservice.setId(APPSERVICE_ID);

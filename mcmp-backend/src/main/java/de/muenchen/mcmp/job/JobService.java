@@ -103,8 +103,6 @@ public class JobService {
 
     private final InfobloxService infobloxService;
 
-    private final JobMapper jobMapper;
-
     private final ActionToJobMapper actionToJobMapper;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -156,26 +154,6 @@ public class JobService {
             return jobRepository.findAllJobsComplete(pageable, jobId, awxJobId, createdFrom, createdTo, changeStartFrom, changeStartTo, userId, serverId, appserviceId, hasActionIdentifier, actionIdentifierParam, statusIdentifier, awxVariables);
         }
         return jobRepository.findAllJobsBasic(pageable, userId, serverId, appserviceId);
-    }
-
-    public Page<JobListBasic> getJobsByAppServiceId(
-            final int page,
-            final int itemsPerPage,
-            final String sortBy,
-            final boolean sortDesc,
-            final Long appServiceId
-    ) {
-        final Sort sort;
-        if (sortBy != null && !sortBy.isBlank()) {
-            String actualSortBy = SORT_MAPPINGS.getOrDefault(sortBy, sortBy);
-            sort = Sort.by(sortDesc ? Sort.Direction.DESC : Sort.Direction.ASC, actualSortBy);
-        } else {
-            sort = Sort.by(Sort.Direction.DESC, "id");
-        }
-        int offset = (page - 1) * itemsPerPage;
-        final Pageable pageable = new OffsetBasedPageRequest(offset, itemsPerPage, sort);
-
-        return jobRepository.findJobsByAppServiceId(pageable, appServiceId);
     }
 
     public void createJob(final String actionIdentifier, Server server, Map<String, Object> awxExtraVars, Map<String, Object> guiVars){
@@ -325,11 +303,7 @@ public class JobService {
             throw new IllegalArgumentException("Cloud type " + cloudType + " is not supported.");
         }
 
-        if(scheduleTime != null){
-            createJob(cloudType.name() + '_'  + start_server_identifier, server, params, new HashMap<>(), scheduleTime,null,null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
-        } else {
-            createJob(cloudType.name() + '_'  + start_server_identifier, server, params, new HashMap<>(), null, null, null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
-        }
+        createJob(cloudType.name() + '_'  + start_server_identifier, server, params, new HashMap<>(), scheduleTime,null,null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
     }
 
     public void stopServer(final Long serverId, final String stop_server_identifier, final Instant scheduleTime) {
@@ -354,11 +328,7 @@ public class JobService {
             throw new IllegalArgumentException("Cloud type " + cloudType + " is not supported.");
         }
 
-        if(scheduleTime != null){
-            createJob(cloudType.name() + '_'  + stop_server_identifier, server, params, new HashMap<>(), scheduleTime,null,null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
-        } else {
-            createJob(cloudType.name() + '_'  + stop_server_identifier, server, params, new HashMap<>(), null, null, null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
-        }
+        createJob(cloudType.name() + '_'  + stop_server_identifier, server, params, new HashMap<>(), scheduleTime,null,null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
     }
 
     public void restartServer(final Long serverId, final String restart_server_identifier, final Instant scheduleTime) {
@@ -383,11 +353,7 @@ public class JobService {
             throw new IllegalArgumentException("Cloud type " + cloudType + " is not supported.");
         }
 
-        if(scheduleTime != null){
-            createJob(cloudType.name() + '_'  + restart_server_identifier, server, params, new HashMap<>(), scheduleTime,null,null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
-        } else {
-            createJob(cloudType.name() + '_'  + restart_server_identifier, server, params, new HashMap<>(), null, null, null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
-        }
+        createJob(cloudType.name() + '_'  + restart_server_identifier, server, params, new HashMap<>(), scheduleTime,null,null, (server.getCloud().getAwxInventoryId() == null ? null : server.getCloud().getAwxInventoryId().toString() ));
     }
 
     public void changeCpuRam(final Long serverId, final String change_cpu_ram_identifier, final Integer cpu, final Integer ram, final Instant scheduleTime, final boolean schedulePatchnight) {
@@ -1085,6 +1051,34 @@ public class JobService {
         params.put("pool", poolParam);
 
         createJobForNewServer(identifier, poolName, appservice, params, null, false, null);
+    }
+
+    public void loadbalancerF5Delete(final Long lbVirtualServerId, final String identifier) {
+        final LbVirtualServer lvs = lbVirtualServerRepository.findById(lbVirtualServerId)
+                .orElseThrow(() -> new NoSuchElementException("Loadbalancer not found: " + lbVirtualServerId));
+
+        if (lvs.getAppservices().size() != 1) {
+            throw new IllegalStateException("Loadbalancer can only be deleted for loadbalancers assigned to exactly one application service.");
+        }
+        final Appservice appservice = lvs.getAppservices().iterator().next();
+
+        final Map<String, Object> params = new HashMap<>();
+        params.put("requester_username", AuthUtils.getUsername());
+        params.put("organisational_unit", AuthUtils.getCurrentUserInfo().department());
+        params.put("application_service", appservice.getName());
+        params.put("application_service_number", appservice.getNumber());
+        params.put("csw_enforced", appservice.getCswEnforced());
+        final Map<String, String> ibs342map = new HashMap<>();
+        switch (appservice.getUsedFor()) {
+            case "Production" -> ibs342map.put("environment", "prod");
+            case "Test", "Development" -> ibs342map.put("environment", "test");
+            case "Training" -> ibs342map.put("environment", "schulung");
+            default -> {}
+        }
+        params.put("ibs342", ibs342map);
+        params.put("listener", lvs.getName());
+
+        createJobForNewServer(identifier, lvs.getName(), appservice, params, null, false, null);
     }
 
     // -----------------------------------------------------------------------------------------------------------------

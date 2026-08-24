@@ -1,5 +1,6 @@
 package de.muenchen.mcmp.job;
 
+import de.muenchen.mcmp.appservice.Appservice;
 import de.muenchen.mcmp.appservice.AppserviceDTO;
 import de.muenchen.mcmp.appservice.AppserviceService;
 import de.muenchen.mcmp.cloud.Cloud;
@@ -12,6 +13,7 @@ import de.muenchen.mcmp.network.NetworkService;
 import de.muenchen.mcmp.ontap.OntapCifsShareAclListDto;
 import de.muenchen.mcmp.ontap.OntapExportPolicyListDto;
 import de.muenchen.mcmp.ontap.OntapExportPolicyRuleListDto;
+import de.muenchen.mcmp.server.Server;
 import de.muenchen.mcmp.server.ServerFullDTO;
 import de.muenchen.mcmp.server.ServerService;
 import de.muenchen.mcmp.snapshot.SnapshotService;
@@ -20,6 +22,7 @@ import de.muenchen.mcmp.storage.StorageType;
 import de.muenchen.mcmp.storage.UnifiedStorageItemDto;
 import de.muenchen.mcmp.storage.UnifiedStorageService;
 import de.muenchen.mcmp.types.CloudType;
+import de.muenchen.mcmp.types.EnvironmentType;
 import de.muenchen.mcmp.user.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +36,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.*;
@@ -99,6 +103,14 @@ class JobControllerValidRequestsTest {
         final Cloud cloud = new Cloud();
         cloud.setCloudType(cloudType);
         return ServerFullDTO.builder().cloud(cloud).build();
+    }
+
+    private Server serverWithEnvironment(final EnvironmentType environmentType) {
+        final Appservice appservice = new Appservice();
+        appservice.setEnvironment(environmentType);
+        final Server server = new Server();
+        server.setAppservices(Set.of(appservice));
+        return server;
     }
 
     private UnifiedStorageItemDto storageItem(final StorageCategory category) {
@@ -191,9 +203,17 @@ class JobControllerValidRequestsTest {
     // -----------------------------------------------------------------------------------------------------------------
 
     @Test
-    void linuxPatchnightTimeChange_validPayload_succeeds() throws Exception {
+    void linuxPatchnightTimeChange_testEnvironmentValidPayload_succeeds() throws Exception {
         allowServerEdit();
+        when(serverService.findById(SERVER_ID)).thenReturn(Optional.of(serverWithEnvironment(EnvironmentType.T)));
         perform("LINUX_PATCHNIGHT_TIME_CHANGE", "{\"time\":\"1500\"}");
+    }
+
+    @Test
+    void linuxPatchnightTimeChange_prodEnvironmentValidPayload_succeeds() throws Exception {
+        allowServerEdit();
+        when(serverService.findById(SERVER_ID)).thenReturn(Optional.of(serverWithEnvironment(EnvironmentType.P)));
+        perform("LINUX_PATCHNIGHT_TIME_CHANGE", "{\"time\":\"2000\"}");
     }
 
     @Test

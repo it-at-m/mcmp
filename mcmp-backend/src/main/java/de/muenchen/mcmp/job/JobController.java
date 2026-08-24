@@ -1,5 +1,6 @@
 package de.muenchen.mcmp.job;
 
+import de.muenchen.mcmp.appservice.Appservice;
 import de.muenchen.mcmp.appservice.AppserviceService;
 import de.muenchen.mcmp.job.incident.JobIncidentSummary;
 import de.muenchen.mcmp.job.node.JobNodeHierarchy;
@@ -23,6 +24,7 @@ import de.muenchen.mcmp.storage.StorageType;
 import de.muenchen.mcmp.storage.UnifiedStorageItemDto;
 import de.muenchen.mcmp.storage.UnifiedStorageService;
 import de.muenchen.mcmp.types.CloudType;
+import de.muenchen.mcmp.types.EnvironmentType;
 import de.muenchen.mcmp.user.User;
 import de.muenchen.mcmp.user.UserService;
 import lombok.AllArgsConstructor;
@@ -506,9 +508,22 @@ public class JobController {
             throw new MissingFormatArgumentException("Time values must be provided.");
         }
         String time = timeObj.toString();
-        if (!List.of("1500", "1700", "1900", "2100", "2300").contains(time)) {
-            log.warn("Invalid time provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
-            throw new IllegalArgumentException("Time must be a value of: 1500, 1700, 1900, 2100, 2300");
+        Server server = serverService.findById(serverId)
+                .orElseThrow(() -> new IllegalArgumentException("Server not found: " + serverId));
+        boolean isProd = server.getAppservices().stream()
+                .map(Appservice::getEnvironment)
+                .anyMatch(env -> env == EnvironmentType.P);
+
+        if (isProd) {
+            if (!List.of("2000", "2200", "2400", "0200", "0400").contains(time)) {
+                log.warn("Invalid time provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
+                throw new IllegalArgumentException("Time must be a value of: 2000, 2200, 2400, 0200, 0400");
+            }
+        } else {
+            if (!List.of("1500", "1700", "1900", "2100", "2300").contains(time)) {
+                log.warn("Invalid time provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
+                throw new IllegalArgumentException("Time must be a value of: 1500, 1700, 1900, 2100, 2300");
+            }
         }
 
         logCreatedJob(LINUX_PATCHNIGHT_TIME_CHANGE, serverId);

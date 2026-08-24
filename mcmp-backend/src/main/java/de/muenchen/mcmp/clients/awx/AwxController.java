@@ -6,8 +6,8 @@ import de.muenchen.mcmp.temporaryPrivileges.PrivilegeType;
 import de.muenchen.mcmp.temporaryPrivileges.TemporaryPrivilege;
 import de.muenchen.mcmp.temporaryPrivileges.TemporaryPrivilegeService;
 import de.muenchen.mcmp.user.User;
-import de.muenchen.mcmp.user.UserRepository;
 import de.muenchen.mcmp.user.UserService;
+import de.muenchen.mcmp.utils.DateTimeUtils;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,9 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -46,7 +44,7 @@ public class AwxController {
 
     /**
      * Health check endpoint for AWX integration.
-     *
+     * <p>
      * This endpoint provides a simple connectivity test for the AWX EAI API.
      * It can be used by monitoring systems or AWX itself to verify that the
      * integration endpoint is accessible and responding.
@@ -60,17 +58,17 @@ public class AwxController {
 
     /**
      * Processes AWX inventory data and imports temporary privileges.
-     *
+     * <p>
      * This method is the main entry point for AWX to push inventory data containing
      * information about temporary privileges granted to users on Linux and Windows hosts.
      * The method performs the following operations:
-     *
+     * <p>
      * 1. Collects all hosts from both Linux and Windows host lists
      * 2. Retrieves matching servers from the database based on FQDN
      * 3. Retrieves or creates users based on usernames from the inventory data
      * 4. Processes each host entry to create or update temporary privileges
      * 5. Removes temporary privileges that are no longer present in the import data
-     *
+     * <p>
      * The import is designed to be idempotent - running it multiple times with the
      * same data will not create duplicates.
      *
@@ -187,8 +185,8 @@ public class AwxController {
                     TemporaryPrivilege tp = existingPrivilege.get();
 
                     // Update timestamps if they changed
-                    if (!isDateTimeEqualUTC(tp.getExpiresAt(), expiresAt) ||
-                            !isDateTimeEqualUTC(tp.getGrantedAt(), grantedAt)) {
+                    if (DateTimeUtils.isDateTimeDifferentUTC(tp.getExpiresAt(), expiresAt) ||
+                            DateTimeUtils.isDateTimeDifferentUTC(tp.getGrantedAt(), grantedAt)) {
 
                         tp.setExpiresAt(expiresAt);
                         tp.setGrantedAt(grantedAt);
@@ -280,7 +278,7 @@ public class AwxController {
                 final OffsetDateTime expiresAt = parseValidUntil(hostDTO.validUntil());
 
                 // ONLY execute update if values change to reduce DB load
-                if (!server.getMaintenanceMode() || !isDateTimeEqualUTC(server.getMaintenanceModeExpiresAt(), expiresAt)) {
+                if (!server.getMaintenanceMode() || DateTimeUtils.isDateTimeDifferentUTC(server.getMaintenanceModeExpiresAt(), expiresAt)) {
                     // ROBUST UPDATE: We use direct update via query here.
                     // This ignores "Optimistic Locking" errors caused by vCenter updates,
                     // since we explicitly write only these two fields.
@@ -302,12 +300,12 @@ public class AwxController {
 
     /**
      * Parses the validUntil string from AWX inventory data into OffsetDateTime.
-     *
+     * <p>
      * This method handles multiple date formats that might be received from AWX:
      * - ISO format with T and Z: "2027-06-21T11:38:26.000000Z"
      * - Date and time with space (Berlin timezone): "2025-09-28 17:17:17"
      * - ISO format without Z: "2027-06-21T11:38:26.000000"
-     *
+     * <p>
      * If parsing fails or the input is null/blank, it returns null.
      *
      * @param validUntil The date string to parse
@@ -349,7 +347,7 @@ public class AwxController {
 
     /**
      * Determines the privilege type based on which host list contains the host.
-     *
+     * <p>
      * This method checks whether the host is in the Linux hosts list (returns ROOT privilege)
      * or in the Windows hosts list (returns ADMIN privilege). The privilege type determines
      * what kind of elevated access the user has on the target system.
@@ -372,50 +370,5 @@ public class AwxController {
         // Fallback: should not occur as we collect all hosts from both lists
         log.warn("Could not determine privilege type for host {}, defaulting to ROOT", hostDTO.fqdn());
         return PrivilegeType.ROOT;
-    }
-
-    /**
-     * Formats an OffsetDateTime to string using the predefined formatter.
-     *
-     * This utility method is used for consistent date formatting throughout the controller.
-     * Returns null if the input dateTime is null.
-     *
-     * @param dateTime The OffsetDateTime to format
-     * @return Formatted date string or null if input is null
-     */
-    private String formatDateTime(OffsetDateTime dateTime) {
-        return dateTime != null ? dateTime.format(DATE_TIME_FORMATTER) : null;
-    }
-
-    /**
-     * Compares two OffsetDateTime objects after converting them to UTC.
-     * This ignores timezone differences and compares the actual points in time.
-     *
-     * This method is crucial for the import process to avoid creating duplicate
-     * temporary privileges when the same data is imported multiple times with
-     * potentially different timezone representations.
-     *
-     * @param dt1 First OffsetDateTime to compare
-     * @param dt2 Second OffsetDateTime to compare
-     * @return true if both represent the same point in time in UTC, false otherwise
-     */
-    private boolean isDateTimeEqualUTC(OffsetDateTime dt1, OffsetDateTime dt2) {
-        if (dt1 == null && dt2 == null) {
-            return true;
-        }
-        if (dt1 == null || dt2 == null) {
-            return false;
-        }
-
-        // Convert both to UTC, truncate to millis and then compare instants
-        final java.time.Instant instant1 = dt1.withOffsetSameInstant(ZoneOffset.UTC)
-                .truncatedTo(ChronoUnit.MILLIS)
-                .toInstant();
-
-        final java.time.Instant instant2 = dt2.withOffsetSameInstant(ZoneOffset.UTC)
-                .truncatedTo(ChronoUnit.MILLIS)
-                .toInstant();
-
-        return instant1.equals(instant2);
     }
 }

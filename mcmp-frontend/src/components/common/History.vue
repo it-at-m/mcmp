@@ -1114,14 +1114,6 @@ function setSort(key: string) {
   height: 12px !important;
 }
 
-.links a,
-.links a:visited,
-.links a:hover,
-.links a:active {
-  color: rgb(var(--v-theme-link));
-  text-decoration: none;
-}
-
 :deep(.v-data-table.border td),
 :deep(.v-data-table.border th) {
   padding: 0 2px !important;

@@ -274,7 +274,7 @@ export async function defaultResponseHandler(
           }
         }
       } catch (e) {
-        console.error("Could not read error response body", e);
+        console.debug("Could not read error response body", e);
       }
 
       if (!suppressSnackbar) {
@@ -291,15 +291,35 @@ export async function defaultResponseHandler(
 
     // 6. Handle Server Errors (5xx)
     if (isStatusServer(response)) {
+      let message =
+        "Serverfehler. Bitte versuchen Sie es später erneut, oder wenden Sie sich an die Administration.";
+      try {
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          const json = await response.json();
+          if (json.message) {
+            message =
+              `${message} ${json.message.match(/\(Fehlercode:.*\)/)?.[0] ?? ""}`.trim();
+          }
+        } else {
+          const bodyText = await response.text();
+          const code = bodyText.match(/\(Fehlercode:.*\)/)?.[0];
+          if (code) {
+            message = `${message} ${code}`;
+          }
+        }
+      } catch (e) {
+        console.debug("Could not read error response body", e);
+      }
+
       if (!suppressSnackbar) {
         useSnackbarStore().showMessage({
-          message:
-            "Serverfehler. Bitte versuchen Sie es später erneut, oder wenden Sie sich an die Administration.",
+          message: message,
           level: STATUS_INDICATORS.ERROR,
         });
       }
       throw new ApiError({
-        message: errorMessage,
+        message: message,
         level: STATUS_INDICATORS.ERROR,
       });
     }

@@ -305,27 +305,17 @@ function getBackupTypeFromServerName(serverName: string): string {
 }
 
 function deleteSnapshot(snapshot: Snapshot) {
-  jobService.startJob(
-    jobLoading,
-    "DELETE_SNAPSHOT",
-    props.selectedServer.id,
-    {
-      snapshotId: snapshot.snapshotId,
-      snapshotName: snapshot.name,
-    }
-  );
+  jobService.startJob(jobLoading, "DELETE_SNAPSHOT", props.selectedServer.id, {
+    snapshotId: snapshot.snapshotId,
+    snapshotName: snapshot.name,
+  });
 }
 
 function revertSnapshot(snapshot: Snapshot) {
-  jobService.startJob(
-    jobLoading,
-    "REVERT_SNAPSHOT",
-    props.selectedServer.id,
-    {
-      snapshotId: snapshot.snapshotId,
-      snapshotName: snapshot.name,
-    }
-  );
+  jobService.startJob(jobLoading, "REVERT_SNAPSHOT", props.selectedServer.id, {
+    snapshotId: snapshot.snapshotId,
+    snapshotName: snapshot.name,
+  });
 }
 
 function formatDeleteDate(item: Snapshot): string {

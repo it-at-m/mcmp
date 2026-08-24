@@ -672,13 +672,4 @@ defineExpose({ updateServerPowerState });
 :deep(th:nth-child(2) .v-data-table-header__content) {
   margin-left: 3px;
 }
-
-.links a,
-.links a:visited,
-.links a:hover,
-.links a:active {
-  /* noinspection CssUnresolvedCustomProperty */
-  color: rgb(var(--v-theme-link));
-  text-decoration: none;
-}
 </style>

@@ -5,6 +5,11 @@ import { registerPlugins } from "@/plugins";
 import { setRuntimeConfig } from "./constants";
 
 import "unfonts.css";
+import "@/assets/material-action-btn.css";
+import "@/assets/split-view-layout.css";
+import "@/assets/links.css";
+import "@/assets/confirm-entity-info.css";
+import "@/assets/dialog-action-btn.css";
 
 async function loadConfig() {
   try {

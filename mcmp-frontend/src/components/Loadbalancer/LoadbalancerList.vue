@@ -304,15 +304,6 @@ onMounted(async () => {
   min-height: 0;
 }
 
-.links a,
-.links a:visited,
-.links a:hover,
-.links a:active {
-  /* noinspection CssUnresolvedCustomProperty */
-  color: rgb(var(--v-theme-link));
-  text-decoration: none;
-}
-
 .domain-header {
   display: inline-flex;
   align-items: center;

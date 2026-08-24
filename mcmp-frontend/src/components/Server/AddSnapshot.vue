@@ -170,28 +170,18 @@ function save() {
         // Batch: start job for each selected server id. Parent guarantees eligibility.
         const servers = props.selectedServers || [];
         servers.forEach((server: Server) => {
-          jobService.startJob(
-            loading,
-            "CREATE_SNAPSHOT",
-            server.id,
-            {
-              duration: days.value,
-              description: description.value,
-              withShutdown: withShutdown.value,
-            }
-          );
-        });
-      } else if (props.server) {
-        jobService.startJob(
-          loading,
-          "CREATE_SNAPSHOT",
-          props.server.id,
-          {
+          jobService.startJob(loading, "CREATE_SNAPSHOT", server.id, {
             duration: days.value,
             description: description.value,
             withShutdown: withShutdown.value,
-          }
-        );
+          });
+        });
+      } else if (props.server) {
+        jobService.startJob(loading, "CREATE_SNAPSHOT", props.server.id, {
+          duration: days.value,
+          description: description.value,
+          withShutdown: withShutdown.value,
+        });
       }
 
       dialog.value = false;

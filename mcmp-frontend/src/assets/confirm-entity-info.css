@@ -1,0 +1,18 @@
+.confirm-entity-label {
+  font-size: 0.875rem;
+  /* noinspection CssUnresolvedCustomProperty */
+  color: rgb(var(--v-theme-accent));
+  font-weight: 500;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.confirm-entity-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  /* noinspection CssUnresolvedCustomProperty */
+  color: rgb(var(--v-theme-text));
+  padding: 4px 0;
+  word-break: break-word;
+}

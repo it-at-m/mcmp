@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/app"
 	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/client/mcmp"
 	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/logging"
 	_ "github.com/sijms/go-ora/v2"
@@ -102,10 +103,35 @@ type (
 
 	// serverResult is an internal type used for collecting worker results.
 	serverResult struct {
-		metrics mcmp.OracleDatabaseMetrics
+		metrics OracleDatabaseMetrics
 		err     error
 	}
+
+	OracleExport struct {
+		app.EaiMetadata `json:"metadata"`
+		Databases       []OracleDatabaseMetrics `json:"databases"`
+	}
+
+	OracleDatabaseMetrics struct {
+		FQDN      string        `json:"fqdn"`
+		PDB       string        `json:"pdb"`
+		Timestamp time.Time     `json:"timestamp"`
+		Data      []QueryResult `json:"data"`
+	}
+
+	QueryResult struct {
+		QueryName string           `json:"queryName"`
+		Rows      []map[string]any `json:"rows"`
+	}
 )
+
+func (e *OracleExport) SetEaiMetadata(meta app.EaiMetadata) {
+	e.EaiMetadata = meta
+}
+
+func (e *OracleExport) GetEaiMetadata() app.EaiMetadata {
+	return e.EaiMetadata
+}
 
 // NewProcessor creates a new Processor instance with the given configuration.
 func NewProcessor(serverProvider OracleServerProvider, logger logging.Logger, config Config) (*Processor, error) {
@@ -138,7 +164,7 @@ func NewProcessor(serverProvider OracleServerProvider, logger logging.Logger, co
 }
 
 // FetchDatabaseMetrics retrieves metrics from all Oracle servers.
-func (p *Processor) FetchDatabaseMetrics(ctx context.Context) (*mcmp.OracleExport, error) {
+func (p *Processor) FetchDatabaseMetrics(ctx context.Context) (*OracleExport, error) {
 	servers, err := p.serverProvider.GetAllOracleServers(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get oracle servers: %w", err)
@@ -176,8 +202,8 @@ func (p *Processor) FetchDatabaseMetrics(ctx context.Context) (*mcmp.OracleExpor
 		close(results)
 	}()
 
-	export := &mcmp.OracleExport{
-		Databases: make([]mcmp.OracleDatabaseMetrics, 0),
+	export := &OracleExport{
+		Databases: make([]OracleDatabaseMetrics, 0),
 	}
 
 	processedCount := 0
@@ -201,6 +227,10 @@ func (p *Processor) FetchDatabaseMetrics(ctx context.Context) (*mcmp.OracleExpor
 		return nil, fmt.Errorf("%w: %d databases", ErrAllServersFailed, errorCount)
 	}
 
+	if errorCount > 0 {
+		export.Status = "ERROR"
+	}
+
 	return export, nil
 }
 
@@ -217,26 +247,27 @@ func (p *Processor) worker(ctx context.Context, jobs <-chan mcmp.OracleServer, r
 	}
 }
 
-func (p *Processor) processDatabase(ctx context.Context, server mcmp.OracleServer) (mcmp.OracleDatabaseMetrics, error) {
+func (p *Processor) processDatabase(ctx context.Context, server mcmp.OracleServer) (OracleDatabaseMetrics, error) {
 	// DSN Format for go-ora: oracle://user:pass@host:port/service
 	dsn := fmt.Sprintf("oracle://%s:%s@%s:%d/%s", url.PathEscape(p.config.OracleUser), url.PathEscape(p.config.OraclePassword), server.FQDN, p.config.OraclePort, server.PDB)
 	db, err := sql.Open("oracle", dsn)
 	if err != nil {
-		return mcmp.OracleDatabaseMetrics{}, fmt.Errorf("failed to open connection to %s: %w", server.FQDN, err)
+		return OracleDatabaseMetrics{}, fmt.Errorf("failed to open connection to %s: %w", server.FQDN, err)
 	}
 	defer db.Close()
 
-	metrics := mcmp.OracleDatabaseMetrics{
+	metrics := OracleDatabaseMetrics{
 		FQDN:      server.FQDN,
+		PDB:       server.PDB,
 		Timestamp: time.Now(),
-		Data:      []mcmp.QueryResult{},
+		Data:      []QueryResult{},
 	}
 
 	for _, q := range p.queries {
 		rows, err := db.QueryContext(ctx, q.SQL)
 		if err != nil {
 			p.logger.Error("Query failed", "server", server.FQDN, "query", q.Name, "error", err)
-			continue
+			return OracleDatabaseMetrics{}, fmt.Errorf("query %s failed for %s: %w", q.Name, server.FQDN, err)
 		}
 
 		cols, _ := rows.Columns()
@@ -286,7 +317,7 @@ func (p *Processor) processDatabase(ctx context.Context, server mcmp.OracleServe
 		}
 		rows.Close()
 
-		metrics.Data = append(metrics.Data, mcmp.QueryResult{
+		metrics.Data = append(metrics.Data, QueryResult{
 			QueryName: q.Name,
 			Rows:      queryRows,
 		})

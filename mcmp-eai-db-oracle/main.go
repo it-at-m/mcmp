@@ -379,7 +379,7 @@ func run(ctx context.Context) error {
 	}
 
 	// Create a data source for oracle database metrics (sending to all configured MCMP clients)
-	sources := []app.DataSource[*mcmp.OracleExport]{
+	sources := []app.DataSource[*processor.OracleExport]{
 		source.NewOracleSource(
 			"mcmp",
 			true,

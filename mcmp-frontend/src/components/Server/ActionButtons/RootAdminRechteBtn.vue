@@ -43,26 +43,26 @@
     >
       <div
         v-if="server"
-        class="server-info-label"
+        class="confirm-entity-label"
       >
         Ausgewählter Server:
       </div>
       <div
         v-if="server"
-        class="server-name"
+        class="confirm-entity-name"
       >
         {{ server.name }}
       </div>
 
       <div
         v-if="isBatchOperation"
-        class="server-info-label"
+        class="confirm-entity-label"
       >
         Ausgewählte Server:
       </div>
       <div
         v-if="isBatchOperation"
-        class="server-name"
+        class="confirm-entity-name"
       >
         {{ selectedServerIds?.length }} Server
       </div>
@@ -295,25 +295,6 @@ function makeJobCall() {
 </script>
 
 <style scoped>
-.material-action-btn {
-  border-radius: 50% !important;
-  margin: 0 4px;
-  width: 33.35px !important;
-  height: 33.35px !important;
-  box-shadow:
-    0 3px 1px -2px rgba(0, 0, 0, 0.2),
-    0 2px 2px 0 rgba(0, 0, 0, 0.14),
-    0 1px 5px 0 rgba(0, 0, 0, 0.12);
-  transition: box-shadow 0.28s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.material-action-btn:hover {
-  box-shadow:
-    0 2px 4px -1px rgba(0, 0, 0, 0.2),
-    0 4px 5px 0 rgba(0, 0, 0, 0.14),
-    0 1px 10px 0 rgba(0, 0, 0, 0.12);
-}
-
 .link-section {
   margin-top: 16px;
 }
@@ -354,25 +335,6 @@ function makeJobCall() {
   }
 }
 
-.server-info-label {
-  font-size: 0.875rem;
-  /* noinspection CssUnresolvedCustomProperty */
-  color: rgb(var(--v-theme-accent));
-  font-weight: 500;
-  margin-bottom: 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.server-name {
-  font-size: 1.25rem;
-  font-weight: 700;
-  /* noinspection CssUnresolvedCustomProperty */
-  color: rgb(var(--v-theme-text));
-  padding: 4px 0;
-  word-break: break-word;
-}
-
 /* Responsive Design Update */
 @media (max-width: 700px) {
   .modern-dialog :deep(.v-overlay__content) {
@@ -380,7 +342,7 @@ function makeJobCall() {
     max-width: calc(100vw - 32px);
   }
 
-  .server-name {
+  .confirm-entity-name {
     font-size: 1.125rem;
   }
 }

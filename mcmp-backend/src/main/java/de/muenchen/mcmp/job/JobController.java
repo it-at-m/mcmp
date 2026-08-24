@@ -4,6 +4,10 @@ import de.muenchen.mcmp.appservice.AppserviceService;
 import de.muenchen.mcmp.job.incident.JobIncidentSummary;
 import de.muenchen.mcmp.job.node.JobNodeHierarchy;
 import de.muenchen.mcmp.loadbalancer.LoadbalancerService;
+import de.muenchen.mcmp.loadbalancer.UnifiedLoadbalancer;
+import de.muenchen.mcmp.loadbalancer.UnifiedLoadbalancerMemberDTO;
+import de.muenchen.mcmp.loadbalancer.UnifiedLoadbalancerPoolDTO;
+import de.muenchen.mcmp.mountPoint.MountPointDTO;
 import de.muenchen.mcmp.mountPoint.MountPointService;
 import de.muenchen.mcmp.network.NetworkService;
 import de.muenchen.mcmp.security.AuthUtils;
@@ -84,6 +88,7 @@ public class JobController {
 
     public static final String LOADBALANCER_F5 = "LOADBALANCER_F5";
     public static final String LOADBALANCER_F5_CHANGE_POOL_MEMBERS = "LOADBALANCER_F5_CHANGE_POOL_MEMBERS";
+    public static final String LOADBALANCER_F5_DELETE = "LOADBALANCER_F5_DELETE";
 
     public static final String GREEN_IT_VMWARE_SHUTDOWN = "GREEN_IT_VMWARE_SHUTDOWN";
     public static final String GREEN_IT_VMWARE_RIGHTSIZE = "GREEN_IT_VMWARE_RIGHTSIZE";
@@ -100,7 +105,6 @@ public class JobController {
     public static final String STORAGE_DELETE_SNAPSHOT_CIFS = "STORAGE_DELETE_SNAPSHOT_CIFS";
     public static final String STORAGE_CHANGE_SNAPSHOT_POLICY_NFS = "STORAGE_CHANGE_SNAPSHOT_POLICY_NFS";
     public static final String STORAGE_CHANGE_SNAPSHOT_POLICY_CIFS = "STORAGE_CHANGE_SNAPSHOT_POLICY_CIFS";
-
 
     @HasUserOrSpecialRole
     @GetMapping("/{jobId}/hierarchy")
@@ -250,13 +254,7 @@ public class JobController {
             throw new AccessDeniedException("You are not allowed to create a job for this server.");
         }
 
-        Object scheduleTimeObj = awxExtraVars.get("scheduleTime");
-        Instant scheduleTime;
-        if (scheduleTimeObj != null) {
-            scheduleTime = Instant.parse(scheduleTimeObj.toString());
-        } else{
-            scheduleTime = null;
-        }
+        Instant scheduleTime = parseOptionalScheduleTime(awxExtraVars.get("scheduleTime"));
 
         logCreatedJob(START_SERVER, serverId);
         jobService.startServer(serverId, START_SERVER, scheduleTime);
@@ -270,13 +268,7 @@ public class JobController {
             throw new AccessDeniedException("You are not allowed to create a job for this server.");
         }
 
-        Object scheduleTimeObj = awxExtraVars.get("scheduleTime");
-        Instant scheduleTime;
-        if (scheduleTimeObj != null) {
-            scheduleTime = Instant.parse(scheduleTimeObj.toString());
-        } else{
-            scheduleTime = null;
-        }
+        Instant scheduleTime = parseOptionalScheduleTime(awxExtraVars.get("scheduleTime"));
 
         logCreatedJob(STOP_SERVER, serverId);
         jobService.stopServer(serverId, STOP_SERVER, scheduleTime);
@@ -290,13 +282,7 @@ public class JobController {
             throw new AccessDeniedException("You are not allowed to create a job for this server.");
         }
 
-        Object scheduleTimeObj = awxExtraVars.get("scheduleTime");
-        Instant scheduleTime;
-        if (scheduleTimeObj != null) {
-            scheduleTime = Instant.parse(scheduleTimeObj.toString());
-        } else{
-            scheduleTime = null;
-        }
+        Instant scheduleTime = parseOptionalScheduleTime(awxExtraVars.get("scheduleTime"));
 
         logCreatedJob(RESTART_SERVER, serverId);
         jobService.restartServer(serverId, RESTART_SERVER, scheduleTime);
@@ -312,15 +298,9 @@ public class JobController {
 
         ServerFullDTO server = serverService.getServerById(serverId);
 
-        Object scheduleTimeObj = awxExtraVars.get("scheduleTime");
+        Instant scheduleTime = parseOptionalScheduleTime(awxExtraVars.get("scheduleTime"));
         Object schedulePatchnightObj = awxExtraVars.get("schedulePatchnight");
-        Instant scheduleTime;
-        if (scheduleTimeObj != null) {
-            scheduleTime = Instant.parse(scheduleTimeObj.toString());
-        } else{
-            scheduleTime = null;
-        }
-        boolean schedulePatchnight = Boolean.parseBoolean(schedulePatchnightObj.toString());
+        boolean schedulePatchnight = schedulePatchnightObj != null && Boolean.parseBoolean(schedulePatchnightObj.toString());
 
         if (schedulePatchnight && !server.patchnightIncluded()){
             log.warn("Schedule request by user: {} for serverId: {} can't be accomplished because no participation in the patchnight.", AuthUtils.getUsername(), serverId);
@@ -544,13 +524,7 @@ public class JobController {
             throw new AccessDeniedException("You are not allowed to create a job for this server.");
         }
 
-        Object scheduleTimeObj = awxExtraVars.get("scheduleTime");
-        Instant scheduleTime;
-        if (scheduleTimeObj != null) {
-            scheduleTime = Instant.parse(scheduleTimeObj.toString());
-        } else{
-            scheduleTime = null;
-        }
+        Instant scheduleTime = parseOptionalScheduleTime(awxExtraVars.get("scheduleTime"));
 
         logCreatedJob(LINUX_DELETE_SERVER, serverId);
         jobService.linuxDeleteServer(serverId, LINUX_DELETE_SERVER, scheduleTime);
@@ -648,11 +622,25 @@ public class JobController {
             throw new AccessDeniedException("Can't change size of mountpoint. Please remove the snapshot first and try it again.");
         }
 
+        MountPointDTO existingMountPoint = mountPointService.getMountPointByServerIdAndPath(serverId, mountPointPath);
+        if (existingMountPoint != null && !Boolean.TRUE.equals(existingMountPoint.editable())) {
+            log.warn("User {} tried to change non-editable mountpoint {} for serverId: {}", AuthUtils.getUsername(), mountPointPath, serverId);
+            throw new AccessDeniedException("This mountpoint is not editable and cannot be changed.");
+        }
+
         if (!volumeGroup.isEmpty()) {
             logicalName = mountPointPath.substring(mountPointPath.lastIndexOf('/') + 1);
+            if (newSize < 1 || newSize > 2000) {
+                log.warn("Invalid size provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
+                throw new IllegalArgumentException("New Size must be between 1 and 2000 GB.");
+            }
         }
         else {
-            if (newSize < (mountPointService.getMountPointByServerIdAndPath(serverId, mountPointPath).capacityInBytes() / (1024 * 1024 * 1024)) ||
+            if (existingMountPoint == null) {
+                log.warn("Mountpoint {} not found for serverId: {} requested by user: {}", mountPointPath, serverId, AuthUtils.getUsername());
+                throw new IllegalArgumentException("Mountpoint not found.");
+            }
+            if (newSize < (existingMountPoint.capacityInBytes() / (1024 * 1024 * 1024)) ||
                     newSize > 2000) {
                 log.warn("Invalid size provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
                 throw new IllegalArgumentException("New Size could not be smaller then the old size and not bigger then 2000 GB.");
@@ -683,7 +671,11 @@ public class JobController {
             log.info("Middleware user not provided by user: {} to order a RHEL 10 server.", AuthUtils.getUsername());
             throw new MissingFormatArgumentException("Middleware user must be provided.");
         }
-        boolean middlewareUser = Boolean.parseBoolean(middlewareUserObj.toString());
+        if (!(middlewareUserObj instanceof Boolean)) {
+            log.warn("Invalid middleware user value provided by user: {} to order a RHEL 10 server.", AuthUtils.getUsername());
+            throw new IllegalArgumentException("Middleware user must be a boolean value.");
+        }
+        boolean middlewareUser = (Boolean) middlewareUserObj;
         if(Objects.equals(linuxRecord.categoryType, "DB") && middlewareUser) {
             log.info("Middleware user cannot be set for database servers by user: {} to order a RHEL 10 server.", AuthUtils.getUsername());
             throw new IllegalArgumentException("Middleware user cannot be set for database servers.");
@@ -733,14 +725,8 @@ public class JobController {
             throw new MissingFormatArgumentException("Not all needed parameter are provided.");
         }
 
-        Map<?, ?> fqdnBuildingBlocks;
+        Map<?, ?> fqdnBuildingBlocks = requireFqdn(fqdnObj);
         Map<String, Map<?, ?>> dbParams = null;
-        try {
-            fqdnBuildingBlocks = (Map<?, ?>) fqdnObj;
-        } catch (ClassCastException e) {
-            log.info("FQDN not provided by user: {} to order a server in the right format.", AuthUtils.getUsername());
-            throw new IllegalArgumentException("FQDN is not provided in the right format.");
-        }
 
 
         String categoryType = categoryTypeObj.toString();
@@ -765,12 +751,7 @@ public class JobController {
 
         Map<?, ?> serverTypeMap = null;
         if (!categoryType.equals("Standard")) {
-            try {
-                serverTypeMap = (Map<?, ?>) serverTypeObj;
-            } catch (ClassCastException e) {
-                log.warn("Invalid server type provided by user: {} to order a server.", AuthUtils.getUsername());
-                throw new IllegalArgumentException("Server type is invalid.");
-            }
+            serverTypeMap = requireMap(serverTypeObj, "Server type");
         }
         String nonPostgresReason = null;
         if (categoryType.equals("DB") || categoryType.equals("Mixed")) {
@@ -806,13 +787,7 @@ public class JobController {
             throw new AccessDeniedException("You are not allowed to create a job for this server.");
         }
 
-        Object scheduleTimeObj = awxExtraVars.get("scheduleTime");
-        Instant scheduleTime;
-        if (scheduleTimeObj != null) {
-            scheduleTime = Instant.parse(scheduleTimeObj.toString());
-        } else{
-            scheduleTime = null;
-        }
+        Instant scheduleTime = parseOptionalScheduleTime(awxExtraVars.get("scheduleTime"));
 
         logCreatedJob(WINDOWS_DELETE_SERVER, serverId);
         jobService.windowsDeleteServer(serverId, WINDOWS_DELETE_SERVER, scheduleTime);
@@ -863,7 +838,17 @@ public class JobController {
         String partition = partitionObj.toString();
         int newSize = Integer.parseInt(newSizeObj.toString());
 
-        if (newSize < (mountPointService.getMountPointByServerIdAndPath(serverId, partition).capacityInBytes() / (1024 * 1024 * 1024)) ||
+        MountPointDTO existingPartition = mountPointService.getMountPointByServerIdAndPath(serverId, partition);
+        if (existingPartition == null) {
+            log.warn("Partition {} not found for serverId: {} requested by user: {}", partition, serverId, AuthUtils.getUsername());
+            throw new IllegalArgumentException("Partition not found.");
+        }
+        if (!Boolean.TRUE.equals(existingPartition.editable())) {
+            log.warn("User {} tried to change non-editable partition {} for serverId: {}", AuthUtils.getUsername(), partition, serverId);
+            throw new AccessDeniedException("This partition is not editable and cannot be changed.");
+        }
+
+        if (newSize < (existingPartition.capacityInBytes() / (1024 * 1024 * 1024)) ||
                 newSize > 2000) {
             log.warn("Invalid size provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
             throw new IllegalArgumentException("New Size could not be smaller then the old size and not bigger then 2000 GB.");
@@ -951,7 +936,7 @@ public class JobController {
             throw new MissingFormatArgumentException("Not all needed parameter are provided.");
         }
 
-        Map<?, ?> fqdnBuildingBlocks = requireMap(fqdnObj, "FQDN");
+        Map<?, ?> fqdnBuildingBlocks = requireFqdn(fqdnObj);
         List<Map<String, Object>> disks = requireListOfMap(disksObj, "Disks");
         validateWinDiskSizes(disks);
 
@@ -1036,7 +1021,7 @@ public class JobController {
             throw new MissingFormatArgumentException("Not all needed parameter are provided.");
         }
 
-        Map<?, ?> fqdnBuildingBlocks = requireMap(fqdnObj, "FQDN");
+        Map<?, ?> fqdnBuildingBlocks = requireFqdn(fqdnObj);
         List<Map<String, Object>> disks = requireListOfMap(disksObj, "Disks");
         validateWinDiskSizes(disks);
 
@@ -1356,6 +1341,20 @@ public class JobController {
         }
         String poolName = poolNameObj.toString().trim();
 
+        final UnifiedLoadbalancer loadbalancer = loadbalancerService.getLoadbalancerById(lbVirtualServerId);
+        if (loadbalancer.wafEnabled()) {
+            logTriedToCreateJob(LOADBALANCER_F5_CHANGE_POOL_MEMBERS, serverId);
+            throw new AccessDeniedException("Pool members cannot be changed for a loadbalancer with WAF enabled.");
+        }
+        final UnifiedLoadbalancerPoolDTO pool = loadbalancer.pools().stream()
+                .filter(p -> poolName.equals(p.name()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Pool not found: " + poolName));
+        if (isCapPool(pool)) {
+            logTriedToCreateJob(LOADBALANCER_F5_CHANGE_POOL_MEMBERS, serverId);
+            throw new AccessDeniedException("Pool members cannot be changed for a pool with CAP members.");
+        }
+
         List<Map<String, Object>> addedList = awxExtraVars.get("added") != null
                 ? requireListOfMap(awxExtraVars.get("added"), "Added members")
                 : List.of();
@@ -1387,7 +1386,7 @@ public class JobController {
             if (port < 1 || port > 65535) {
                 throw new IllegalArgumentException("Port must be between 1 and 65535.");
             }
-            if (!serverService.canUserViewServer(addedServerId)) {
+            if (!serverService.canUserEditServer(addedServerId)) {
                 logTriedToCreateJob(LOADBALANCER_F5_CHANGE_POOL_MEMBERS, addedServerId);
                 throw new AccessDeniedException("You are not allowed to add one of the selected servers as a pool member.");
             }
@@ -1410,6 +1409,53 @@ public class JobController {
         jobService.loadbalancerF5ChangePoolMembers(lbVirtualServerId, poolName, addedList, removedList, LOADBALANCER_F5_CHANGE_POOL_MEMBERS);
     }
 
+    @PostMapping("/create/" + LOADBALANCER_F5_DELETE)
+    public void loadbalancerF5Delete(@RequestParam(name = "serverId") final Long serverId,
+                                      @RequestBody final Map<String, Object> awxExtraVars) {
+        Object lbVirtualServerIdObj = awxExtraVars.get("lb_virtual_server_id");
+        if (lbVirtualServerIdObj == null) {
+            throw new MissingFormatArgumentException("Loadbalancer ID must be provided.");
+        }
+        final long lbVirtualServerId;
+        try {
+            lbVirtualServerId = Long.parseLong(lbVirtualServerIdObj.toString());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Loadbalancer ID is invalid.");
+        }
+
+        if (!loadbalancerService.canUserEditLoadbalancer(lbVirtualServerId)) {
+            logTriedToCreateJob(LOADBALANCER_F5_DELETE, serverId);
+            throw new AccessDeniedException("You are not allowed to delete this loadbalancer.");
+        }
+
+        final UnifiedLoadbalancer loadbalancer = loadbalancerService.getLoadbalancerById(lbVirtualServerId);
+        if (loadbalancer.wafEnabled()) {
+            logTriedToCreateJob(LOADBALANCER_F5_DELETE, serverId);
+            throw new AccessDeniedException("A loadbalancer with WAF enabled cannot be deleted.");
+        }
+
+        logCreatedJob(LOADBALANCER_F5_DELETE, serverId);
+        jobService.loadbalancerF5Delete(lbVirtualServerId, LOADBALANCER_F5_DELETE);
+    }
+
+    // Mirrors the CAP-Ingress port ranges used by the frontend (isCapPool in loadbalancerPool.ts)
+    // so that CAP-managed pools can't be edited through this endpoint either.
+    private static final List<int[]> CAP_PORT_RANGES = List.of(
+            new int[]{32201, 32207},
+            new int[]{32301, 32307},
+            new int[]{32401, 32407}
+    );
+
+    private static boolean isCapPort(final int port) {
+        return CAP_PORT_RANGES.stream().anyMatch(range -> port >= range[0] && port <= range[1]);
+    }
+
+    private static boolean isCapPool(final UnifiedLoadbalancerPoolDTO pool) {
+        final List<UnifiedLoadbalancerMemberDTO> members = pool.members();
+        return members != null && !members.isEmpty()
+                && members.stream().allMatch(m -> m.serverId() == null)
+                && members.stream().allMatch(m -> isCapPort(m.port()));
+    }
 
     // -----------------------------------------------------------------------------------------------------------------
     // Storage JOBs
@@ -1862,6 +1908,17 @@ public class JobController {
         }
     }
 
+    private Instant parseOptionalScheduleTime(Object scheduleTimeObj) {
+        if (scheduleTimeObj == null) {
+            return null;
+        }
+        try {
+            return Instant.parse(scheduleTimeObj.toString());
+        } catch (DateTimeParseException e) {
+            throw new IllegalArgumentException("Schedule time must be a valid ISO-8601 instant.");
+        }
+    }
+
     private void logCreatedJob(String jobIdentifier, Long serverId) {
         log.info("Job {} created by user: {} for serverId: {}", jobIdentifier, AuthUtils.getUsername(), serverId);
     }
@@ -1889,6 +1946,21 @@ public class JobController {
             throw new IllegalArgumentException(fieldLabel + " must be provided in the correct format.");
         }
         return map;
+    }
+
+    private Map<?, ?> requireFqdn(Object fqdnObj) {
+        Map<?, ?> fqdnBuildingBlocks = requireMap(fqdnObj, "FQDN");
+        if (fqdnBuildingBlocks.get("prefix") == null || fqdnBuildingBlocks.get("application") == null
+                || fqdnBuildingBlocks.get("domain") == null) {
+            log.info("FQDN not provided by user: {} in the right format.", AuthUtils.getUsername());
+            throw new IllegalArgumentException("FQDN must contain prefix, application and domain.");
+        }
+        Object customNumberObj = fqdnBuildingBlocks.get("customNumber");
+        if (customNumberObj != null && !(customNumberObj instanceof Integer)) {
+            log.info("FQDN custom number not provided by user: {} in the right format.", AuthUtils.getUsername());
+            throw new IllegalArgumentException("FQDN custom number must be a whole number.");
+        }
+        return fqdnBuildingBlocks;
     }
 
     private List<?> requireList(Object obj, String fieldLabel) {
@@ -1976,4 +2048,5 @@ public class JobController {
             throw new AccessDeniedException("You are not allowed to create a Server for this Application Service.");
         }
     }
+
 }

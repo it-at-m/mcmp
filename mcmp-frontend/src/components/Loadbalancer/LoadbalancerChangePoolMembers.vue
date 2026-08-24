@@ -1,6 +1,6 @@
 <template>
   <common-dialog
-    v-if="testEnv"
+    v-if="canManagePool"
     v-model="dialog"
     title="Pool-Member bearbeiten"
     :icon="mdiPencil"
@@ -227,6 +227,7 @@ import jobService from "@/api/jobService";
 import serverService from "@/api/serverService";
 import testenvService from "@/api/testenvService";
 import CommonDialog from "@/components/common/CommonDialog.vue";
+import { isCapPool } from "@/util/loadbalancerPool";
 
 const props = defineProps<{
   lb: LoadbalancerDetail;
@@ -248,6 +249,10 @@ onMounted(() => {
     testEnv.value = enabled;
   });
 });
+
+const canManagePool = computed(
+  () => testEnv.value && !props.lb.wafEnabled && !isCapPool(props.pool)
+);
 
 const removedMembers = ref<Set<LoadbalancerMember>>(new Set());
 

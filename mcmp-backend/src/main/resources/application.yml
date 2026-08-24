@@ -59,6 +59,9 @@ info:
     java.version: '@java.version@'
     spring-cloud.version: '@spring-cloud-dependencies.version@'
 
+error-log:
+  retention-days: 30
+
 logging:
   level:
     org.apache.catalina: WARN

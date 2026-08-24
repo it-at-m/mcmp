@@ -56,8 +56,8 @@ func run(ctx context.Context, cfg *config.Config, logger logging.Logger) error {
 	}
 
 	// create data sources
-	for i, datacenterCfg := range cfg.DATACENTER {
-		if !cfg.GENERAL.SkipProxmox {
+	if !cfg.GENERAL.SkipProxmox {
+		for i, datacenterCfg := range cfg.DATACENTER {
 			proc, err := processor.NewProcessor(datacenterCfg, logger)
 			if err != nil {
 				return fmt.Errorf("[DATACENTER %d] failed to create processors: %w", i, err)
@@ -72,48 +72,48 @@ func run(ctx context.Context, cfg *config.Config, logger logging.Logger) error {
 				ApiEndpoints:   mcmpEndpoints,
 				Logger:         logger,
 			})
-		} else {
-			// we can't know which nodes the proxmox cluster has
-			// without calling it, so we just import all JSON files in
-			// the working directory.
-			entries, err := os.ReadDir(".")
-			if err != nil {
-				return fmt.Errorf("[PROXMOX %d] failed to read dir: %w", i, err)
+		}
+	} else {
+		// we can't know which nodes the proxmox cluster has
+		// without calling it, so we just import all JSON files in
+		// the working directory.
+		entries, err := os.ReadDir(".")
+		if err != nil {
+			return fmt.Errorf("[PROXMOX] failed to read dir: %w", err)
+		}
+
+		for _, entry := range entries {
+			filename := entry.Name()
+			if !strings.HasSuffix(filename, ".json") {
+				continue
 			}
 
-			for _, entry := range entries {
-				filename := entry.Name()
-				if !strings.HasSuffix(filename, ".json") {
-					continue
+			proc := func(context.Context) (*processor.Cloud, error) {
+				logger.DebugPrintf("sourcing data from JSON dump %s", filename)
+
+				bytes, err := os.ReadFile(filename)
+				if err != nil {
+					return nil, err
 				}
 
-				proc := func(context.Context) (*processor.Cloud, error) {
-					logger.DebugPrintf("sourcing data from JSON dump %s", filename)
-
-					bytes, err := os.ReadFile(filename)
-					if err != nil {
-						return nil, err
-					}
-
-					var data processor.Cloud
-					err = json.Unmarshal(bytes, &data)
-					if err != nil {
-						return nil, fmt.Errorf("failed to unmarshal JSON data: %w", err)
-					}
-
-					return &data, nil
+				var data processor.Cloud
+				err = json.Unmarshal(bytes, &data)
+				if err != nil {
+					return nil, fmt.Errorf("failed to unmarshal JSON data: %w", err)
 				}
 
-				sources = append(sources, &datasource.JsonFileSource[*processor.Cloud]{
-					Hostname:       appName,
-					Enabled:        true,
-					ExportFilename: filename,
-					Fetcher:        proc,
-					McmpClients:    mcmpClients,
-					ApiEndpoints:   mcmpEndpoints,
-					Logger:         logger,
-				})
+				return &data, nil
 			}
+
+			sources = append(sources, &datasource.JsonFileSource[*processor.Cloud]{
+				Hostname:       appName,
+				Enabled:        true,
+				ExportFilename: filename,
+				Fetcher:        proc,
+				McmpClients:    mcmpClients,
+				ApiEndpoints:   mcmpEndpoints,
+				Logger:         logger,
+			})
 		}
 	}
 

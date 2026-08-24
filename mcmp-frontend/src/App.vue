@@ -57,7 +57,7 @@
     </v-navigation-drawer>
     <v-app-bar
       v-if="!showLockPage"
-      color="backgroundLight"
+      :color="envBarColor"
       class="appbar"
     >
       <v-row align="center">
@@ -95,7 +95,14 @@
         <v-col
           cols="6"
           class="d-flex align-center justify-center"
-        />
+        >
+          <span
+            v-if="envBarText"
+            class="text-h6 font-weight-bold text-white text-uppercase"
+          >
+            {{ envBarText }}
+          </span>
+        </v-col>
         <v-col
           cols="3"
           class="d-flex align-center justify-end"
@@ -254,6 +261,7 @@ import { useTheme } from "vuetify";
 
 import appVersionService from "@/api/appVersionService.ts";
 import jobService from "@/api/jobService";
+import testenvService from "@/api/testenvService";
 import { getUser } from "@/api/user-client";
 import userService from "@/api/userService";
 import Shop from "@/components/shop/Shop.vue";
@@ -291,6 +299,22 @@ const isAdmin = computed(() =>
 
 const showLockPage = computed(() => appStore.isLocked && !isAdmin.value);
 
+const isDevEnv = import.meta.env.DEV;
+const isTestEnv = ref(false);
+const loadingTestEnv = ref(false);
+
+const envBarColor = computed(() => {
+  if (isDevEnv) return "blue";
+  if (isTestEnv.value) return "light_red";
+  return "backgroundLight";
+});
+
+const envBarText = computed(() => {
+  if (isDevEnv) return "dev MCMP";
+  if (isTestEnv.value) return "test MCMP";
+  return "";
+});
+
 const isUserAuthorized = computed(() => {
   const user = userStore.getUser;
   if (!user) return false;
@@ -305,10 +329,17 @@ onMounted(() => {
   loadThemePreference();
   loadVersion();
   loadMaintenanceData();
+  loadTestEnv();
 
   setInterval(() => loadUser(), 1000 * 60 * 5);
   setInterval(() => appStore.fetchSystemStatus(), 1000 * 60);
 });
+
+function loadTestEnv(): void {
+  testenvService.getTestEnabled(loadingTestEnv).then((enabled) => {
+    isTestEnv.value = enabled;
+  });
+}
 
 watch(
   () => route.path,

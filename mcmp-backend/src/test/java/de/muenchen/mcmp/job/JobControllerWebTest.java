@@ -21,6 +21,7 @@ import de.muenchen.mcmp.server.ServerFullDTO;
 import de.muenchen.mcmp.server.ServerService;
 import de.muenchen.mcmp.snapshot.SnapshotService;
 import de.muenchen.mcmp.storage.UnifiedStorageService;
+import de.muenchen.mcmp.types.EnvironmentType;
 import de.muenchen.mcmp.user.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +42,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
@@ -206,6 +209,45 @@ class JobControllerWebTest {
         mockMvc.perform(post("/job/create/WINDOWS_PARTITION_CHANGE").param("serverId", String.valueOf(SERVER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"partition\":\"Z:\",\"newSize\":10}"))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void linuxPatchnightTimeChange_prodTimeOnTestServer_isRejected() throws Exception {
+        when(serverService.canUserEditServer(SERVER_ID)).thenReturn(true);
+        when(serverService.findById(SERVER_ID)).thenReturn(Optional.of(serverWithEnvironment(EnvironmentType.T)));
+
+        mockMvc.perform(post("/job/create/LINUX_PATCHNIGHT_TIME_CHANGE").param("serverId", String.valueOf(SERVER_ID))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"time\":\"2000\"}"))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void linuxPatchnightTimeChange_testTimeOnProdServer_isRejected() throws Exception {
+        when(serverService.canUserEditServer(SERVER_ID)).thenReturn(true);
+        when(serverService.findById(SERVER_ID)).thenReturn(Optional.of(serverWithEnvironment(EnvironmentType.P)));
+
+        mockMvc.perform(post("/job/create/LINUX_PATCHNIGHT_TIME_CHANGE").param("serverId", String.valueOf(SERVER_ID))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"time\":\"1500\"}"))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void linuxPatchnightTimeChange_unknownServer_isRejected() throws Exception {
+        when(serverService.canUserEditServer(SERVER_ID)).thenReturn(true);
+        when(serverService.findById(SERVER_ID)).thenReturn(Optional.empty());
+
+        mockMvc.perform(post("/job/create/LINUX_PATCHNIGHT_TIME_CHANGE").param("serverId", String.valueOf(SERVER_ID))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"time\":\"1500\"}"))
                 .andExpect(status().isBadRequest());
 
         verifyNoInteractions(jobService);
@@ -382,6 +424,14 @@ class JobControllerWebTest {
     private static Server server() {
         final Server server = new Server();
         server.setId(JobControllerWebTest.SERVER_ID);
+        return server;
+    }
+
+    private static Server serverWithEnvironment(final EnvironmentType environmentType) {
+        final Appservice appservice = new Appservice();
+        appservice.setEnvironment(environmentType);
+        final Server server = new Server();
+        server.setAppservices(Set.of(appservice));
         return server;
     }
 }

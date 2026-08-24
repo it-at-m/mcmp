@@ -11,7 +11,7 @@
 
     <groupId>de.muenchen.mcmp</groupId>
     <artifactId>mcmp-backend</artifactId>
-    <version>1.0.43</version>
+    <version>1.0.44-SNAPSHOT</version>
 
     <name>mcmp-backend</name>
     <description>This is the backend project for the MCMP</description>

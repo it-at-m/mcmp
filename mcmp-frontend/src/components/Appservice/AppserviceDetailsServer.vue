@@ -146,20 +146,19 @@
         class="server-table"
       >
         <template #item.serverKind="{ item }">
-          <v-tooltip
+          <v-icon
             v-if="serverKindText(item.serverKind)"
-            :text="serverKindText(item.serverKind)"
+            size="small"
+            class="server-kind-icon"
+            @mouseenter="
+              onRowTooltipHover($event, serverKindText(item.serverKind))
+            "
+            @mouseleave="onRowTooltipLeave"
+            @focus="onRowTooltipHover($event, serverKindText(item.serverKind))"
+            @blur="onRowTooltipLeave"
           >
-            <template #activator="{ props }">
-              <v-icon
-                v-bind="props"
-                size="small"
-                class="server-kind-icon"
-              >
-                {{ serverKindIcon(item.serverKind) }}
-              </v-icon>
-            </template>
-          </v-tooltip>
+            {{ serverKindIcon(item.serverKind) }}
+          </v-icon>
         </template>
         <template #item.name="{ item }">
           <div class="d-flex align-center">
@@ -168,26 +167,22 @@
                 {{ item.name }}
               </router-link>
             </span>
-            <v-tooltip
+            <router-link
               v-if="item.hasWarnings"
-              location="top"
-              text="Handlung erforderlich"
+              :to="`/server/${item.id}`"
+              class="d-flex align-center text-decoration-none"
             >
-              <template #activator="{ props: tooltipProps }">
-                <router-link
-                  :to="`/server/${item.id}`"
-                  class="d-flex align-center text-decoration-none"
-                >
-                  <v-icon
-                    v-bind="tooltipProps"
-                    :icon="mdiAlert"
-                    color="orange"
-                    size="20"
-                    class="ml-1"
-                  />
-                </router-link>
-              </template>
-            </v-tooltip>
+              <v-icon
+                :icon="mdiAlert"
+                color="orange"
+                size="20"
+                class="ml-1"
+                @mouseenter="onRowTooltipHover($event, 'Handlung erforderlich')"
+                @mouseleave="onRowTooltipLeave"
+                @focus="onRowTooltipHover($event, 'Handlung erforderlich')"
+                @blur="onRowTooltipLeave"
+              />
+            </router-link>
           </div>
         </template>
         <template #item.powerState="{ item }">
@@ -258,6 +253,12 @@
         </template>
       </v-data-table>
     </common-card>
+
+    <v-tooltip
+      :model-value="!!rowTooltipActivator"
+      :activator="rowTooltipActivator"
+      :text="rowTooltipText"
+    />
   </div>
 </template>
 
@@ -309,6 +310,18 @@ const cardTitle = computed(() => "Zugeordnete Server");
 const serverCount = computed(
   () => props.selectedAppservice?.servers?.length ?? 0
 );
+
+const rowTooltipActivator = ref<HTMLElement | undefined>(undefined);
+const rowTooltipText = ref("");
+
+function onRowTooltipHover(event: Event, text: string) {
+  rowTooltipActivator.value = event.currentTarget as HTMLElement;
+  rowTooltipText.value = text;
+}
+
+function onRowTooltipLeave() {
+  rowTooltipActivator.value = undefined;
+}
 
 const serverKindText = (kind?: string | null) => {
   if (!kind) return "";

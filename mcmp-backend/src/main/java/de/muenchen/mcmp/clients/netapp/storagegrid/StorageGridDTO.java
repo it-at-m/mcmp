@@ -11,24 +11,24 @@ public record StorageGridDTO(String hostname, List<AccountWithUsage> accounts) {
             String description,
             List<String> capabilities,
             Map<String, Object> synchronizeRules,
-            boolean useAccountIdentitySource,
-            boolean allowPlatformServices,
-            boolean allowSelectObjectContent,
+            Boolean useAccountIdentitySource,
+            Boolean allowPlatformServices,
+            Boolean allowSelectObjectContent,
             List<Object> allowedGridFederationConnections,
-            boolean allowComplianceMode,
+            Boolean allowComplianceMode,
             Long maxRetentionDays,
-            long maxRetentionYears,
-            long quotaObjectBytes,
-            long dataBytes,
-            long objectCount,
+            Long maxRetentionYears,
+            Long quotaObjectBytes,
+            Long dataBytes,
+            Long objectCount,
             String calculationTime,
             List<BucketUsage> buckets
     ) {
 
         public record BucketUsage(
                 String name,
-                long dataBytes,
-                long objectCount,
+                Long dataBytes,
+                Long objectCount,
                 String region,
                 Long quotaObjectBytes
         ) {}

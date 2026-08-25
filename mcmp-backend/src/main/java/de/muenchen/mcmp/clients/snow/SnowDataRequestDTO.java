@@ -76,7 +76,7 @@ public record SnowDataRequestDTO(
             @JsonProperty("name") String name,
             @JsonProperty("version") String version,
             @JsonProperty("commit_id") String commitId,
-            @JsonProperty("modified") boolean modified,
+            @JsonProperty("modified") Boolean modified,
             @JsonProperty("go_version") String goVersion,
             @JsonProperty("fqdn") String fqdn,
             @JsonProperty("start_time") String startTime,
@@ -203,7 +203,7 @@ public record SnowDataRequestDTO(
             String environment,
 
             @JsonProperty("csw_enforced")
-            boolean cswEnforced,
+            Boolean cswEnforced,
 
             @JsonProperty("owned_by")
             String ownedBy,
@@ -217,6 +217,9 @@ public record SnowDataRequestDTO(
             @JsonProperty("server_cis")
             List<String> cis
     ) {
+        public AppServiceDTO {
+            if (cswEnforced == null) cswEnforced = false;
+        }
     }
 
     @Builder

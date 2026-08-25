@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import de.muenchen.mcmp.server.ServerStatusType;
 import de.muenchen.mcmp.types.ServerKind;
 import de.muenchen.mcmp.types.ServerType;
-import jakarta.persistence.Column;
 import lombok.Builder;
 
 import java.time.OffsetDateTime;
@@ -137,9 +136,13 @@ public record CloudImportDTO(
             @JsonProperty("name") String name,
             @JsonProperty("description") String description,
             @JsonProperty("create_time") OffsetDateTime createTime,
-            @JsonProperty("quiesced") boolean quiesced,
+            @JsonProperty("quiesced") Boolean quiesced,
             @JsonProperty("state") String state,
-            @JsonProperty("replay_supported") boolean replaySupported
+            @JsonProperty("replay_supported") Boolean replaySupported
     ) {
+        public Snapshot {
+            if (quiesced == null) quiesced = false;
+            if (replaySupported == null) replaySupported = false;
+        }
     }
 }

@@ -27,12 +27,16 @@ public record LoadBalancerDTO(
             @NotBlank String listen,
             @NotBlank String forward,
             Map<String, PoolRefDTO> pool,
-            int port,
+            @NotNull Integer port,
             @NotNull WafDTO waf,
             @NotBlank String persistence,
             Map<String, String> irules,
-            boolean redirect80
-    ) {}
+            Boolean redirect80
+    ) {
+        public VirtualServerDTO {
+            if (redirect80 == null) redirect80 = false;
+        }
+    }
 
     public record PoolRefDTO(
             @JsonProperty("default") Boolean isDefault,
@@ -41,9 +45,13 @@ public record LoadBalancerDTO(
     ) {}
 
     public record WafDTO(
-            boolean enabled,
+            Boolean enabled,
             String status
-    ) {}
+    ) {
+        public WafDTO {
+            if (enabled == null) enabled = false;
+        }
+    }
 
     public record PoolDTO(
             @JsonProperty("pool_member") List<@Valid PoolMemberDTO> poolMembers,
@@ -54,7 +62,7 @@ public record LoadBalancerDTO(
 
     public record PoolMemberDTO(
             @NotBlank String ip,
-            int port,
+            @NotNull Integer port,
             @JsonProperty("monitor_condition") Object monitorCondition,
             List<MonitorDTO> monitors
     ) {}

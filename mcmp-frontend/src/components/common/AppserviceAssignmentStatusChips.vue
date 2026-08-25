@@ -1,6 +1,6 @@
 <template>
   <status-chip
-    v-if="!canEdit && !loading"
+    v-if="!canEdit"
     :value="canEdit"
     :check-value="false"
     match-text="Nur Lesezugriff"
@@ -8,7 +8,7 @@
     match-mode="equal"
   />
   <status-chip
-    v-if="!canEdit && !loading && assignedCount === 0"
+    v-if="!canEdit && assignedCount === 0"
     :value="assignedCount"
     :check-value="1"
     match-text=""
@@ -18,7 +18,7 @@
     href="https://go.muenchen.de/sp/KB0023236"
   />
   <status-chip
-    v-if="!canEdit && !loading && assignedCount > 1"
+    v-if="!canEdit && assignedCount > 1"
     :value="assignedCount"
     :check-value="1"
     match-text=""
@@ -36,13 +36,11 @@ withDefaults(
   defineProps<{
     canEdit?: boolean;
     assignedCount?: number;
-    loading?: boolean;
     entityLabel: string;
   }>(),
   {
     canEdit: false,
     assignedCount: 0,
-    loading: false,
   }
 );
 </script>

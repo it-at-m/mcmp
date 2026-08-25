@@ -16,7 +16,6 @@
           ref="serverListRef"
           :un-activate-server-row="unActivateServerListRow"
           :selected="selectedServer"
-          :url-params-id="route.params.id"
           :initial-search="serverSearch"
           @update:selected="getSelectedServerFromServerListComponent"
           @reset-un-activate-server-row="unActivateServerListRow = false"
@@ -627,21 +626,22 @@ onUnmounted(() => {
 });
 
 function getSelectedServerFromServerListComponent(newSelected: Server[]) {
-  selectedServer.value = newSelected;
   notFound.value = false;
   notFoundId.value = null;
-  if (selectedServer.value.length === 0) {
+  const first = newSelected[0];
+  if (!first) {
+    selectedServer.value = [];
     hasAtLeastOneServer.value = false;
     stopAutoRefresh();
     return;
   }
-  getSelectedServer();
+  getSelectedServer(false, first.id);
   startAutoRefresh();
 }
 
-function getSelectedServer(silent = false) {
+function getSelectedServer(silent = false, targetId?: number) {
   const loadingRef = silent ? ref(false) : loadingDetails;
-  const currentId = selectedServerItem.value?.id;
+  const currentId = targetId ?? selectedServerItem.value?.id;
 
   if (!currentId) return;
   const serverId = currentId!;
@@ -896,14 +896,12 @@ watch(
 
     notFound.value = false;
     notFoundId.value = null;
-    // When route ID changes, load the corresponding server
+    // When route ID changes, load the corresponding server. Previously-
+    // selected server's data stays visible until the fetch resolves
     const id = Number(route.params.id);
     if (!isNaN(id)) {
-      selectedServer.value.splice(0, selectedServer.value.length, {
-        id,
-      } as Server);
       unActivateServerListRow.value = true;
-      getSelectedServer();
+      getSelectedServer(false, id);
     }
   }
 );

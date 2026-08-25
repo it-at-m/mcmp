@@ -9,7 +9,6 @@
       :sort-by="sortBy"
       :items-per-page="itemsPerPage"
       :has-more="hasMore"
-      :selected-id="selectedRow"
       :search="search"
       search-label="Server suchen..."
       @update:sort-by="updateSortBy"
@@ -196,39 +195,30 @@
           >
             <v-icon>{{ item.isFavorite ? mdiStar : mdiStarOutline }}</v-icon>
           </v-btn>
-          <v-tooltip
-            :text="
-              item.powerState === 'poweredOn'
-                ? 'Eingeschaltet!'
-                : item.powerState === 'poweredOff'
-                  ? 'Ausgeschaltet!'
-                  : 'Suspended'
-            "
-          >
-            <template #activator="{ props }">
-              <div class="power-state-icon-inline">
-                <v-icon
-                  :color="
-                    item.powerState === 'poweredOn'
-                      ? 'btn_green'
-                      : item.powerState === 'poweredOff'
-                        ? 'btn_red'
-                        : 'accent'
-                  "
-                  size="25"
-                  v-bind="props"
-                >
-                  {{
-                    item.powerState === "poweredOn"
-                      ? mdiPlayCircle
-                      : item.powerState === "poweredOff"
-                        ? mdiStopCircle
-                        : mdiPauseCircle
-                  }}
-                </v-icon>
-              </div>
-            </template>
-          </v-tooltip>
+          <div class="power-state-icon-inline">
+            <v-icon
+              :color="
+                item.powerState === 'poweredOn'
+                  ? 'btn_green'
+                  : item.powerState === 'poweredOff'
+                    ? 'btn_red'
+                    : 'accent'
+              "
+              size="25"
+              @mouseenter="onPowerStateIconHover($event, item)"
+              @mouseleave="onPowerStateIconLeave"
+              @focus="onPowerStateIconHover($event, item)"
+              @blur="onPowerStateIconLeave"
+            >
+              {{
+                item.powerState === "poweredOn"
+                  ? mdiPlayCircle
+                  : item.powerState === "poweredOff"
+                    ? mdiStopCircle
+                    : mdiPauseCircle
+              }}
+            </v-icon>
+          </div>
           <os-cell
             :os-full-name="item.os || ''"
             size="small"
@@ -288,6 +278,12 @@
         </v-row>
       </template>
     </scrollable-list-table>
+
+    <v-tooltip
+      :model-value="!!powerStateTooltipActivator"
+      :activator="powerStateTooltipActivator"
+      :text="powerStateTooltipText"
+    />
   </div>
 </template>
 
@@ -305,6 +301,7 @@ import {
   mdiStopCircle,
 } from "@mdi/js";
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import { useRoute } from "vue-router";
 
 import serverService from "@/api/serverService";
 import ScrollableListTable from "@/components/common/ScrollableListTable.vue";
@@ -314,14 +311,33 @@ import { APPSERVICE_EXPLAIN_URL } from "@/constants.ts";
 const props = defineProps<{
   selected: ServerList[];
   unActivateServerRow: boolean;
-  urlParamsId?: string | string[];
   urlParamsAppId?: string | string[];
   initialSearch?: string;
 }>();
 
+const initialUrlId = useRoute().params.id;
+
 const favoritesFilter = ref(
   localStorage.getItem("mcmp_favorites_filter") === "true"
 );
+
+const powerStateTooltipActivator = ref<HTMLElement | undefined>(undefined);
+const powerStateTooltipText = ref("");
+
+function powerStateText(item: ServerList): string {
+  if (item.powerState === "poweredOn") return "Eingeschaltet!";
+  if (item.powerState === "poweredOff") return "Ausgeschaltet!";
+  return "Suspended";
+}
+
+function onPowerStateIconHover(event: Event, item: ServerList) {
+  powerStateTooltipActivator.value = event.currentTarget as HTMLElement;
+  powerStateTooltipText.value = powerStateText(item);
+}
+
+function onPowerStateIconLeave() {
+  powerStateTooltipActivator.value = undefined;
+}
 const loadingServer = ref(false);
 const servers = ref<ServerList[]>([]);
 const totalServers = ref(0);
@@ -503,8 +519,8 @@ async function loadServers(
     hasMore.value = servers.value.length < totalServers.value;
 
     const hasUrlId =
-      !!props.urlParamsId &&
-      (Array.isArray(props.urlParamsId) ? props.urlParamsId.length > 0 : true);
+      !!initialUrlId &&
+      (Array.isArray(initialUrlId) ? initialUrlId.length > 0 : true);
     const hasUrlAppId =
       !!props.urlParamsAppId &&
       (Array.isArray(props.urlParamsAppId)
@@ -549,10 +565,8 @@ watch(search, () => {
 });
 
 onMounted(async () => {
-  if (props.urlParamsId) {
-    const id = Array.isArray(props.urlParamsId)
-      ? props.urlParamsId[0]
-      : props.urlParamsId;
+  if (initialUrlId) {
+    const id = Array.isArray(initialUrlId) ? initialUrlId[0] : initialUrlId;
     selectedRow.value = id.toString();
     emit("update:selected", [{ id: parseInt(id) } as ServerList]);
   }

@@ -14,7 +14,6 @@
       >
         <storage-list
           :model-value="selectedStorage"
-          :url-params-id="route.params.id"
           :initial-search="storageSearch"
           @update:selected="onStorageSelected"
           @update:total-items="onStorageTotalItemsUpdate"

@@ -14,7 +14,6 @@
       >
         <openshift-namespace-list
           :model-value="selectedItems"
-          :url-params-id="route.params.id"
           :initial-search="openshiftSearch"
           @update:selected="onNamespaceSelected"
           @update:search="openshiftSearch = $event"

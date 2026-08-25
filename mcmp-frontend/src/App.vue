@@ -341,13 +341,6 @@ function loadTestEnv(): void {
   });
 }
 
-watch(
-  () => route.path,
-  () => {
-    appStore.fetchSystemStatus();
-  }
-);
-
 async function loadMaintenanceData() {
   await appStore.fetchSystemStatus();
 }
@@ -497,6 +490,17 @@ watch(
     if (matched) markNavSeen(matched);
   },
   { immediate: true }
+);
+
+function topLevelNavSegment(path: string): string {
+  return path.split("/")[1] ?? "";
+}
+
+watch(
+  () => topLevelNavSegment(route.path),
+  (newSegment, oldSegment) => {
+    if (newSegment !== oldSegment) appStore.fetchSystemStatus();
+  }
 );
 
 const buttonsCenter = computed(() => [

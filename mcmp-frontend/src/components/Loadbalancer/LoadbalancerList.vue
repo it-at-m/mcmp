@@ -9,7 +9,6 @@
       :sort-by="sortBy"
       :items-per-page="itemsPerPage"
       :has-more="hasMore"
-      :selected-id="selectedId"
       :search="search"
       search-label="Loadbalancer suchen..."
       @update:sort-by="updateSortBy"
@@ -32,18 +31,16 @@
           >
             <v-icon>{{ item.isFavorite ? mdiStar : mdiStarOutline }}</v-icon>
           </v-btn>
-          <v-tooltip>
-            <template #activator="{ props: tooltipProps }">
-              <img
-                class="domain-header-icon"
-                v-bind="tooltipProps"
-                src="https://monitoring.muenchen.de/lhmmon/check_mk/images/icons/f5.png"
-                alt="Loadbalancer icon"
-                aria-hidden="true"
-              />
-            </template>
-            F5 Loadbalancer
-          </v-tooltip>
+          <img
+            class="domain-header-icon"
+            src="https://monitoring.muenchen.de/lhmmon/check_mk/images/icons/f5.png"
+            alt="Loadbalancer icon"
+            aria-hidden="true"
+            @mouseenter="onF5IconHover"
+            @mouseleave="onF5IconLeave"
+            @focus="onF5IconHover"
+            @blur="onF5IconLeave"
+          />
           <span>{{ item.domain }}</span>
         </div>
       </template>
@@ -79,6 +76,11 @@
         </v-row>
       </template>
     </scrollable-list-table>
+    <v-tooltip
+      :model-value="f5TooltipActivator !== undefined"
+      :activator="f5TooltipActivator"
+      text="F5 Loadbalancer"
+    />
   </div>
 </template>
 
@@ -88,6 +90,7 @@ import type { DataTableHeader } from "vuetify";
 
 import { mdiStar, mdiStarOutline } from "@mdi/js";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
+import { useRoute } from "vue-router";
 
 import loadbalancerService from "@/api/loadbalancerService";
 import ScrollableListTable from "@/components/common/ScrollableListTable.vue";
@@ -102,9 +105,10 @@ type TableItem = LoadbalancerListItem & { id: number };
 
 const props = defineProps<{
   modelValue?: LoadbalancerListItem[];
-  urlParamsId?: string | string[];
   initialSearch?: string;
 }>();
+
+const initialUrlId = useRoute().params.id;
 
 const emit = defineEmits<{
   (e: "update:modelValue", selected: LoadbalancerListItem[]): void;
@@ -123,7 +127,20 @@ const hasMore = ref(true);
 const search = ref(props.initialSearch ?? "");
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
 
-const tableRef = ref<{ triggerObserveScroll: () => void } | null>(null);
+const tableRef = ref<{
+  triggerObserveScroll: () => void;
+  resetSelection: () => void;
+} | null>(null);
+
+const f5TooltipActivator = ref<HTMLElement | undefined>(undefined);
+
+function onF5IconHover(event: Event) {
+  f5TooltipActivator.value = event.currentTarget as HTMLElement;
+}
+
+function onF5IconLeave() {
+  f5TooltipActivator.value = undefined;
+}
 
 const headers = ref<DataTableHeader[]>([
   { title: "Domain", key: "domain", align: "start", sortable: true },
@@ -136,6 +153,12 @@ const currentSort = computed<SortByEntry>(
 const selectedId = computed(() =>
   selected.value.length > 0 ? selected.value[0]?.id : null
 );
+
+watch(selectedId, (val) => {
+  if (val === null || val === undefined) {
+    tableRef.value?.resetSelection();
+  }
+});
 
 const domainCounts = computed(() => {
   const counts = new Map<string, number>();
@@ -159,7 +182,7 @@ const tableItems = computed<TableItem[]>(() =>
 );
 
 const normalizedUrlParamId = computed(() =>
-  typeof props.urlParamsId === "string" ? props.urlParamsId : undefined
+  typeof initialUrlId === "string" ? initialUrlId : undefined
 );
 
 function selectItem(item: LoadbalancerListItem) {

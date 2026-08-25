@@ -9,7 +9,6 @@
       :sort-by="sortBy"
       :items-per-page="itemsPerPage"
       :has-more="hasMore"
-      :selected-id="selectedId"
       :search="search"
       search-label="Namespace suchen..."
       @update:sort-by="updateSortBy"
@@ -70,6 +69,7 @@ import type { DataTableHeader } from "vuetify";
 
 import { mdiStar, mdiStarOutline } from "@mdi/js";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
+import { useRoute } from "vue-router";
 
 import openshiftService from "@/api/openshiftService";
 import ScrollableListTable from "@/components/common/ScrollableListTable.vue";
@@ -82,9 +82,10 @@ interface SortByEntry {
 
 const props = defineProps<{
   modelValue?: OpenshiftNamespaceListItem[];
-  urlParamsId?: string | string[];
   initialSearch?: string;
 }>();
+
+const initialUrlId = useRoute().params.id;
 
 const emit = defineEmits<{
   (e: "update:modelValue", selected: OpenshiftNamespaceListItem[]): void;
@@ -103,7 +104,10 @@ const hasMore = ref(true);
 const search = ref(props.initialSearch ?? "");
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
 
-const tableRef = ref<{ triggerObserveScroll: () => void } | null>(null);
+const tableRef = ref<{
+  triggerObserveScroll: () => void;
+  resetSelection: () => void;
+} | null>(null);
 const formatter = useFormatter();
 
 const headers = ref<DataTableHeader[]>([
@@ -124,10 +128,16 @@ const selectedId = computed(() =>
   selected.value.length > 0 ? selected.value[0]?.id : null
 );
 
+watch(selectedId, (val) => {
+  if (val === null || val === undefined) {
+    tableRef.value?.resetSelection();
+  }
+});
+
 const tableItems = computed(() => items.value);
 
 const normalizedUrlParamId = computed(() =>
-  typeof props.urlParamsId === "string" ? props.urlParamsId : undefined
+  typeof initialUrlId === "string" ? initialUrlId : undefined
 );
 
 function selectItem(item: OpenshiftNamespaceListItem) {

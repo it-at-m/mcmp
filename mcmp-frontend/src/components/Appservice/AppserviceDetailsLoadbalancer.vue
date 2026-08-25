@@ -59,11 +59,14 @@ async function loadLoadbalancers(appservice: Appservice | null) {
     loadbalancers.value = [];
     return;
   }
-  loadbalancers.value =
-    await loadbalancerService.getLoadbalancersByAppserviceId(
-      loading,
-      appservice.id
-    );
+  loadbalancers.value = [];
+  const result = await loadbalancerService.getLoadbalancersByAppserviceId(
+    loading,
+    appservice.id
+  );
+  if (props.selectedAppservice?.id === appservice.id) {
+    loadbalancers.value = result;
+  }
 }
 
 watch(

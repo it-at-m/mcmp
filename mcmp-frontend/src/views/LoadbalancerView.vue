@@ -14,7 +14,6 @@
       >
         <loadbalancer-list
           :model-value="selectedItems"
-          :url-params-id="route.params.id"
           :initial-search="loadbalancerSearch"
           @update:selected="onLoadbalancerSelected"
           @update:search="loadbalancerSearch = $event"

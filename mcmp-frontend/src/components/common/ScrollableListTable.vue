@@ -108,7 +108,6 @@ const props = defineProps<{
   itemsPerPage?: number;
   searchLabel?: string;
   searchTooltip?: string; // HIER: Das Prop für dein Tooltip registriert
-  selectedId?: number | string | null;
   hasMore: boolean;
   search?: string;
 }>();
@@ -280,19 +279,6 @@ watch(
     focusedRowIndex.value = 0;
     focusedItemId.value = newItems[0]?.id ?? null;
     nextTick(() => scrollToRow(0));
-  }
-);
-
-// Reset selected highlight when selectedId becomes null
-watch(
-  () => props.selectedId,
-  (val) => {
-    if (val === null || val === undefined) {
-      getRows().forEach((el) => {
-        el.classList.remove("selected-row");
-        el.classList.remove("focused-row");
-      });
-    }
   }
 );
 

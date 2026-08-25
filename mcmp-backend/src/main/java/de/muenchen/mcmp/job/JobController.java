@@ -1369,6 +1369,13 @@ public class JobController {
             logTriedToCreateJob(LOADBALANCER_F5_CHANGE_POOL_MEMBERS, serverId);
             throw new AccessDeniedException("Pool members cannot be changed for a pool with CAP members.");
         }
+        final boolean allMembersResolved = pool.members() != null
+                && pool.members().stream().allMatch(this::memberMatchesServerInDb);
+        if (!allMembersResolved) {
+            logTriedToCreateJob(LOADBALANCER_F5_CHANGE_POOL_MEMBERS, serverId);
+            throw new AccessDeniedException(
+                    "Pool members cannot be changed because not all pool members are fully resolved (name and IP must match a known server).");
+        }
 
         List<Map<String, Object>> addedList = awxExtraVars.get("added") != null
                 ? requireListOfMap(awxExtraVars.get("added"), "Added members")
@@ -1454,7 +1461,6 @@ public class JobController {
     }
 
     // Mirrors the CAP-Ingress port ranges used by the frontend (isCapPool in loadbalancerPool.ts)
-    // so that CAP-managed pools can't be edited through this endpoint either.
     private static final List<int[]> CAP_PORT_RANGES = List.of(
             new int[]{32201, 32207},
             new int[]{32301, 32307},
@@ -1463,6 +1469,19 @@ public class JobController {
 
     private static boolean isCapPort(final int port) {
         return CAP_PORT_RANGES.stream().anyMatch(range -> port >= range[0] && port <= range[1]);
+    }
+
+    private boolean memberMatchesServerInDb(final UnifiedLoadbalancerMemberDTO member) {
+        if (member.serverId() == null || member.serverName() == null || member.serverName().isBlank()
+                || member.ip() == null || member.ip().isBlank()) {
+            return false;
+        }
+        final Server server = serverService.findById(member.serverId()).orElse(null);
+        if (server == null || !member.serverName().equals(server.getName())) {
+            return false;
+        }
+        return serverService.findServersByIpAddress(member.ip()).stream()
+                .anyMatch(s -> s.getId().equals(server.getId()));
     }
 
     private static boolean isCapPool(final UnifiedLoadbalancerPoolDTO pool) {

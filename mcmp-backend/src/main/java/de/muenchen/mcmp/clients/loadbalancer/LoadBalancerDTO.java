@@ -61,7 +61,7 @@ public record LoadBalancerDTO(
 
     public record MonitorDTO(
             @NotBlank String type,
-            int interval,
+            Integer interval,
             Object port,
             String method,
             String path,

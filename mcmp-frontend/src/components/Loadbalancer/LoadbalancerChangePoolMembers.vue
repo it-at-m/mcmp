@@ -13,14 +13,28 @@
     @dialog-confirm="submit"
   >
     <template #activator="{ props: activatorProps }">
-      <v-btn
-        v-bind="activatorProps"
-        :icon="mdiPencil"
-        variant="text"
-        size="small"
-        aria-label="Pool-Member bearbeiten"
-        @click.stop="openDialog"
-      />
+      <v-tooltip
+        :disabled="!isManageDisabled"
+        :text="disableReason"
+        location="bottom"
+      >
+        <template #activator="{ props: tooltipProps }">
+          <span
+            v-bind="tooltipProps"
+            style="display: inline-flex"
+          >
+            <v-btn
+              v-bind="activatorProps"
+              :icon="mdiPencil"
+              variant="text"
+              size="small"
+              :disabled="isManageDisabled"
+              aria-label="Pool-Member bearbeiten"
+              @click.stop="openDialog"
+            />
+          </span>
+        </template>
+      </v-tooltip>
     </template>
 
     <v-row>
@@ -250,9 +264,22 @@ onMounted(() => {
   });
 });
 
-const canManagePool = computed(
-  () => testEnv.value && !props.lb.wafEnabled && !isCapPool(props.pool)
+const canManagePool = computed(() => testEnv.value);
+
+const allMembersHaveNameAndIp = computed(() =>
+  props.pool.members.every((member) => !!member.serverName && !!member.ip)
 );
+
+const disableReason = computed(() => {
+  if (isCapPool(props.pool)) return "Cap-Pools können nicht bearbeitet werden.";
+  if (props.lb.wafEnabled)
+    return "Bearbeitung ist bei aktivierter WAF nicht möglich.";
+  if (!allMembersHaveNameAndIp.value)
+    return "Nicht alle Pool-Member sind vollständig aufgelöst (Name und IP erforderlich).";
+  return "";
+});
+
+const isManageDisabled = computed(() => !!disableReason.value);
 
 const removedMembers = ref<Set<LoadbalancerMember>>(new Set());
 
@@ -349,7 +376,9 @@ function toggleRemove(member: LoadbalancerMember) {
 }
 
 const canSubmit = computed(
-  () => removedMembers.value.size > 0 || addedMembers.value.length > 0
+  () =>
+    !isManageDisabled.value &&
+    (removedMembers.value.size > 0 || addedMembers.value.length > 0)
 );
 
 function resetForm() {

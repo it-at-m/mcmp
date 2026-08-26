@@ -90,7 +90,9 @@ public record CloudImportDTO(
             @JsonProperty("cpu_allocation_overhead_limit") Long cpuAllocationOverheadLimit,
             @JsonProperty("cpu_allocation_reservation") Long cpuAllocationReservation
     ) {
+        @SuppressWarnings("MismatchedStringCase")
         public Server {
+
             /* ensure we have a trimmed name */
             if (name == null || name.isBlank()) {
                 name = uuid;
@@ -99,6 +101,7 @@ public record CloudImportDTO(
             }
 
             /* ensure we have a valid power state */
+            if (powerState == null) powerState = "";
             switch (powerState) {
                 case "poweredOn": // vmware
                 case "running":   // proxmox

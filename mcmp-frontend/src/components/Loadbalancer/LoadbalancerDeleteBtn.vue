@@ -1,6 +1,6 @@
 <template>
   <common-dialog
-    v-if="canDelete"
+    v-if="testEnv"
     :model-value="dialog"
     title="Loadbalancer abbauen"
     :icon="mdiDelete"
@@ -14,7 +14,7 @@
   >
     <template #activator="{ props: activatorProps }">
       <v-tooltip
-        text="Loadbalancer abbauen"
+        :text="isDeleteDisabled ? disableReason : 'Loadbalancer abbauen'"
         location="bottom"
         aria-label="Loadbalancer abbauen"
       >
@@ -26,7 +26,7 @@
           >
             <v-btn
               v-bind="activatorProps"
-              :disabled="loading"
+              :disabled="loading || isDeleteDisabled"
               color="btn_red"
               :loading="loading"
               class="material-action-btn"
@@ -57,7 +57,7 @@
   </common-dialog>
 
   <dialog-extra-sure
-    v-if="canDelete && extraSureDialog"
+    v-if="testEnv && extraSureDialog"
     v-model="extraSureDialog"
     title="Loadbalancer abbauen"
     text="Wollen Sie diesen Loadbalancer wirklich abbauen?"
@@ -99,9 +99,16 @@ onMounted(() => {
   });
 });
 
-const canDelete = computed(() => testEnv.value && !props.lb.wafEnabled);
+const disableReason = computed(() => {
+  if (props.lb.wafEnabled)
+    return "Abbau ist bei aktivierter WAF nicht möglich.";
+  return "";
+});
+
+const isDeleteDisabled = computed(() => !!disableReason.value);
 
 function openDialog() {
+  if (isDeleteDisabled.value) return;
   dialog.value = true;
   registerOpenDialog?.();
 }

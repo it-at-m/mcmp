@@ -12,6 +12,7 @@ import de.muenchen.mcmp.security.RequestBodyCachingFilter;
 import de.muenchen.mcmp.security.RequestResponseLoggingFilter;
 import de.muenchen.mcmp.server.ServerService;
 import de.muenchen.mcmp.snapshot.SnapshotService;
+import de.muenchen.mcmp.storage.StorageType;
 import de.muenchen.mcmp.storage.UnifiedStorageService;
 import de.muenchen.mcmp.user.User;
 import de.muenchen.mcmp.user.UserService;
@@ -147,25 +148,21 @@ class JobControllerReadEndpointsTest {
     @Test
     @WithMockUser(authorities = "ROLE_ADMIN")
     void search_negativePage_isClampedToOne() throws Exception {
-        when(jobService.findAllJobsByRole(anyInt(), anyInt(), any(), anyBoolean(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any())).thenReturn(Page.empty());
+        stub21ArgFindAllJobsByRole();
 
         mockMvc.perform(get("/job/search").param("page", "-5")).andExpect(status().isOk());
 
-        verify(jobService).findAllJobsByRole(eq(1), eq(10), any(), eq(false), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any());
+        verify(jobService).findAllJobsByRole(eq(1), eq(10), any(), eq(false), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
     @WithMockUser(authorities = "ROLE_ADMIN")
     void search_itemsPerPageOutOfBounds_isClampedToTen() throws Exception {
-        when(jobService.findAllJobsByRole(anyInt(), anyInt(), any(), anyBoolean(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any())).thenReturn(Page.empty());
+        stub21ArgFindAllJobsByRole();
 
         mockMvc.perform(get("/job/search").param("itemsPerPage", "999")).andExpect(status().isOk());
 
-        verify(jobService).findAllJobsByRole(eq(1), eq(10), any(), eq(false), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any());
+        verify(jobService).findAllJobsByRole(eq(1), eq(10), any(), eq(false), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -178,6 +175,84 @@ class JobControllerReadEndpointsTest {
 
         verify(jobService).findAllJobsByRole(eq(3), eq(25), any(), eq(false), isNull(), isNull(), isNull(), isNull(),
                 isNull(), isNull(), isNull(), eq(1001L), isNull(), isNull(), isNull(), isNull());
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------
+    // Tests for the new /job/loadbalancer, /job/storage, /job/openshift History endpoints.
+    // These route into the 21-arg findAllJobsByRole overload that carries the new resource FKs.
+    // -----------------------------------------------------------------------------------------------------------------
+
+    @Test
+    @WithMockUser(authorities = "ROLE_USER")
+    void jobsByLoadbalancerId_passesLbVirtualServerIdInCorrectSlot() throws Exception {
+        stub21ArgFindAllJobsByRole();
+
+        mockMvc.perform(get("/job/loadbalancer/5005").param("page", "2").param("itemsPerPage", "15"))
+                .andExpect(status().isOk());
+
+        verify(jobService).findAllJobsByRole(eq(2), eq(15), any(), eq(false),
+                isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
+                eq(5005L), isNull(), isNull(), isNull(), isNull(),
+                isNull(), isNull(), isNull(), isNull());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROLE_USER")
+    void jobsByStorageId_nfsType_resolvesIntoOntapVolumeIdSlot() throws Exception {
+        stub21ArgFindAllJobsByRole();
+        when(unifiedStorageService.resolveStorageEntityId("vol-uuid-1", StorageType.NFS)).thenReturn(7007L);
+
+        mockMvc.perform(get("/job/storage/NFS/vol-uuid-1")).andExpect(status().isOk());
+
+        verify(jobService).findAllJobsByRole(eq(1), eq(10), any(), eq(false),
+                isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
+                isNull(), eq(7007L), isNull(), isNull(), isNull(),
+                isNull(), isNull(), isNull(), isNull());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROLE_USER")
+    void jobsByStorageId_qtreeType_resolvesIntoOntapQtreeIdSlot() throws Exception {
+        stub21ArgFindAllJobsByRole();
+        when(unifiedStorageService.resolveStorageEntityId("42", StorageType.QTREE)).thenReturn(42L);
+
+        mockMvc.perform(get("/job/storage/QTREE/42")).andExpect(status().isOk());
+
+        verify(jobService).findAllJobsByRole(eq(1), eq(10), any(), eq(false),
+                isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
+                isNull(), isNull(), eq(42L), isNull(), isNull(),
+                isNull(), isNull(), isNull(), isNull());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROLE_USER")
+    void jobsByStorageId_s3Type_resolvesIntoStoragegridBucketIdSlot() throws Exception {
+        stub21ArgFindAllJobsByRole();
+        when(unifiedStorageService.resolveStorageEntityId("99", StorageType.S3)).thenReturn(99L);
+
+        mockMvc.perform(get("/job/storage/S3/99")).andExpect(status().isOk());
+
+        verify(jobService).findAllJobsByRole(eq(1), eq(10), any(), eq(false),
+                isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
+                isNull(), isNull(), isNull(), eq(99L), isNull(),
+                isNull(), isNull(), isNull(), isNull());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ROLE_USER")
+    void jobsByOpenshiftNamespaceId_passesKubernetesNamespaceIdInCorrectSlot() throws Exception {
+        stub21ArgFindAllJobsByRole();
+
+        mockMvc.perform(get("/job/openshift/8008")).andExpect(status().isOk());
+
+        verify(jobService).findAllJobsByRole(eq(1), eq(10), any(), eq(false),
+                isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
+                isNull(), isNull(), isNull(), isNull(), eq(8008L),
+                isNull(), isNull(), isNull(), isNull());
+    }
+
+    private void stub21ArgFindAllJobsByRole() {
+        when(jobService.findAllJobsByRole(anyInt(), anyInt(), any(), anyBoolean(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(Page.empty());
     }
 
     // -----------------------------------------------------------------------------------------------------------------

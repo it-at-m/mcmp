@@ -7,7 +7,14 @@ import de.muenchen.mcmp.action.ActionRepository;
 import de.muenchen.mcmp.appservice.Appservice;
 import de.muenchen.mcmp.appservice.AppserviceRepository;
 import de.muenchen.mcmp.awxConfig.AwxConfig;
+import de.muenchen.mcmp.loadbalancer.LbPool;
+import de.muenchen.mcmp.loadbalancer.LbVirtualServer;
+import de.muenchen.mcmp.loadbalancer.LbVirtualServerPoolRef;
+import de.muenchen.mcmp.loadbalancer.LbVirtualServerRepository;
+import de.muenchen.mcmp.ontap.OntapVolume;
+import de.muenchen.mcmp.ontap.OntapVolumeRepository;
 import de.muenchen.mcmp.server.Server;
+import de.muenchen.mcmp.storage.UnifiedStorageItemDto;
 import de.muenchen.mcmp.user.User;
 import de.muenchen.mcmp.user.UserRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -24,9 +31,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -36,7 +47,7 @@ public class JobServiceTest {
     public void testMergeJsonStrings() throws JsonProcessingException {
         ObjectMapper objectMapper = new ObjectMapper();
         JobService jobService = new JobService(
-                null, null, null, null, null, null, null, null, null, null, null, null
+                null, null, null, null, null, null, null, null, null, null, null, null, null
         );
 
         // Erstes JSON-Objekt (awxExtraVars)
@@ -75,7 +86,7 @@ public class JobServiceTest {
     @Test
     public void testChechmkDowntimeEndtimeDateConversion() {
         JobService jobService = new JobService(
-                null, null, null, null, null, null, null, null, null, null, null, null
+                null, null, null, null, null, null, null, null, null, null, null, null, null
         );
 
         // Testfall 1: Gültiges Datum
@@ -125,7 +136,7 @@ public class JobServiceTest {
 
         JobService jobService = new JobService(
                 jobRepository, actionRepository, userRepository, null, appserviceRepository,
-                null, null, null, null, null, null, actionToJobMapper
+                null, null, null, null, null, null, null, actionToJobMapper
         );
 
         Appservice appservice = new Appservice();
@@ -203,7 +214,7 @@ public class JobServiceTest {
 
         JobService jobService = new JobService(
                 jobRepository, actionRepository, userRepository, null, null,
-                null, null, null, null, null, null, actionToJobMapper
+                null, null, null, null, null, null, null, actionToJobMapper
         );
 
         Server server = new Server();
@@ -237,5 +248,266 @@ public class JobServiceTest {
         assertEquals(scheduleTime, savedJob.getChangeStartDate(),
                 "scheduled execution time must be forwarded to the persisted job");
         assertEquals(scheduleTime.plusSeconds(1), savedJob.getChangeEndDate());
+    }
+
+    @Test
+    public void testLoadbalancerF5Delete_linksLbVirtualServerToPersistedJob() {
+        JobRepository jobRepository = mock(JobRepository.class);
+        ActionRepository actionRepository = mock(ActionRepository.class);
+        UserRepository userRepository = mock(UserRepository.class);
+        LbVirtualServerRepository lbVirtualServerRepository = mock(LbVirtualServerRepository.class);
+        ActionToJobMapper actionToJobMapper = mock(ActionToJobMapper.class);
+
+        JobService jobService = new JobService(
+                jobRepository, actionRepository, userRepository, null, null,
+                null, lbVirtualServerRepository, null, null, null, null, null, actionToJobMapper
+        );
+
+        when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Appservice appservice = new Appservice();
+        appservice.setId(3003L);
+        appservice.setName("LB-TEST");
+        appservice.setNumber("SNSVC0002");
+        appservice.setUsedFor("Test");
+        appservice.setCswEnforced(false);
+
+        LbVirtualServer lvs = new LbVirtualServer();
+        lvs.setId(5005L);
+        lvs.setName("vs-test.muenchen.de");
+        lvs.getAppservices().add(appservice);
+        when(lbVirtualServerRepository.findById(5005L)).thenReturn(Optional.of(lvs));
+
+        Action action = new Action();
+        action.setIdentifier("LOADBALANCER_F5_DELETE");
+        action.setEnabled(true);
+        AwxConfig awxConfig = new AwxConfig();
+        awxConfig.setEnabled(true);
+        action.setAwxConfig(awxConfig);
+        when(actionRepository.findByIdentifier("LOADBALANCER_F5_DELETE")).thenReturn(action);
+
+        User user = new User();
+        user.setUsername("tester");
+        when(userRepository.findByUsername("tester")).thenReturn(user);
+
+        SecurityContextHolder.getContext().setAuthentication(
+                new TestingAuthenticationToken("tester", null, Collections.emptyList()));
+
+        jobService.loadbalancerF5Delete(5005L, "LOADBALANCER_F5_DELETE");
+
+        ArgumentCaptor<Job> jobCaptor = ArgumentCaptor.forClass(Job.class);
+        verify(jobRepository, times(1)).save(jobCaptor.capture());
+        Job savedJob = jobCaptor.getValue();
+
+        assertSame(lvs, savedJob.getLbVirtualServer(),
+                "the persisted job must be linked to the deleted loadbalancer for History lookups");
+        assertSame(appservice, savedJob.getAppService());
+    }
+
+    @Test
+    public void testLoadbalancerF5ChangePoolMembers_linksLbVirtualServerToPersistedJob() {
+        JobRepository jobRepository = mock(JobRepository.class);
+        ActionRepository actionRepository = mock(ActionRepository.class);
+        UserRepository userRepository = mock(UserRepository.class);
+        LbVirtualServerRepository lbVirtualServerRepository = mock(LbVirtualServerRepository.class);
+        ActionToJobMapper actionToJobMapper = mock(ActionToJobMapper.class);
+
+        JobService jobService = new JobService(
+                jobRepository, actionRepository, userRepository, null, null,
+                null, lbVirtualServerRepository, null, null, null, null, null, actionToJobMapper
+        );
+
+        when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Appservice appservice = new Appservice();
+        appservice.setId(3004L);
+        appservice.setName("LB-TEST-2");
+        appservice.setNumber("SNSVC0003");
+        appservice.setUsedFor("Test");
+        appservice.setCswEnforced(false);
+
+        LbPool pool = new LbPool();
+        pool.setId(6006L);
+        pool.setName("pool-1");
+        pool.setMembers(new ArrayList<>());
+
+        LbVirtualServerPoolRef poolRef = new LbVirtualServerPoolRef();
+        poolRef.setPool(pool);
+
+        LbVirtualServer lvs = new LbVirtualServer();
+        lvs.setId(5006L);
+        lvs.setName("vs-test-2.muenchen.de");
+        lvs.getAppservices().add(appservice);
+        lvs.setPoolRefs(new ArrayList<>(List.of(poolRef)));
+        when(lbVirtualServerRepository.findById(5006L)).thenReturn(Optional.of(lvs));
+
+        Action action = new Action();
+        action.setIdentifier("LOADBALANCER_F5_CHANGE_POOL_MEMBERS");
+        action.setEnabled(true);
+        AwxConfig awxConfig = new AwxConfig();
+        awxConfig.setEnabled(true);
+        action.setAwxConfig(awxConfig);
+        when(actionRepository.findByIdentifier("LOADBALANCER_F5_CHANGE_POOL_MEMBERS")).thenReturn(action);
+
+        User user = new User();
+        user.setUsername("tester");
+        when(userRepository.findByUsername("tester")).thenReturn(user);
+
+        SecurityContextHolder.getContext().setAuthentication(
+                new TestingAuthenticationToken("tester", null, Collections.emptyList()));
+
+        jobService.loadbalancerF5ChangePoolMembers(5006L, "pool-1", List.of(), List.of(),
+                "LOADBALANCER_F5_CHANGE_POOL_MEMBERS");
+
+        ArgumentCaptor<Job> jobCaptor = ArgumentCaptor.forClass(Job.class);
+        verify(jobRepository, times(1)).save(jobCaptor.capture());
+
+        assertSame(lvs, jobCaptor.getValue().getLbVirtualServer());
+    }
+
+    @Test
+    public void testStorageModifyNfs_linksOntapVolumeToPersistedJob() {
+        JobRepository jobRepository = mock(JobRepository.class);
+        ActionRepository actionRepository = mock(ActionRepository.class);
+        UserRepository userRepository = mock(UserRepository.class);
+        OntapVolumeRepository ontapVolumeRepository = mock(OntapVolumeRepository.class);
+        ActionToJobMapper actionToJobMapper = mock(ActionToJobMapper.class);
+
+        JobService jobService = new JobService(
+                jobRepository, actionRepository, userRepository, null, null,
+                null, null, ontapVolumeRepository, null, null, null, null, actionToJobMapper
+        );
+
+        when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        UUID volumeUuid = UUID.randomUUID();
+        Appservice appservice = new Appservice();
+        appservice.setId(4004L);
+        appservice.setName("STORAGE-TEST");
+
+        OntapVolume volume = new OntapVolume();
+        volume.setId(7007L);
+        volume.setVolumeUuid(volumeUuid);
+        volume.getAppservices().add(appservice);
+        when(ontapVolumeRepository.findByVolumeUuid(volumeUuid)).thenReturn(Optional.of(volume));
+
+        Action action = new Action();
+        action.setIdentifier("STORAGE_MODIFY_NFS");
+        action.setEnabled(true);
+        action.setChangeRequired(false);
+        AwxConfig awxConfig = new AwxConfig();
+        awxConfig.setEnabled(true);
+        action.setAwxConfig(awxConfig);
+        when(actionRepository.findByIdentifier("STORAGE_MODIFY_NFS")).thenReturn(action);
+
+        User user = new User();
+        user.setUsername("tester");
+        when(userRepository.findByUsername("tester")).thenReturn(user);
+
+        SecurityContextHolder.getContext().setAuthentication(
+                new TestingAuthenticationToken("tester", null, Collections.emptyList()));
+
+        UnifiedStorageItemDto nfsItem = UnifiedStorageItemDto.builder()
+                .uuid(volumeUuid.toString())
+                .nfs_mount_path("/mnt/nfs/vol1")
+                .build();
+
+        jobService.storageModifyNfs(nfsItem, 100, 20);
+
+        ArgumentCaptor<Job> jobCaptor = ArgumentCaptor.forClass(Job.class);
+        verify(jobRepository, times(1)).save(jobCaptor.capture());
+
+        assertSame(volume, jobCaptor.getValue().getOntapVolume());
+        assertSame(appservice, jobCaptor.getValue().getAppService(),
+                "job must be linked to the volume's single appservice, mirroring the loadbalancer/server behavior");
+    }
+
+    @Test
+    public void testStorageModifyNfs_volumeWithoutExactlyOneAppservice_throws() {
+        JobRepository jobRepository = mock(JobRepository.class);
+        ActionRepository actionRepository = mock(ActionRepository.class);
+        UserRepository userRepository = mock(UserRepository.class);
+        OntapVolumeRepository ontapVolumeRepository = mock(OntapVolumeRepository.class);
+        ActionToJobMapper actionToJobMapper = mock(ActionToJobMapper.class);
+
+        JobService jobService = new JobService(
+                jobRepository, actionRepository, userRepository, null, null,
+                null, null, ontapVolumeRepository, null, null, null, null, actionToJobMapper
+        );
+
+        UUID volumeUuid = UUID.randomUUID();
+        OntapVolume volume = new OntapVolume();
+        volume.setId(7008L);
+        volume.setVolumeUuid(volumeUuid);
+        // no appservices linked
+        when(ontapVolumeRepository.findByVolumeUuid(volumeUuid)).thenReturn(Optional.of(volume));
+
+        Action action = new Action();
+        action.setIdentifier("STORAGE_MODIFY_NFS");
+        action.setEnabled(true);
+        action.setChangeRequired(false);
+        AwxConfig awxConfig = new AwxConfig();
+        awxConfig.setEnabled(true);
+        action.setAwxConfig(awxConfig);
+        when(actionRepository.findByIdentifier("STORAGE_MODIFY_NFS")).thenReturn(action);
+
+        User user = new User();
+        user.setUsername("tester");
+        when(userRepository.findByUsername("tester")).thenReturn(user);
+
+        SecurityContextHolder.getContext().setAuthentication(
+                new TestingAuthenticationToken("tester", null, Collections.emptyList()));
+
+        UnifiedStorageItemDto nfsItem = UnifiedStorageItemDto.builder()
+                .uuid(volumeUuid.toString())
+                .nfs_mount_path("/mnt/nfs/vol1")
+                .build();
+
+        assertThrows(IllegalStateException.class, () -> jobService.storageModifyNfs(nfsItem, 100, 20));
+        verify(jobRepository, never()).save(any(Job.class));
+    }
+
+    @Test
+    public void testStorageModifyCifs_volumeNotResolvable_stillCreatesJobWithoutSecondSave() {
+        JobRepository jobRepository = mock(JobRepository.class);
+        ActionRepository actionRepository = mock(ActionRepository.class);
+        UserRepository userRepository = mock(UserRepository.class);
+        OntapVolumeRepository ontapVolumeRepository = mock(OntapVolumeRepository.class);
+        ActionToJobMapper actionToJobMapper = mock(ActionToJobMapper.class);
+
+        JobService jobService = new JobService(
+                jobRepository, actionRepository, userRepository, null, null,
+                null, null, ontapVolumeRepository, null, null, null, null, actionToJobMapper
+        );
+
+        when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        UUID volumeUuid = UUID.randomUUID();
+        when(ontapVolumeRepository.findByVolumeUuid(volumeUuid)).thenReturn(Optional.empty());
+
+        Action action = new Action();
+        action.setIdentifier("STORAGE_MODIFY_CIFS");
+        action.setEnabled(true);
+        action.setChangeRequired(false);
+        AwxConfig awxConfig = new AwxConfig();
+        awxConfig.setEnabled(true);
+        action.setAwxConfig(awxConfig);
+        when(actionRepository.findByIdentifier("STORAGE_MODIFY_CIFS")).thenReturn(action);
+
+        User user = new User();
+        user.setUsername("tester");
+        when(userRepository.findByUsername("tester")).thenReturn(user);
+
+        SecurityContextHolder.getContext().setAuthentication(
+                new TestingAuthenticationToken("tester", null, Collections.emptyList()));
+
+        UnifiedStorageItemDto cifsItem = UnifiedStorageItemDto.builder()
+                .uuid(volumeUuid.toString())
+                .cifs_mount_path("\\\\srv\\share1")
+                .build();
+
+        jobService.storageModifyCifs(cifsItem, 100, 20);
+
+        verify(jobRepository, times(1)).save(any(Job.class));
     }
 }

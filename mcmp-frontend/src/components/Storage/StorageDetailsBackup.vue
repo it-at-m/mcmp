@@ -164,10 +164,11 @@ function getPolicyTitle(policyValue: string | undefined): string {
 
 const canManageSnapshots = computed(() => {
   return (
-    props.selectedStorageItem.storageCategory == "NFS_STANDARD_SHARE" ||
-    props.selectedStorageItem.storageCategory == "NFS_CLONE" ||
-    props.selectedStorageItem.storageCategory == "CIFS_STANDARD_SHARE" ||
-    props.selectedStorageItem.storageCategory == "CIFS_CLONE"
+    props.selectedStorageItem.canEdit &&
+    (props.selectedStorageItem.storageCategory == "NFS_STANDARD_SHARE" ||
+      props.selectedStorageItem.storageCategory == "NFS_CLONE" ||
+      props.selectedStorageItem.storageCategory == "CIFS_STANDARD_SHARE" ||
+      props.selectedStorageItem.storageCategory == "CIFS_CLONE")
   );
 });
 

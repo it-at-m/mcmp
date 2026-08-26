@@ -24,6 +24,8 @@ public interface OntapVolumeRepository extends JpaRepository<OntapVolume, Long> 
 
     List<OntapVolume> findAllByMountPathNfsIn(List<String> mountPathsNfs);
 
+    Optional<OntapVolume> findByVolumeUuid(UUID volumeUuid);
+
     @Query("SELECT v FROM OntapVolume v " +
             "LEFT JOIN FETCH v.svm s " +
             "LEFT JOIN FETCH v.exportPolicy ep " +

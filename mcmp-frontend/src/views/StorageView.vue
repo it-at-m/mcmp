@@ -102,6 +102,16 @@
                       <v-icon size="x-large">{{ mdiDatabase }}</v-icon>
                     </template>
                   </v-tab>
+                  <v-tab
+                    value="History"
+                    rounded="lg"
+                    class="d-flex justify-center align-center"
+                  >
+                    History
+                    <template #prepend>
+                      <v-icon size="x-large">{{ mdiHistory }}</v-icon>
+                    </template>
+                  </v-tab>
                 </v-tabs>
 
                 <collapse-all-cards-button
@@ -142,6 +152,18 @@
                       :loading="loadingSnapshots"
                     />
                   </v-tabs-window-item>
+                  <v-tabs-window-item value="History">
+                    <storage-details-history
+                      :history="history"
+                      :loading="loadingHistory"
+                      :page="currentPage"
+                      :items-per-page="currentItemsPerPage"
+                      @refresh-jobs="fetchHistory"
+                      @update:page="handlePageUpdate($event)"
+                      @update:items-per-page="handleItemsPerPageUpdate($event)"
+                      @update:sort="onSort"
+                    />
+                  </v-tabs-window-item>
                 </v-tabs-window>
               </v-col>
             </v-row>
@@ -161,11 +183,19 @@
 </template>
 
 <script setup lang="ts">
+import type JobList from "@/types/JobList";
+import type { Page } from "@/types/Page";
 import type { UnifiedStorageItem } from "@/types/Storage";
 import type { UnifiedStorageItemList } from "@/types/UnifiedStorageItemList";
 import type { UnifiedStorageSnapshotItem } from "@/types/UnifiedStorageSnapshotItem";
 
-import { mdiAccountCog, mdiDatabase, mdiHarddisk, mdiHome } from "@mdi/js";
+import {
+  mdiAccountCog,
+  mdiDatabase,
+  mdiHarddisk,
+  mdiHistory,
+  mdiHome,
+} from "@mdi/js";
 import {
   computed,
   defineAsyncComponent,
@@ -177,6 +207,7 @@ import {
 } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
+import jobService from "@/api/jobService";
 import storageService from "@/api/storageService";
 import AppserviceAssignmentStatusChips from "@/components/common/AppserviceAssignmentStatusChips.vue";
 import CollapseAllCardsButton from "@/components/common/CollapseAllCardsButton.vue";
@@ -191,6 +222,9 @@ const StorageDetailsBackup = defineAsyncComponent(
 );
 const StorageDetailsGeneral = defineAsyncComponent(
   () => import("@/components/Storage/StorageDetailsGeneral.vue")
+);
+const StorageDetailsHistory = defineAsyncComponent(
+  () => import("@/components/Storage/StorageDetailsHistory.vue")
 );
 const StorageDetailsPermissions = defineAsyncComponent(
   () => import("@/components/Storage/StorageDetailsPermissions.vue")
@@ -223,6 +257,14 @@ useScrollRestoration(scrollContainer);
 const loadingSnapshots = ref(false);
 const snapshots = ref<UnifiedStorageSnapshotItem[]>([]);
 const storageTotalItems = ref<number | null>(null);
+
+// History State
+const history = ref<Page<JobList> | null>(null);
+const loadingHistory = ref(false);
+const currentPage = ref(1);
+const currentItemsPerPage = ref(10);
+const currentSortBy = ref<string | null>(null);
+const currentSortDesc = ref(false);
 
 const route = useRoute();
 const router = useRouter();
@@ -327,6 +369,8 @@ function getTitle() {
 function loadTabData(tabName: string, silent = false) {
   if (tabName === "Backup") {
     fetchSnapshots(silent);
+  } else if (tabName === "History") {
+    fetchHistory();
   }
 }
 
@@ -346,6 +390,46 @@ function fetchSnapshots(silent = false) {
     snapshots.value = [];
     return Promise.resolve();
   }
+}
+
+// History API Handler & Pagination
+function fetchHistory() {
+  const detail = selectedStorageDetail.value;
+  if (detail?.uuid && detail?.type) {
+    return jobService
+      .getJobsByStorageId(
+        loadingHistory,
+        detail.type,
+        detail.uuid,
+        currentPage.value,
+        currentItemsPerPage.value,
+        currentSortBy.value,
+        currentSortDesc.value
+      )
+      .then((res) => {
+        history.value = res;
+      });
+  } else {
+    history.value = null;
+    return Promise.resolve();
+  }
+}
+
+function handlePageUpdate(page: number) {
+  currentPage.value = page;
+  void fetchHistory();
+}
+
+function handleItemsPerPageUpdate(items: number) {
+  currentItemsPerPage.value = items;
+  currentPage.value = 1;
+  void fetchHistory();
+}
+
+function onSort(sort: { by: string; desc: boolean }) {
+  currentSortBy.value = sort.by;
+  currentSortDesc.value = sort.desc;
+  void fetchHistory();
 }
 
 watch(tab, (newTab) => {

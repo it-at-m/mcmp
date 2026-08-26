@@ -33,6 +33,31 @@ public class UnifiedStorageService {
     private final UserFavoriteStorageRepository userFavoriteStorageRepository;
 
     @Transactional(readOnly = true)
+    public Long resolveStorageEntityId(String uuid, StorageType type) {
+        final UserRoles userRoles = AuthUtils.getCurrentUserRoles();
+        String username = userRoles.getUsername();
+        boolean isAdmin = userRoles.hasAdminRole();
+        boolean isReadonly = userRoles.hasReadonlyRole();
+        boolean isStorage = userRoles.hasStorageRole();
+        boolean isOperator = userRoles.hasOperatorRole();
+
+        if (type == StorageType.NFS || type == StorageType.CIFS) {
+            return ontapVolumeRepository.findByVolumeUuidWithPermissions(UUID.fromString(uuid), username, isAdmin, isReadonly, isStorage, isOperator)
+                    .orElseThrow(() -> new EntityNotFoundException("Volume not found or access denied"))
+                    .getId();
+        } else if (type == StorageType.QTREE) {
+            return ontapQtreeRepository.findByIdWithPermissions(Long.parseLong(uuid), username, isAdmin, isReadonly, isStorage, isOperator)
+                    .orElseThrow(() -> new EntityNotFoundException("Qtree not found or access denied"))
+                    .getId();
+        } else if (type == StorageType.S3) {
+            return storageGridBucketRepository.findByIdWithPermissions(Long.parseLong(uuid), username, isAdmin, isReadonly, isStorage, isOperator)
+                    .orElseThrow(() -> new EntityNotFoundException("Bucket not found or access denied"))
+                    .getId();
+        }
+        throw new IllegalArgumentException("Unsupported storage type: " + type);
+    }
+
+    @Transactional(readOnly = true)
     public UnifiedStorageItemDto getUnifiedStorageItem(String uuid, StorageType type) {
         final UserRoles userRoles = AuthUtils.getCurrentUserRoles();
         String username = userRoles.getUsername();

@@ -58,10 +58,14 @@ async function loadStorages(appservice: Appservice | null) {
     storages.value = [];
     return;
   }
-  storages.value = await storageService.getUnifiedStorageByAppserviceId(
+  storages.value = [];
+  const result = await storageService.getUnifiedStorageByAppserviceId(
     loading,
     appservice.id
   );
+  if (props.selectedAppservice?.id === appservice.id) {
+    storages.value = result;
+  }
 }
 
 watch(

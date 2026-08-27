@@ -19,7 +19,7 @@ public record RepositoryDTO(
             String commitId,
             @JsonProperty("commit_time")
             OffsetDateTime commitTime,
-            boolean modified,
+            Boolean modified,
             @JsonProperty("go_version")
             String goVersion,
             String fqdn,

@@ -26,6 +26,8 @@ import de.muenchen.mcmp.loadbalancer.LbVirtualServerPoolRef;
 import de.muenchen.mcmp.loadbalancer.LbVirtualServerRepository;
 import de.muenchen.mcmp.network.NetworkGroup;
 import de.muenchen.mcmp.network.NetworkGroupRepository;
+import de.muenchen.mcmp.ontap.OntapVolume;
+import de.muenchen.mcmp.ontap.OntapVolumeRepository;
 import de.muenchen.mcmp.security.AuthUtils;
 import de.muenchen.mcmp.security.UserRoles;
 import de.muenchen.mcmp.server.Server;
@@ -52,6 +54,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -97,6 +100,7 @@ public class JobService {
     private final AppserviceRepository appserviceRepository;
     private final NetworkGroupRepository networkGroupRepository;
     private final LbVirtualServerRepository lbVirtualServerRepository;
+    private final OntapVolumeRepository ontapVolumeRepository;
     private final GreenItRightsizingRepository greenItRightsizingRepository;
     private final GreenItShutdownRepository greenItShutdownRepository;
     private final AppservicesProperties appservicesProperties;
@@ -136,6 +140,10 @@ public class JobService {
     }
 
     public Page<? extends JobListBasic> findAllJobsByRole(final int page, final int itemsPerPage, final String sortBy, final boolean sortDesc, final Long jobId, final Long awxJobId, final Instant createdFrom, final Instant createdTo, final Instant changeStartFrom, final Instant changeStartTo, final Long userId, final Long serverId, final Long appserviceId, final List<String> actionIdentifier, final String statusIdentifier, final String awxVariables) {
+        return findAllJobsByRole(page, itemsPerPage, sortBy, sortDesc, jobId, awxJobId, createdFrom, createdTo, changeStartFrom, changeStartTo, userId, serverId, appserviceId, null, null, null, null, null, actionIdentifier, statusIdentifier, awxVariables, null);
+    }
+
+    public Page<? extends JobListBasic> findAllJobsByRole(final int page, final int itemsPerPage, final String sortBy, final boolean sortDesc, final Long jobId, final Long awxJobId, final Instant createdFrom, final Instant createdTo, final Instant changeStartFrom, final Instant changeStartTo, final Long userId, final Long serverId, final Long appserviceId, final Long lbVirtualServerId, final Long ontapVolumeId, final Long ontapQtreeId, final Long storagegridBucketId, final Long kubernetesNamespaceId, final List<String> actionIdentifier, final String statusIdentifier, final String awxVariables, final String searchText) {
         final Sort sort;
         if (sortBy != null && !sortBy.isBlank()) {
             String actualSortBy = SORT_MAPPINGS.getOrDefault(sortBy, sortBy);
@@ -151,24 +159,36 @@ public class JobService {
 
         final UserRoles userRoles = AuthUtils.getCurrentUserRoles();
         if (userRoles.hasAdminRole() || userRoles.hasSecurityRole()) {
-            return jobRepository.findAllJobsComplete(pageable, jobId, awxJobId, createdFrom, createdTo, changeStartFrom, changeStartTo, userId, serverId, appserviceId, hasActionIdentifier, actionIdentifierParam, statusIdentifier, awxVariables);
+            return jobRepository.findAllJobsComplete(pageable, jobId, awxJobId, createdFrom, createdTo, changeStartFrom, changeStartTo, userId, serverId, appserviceId, lbVirtualServerId, ontapVolumeId, ontapQtreeId, storagegridBucketId, kubernetesNamespaceId, hasActionIdentifier, actionIdentifierParam, statusIdentifier, awxVariables, searchText);
         }
-        return jobRepository.findAllJobsBasic(pageable, userId, serverId, appserviceId);
+        return jobRepository.findAllJobsBasic(pageable, userId, serverId, appserviceId, lbVirtualServerId, ontapVolumeId, ontapQtreeId, storagegridBucketId, kubernetesNamespaceId, searchText);
     }
 
-    public void createJob(final String actionIdentifier, Server server, Map<String, Object> awxExtraVars, Map<String, Object> guiVars){
-        createJob(actionIdentifier, server, awxExtraVars, guiVars, null, null);
+    public Job createJob(final String actionIdentifier, Server server, Map<String, Object> awxExtraVars, Map<String, Object> guiVars){
+        return createJob(actionIdentifier, server, awxExtraVars, guiVars, null, null);
     }
 
-    public void createJob(final String actionIdentifier, Server server, Map<String, Object> awxExtraVars, Map<String, Object> guiVars, String awxJobTags, String awxSkipTags) {
-        createJob(actionIdentifier, server, awxExtraVars, guiVars,null, awxJobTags, awxSkipTags);
+    public Job createJob(final String actionIdentifier, Server server, Appservice appservice, Map<String, Object> awxExtraVars, Map<String, Object> guiVars, Consumer<Job> jobCustomizer){
+        return createJob(actionIdentifier, server, appservice, awxExtraVars, guiVars, null, null, null, null, jobCustomizer);
     }
 
-    public void createJob(final String actionIdentifier, Server server, Map<String, Object> awxExtraVars, Map<String, Object> guiVars, Instant scheduleTime, String awxJobTags, String awxSkipTags) {
-        createJob(actionIdentifier, server, awxExtraVars, guiVars, scheduleTime, awxJobTags, awxSkipTags, null);
+    public Job createJob(final String actionIdentifier, Server server, Map<String, Object> awxExtraVars, Map<String, Object> guiVars, String awxJobTags, String awxSkipTags) {
+        return createJob(actionIdentifier, server, awxExtraVars, guiVars,null, awxJobTags, awxSkipTags);
     }
 
-    public void createJob(final String actionIdentifier, Server server, Map<String, Object> awxExtraVars, Map<String, Object> guiVars, Instant scheduleTime, String awxJobTags, String awxSkipTags, String awxInventroyId) {
+    public Job createJob(final String actionIdentifier, Server server, Map<String, Object> awxExtraVars, Map<String, Object> guiVars, Instant scheduleTime, String awxJobTags, String awxSkipTags) {
+        return createJob(actionIdentifier, server, awxExtraVars, guiVars, scheduleTime, awxJobTags, awxSkipTags, null);
+    }
+
+    public Job createJob(final String actionIdentifier, Server server, Map<String, Object> awxExtraVars, Map<String, Object> guiVars, Instant scheduleTime, String awxJobTags, String awxSkipTags, String awxInventroyId) {
+        return createJob(actionIdentifier, server, awxExtraVars, guiVars, scheduleTime, awxJobTags, awxSkipTags, awxInventroyId, null);
+    }
+
+    public Job createJob(final String actionIdentifier, Server server, Map<String, Object> awxExtraVars, Map<String, Object> guiVars, Instant scheduleTime, String awxJobTags, String awxSkipTags, String awxInventroyId, Consumer<Job> jobCustomizer) {
+        return createJob(actionIdentifier, server, null, awxExtraVars, guiVars, scheduleTime, awxJobTags, awxSkipTags, awxInventroyId, jobCustomizer);
+    }
+
+    public Job createJob(final String actionIdentifier, Server server, Appservice appservice, Map<String, Object> awxExtraVars, Map<String, Object> guiVars, Instant scheduleTime, String awxJobTags, String awxSkipTags, String awxInventroyId, Consumer<Job> jobCustomizer) {
         Action action = getActionOrThrow(actionIdentifier);
 
         checkActionEnabled(action);
@@ -182,13 +202,13 @@ public class JobService {
         // write all fields from action to job
         Job job = new Job();
 
-        if(action.getChangeRequired()){
+        if(action.getChangeRequired() && appservice == null){
             if (server == null) {
-                throw new IllegalArgumentException("Server cannot be null for actions that require change approval.");
+                throw new IllegalArgumentException("Server or Appservice must be provided for actions that require change approval.");
             }
-            final List<AppserviceNameAndSysId> appservice = appserviceRepository.findAppservicesByServerId(server.getId());
-            if (appservice.size() == 1){
-                job.setAppService(appserviceRepository.findBySysId((appservice.getFirst().getSysId())));
+            final List<AppserviceNameAndSysId> resolvedAppservices = appserviceRepository.findAppservicesByServerId(server.getId());
+            if (resolvedAppservices.size() == 1){
+                job.setAppService(appserviceRepository.findBySysId((resolvedAppservices.getFirst().getSysId())));
             } else {
                 final UserRoles userRoles = AuthUtils.getCurrentUserRoles();
                 if ((userRoles.hasLinuxRole() || userRoles.hasOperatorRole()) && server.getRoleLinux()) {
@@ -211,7 +231,7 @@ public class JobService {
                         throw new AccessDeniedException("You are not allowed to create a job for this server because the server is assigned to an Application Service, but the windows Application Service is not configured.");
                     }
                     job.setAppService(windowsAppservice);
-                } else if (appservice.size() > 1) {
+                } else if (resolvedAppservices.size() > 1) {
                     throw new AccessDeniedException("You are not allowed to create a job for this server because the server is assigned to more than one Application Service.");
                 } else {
                     throw new AccessDeniedException("You are not allowed to create a job for this server because the server is not assigned to an Application Service.");
@@ -232,44 +252,33 @@ public class JobService {
 
         job.setAwxExtraVars(mergeJsonStrings(ActionExtraVars, serializeParams(awxExtraVars)));
         job.setServer(server);
+        if (appservice != null) {
+            job.setAppService(appservice);
+        }
         job.setUser(user);
         job.setActionIdentifier(action.getIdentifier());
         job.setVersion(1L);
-        jobRepository.save(job);
+        if (jobCustomizer != null) {
+            jobCustomizer.accept(job);
+        }
+        return jobRepository.save(job);
     }
 
-    public void createJobForNewServer(String actionIdentifier, String fqdn, Appservice appservice, Map<String, Object> awxExtraVars, String nonPostgresMailBody, boolean nonOss, DbType targetDbType) {
-        Action action = getActionOrThrow(actionIdentifier);
-
-        checkActionEnabled(action);
-
-        User user = getCurrentUserOrThrow();
+    public Job createJobForNewServer(String actionIdentifier, String fqdn, Appservice appservice, Map<String, Object> awxExtraVars, String nonPostgresMailBody, boolean nonOss, DbType targetDbType) {
         Map<String, Object> guiVars = new HashMap<>();
         guiVars.put("server.fqdn", fqdn);
-        guiVars.put("user", user.getUsername());
-
-        // write all fields from action to job
-        Job job = new Job();
-        actionToJobMapper.updateJobFromAction(action, job);
-        String ActionExtraVars = replaceJobPlaceholderVars(awxExtraVars, job, action.getAwxExtraVars(), guiVars);
-
-        if (nonPostgresMailBody != null) {
-            job.setNonPostgres(true);
-            job.setNonOss(nonOss);
-            job.setNonPostgresJustification(nonPostgresMailBody);
-        } else {
-            job.setNonPostgres(false);
-            job.setNonOss(false);
-        }
-
-        job.setAwxExtraVars(mergeJsonStrings(ActionExtraVars, serializeParams(awxExtraVars)));
-        job.setUser(user);
-        job.setAppService(appservice);
-        job.setActionIdentifier(action.getIdentifier());
-        job.setVersion(1L);
-        job.setHostname(fqdn);
-        job.setTargetDatabaseType(targetDbType);
-        jobRepository.save(job);
+        return createJob(actionIdentifier, null, appservice, awxExtraVars, guiVars, job -> {
+            job.setHostname(fqdn);
+            if (nonPostgresMailBody != null) {
+                job.setNonPostgres(true);
+                job.setNonOss(nonOss);
+                job.setNonPostgresJustification(nonPostgresMailBody);
+            } else {
+                job.setNonPostgres(false);
+                job.setNonOss(false);
+            }
+            job.setTargetDatabaseType(targetDbType);
+        });
     }
 
     private void checkActionEnabled(Action action) {
@@ -967,7 +976,8 @@ public class JobService {
         params.put("ibs342", ibs342map);
         params.put("csw_enforced", appservice.getCswEnforced());
 
-        createJobForNewServer(loadbalancer_f5_identifier, awxExtraVars.get("dns").toString(), appservice, params, null, false, null);
+        final String dns = awxExtraVars.get("dns").toString();
+        createJob(loadbalancer_f5_identifier, null, appservice, params, new HashMap<>(), job -> job.setHostname(dns));
     }
 
     public void loadbalancerF5ChangePoolMembers(final Long lbVirtualServerId, final String poolName,
@@ -976,10 +986,8 @@ public class JobService {
         final LbVirtualServer lvs = lbVirtualServerRepository.findById(lbVirtualServerId)
                 .orElseThrow(() -> new NoSuchElementException("Loadbalancer not found: " + lbVirtualServerId));
 
-        if (lvs.getAppservices().size() != 1) {
-            throw new IllegalStateException("Pool members can only be changed for loadbalancers assigned to exactly one application service.");
-        }
-        final Appservice appservice = lvs.getAppservices().iterator().next();
+        final Appservice appservice = requireSingleAppservice(lvs.getAppservices(),
+                "Pool members can only be changed for loadbalancers assigned to exactly one application service.");
 
         final LbPool pool = lvs.getPoolRefs().stream()
                 .map(LbVirtualServerPoolRef::getPool)
@@ -1050,17 +1058,18 @@ public class JobService {
         poolParam.put("members", finalMembers);
         params.put("pool", poolParam);
 
-        createJobForNewServer(identifier, poolName, appservice, params, null, false, null);
+        createJob(identifier, null, appservice, params, new HashMap<>(), job -> {
+            job.setHostname(poolName);
+            job.setLbVirtualServer(lvs);
+        });
     }
 
     public void loadbalancerF5Delete(final Long lbVirtualServerId, final String identifier) {
         final LbVirtualServer lvs = lbVirtualServerRepository.findById(lbVirtualServerId)
                 .orElseThrow(() -> new NoSuchElementException("Loadbalancer not found: " + lbVirtualServerId));
 
-        if (lvs.getAppservices().size() != 1) {
-            throw new IllegalStateException("Loadbalancer can only be deleted for loadbalancers assigned to exactly one application service.");
-        }
-        final Appservice appservice = lvs.getAppservices().iterator().next();
+        final Appservice appservice = requireSingleAppservice(lvs.getAppservices(),
+                "Loadbalancer can only be deleted for loadbalancers assigned to exactly one application service.");
 
         final Map<String, Object> params = new HashMap<>();
         params.put("requester_username", AuthUtils.getUsername());
@@ -1078,7 +1087,10 @@ public class JobService {
         params.put("ibs342", ibs342map);
         params.put("listener", lvs.getName());
 
-        createJobForNewServer(identifier, lvs.getName(), appservice, params, null, false, null);
+        createJob(identifier, null, appservice, params, new HashMap<>(), job -> {
+            job.setHostname(lvs.getName());
+            job.setLbVirtualServer(lvs);
+        });
     }
 
     // -----------------------------------------------------------------------------------------------------------------
@@ -1186,11 +1198,27 @@ public class JobService {
     // -----------------------------------------------------------------------------------------------------------------
 
     public void storageModifyNfs(UnifiedStorageItemDto nfsItem, int newSize, int newSnapshotPercentage) {
-        storageModifyShare(nfsItem.getNfs_mount_path(), JobController.STORAGE_MODIFY_NFS, newSize, newSnapshotPercentage);
+        storageModifyShare(nfsItem.getNfs_mount_path(), JobController.STORAGE_MODIFY_NFS, newSize, newSnapshotPercentage, resolveVolume(nfsItem));
     }
 
     public void storageModifyCifs(UnifiedStorageItemDto cifsItem, int newSize, int newSnapshotPercentage) {
-        storageModifyShare(cifsItem.getCifs_mount_path(), JobController.STORAGE_MODIFY_CIFS, newSize, newSnapshotPercentage);
+        storageModifyShare(cifsItem.getCifs_mount_path(), JobController.STORAGE_MODIFY_CIFS, newSize, newSnapshotPercentage, resolveVolume(cifsItem));
+    }
+
+    private OntapVolume resolveVolume(UnifiedStorageItemDto item) {
+        try {
+            return ontapVolumeRepository.findByVolumeUuid(UUID.fromString(item.getUuid())).orElse(null);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    private Appservice resolveStorageAppservice(OntapVolume volume) {
+        if (volume == null) {
+            return null;
+        }
+        return requireSingleAppservice(volume.getAppservices(),
+                "Storage actions can only be performed for volumes assigned to exactly one application service.");
     }
 
 //    private void storageDeleteNfs(UnifiedStorageItemDto nfsItem) {
@@ -1204,22 +1232,22 @@ public class JobService {
 //    }
 
     public void storageCreateSnapshotNfs(UnifiedStorageItemDto nfsItem, String usage) {
-        storageCreateSnapshotShare(nfsItem.getNfs_mount_path(), "STORAGE_CREATE_SNAPSHOT_NFS", usage);
+        storageCreateSnapshotShare(nfsItem.getNfs_mount_path(), "STORAGE_CREATE_SNAPSHOT_NFS", usage, resolveVolume(nfsItem));
     }
 
     public void storageCreateSnapshotCifs(UnifiedStorageItemDto cifsItem, String usage) {
-        storageCreateSnapshotShare(cifsItem.getCifs_mount_path(), "STORAGE_CREATE_SNAPSHOT_CIFS", usage);
+        storageCreateSnapshotShare(cifsItem.getCifs_mount_path(), "STORAGE_CREATE_SNAPSHOT_CIFS", usage, resolveVolume(cifsItem));
     }
 
     public void storageDeleteSnapshotNfs(UnifiedStorageItemDto nfsItem, String snapshotName) {
-        storageDeleteSnapshotShare(nfsItem.getNfs_mount_path(), "STORAGE_DELETE_SNAPSHOT_NFS", snapshotName);
+        storageDeleteSnapshotShare(nfsItem.getNfs_mount_path(), "STORAGE_DELETE_SNAPSHOT_NFS", snapshotName, resolveVolume(nfsItem));
     }
 
     public void storageDeleteSnapshotCifs(UnifiedStorageItemDto cifsItem, String snapshotName) {
-        storageDeleteSnapshotShare(cifsItem.getCifs_mount_path(), "STORAGE_DELETE_SNAPSHOT_CIFS", snapshotName);
+        storageDeleteSnapshotShare(cifsItem.getCifs_mount_path(), "STORAGE_DELETE_SNAPSHOT_CIFS", snapshotName, resolveVolume(cifsItem));
     }
 
-    private void storageModifyShare(String mountPath, String jobIdentifier, int newSize, int newSnapshotPercentage) {
+    private void storageModifyShare(String mountPath, String jobIdentifier, int newSize, int newSnapshotPercentage, OntapVolume volume) {
         Map<String, Object> params = new HashMap<>();
         if (Objects.equals(jobIdentifier, JobController.STORAGE_MODIFY_NFS)) {
             params.put("MCMPSTRG_MOUNTPATH", mountPath);
@@ -1229,15 +1257,15 @@ public class JobService {
         params.put("MCMPSTRG_NEW_SIZE_IN_GB", newSize);
         params.put("MCMPSTRG_NEW_SNAPRESERVE_PERCENT", newSnapshotPercentage);
 
-        createJob(jobIdentifier, null, params, new HashMap<>());
+        createJob(jobIdentifier, null, resolveStorageAppservice(volume), params, new HashMap<>(), volumeCustomizer(volume));
     }
 
     public void storageChangeSnapshotPolicyNfs(UnifiedStorageItemDto nfsItem, String newPolicy) {
-        storageChangeSnapshotPolicyShare(nfsItem.getNfs_mount_path(), "STORAGE_CHANGE_SNAPSHOT_POLICY_NFS", newPolicy);
+        storageChangeSnapshotPolicyShare(nfsItem.getNfs_mount_path(), "STORAGE_CHANGE_SNAPSHOT_POLICY_NFS", newPolicy, resolveVolume(nfsItem));
     }
 
     public void storageChangeSnapshotPolicyCifs(UnifiedStorageItemDto cifsItem, String newPolicy) {
-        storageChangeSnapshotPolicyShare(cifsItem.getCifs_mount_path(), "STORAGE_CHANGE_SNAPSHOT_POLICY_CIFS", newPolicy);
+        storageChangeSnapshotPolicyShare(cifsItem.getCifs_mount_path(), "STORAGE_CHANGE_SNAPSHOT_POLICY_CIFS", newPolicy, resolveVolume(cifsItem));
     }
 
     public void storageChangeNfsExportPolicy(UnifiedStorageItemDto nfsItem, String fqdn, String permission) {
@@ -1245,7 +1273,8 @@ public class JobService {
         params.put("MCMPSTRG_MOUNTPATH", nfsItem.getNfs_mount_path());
         params.put("MCMPSTRG_FQDN", fqdn);
         params.put("MCMPSTRG_PERMISSION", permission);
-        createJob(JobController.STORAGE_CHANGE_NFS_EXPORT_POLICY, null, params, new HashMap<>());
+        final OntapVolume nfsVolume = resolveVolume(nfsItem);
+        createJob(JobController.STORAGE_CHANGE_NFS_EXPORT_POLICY, null, resolveStorageAppservice(nfsVolume), params, new HashMap<>(), volumeCustomizer(nfsVolume));
     }
 
     public void storageChangeCifsPermissions(UnifiedStorageItemDto cifsItem, String ad, String permission) {
@@ -1254,10 +1283,11 @@ public class JobService {
         params.put("MCMPSTRG_PERMISSION", permission);
         params.put("MCMPSTRG_UNCPATH", cifsItem.getCifs_mount_path());
 
-        createJob(JobController.STORAGE_CHANGE_CIFS_PERMISSIONS, null, params, new HashMap<>());
+        final OntapVolume cifsVolume = resolveVolume(cifsItem);
+        createJob(JobController.STORAGE_CHANGE_CIFS_PERMISSIONS, null, resolveStorageAppservice(cifsVolume), params, new HashMap<>(), volumeCustomizer(cifsVolume));
     }
 
-    private void storageChangeSnapshotPolicyShare(String mountPath, String jobIdentifier, String newPolicy) {
+    private void storageChangeSnapshotPolicyShare(String mountPath, String jobIdentifier, String newPolicy, OntapVolume volume) {
         Map<String, Object> params = new HashMap<>();
         if (Objects.equals(jobIdentifier, "STORAGE_CHANGE_SNAPSHOT_POLICY_NFS")) {
             params.put("MCMPSTRG_MOUNTPATH", mountPath);
@@ -1266,10 +1296,10 @@ public class JobService {
         }
         params.put("MCMPSTRG_NEW_SNAPSHOT_POLICY", newPolicy);
 
-        createJob(jobIdentifier, null, params, new HashMap<>());
+        createJob(jobIdentifier, null, resolveStorageAppservice(volume), params, new HashMap<>(), volumeCustomizer(volume));
     }
 
-    private void storageCreateSnapshotShare(String mountPath, String jobIdentifier, String usage) {
+    private void storageCreateSnapshotShare(String mountPath, String jobIdentifier, String usage, OntapVolume volume) {
         Map<String, Object> params = new HashMap<>();
         if (Objects.equals(jobIdentifier, "STORAGE_CREATE_SNAPSHOT_NFS")) {
             params.put("MCMPSTRG_MOUNTPATH", mountPath);
@@ -1278,10 +1308,10 @@ public class JobService {
         }
         params.put("MCMPSTRG_USAGE", usage);
 
-        createJob(jobIdentifier, null, params, new HashMap<>());
+        createJob(jobIdentifier, null, resolveStorageAppservice(volume), params, new HashMap<>(), volumeCustomizer(volume));
     }
 
-    private void storageDeleteSnapshotShare(String mountPath, String jobIdentifier, String snapshotName) {
+    private void storageDeleteSnapshotShare(String mountPath, String jobIdentifier, String snapshotName, OntapVolume volume) {
         Map<String, Object> params = new HashMap<>();
         if (Objects.equals(jobIdentifier, "STORAGE_DELETE_SNAPSHOT_NFS")) {
             params.put("MCMPSTRG_MOUNTPATH", mountPath);
@@ -1290,13 +1320,24 @@ public class JobService {
         }
         params.put("MCMPSTRG_SNAPSHOTNAME", snapshotName);
 
-        createJob(jobIdentifier, null, params, new HashMap<>());
+        createJob(jobIdentifier, null, resolveStorageAppservice(volume), params, new HashMap<>(), volumeCustomizer(volume));
+    }
+
+    private Consumer<Job> volumeCustomizer(OntapVolume volume) {
+        return volume == null ? null : job -> job.setOntapVolume(volume);
     }
 
 
     // -----------------------------------------------------------------------------------------------------------------
     // PRIVATE HELPER METHODS
     // -----------------------------------------------------------------------------------------------------------------
+
+    private Appservice requireSingleAppservice(Collection<Appservice> appservices, String errorMessage) {
+        if (appservices == null || appservices.size() != 1) {
+            throw new IllegalStateException(errorMessage);
+        }
+        return appservices.iterator().next();
+    }
 
     private boolean handleDBParams(Map<String, Map<?, ?>> dbParams, Map<String, Object> params) {
         if (dbParams.containsKey("mariaPostgresMysqlOracle")) {

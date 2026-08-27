@@ -2,11 +2,7 @@
   <template v-if="isAllowedShare && isEditMode">
     <v-tooltip
       location="bottom"
-      :text="
-        activatorDisabled
-          ? 'Editieren nicht möglich für IP-Adressen/Range'
-          : tooltipText
-      "
+      :text="activatorDisabled ? disabledReason : tooltipText"
       :open-on-hover="true"
     >
       <template #activator="{ props: tooltipProps }">
@@ -16,11 +12,7 @@
             variant="flat"
             :aria-label="tooltipText"
             :disabled="activatorDisabled"
-            :title="
-              activatorDisabled
-                ? 'Editieren nicht möglich für IP-Adressen/Range'
-                : tooltipText
-            "
+            :title="activatorDisabled ? disabledReason : tooltipText"
             @click="openDialog"
           >
             <v-icon>{{ activatorIcon }}</v-icon>
@@ -173,7 +165,17 @@ function isIpOrRange(value: string) {
 }
 
 const activatorDisabled = computed(() => {
-  return isEditMode.value && isIpOrRange(props.serverFqdn ?? "");
+  return (
+    !props.selectedStorage.canEdit ||
+    (isEditMode.value && isIpOrRange(props.serverFqdn ?? ""))
+  );
+});
+
+const disabledReason = computed(() => {
+  if (!props.selectedStorage.canEdit) {
+    return "Bearbeitung nur möglich, wenn genau ein Anwendungsservice zugeordnet ist und Sie berechtigt sind.";
+  }
+  return "Editieren nicht möglich für IP-Adressen/Range";
 });
 
 function openDialog() {

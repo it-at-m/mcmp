@@ -213,12 +213,10 @@
       <appservice-assignment-status-chips
         :can-edit="selectedServer.canEdit"
         :assigned-count="selectedServer.numberOfAssignedAppservices"
-        :loading="loadingServerDetails"
         entity-label="Server"
       />
       <status-chip
         v-if="
-          !loadingServerDetails &&
           selectedServer.hasTempAdminPrivileges &&
           selectedServer.tempPrivilegesExpiresAt
         "
@@ -230,7 +228,6 @@
       />
       <status-chip
         v-if="
-          !loadingServerDetails &&
           selectedServer.hasTempRootPrivileges &&
           selectedServer.tempPrivilegesExpiresAt
         "
@@ -242,7 +239,6 @@
       />
       <status-chip
         v-if="
-          !loadingServerDetails &&
           selectedServer.maintenanceMode &&
           selectedServer.maintenanceModeExpiresAt
         "
@@ -253,10 +249,7 @@
         match-mode="equal"
       />
       <status-chip
-        v-if="
-          !loadingServerDetails &&
-          Number(selectedServer.patchnightExitcode) != 0
-        "
+        v-if="Number(selectedServer.patchnightExitcode) != 0"
         :value="Number(selectedServer.patchnightExitcode) === 0"
         :check-value="true"
         match-text=""
@@ -265,11 +258,7 @@
         @click="$emit('navigateToPatchnight')"
       />
       <status-chip
-        v-if="
-          !loadingServerDetails &&
-          selectedServer.canEdit &&
-          !selectedServer.managed
-        "
+        v-if="selectedServer.canEdit && !selectedServer.managed"
         :value="!selectedServer.managed"
         :check-value="false"
         match-text=""

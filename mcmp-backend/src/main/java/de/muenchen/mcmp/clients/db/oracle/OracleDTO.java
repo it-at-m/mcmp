@@ -1,9 +1,9 @@
 package de.muenchen.mcmp.clients.db.oracle;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.JsonNode;
 import de.muenchen.mcmp.metadata.MetadataDTO;
 import lombok.Builder;
+import tools.jackson.databind.JsonNode;
 
 import java.time.OffsetDateTime;
 import java.util.List;

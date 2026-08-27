@@ -136,9 +136,14 @@ public class JobController {
             @RequestParam(value = "userId", required = false) final Long userId,
             @RequestParam(value = "serverId", required = false) final Long serverId,
             @RequestParam(value = "appserviceId", required = false) final Long appserviceId,
+            @RequestParam(value = "lbVirtualServerId", required = false) final Long lbVirtualServerId,
+            @RequestParam(value = "storageType", required = false) final StorageType storageType,
+            @RequestParam(value = "storageUuid", required = false) final String storageUuid,
+            @RequestParam(value = "kubernetesNamespaceId", required = false) final Long kubernetesNamespaceId,
             @RequestParam(value = "actionIdentifier", required = false) final List<String> actionIdentifier,
             @RequestParam(value = "statusIdentifier", required = false) final String statusIdentifier,
-            @RequestParam(value = "awxVariables", required = false) final String awxVariables
+            @RequestParam(value = "awxVariables", required = false) final String awxVariables,
+            @RequestParam(value = "searchText", required = false) final String searchText
     ) {
         if (page < 1) {
             page = 1;
@@ -151,7 +156,14 @@ public class JobController {
         final Instant changeStartFromInstant = changeStartFrom != null && !changeStartFrom.isBlank() ? Instant.parse(changeStartFrom) : null;
         final Instant changeStartToInstant = changeStartTo != null && !changeStartTo.isBlank() ? Instant.parse(changeStartTo) : null;
 
-        return jobService.findAllJobsByRole(page, itemsPerPage, sortBy, sortDesc, jobId, awxJobId, createdFromInstant, createdToInstant, changeStartFromInstant, changeStartToInstant, userId, serverId, appserviceId, actionIdentifier, statusIdentifier, awxVariables);
+        final Long storageEntityId = (storageType != null && storageUuid != null)
+                ? unifiedStorageService.resolveStorageEntityId(storageUuid, storageType)
+                : null;
+        final Long ontapVolumeId = (storageType == StorageType.NFS || storageType == StorageType.CIFS) ? storageEntityId : null;
+        final Long ontapQtreeId = storageType == StorageType.QTREE ? storageEntityId : null;
+        final Long storagegridBucketId = storageType == StorageType.S3 ? storageEntityId : null;
+
+        return jobService.findAllJobsByRole(page, itemsPerPage, sortBy, sortDesc, jobId, awxJobId, createdFromInstant, createdToInstant, changeStartFromInstant, changeStartToInstant, userId, serverId, appserviceId, lbVirtualServerId, ontapVolumeId, ontapQtreeId, storagegridBucketId, kubernetesNamespaceId, actionIdentifier, statusIdentifier, awxVariables, searchText);
     }
 
     @HasSpecialRole
@@ -200,6 +212,65 @@ public class JobController {
             itemsPerPage = 10;
         }
         return jobService.findAllJobsByRole(page, itemsPerPage, sortBy, sortDesc, null, null, null, null, null, null, null, null, appserviceId, null, null, null);
+    }
+
+    @HasUserOrSpecialRole
+    @GetMapping("/loadbalancer/{lbVirtualServerId}")
+    public Page<? extends JobListBasic> getJobsByLoadbalancerId(
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "itemsPerPage", defaultValue = "10") int itemsPerPage,
+            @RequestParam(value = "sortBy", required = false) final String sortBy,
+            @RequestParam(value = "sortDesc", defaultValue = "false") final boolean sortDesc,
+            @PathVariable("lbVirtualServerId") final Long lbVirtualServerId
+    ) {
+        if (page < 1) {
+            page = 1;
+        }
+        if (itemsPerPage < 1 || itemsPerPage > 100) {
+            itemsPerPage = 10;
+        }
+        return jobService.findAllJobsByRole(page, itemsPerPage, sortBy, sortDesc, null, null, null, null, null, null, null, null, null, lbVirtualServerId, null, null, null, null, null, null, null, null);
+    }
+
+    @HasUserOrSpecialRole
+    @GetMapping("/storage/{storageType}/{uuid}")
+    public Page<? extends JobListBasic> getJobsByStorageId(
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "itemsPerPage", defaultValue = "10") int itemsPerPage,
+            @RequestParam(value = "sortBy", required = false) final String sortBy,
+            @RequestParam(value = "sortDesc", defaultValue = "false") final boolean sortDesc,
+            @PathVariable("storageType") final StorageType storageType,
+            @PathVariable("uuid") final String uuid
+    ) {
+        if (page < 1) {
+            page = 1;
+        }
+        if (itemsPerPage < 1 || itemsPerPage > 100) {
+            itemsPerPage = 10;
+        }
+        final Long storageEntityId = unifiedStorageService.resolveStorageEntityId(uuid, storageType);
+        final Long ontapVolumeId = (storageType == StorageType.NFS || storageType == StorageType.CIFS) ? storageEntityId : null;
+        final Long ontapQtreeId = storageType == StorageType.QTREE ? storageEntityId : null;
+        final Long storagegridBucketId = storageType == StorageType.S3 ? storageEntityId : null;
+        return jobService.findAllJobsByRole(page, itemsPerPage, sortBy, sortDesc, null, null, null, null, null, null, null, null, null, null, ontapVolumeId, ontapQtreeId, storagegridBucketId, null, null, null, null, null);
+    }
+
+    @HasUserOrSpecialRole
+    @GetMapping("/openshift/{kubernetesNamespaceId}")
+    public Page<? extends JobListBasic> getJobsByOpenshiftNamespaceId(
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "itemsPerPage", defaultValue = "10") int itemsPerPage,
+            @RequestParam(value = "sortBy", required = false) final String sortBy,
+            @RequestParam(value = "sortDesc", defaultValue = "false") final boolean sortDesc,
+            @PathVariable("kubernetesNamespaceId") final Long kubernetesNamespaceId
+    ) {
+        if (page < 1) {
+            page = 1;
+        }
+        if (itemsPerPage < 1 || itemsPerPage > 100) {
+            itemsPerPage = 10;
+        }
+        return jobService.findAllJobsByRole(page, itemsPerPage, sortBy, sortDesc, null, null, null, null, null, null, null, null, null, null, null, null, null, kubernetesNamespaceId, null, null, null, null);
     }
 
     @HasUserOrSpecialRole
@@ -1369,6 +1440,13 @@ public class JobController {
             logTriedToCreateJob(LOADBALANCER_F5_CHANGE_POOL_MEMBERS, serverId);
             throw new AccessDeniedException("Pool members cannot be changed for a pool with CAP members.");
         }
+        final boolean allMembersResolved = pool.members() != null
+                && pool.members().stream().allMatch(this::memberMatchesServerInDb);
+        if (!allMembersResolved) {
+            logTriedToCreateJob(LOADBALANCER_F5_CHANGE_POOL_MEMBERS, serverId);
+            throw new AccessDeniedException(
+                    "Pool members cannot be changed because not all pool members are fully resolved (name and IP must match a known server).");
+        }
 
         List<Map<String, Object>> addedList = awxExtraVars.get("added") != null
                 ? requireListOfMap(awxExtraVars.get("added"), "Added members")
@@ -1454,7 +1532,6 @@ public class JobController {
     }
 
     // Mirrors the CAP-Ingress port ranges used by the frontend (isCapPool in loadbalancerPool.ts)
-    // so that CAP-managed pools can't be edited through this endpoint either.
     private static final List<int[]> CAP_PORT_RANGES = List.of(
             new int[]{32201, 32207},
             new int[]{32301, 32307},
@@ -1463,6 +1540,19 @@ public class JobController {
 
     private static boolean isCapPort(final int port) {
         return CAP_PORT_RANGES.stream().anyMatch(range -> port >= range[0] && port <= range[1]);
+    }
+
+    private boolean memberMatchesServerInDb(final UnifiedLoadbalancerMemberDTO member) {
+        if (member.serverId() == null || member.serverName() == null || member.serverName().isBlank()
+                || member.ip() == null || member.ip().isBlank()) {
+            return false;
+        }
+        final Server server = serverService.findById(member.serverId()).orElse(null);
+        if (server == null || !member.serverName().equals(server.getName())) {
+            return false;
+        }
+        return serverService.findServersByIpAddress(member.ip()).stream()
+                .anyMatch(s -> s.getId().equals(server.getId()));
     }
 
     private static boolean isCapPool(final UnifiedLoadbalancerPoolDTO pool) {

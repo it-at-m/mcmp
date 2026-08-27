@@ -9,7 +9,6 @@
       :sort-by="sortBy"
       :items-per-page="itemsPerPage"
       :has-more="hasMore"
-      :selected-id="selectedId"
       :search="search"
       search-label="Storage suchen..."
       @update:sort-by="updateSortBy"
@@ -85,18 +84,16 @@
           >
             <v-icon>{{ item.isFavorite ? mdiStar : mdiStarOutline }}</v-icon>
           </v-btn>
-          <v-tooltip>
-            <template #activator="{ props: tooltipProps }">
-              <v-icon
-                v-bind="tooltipProps"
-                size="x-large"
-                :color="switchColor(item.type)"
-              >
-                {{ switchType(item.type) }}
-              </v-icon>
-            </template>
-            {{ formatStorageCategory(item.storageCategory) }}
-          </v-tooltip>
+          <v-icon
+            size="x-large"
+            :color="switchColor(item.type)"
+            @mouseenter="onStorageTypeIconHover($event, item)"
+            @mouseleave="onStorageTypeIconLeave"
+            @focus="onStorageTypeIconHover($event, item)"
+            @blur="onStorageTypeIconLeave"
+          >
+            {{ switchType(item.type) }}
+          </v-icon>
         </div>
       </template>
       <template #no-data>
@@ -130,6 +127,11 @@
         </v-row>
       </template>
     </scrollable-list-table>
+    <v-tooltip
+      :model-value="!!storageTypeTooltipActivator"
+      :activator="storageTypeTooltipActivator"
+      :text="storageTypeTooltipText"
+    />
   </div>
 </template>
 
@@ -147,6 +149,7 @@ import {
   mdiStarOutline,
 } from "@mdi/js";
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import { useRoute } from "vue-router";
 
 import storageService from "@/api/storageService";
 import ScrollableListTable from "@/components/common/ScrollableListTable.vue";
@@ -161,9 +164,10 @@ type TableItem = UnifiedStorageItemList & { id: string };
 
 const props = defineProps<{
   modelValue?: UnifiedStorageItemList[];
-  urlParamsId?: string | string[];
   initialSearch?: string;
 }>();
+
+const route = useRoute();
 
 const emit = defineEmits<{
   (e: "update:modelValue", selected: UnifiedStorageItemList[]): void;
@@ -201,7 +205,28 @@ const selectedId = computed(() =>
   selected.value.length > 0 ? selected.value[0]?.uuid : null
 );
 
-const tableRef = ref<{ triggerObserveScroll: () => void } | null>(null);
+const tableRef = ref<{
+  triggerObserveScroll: () => void;
+  resetSelection: () => void;
+} | null>(null);
+
+watch(selectedId, (val) => {
+  if (val === null || val === undefined) {
+    tableRef.value?.resetSelection();
+  }
+});
+
+const storageTypeTooltipActivator = ref<HTMLElement | undefined>(undefined);
+const storageTypeTooltipText = ref("");
+
+function onStorageTypeIconHover(event: Event, item: UnifiedStorageItemList) {
+  storageTypeTooltipActivator.value = event.currentTarget as HTMLElement;
+  storageTypeTooltipText.value = formatStorageCategory(item.storageCategory);
+}
+
+function onStorageTypeIconLeave() {
+  storageTypeTooltipActivator.value = undefined;
+}
 
 const headers = ref<DataTableHeader[]>([
   { title: "Typ", key: "storageCategory", sortable: false, width: "88px" },
@@ -220,7 +245,7 @@ const tableItems = computed<TableItem[]>(() =>
 );
 
 const normalizedUrlParamId = computed(() =>
-  typeof props.urlParamsId === "string" ? props.urlParamsId : undefined
+  typeof route.params.id === "string" ? route.params.id : undefined
 );
 
 function normalizeType(type: string) {

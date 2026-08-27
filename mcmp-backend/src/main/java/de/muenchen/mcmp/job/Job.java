@@ -5,8 +5,13 @@ import de.muenchen.mcmp.appservice.Appservice;
 import de.muenchen.mcmp.awxConfig.AwxConfig;
 import de.muenchen.mcmp.common.AbstractEntity;
 import de.muenchen.mcmp.converter.*;
+import de.muenchen.mcmp.kubernetes.KubernetesNamespace;
+import de.muenchen.mcmp.loadbalancer.LbVirtualServer;
+import de.muenchen.mcmp.ontap.OntapQtree;
+import de.muenchen.mcmp.ontap.OntapVolume;
 import de.muenchen.mcmp.server.Server;
 import de.muenchen.mcmp.snowConfig.SnowConfig;
+import de.muenchen.mcmp.storagegrid.StorageGridBucket;
 import de.muenchen.mcmp.types.*;
 import de.muenchen.mcmp.user.User;
 import jakarta.persistence.*;
@@ -54,6 +59,31 @@ public class Job extends AbstractEntity {
     @JoinColumn(name = "appservice_id")
     @ToString.Exclude
     private Appservice appService;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "lb_virtual_server_id")
+    @ToString.Exclude
+    private LbVirtualServer lbVirtualServer;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ontap_volume_id")
+    @ToString.Exclude
+    private OntapVolume ontapVolume;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ontap_qtree_id")
+    @ToString.Exclude
+    private OntapQtree ontapQtree;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "storagegrid_bucket_id")
+    @ToString.Exclude
+    private StorageGridBucket storagegridBucket;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "kubernetes_namespace_id")
+    @ToString.Exclude
+    private KubernetesNamespace kubernetesNamespace;
 
     @Convert(converter = JobStatusConverter.class)
     @Column(name = "status", nullable = false)

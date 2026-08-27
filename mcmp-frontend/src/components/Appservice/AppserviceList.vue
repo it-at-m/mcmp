@@ -9,7 +9,6 @@
       :sort-by="sortBy"
       :items-per-page="itemsPerPage"
       :has-more="curOffset < itemsAvailableToLoad"
-      :selected-id="selectedId"
       :search="search"
       search-label="Anwendungsservice suchen"
       search-tooltip="Name oder SNSVC des Anwendungsservice"
@@ -101,6 +100,7 @@ import type { DataTableHeader } from "vuetify";
 
 import { mdiFileExportOutline, mdiStar, mdiStarOutline } from "@mdi/js";
 import { nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import { useRoute } from "vue-router";
 
 import appserviceService from "@/api/appserviceService.ts";
 import AppserviceExportDialog from "@/components/Appservice/AppserviceExportDialog.vue";
@@ -111,13 +111,14 @@ const props = withDefaults(
   defineProps<{
     selected?: AppserviceList[];
     unActivateAppserviceRow?: boolean;
-    urlParamsId?: string | string[];
     initialSearch?: string;
   }>(),
   {
     selected: () => [],
   }
 );
+
+const initialUrlId = useRoute().params.appId;
 
 const emit = defineEmits<{
   (e: "update:selected", selected: AppserviceList[]): void;
@@ -259,8 +260,8 @@ async function loadAppservices() {
     curOffset.value += newItems.length;
 
     const hasUrlId =
-      !!props.urlParamsId &&
-      (Array.isArray(props.urlParamsId) ? props.urlParamsId.length > 0 : true);
+      !!initialUrlId &&
+      (Array.isArray(initialUrlId) ? initialUrlId.length > 0 : true);
 
     if (
       props.selected.length === 0 &&

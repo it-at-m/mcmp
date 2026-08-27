@@ -13,7 +13,6 @@
       >
         <appservice-list
           :selected="selectedAppserviceRows"
-          :url-params-id="route.params.appId"
           :initial-search="appserviceSearch"
           @update:selected="onAppserviceSelected"
           @update:search="appserviceSearch = $event"

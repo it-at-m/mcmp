@@ -2,7 +2,7 @@
   <template v-if="isAllowedShare">
     <v-tooltip
       location="bottom"
-      text="Berechtigung bearbeiten"
+      :text="canEdit ? 'Berechtigung bearbeiten' : disabledReason"
       :open-on-hover="true"
     >
       <template #activator="{ props: tooltipProps }">
@@ -11,7 +11,8 @@
             icon
             variant="flat"
             aria-label="Berechtigung bearbeiten"
-            title="Berechtigung bearbeiten"
+            :disabled="!canEdit"
+            :title="canEdit ? 'Berechtigung bearbeiten' : disabledReason"
             @click="openDialog"
           >
             <v-icon>{{ mdiPencil }}</v-icon>
@@ -93,7 +94,12 @@ const isAllowedShare = computed(
     props.selectedStorage.storageCategory == "CIFS_CLONE" ||
     props.selectedStorage.storageCategory == "CIFS_WORM"
 );
+const canEdit = computed(() => props.selectedStorage.canEdit);
+const disabledReason =
+  "Bearbeitung nur möglich, wenn genau ein Anwendungsservice zugeordnet ist und Sie berechtigt sind.";
+
 function openDialog() {
+  if (!canEdit.value) return;
   localPermission.value = props.selectedPermission;
   dialog.value = true;
 }

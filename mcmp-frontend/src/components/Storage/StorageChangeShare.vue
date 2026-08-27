@@ -13,7 +13,7 @@
   >
     <template #activator="{ props: activatorProps }">
       <v-tooltip
-        :text="editable ? 'Ressourcen bearbeiten' : 'Nicht bearbeitbar'"
+        :text="editable ? 'Ressourcen bearbeiten' : disabledReason"
         location="bottom"
       >
         <template #activator="{ props: tooltipProps }">
@@ -171,7 +171,7 @@ const dialog = ref(false);
 const draftSizeGb = ref(0);
 const draftSnapshotReservePercent = ref(0);
 
-const editable = computed(() => {
+const isEditableCategory = computed(() => {
   return (
     props.selectedStorageItem.storageCategory == "NFS_STANDARD_SHARE" ||
     props.selectedStorageItem.storageCategory == "NFS_CLONE" ||
@@ -180,6 +180,17 @@ const editable = computed(() => {
     props.selectedStorageItem.storageCategory == "CIFS_CLONE" ||
     props.selectedStorageItem.storageCategory == "CIFS_WORM"
   );
+});
+
+const editable = computed(
+  () => props.selectedStorageItem.canEdit && isEditableCategory.value
+);
+
+const disabledReason = computed(() => {
+  if (!isEditableCategory.value) return "Nicht bearbeitbar";
+  if (!props.selectedStorageItem.canEdit)
+    return "Bearbeitung nur möglich, wenn genau ein Anwendungsservice zugeordnet ist und Sie berechtigt sind.";
+  return "Nicht bearbeitbar";
 });
 
 const isWorm = computed(() => props.selectedStorageItem.isWorm === true);

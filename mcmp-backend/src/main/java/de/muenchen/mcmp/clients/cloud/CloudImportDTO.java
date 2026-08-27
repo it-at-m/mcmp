@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import de.muenchen.mcmp.server.ServerStatusType;
 import de.muenchen.mcmp.types.ServerKind;
 import de.muenchen.mcmp.types.ServerType;
-import jakarta.persistence.Column;
 import lombok.Builder;
 
 import java.time.OffsetDateTime;
@@ -91,7 +90,9 @@ public record CloudImportDTO(
             @JsonProperty("cpu_allocation_overhead_limit") Long cpuAllocationOverheadLimit,
             @JsonProperty("cpu_allocation_reservation") Long cpuAllocationReservation
     ) {
+        @SuppressWarnings("MismatchedStringCase")
         public Server {
+
             /* ensure we have a trimmed name */
             if (name == null || name.isBlank()) {
                 name = uuid;
@@ -100,6 +101,7 @@ public record CloudImportDTO(
             }
 
             /* ensure we have a valid power state */
+            if (powerState == null) powerState = "";
             switch (powerState) {
                 case "poweredOn": // vmware
                 case "running":   // proxmox
@@ -137,9 +139,13 @@ public record CloudImportDTO(
             @JsonProperty("name") String name,
             @JsonProperty("description") String description,
             @JsonProperty("create_time") OffsetDateTime createTime,
-            @JsonProperty("quiesced") boolean quiesced,
+            @JsonProperty("quiesced") Boolean quiesced,
             @JsonProperty("state") String state,
-            @JsonProperty("replay_supported") boolean replaySupported
+            @JsonProperty("replay_supported") Boolean replaySupported
     ) {
+        public Snapshot {
+            if (quiesced == null) quiesced = false;
+            if (replaySupported == null) replaySupported = false;
+        }
     }
 }

@@ -33,6 +33,8 @@ loadConfig().then((config) => {
 
   const app = createApp(App);
 
+  app.config.performance = import.meta.env.DEV; // Browser Performance Profiling Infos in DEV
+
   registerPlugins(app); // ERST Plugins registrieren
 
   app.provide("config", config);

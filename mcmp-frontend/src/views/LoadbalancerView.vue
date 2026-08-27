@@ -14,7 +14,6 @@
       >
         <loadbalancer-list
           :model-value="selectedItems"
-          :url-params-id="route.params.id"
           :initial-search="loadbalancerSearch"
           @update:selected="onLoadbalancerSelected"
           @update:search="loadbalancerSearch = $event"
@@ -82,6 +81,16 @@
                       <v-icon size="x-large">{{ mdiScriptText }}</v-icon>
                     </template>
                   </v-tab>
+                  <v-tab
+                    value="History"
+                    rounded="lg"
+                    class="d-flex justify-center align-center"
+                  >
+                    History
+                    <template #prepend>
+                      <v-icon size="x-large">{{ mdiHistory }}</v-icon>
+                    </template>
+                  </v-tab>
                 </v-tabs>
 
                 <collapse-all-cards-button
@@ -108,6 +117,18 @@
                   <v-tabs-window-item value="IRules">
                     <loadbalancer-details-irules :lb="selectedDetail" />
                   </v-tabs-window-item>
+                  <v-tabs-window-item value="History">
+                    <loadbalancer-details-history
+                      :history="history"
+                      :loading="loadingHistory"
+                      :page="currentPage"
+                      :items-per-page="currentItemsPerPage"
+                      @refresh-jobs="fetchHistory"
+                      @update:page="handlePageUpdate($event)"
+                      @update:items-per-page="handleItemsPerPageUpdate($event)"
+                      @update:sort="onSort"
+                    />
+                  </v-tabs-window-item>
                 </v-tabs-window>
               </v-col>
             </v-row>
@@ -123,16 +144,20 @@
 </template>
 
 <script setup lang="ts">
+import type JobList from "@/types/JobList";
 import type { LoadbalancerDetail } from "@/types/LoadbalancerDetail";
 import type { LoadbalancerListItem } from "@/types/LoadbalancerListItem";
+import type { Page } from "@/types/Page";
 
-import { mdiCallSplit, mdiHome, mdiScriptText } from "@mdi/js";
+import { mdiCallSplit, mdiHistory, mdiHome, mdiScriptText } from "@mdi/js";
 import { onMounted, onUnmounted, provide, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
+import jobService from "@/api/jobService";
 import loadbalancerService from "@/api/loadbalancerService";
 import CollapseAllCardsButton from "@/components/common/CollapseAllCardsButton.vue";
 import LoadbalancerDetailsGeneral from "@/components/Loadbalancer/LoadbalancerDetailsGeneral.vue";
+import LoadbalancerDetailsHistory from "@/components/Loadbalancer/LoadbalancerDetailsHistory.vue";
 import LoadbalancerDetailsIrules from "@/components/Loadbalancer/LoadbalancerDetailsIrules.vue";
 import LoadbalancerDetailsPool from "@/components/Loadbalancer/LoadbalancerDetailsPool.vue";
 import LoadbalancerList from "@/components/Loadbalancer/LoadbalancerList.vue";
@@ -152,6 +177,14 @@ const tab = ref("Allgemeines");
 const loadbalancerSearch = ref("");
 const loadingDetails = ref(false);
 const scrollContainer = ref<HTMLElement | null>(null);
+
+// History State
+const history = ref<Page<JobList> | null>(null);
+const loadingHistory = ref(false);
+const currentPage = ref(1);
+const currentItemsPerPage = ref(10);
+const currentSortBy = ref<string | null>(null);
+const currentSortDesc = ref(false);
 
 const hasOpenDialog = ref(false);
 provide("registerOpenDialog", () => {
@@ -233,6 +266,62 @@ watch(
 
 onMounted(() => {
   syncSelectionFromRoute(route.params.id);
+});
+
+// History API Handler & Pagination
+function fetchHistory() {
+  const lbId = selectedDetail.value?.id;
+  if (lbId) {
+    return jobService
+      .getJobsByLoadbalancerId(
+        loadingHistory,
+        lbId,
+        currentPage.value,
+        currentItemsPerPage.value,
+        currentSortBy.value,
+        currentSortDesc.value
+      )
+      .then((res) => {
+        history.value = res;
+      });
+  } else {
+    history.value = null;
+    return Promise.resolve();
+  }
+}
+
+function handlePageUpdate(page: number) {
+  currentPage.value = page;
+  void fetchHistory();
+}
+
+function handleItemsPerPageUpdate(items: number) {
+  currentItemsPerPage.value = items;
+  currentPage.value = 1;
+  void fetchHistory();
+}
+
+function onSort(sort: { by: string; desc: boolean }) {
+  currentSortBy.value = sort.by;
+  currentSortDesc.value = sort.desc;
+  void fetchHistory();
+}
+
+watch(tab, (newTab) => {
+  if (selectedDetail.value?.id && newTab === "History") {
+    currentPage.value = 1;
+    currentItemsPerPage.value = 10;
+    void fetchHistory();
+  }
+});
+
+watch(selectedDetail, () => {
+  history.value = null;
+  if (tab.value === "History") {
+    currentPage.value = 1;
+    currentItemsPerPage.value = 10;
+    void fetchHistory();
+  }
 });
 
 // Resize logic

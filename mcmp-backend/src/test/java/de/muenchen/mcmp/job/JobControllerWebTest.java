@@ -25,7 +25,7 @@ import de.muenchen.mcmp.types.EnvironmentType;
 import de.muenchen.mcmp.user.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Bean;
@@ -35,6 +35,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.security.web.SecurityFilterChain;
@@ -93,6 +94,7 @@ class JobControllerWebTest {
     private ErrorLogService errorLogService;
 
     @TestConfiguration
+    @EnableWebSecurity
     @EnableMethodSecurity(securedEnabled = true)
     static class TestSecurityConfig {
         @Bean
@@ -100,6 +102,11 @@ class JobControllerWebTest {
             http.csrf(AbstractHttpConfigurer::disable)
                     .authorizeHttpRequests(requests -> requests.anyRequest().authenticated());
             return http.build();
+        }
+
+        @Bean
+        org.springframework.boot.webmvc.test.autoconfigure.MockMvcBuilderCustomizer securityMockMvcBuilderCustomizer() {
+            return builder -> builder.apply(org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity());
         }
     }
 
@@ -368,6 +375,98 @@ class JobControllerWebTest {
                         .content("""
                                 {"lb_virtual_server_id":123,"pool_name":"pool1",
                                  "removed":[{"ip":"10.0.0.1","port":32201}]}"""))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void loadbalancerPoolMembers_unresolvedMember_isBlocked() throws Exception {
+        when(loadbalancerService.canUserEditLoadbalancer(anyLong())).thenReturn(true);
+        when(loadbalancerService.getLoadbalancerById(anyLong())).thenReturn(
+                UnifiedLoadbalancer.builder()
+                        .wafEnabled(false)
+                        .pools(List.of(UnifiedLoadbalancerPoolDTO.builder()
+                                .name("pool1")
+                                .members(List.of(UnifiedLoadbalancerMemberDTO.builder()
+                                        .ip("10.0.0.1")
+                                        .port(443)
+                                        .serverId(2002L)
+                                        .serverName(null)
+                                        .build()))
+                                .build()))
+                        .build());
+
+        mockMvc.perform(post("/job/create/LOADBALANCER_F5_CHANGE_POOL_MEMBERS").param("serverId", "-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"lb_virtual_server_id":123,"pool_name":"pool1",
+                                 "removed":[{"ip":"10.0.0.1","port":443}]}"""))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void loadbalancerPoolMembers_memberNameDoesNotMatchDbServer_isBlocked() throws Exception {
+        final Server dbServer = new Server();
+        dbServer.setId(2002L);
+        dbServer.setName("actual-server-name");
+
+        when(loadbalancerService.canUserEditLoadbalancer(anyLong())).thenReturn(true);
+        when(loadbalancerService.getLoadbalancerById(anyLong())).thenReturn(
+                UnifiedLoadbalancer.builder()
+                        .wafEnabled(false)
+                        .pools(List.of(UnifiedLoadbalancerPoolDTO.builder()
+                                .name("pool1")
+                                .members(List.of(UnifiedLoadbalancerMemberDTO.builder()
+                                        .ip("10.0.0.1")
+                                        .port(443)
+                                        .serverId(2002L)
+                                        .serverName("stale-server-name")
+                                        .build()))
+                                .build()))
+                        .build());
+        when(serverService.findById(2002L)).thenReturn(Optional.of(dbServer));
+
+        mockMvc.perform(post("/job/create/LOADBALANCER_F5_CHANGE_POOL_MEMBERS").param("serverId", "-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"lb_virtual_server_id":123,"pool_name":"pool1",
+                                 "removed":[{"ip":"10.0.0.1","port":443}]}"""))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void loadbalancerPoolMembers_memberIpDoesNotMatchDbServer_isBlocked() throws Exception {
+        final Server dbServer = new Server();
+        dbServer.setId(2002L);
+        dbServer.setName("app-server-1");
+
+        when(loadbalancerService.canUserEditLoadbalancer(anyLong())).thenReturn(true);
+        when(loadbalancerService.getLoadbalancerById(anyLong())).thenReturn(
+                UnifiedLoadbalancer.builder()
+                        .wafEnabled(false)
+                        .pools(List.of(UnifiedLoadbalancerPoolDTO.builder()
+                                .name("pool1")
+                                .members(List.of(UnifiedLoadbalancerMemberDTO.builder()
+                                        .ip("10.0.0.1")
+                                        .port(443)
+                                        .serverId(2002L)
+                                        .serverName("app-server-1")
+                                        .build()))
+                                .build()))
+                        .build());
+        when(serverService.findById(2002L)).thenReturn(Optional.of(dbServer));
+        when(serverService.findServersByIpAddress("10.0.0.1")).thenReturn(List.of());
+
+        mockMvc.perform(post("/job/create/LOADBALANCER_F5_CHANGE_POOL_MEMBERS").param("serverId", "-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"lb_virtual_server_id":123,"pool_name":"pool1",
+                                 "removed":[{"ip":"10.0.0.1","port":443}]}"""))
                 .andExpect(status().isForbidden());
 
         verifyNoInteractions(jobService);

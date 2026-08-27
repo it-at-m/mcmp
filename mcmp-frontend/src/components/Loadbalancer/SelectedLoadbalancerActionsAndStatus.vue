@@ -52,10 +52,6 @@ onMounted(() => {
 });
 
 const hasActions = computed(
-  () =>
-    props.lb.canEdit &&
-    props.lb.appservices?.length === 1 &&
-    testEnv.value &&
-    !props.lb.wafEnabled
+  () => props.lb.canEdit && props.lb.appservices?.length === 1 && testEnv.value
 );
 </script>

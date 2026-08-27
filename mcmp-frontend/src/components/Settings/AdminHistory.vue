@@ -23,11 +23,7 @@
       <!-- Zeile 1: Suchfelder -->
       <div class="text-caption text-medium-emphasis mb-2">Suche & Filter</div>
       <v-row dense>
-        <v-col
-          cols="12"
-          sm="6"
-          md="1"
-        >
+        <v-col cols="1">
           <v-text-field
             v-model="searchJobId"
             label="Job ID"
@@ -37,11 +33,7 @@
             clearable
           />
         </v-col>
-        <v-col
-          cols="12"
-          sm="6"
-          md="1"
-        >
+        <v-col cols="1">
           <v-text-field
             v-model="searchAwxJobId"
             label="AWX Job ID"
@@ -51,11 +43,17 @@
             clearable
           />
         </v-col>
-        <v-col
-          cols="12"
-          sm="6"
-          md="2"
-        >
+        <v-col cols="2">
+          <v-text-field
+            v-model="searchText"
+            label="Volltextsuche (Titel, Beschreibung, Hostname)"
+            :prepend-inner-icon="mdiMagnify"
+            density="compact"
+            hide-details
+            clearable
+          />
+        </v-col>
+        <v-col cols="2">
           <user-autocomplete-field
             v-model="searchUsername"
             label="Benutzername (min. 3 Zeichen)"
@@ -63,23 +61,7 @@
             density="compact"
           />
         </v-col>
-        <v-col
-          cols="12"
-          sm="6"
-          md="2"
-        >
-          <server-autocomplete-field
-            v-model="searchServerName"
-            label="Servername (min. 3 Zeichen)"
-            :loading="loading"
-            density="compact"
-          />
-        </v-col>
-        <v-col
-          cols="12"
-          sm="6"
-          md="2"
-        >
+        <v-col cols="2">
           <v-select
             v-model="searchActionIdentifier"
             :items="allActionIdentifiers"
@@ -90,11 +72,7 @@
             multiple
           />
         </v-col>
-        <v-col
-          cols="12"
-          sm="6"
-          md="2"
-        >
+        <v-col cols="2">
           <v-select
             v-model="searchStatusIdentifier"
             :items="allStatusIdentifiers"
@@ -104,11 +82,7 @@
             clearable
           />
         </v-col>
-        <v-col
-          cols="12"
-          sm="6"
-          md="2"
-        >
+        <v-col cols="2">
           <v-text-field
             v-model="searchAwxVariables"
             label="AWX-Variables"
@@ -116,6 +90,40 @@
             density="compact"
             hide-details
             clearable
+          />
+        </v-col>
+      </v-row>
+      <v-row dense>
+        <v-col cols="3">
+          <server-autocomplete-field
+            v-model="searchServerName"
+            label="Servername (min. 3 Zeichen)"
+            :loading="loading"
+            density="compact"
+          />
+        </v-col>
+        <v-col cols="3">
+          <loadbalancer-autocomplete-field
+            v-model="searchLoadbalancer"
+            label="Loadbalancer (min. 3 Zeichen)"
+            :loading="loading"
+            density="compact"
+          />
+        </v-col>
+        <v-col cols="3">
+          <storage-volume-autocomplete-field
+            v-model="searchStorageVolume"
+            label="Storage-Volume (min. 3 Zeichen)"
+            :loading="loading"
+            density="compact"
+          />
+        </v-col>
+        <v-col cols="3">
+          <openshift-namespace-autocomplete-field
+            v-model="searchOpenshiftNamespace"
+            label="Openshift-Namespace (min. 3 Zeichen)"
+            :loading="loading"
+            density="compact"
           />
         </v-col>
       </v-row>
@@ -177,7 +185,10 @@
 
 <script setup lang="ts">
 import type JobList from "@/types/JobList.ts";
+import type { LoadbalancerListItem } from "@/types/LoadbalancerListItem";
+import type { OpenshiftNamespaceListItem } from "@/types/OpenshiftNamespaceListItem";
 import type { ServerAutocomplete } from "@/types/ServerAutocomplete";
+import type { UnifiedStorageItemList } from "@/types/UnifiedStorageItemList";
 import type { UserAutocomplete } from "@/types/UserAutocomplete";
 
 import { mdiMagnify } from "@mdi/js";
@@ -187,7 +198,10 @@ import jobService from "@/api/jobService";
 import CommonDatePicker from "@/components/common/CommonDatePicker.vue";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import History from "@/components/common/History.vue";
+import LoadbalancerAutocompleteField from "@/components/common/LoadbalancerAutocompleteField.vue";
+import OpenshiftNamespaceAutocompleteField from "@/components/common/OpenshiftNamespaceAutocompleteField.vue";
 import ServerAutocompleteField from "@/components/common/ServerAutocompleteField.vue";
+import StorageVolumeAutocompleteField from "@/components/common/StorageVolumeAutocompleteField.vue";
 import UserAutocompleteField from "@/components/common/UserAutocompleteField.vue";
 
 const history = ref<JobList[]>([]);
@@ -199,6 +213,10 @@ const searchServerName = ref<ServerAutocomplete | null>(null);
 const searchActionIdentifier = ref<string[]>([]);
 const searchStatusIdentifier = ref("");
 const searchAwxVariables = ref("");
+const searchText = ref("");
+const searchLoadbalancer = ref<LoadbalancerListItem | null>(null);
+const searchStorageVolume = ref<UnifiedStorageItemList | null>(null);
+const searchOpenshiftNamespace = ref<OpenshiftNamespaceListItem | null>(null);
 const searchCreatedAtFrom = ref<string | null>(null);
 const searchCreatedAtTo = ref<string | null>(null);
 const searchChangeStartDateFrom = ref<string | null>(null);
@@ -230,6 +248,7 @@ watch(hasLoaded, (newVal) => {
 
 onUnmounted(() => {
   stopAutoRefresh();
+  if (searchTextTimeout) clearTimeout(searchTextTimeout);
 });
 
 watch(
@@ -241,6 +260,9 @@ watch(
     searchActionIdentifier,
     searchStatusIdentifier,
     searchAwxVariables,
+    searchLoadbalancer,
+    searchStorageVolume,
+    searchOpenshiftNamespace,
     searchCreatedAtFrom,
     searchCreatedAtTo,
     searchChangeStartDateFrom,
@@ -253,6 +275,16 @@ watch(
     startAutoRefresh();
   }
 );
+
+let searchTextTimeout: ReturnType<typeof setTimeout> | null = null;
+watch(searchText, () => {
+  if (searchTextTimeout) clearTimeout(searchTextTimeout);
+  searchTextTimeout = setTimeout(() => {
+    currentPage.value = 1;
+    fetchHistory();
+    startAutoRefresh();
+  }, 400);
+});
 
 watch([currentPage, itemsPerPage], () => {
   fetchHistory();
@@ -293,7 +325,12 @@ function fetchHistory() {
       searchActionIdentifier.value.length === 0
         ? null
         : searchActionIdentifier.value,
-      searchStatusIdentifier.value === "" ? null : searchStatusIdentifier.value
+      searchStatusIdentifier.value === "" ? null : searchStatusIdentifier.value,
+      searchLoadbalancer.value?.id || null,
+      searchStorageVolume.value?.type || null,
+      searchStorageVolume.value?.uuid || null,
+      searchOpenshiftNamespace.value?.id || null,
+      searchText.value === "" ? null : searchText.value
     )
     .then((res) => {
       history.value = res.content || [];

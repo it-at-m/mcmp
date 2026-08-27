@@ -14,7 +14,6 @@
       >
         <openshift-namespace-list
           :model-value="selectedItems"
-          :url-params-id="route.params.id"
           :initial-search="openshiftSearch"
           @update:selected="onNamespaceSelected"
           @update:search="openshiftSearch = $event"
@@ -76,6 +75,16 @@
                       <v-icon size="x-large">{{ mdiHome }}</v-icon>
                     </template>
                   </v-tab>
+                  <v-tab
+                    value="History"
+                    rounded="lg"
+                    class="d-flex justify-center align-center"
+                  >
+                    History
+                    <template #prepend>
+                      <v-icon size="x-large">{{ mdiHistory }}</v-icon>
+                    </template>
+                  </v-tab>
                 </v-tabs>
 
                 <collapse-all-cards-button
@@ -98,6 +107,18 @@
                       :namespace="selectedDetail"
                     />
                   </v-tabs-window-item>
+                  <v-tabs-window-item value="History">
+                    <openshift-namespace-details-history
+                      :history="history"
+                      :loading="loadingHistory"
+                      :page="currentPage"
+                      :items-per-page="currentItemsPerPage"
+                      @refresh-jobs="fetchHistory"
+                      @update:page="handlePageUpdate($event)"
+                      @update:items-per-page="handleItemsPerPageUpdate($event)"
+                      @update:sort="onSort"
+                    />
+                  </v-tabs-window-item>
                 </v-tabs-window>
               </v-col>
             </v-row>
@@ -113,18 +134,22 @@
 </template>
 
 <script setup lang="ts">
+import type JobList from "@/types/JobList";
 import type { OpenshiftNamespaceDetail } from "@/types/OpenshiftNamespaceDetail";
 import type { OpenshiftNamespaceListItem } from "@/types/OpenshiftNamespaceListItem";
+import type { Page } from "@/types/Page";
 
-import { mdiHome, mdiKubernetes } from "@mdi/js";
+import { mdiHistory, mdiHome, mdiKubernetes } from "@mdi/js";
 import { onMounted, onUnmounted, provide, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
+import jobService from "@/api/jobService";
 import openshiftService from "@/api/openshiftService";
 import AppserviceAssignmentStatusChips from "@/components/common/AppserviceAssignmentStatusChips.vue";
 import CollapseAllCardsButton from "@/components/common/CollapseAllCardsButton.vue";
 import DetailPageHeader from "@/components/common/DetailPageHeader.vue";
 import OpenshiftNamespaceDetailsGeneral from "@/components/Openshift/OpenshiftNamespaceDetailsGeneral.vue";
+import OpenshiftNamespaceDetailsHistory from "@/components/Openshift/OpenshiftNamespaceDetailsHistory.vue";
 import OpenshiftNamespaceList from "@/components/Openshift/OpenshiftNamespaceList.vue";
 import { useCollapsibleCards } from "@/composables/useCollapsibleCards";
 import { useScrollRestoration } from "@/composables/useScrollRestoration";
@@ -141,6 +166,14 @@ const tab = ref("Allgemeines");
 const openshiftSearch = ref("");
 const loadingDetails = ref(false);
 const scrollContainer = ref<HTMLElement | null>(null);
+
+// History State
+const history = ref<Page<JobList> | null>(null);
+const loadingHistory = ref(false);
+const currentPage = ref(1);
+const currentItemsPerPage = ref(10);
+const currentSortBy = ref<string | null>(null);
+const currentSortDesc = ref(false);
 
 const hasOpenDialog = ref(false);
 provide("registerOpenDialog", () => {
@@ -221,6 +254,62 @@ watch(
 
 onMounted(() => {
   syncSelectionFromRoute(route.params.id);
+});
+
+// History API Handler & Pagination
+function fetchHistory() {
+  const namespaceId = selectedDetail.value?.id;
+  if (namespaceId) {
+    return jobService
+      .getJobsByOpenshiftNamespaceId(
+        loadingHistory,
+        namespaceId,
+        currentPage.value,
+        currentItemsPerPage.value,
+        currentSortBy.value,
+        currentSortDesc.value
+      )
+      .then((res) => {
+        history.value = res;
+      });
+  } else {
+    history.value = null;
+    return Promise.resolve();
+  }
+}
+
+function handlePageUpdate(page: number) {
+  currentPage.value = page;
+  void fetchHistory();
+}
+
+function handleItemsPerPageUpdate(items: number) {
+  currentItemsPerPage.value = items;
+  currentPage.value = 1;
+  void fetchHistory();
+}
+
+function onSort(sort: { by: string; desc: boolean }) {
+  currentSortBy.value = sort.by;
+  currentSortDesc.value = sort.desc;
+  void fetchHistory();
+}
+
+watch(tab, (newTab) => {
+  if (selectedDetail.value?.id && newTab === "History") {
+    currentPage.value = 1;
+    currentItemsPerPage.value = 10;
+    void fetchHistory();
+  }
+});
+
+watch(selectedDetail, () => {
+  history.value = null;
+  if (tab.value === "History") {
+    currentPage.value = 1;
+    currentItemsPerPage.value = 10;
+    void fetchHistory();
+  }
 });
 
 // Resize logic

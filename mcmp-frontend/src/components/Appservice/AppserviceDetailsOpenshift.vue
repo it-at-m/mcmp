@@ -65,10 +65,14 @@ async function loadNamespaces(appservice: Appservice | null) {
     namespaces.value = [];
     return;
   }
-  namespaces.value = await openshiftService.getNamespacesByAppserviceId(
+  namespaces.value = [];
+  const result = await openshiftService.getNamespacesByAppserviceId(
     loading,
     appservice.id
   );
+  if (props.selectedAppservice?.id === appservice.id) {
+    namespaces.value = result;
+  }
 }
 
 watch(

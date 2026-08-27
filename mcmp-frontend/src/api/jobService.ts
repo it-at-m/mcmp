@@ -96,6 +96,100 @@ export default {
       });
   },
 
+  getJobsByLoadbalancerId(
+    loading: Ref<boolean>,
+    lbVirtualServerId: number,
+    page = 1,
+    itemsPerPage = 10,
+    sortBy: string | null = null,
+    sortDesc = false
+  ): Promise<Page<JobList>> {
+    loading.value = true;
+    const params = new URLSearchParams();
+    params.append("page", page.toString());
+    params.append("itemsPerPage", itemsPerPage.toString());
+
+    if (sortBy) {
+      params.append("sortBy", sortBy);
+      params.append("sortDesc", sortDesc.toString());
+    }
+
+    return fetch(
+      `${getApiBase()}${JOB_BASE}/loadbalancer/${lbVirtualServerId}?${params.toString()}`,
+      getConfig()
+    )
+      .then((response) => {
+        defaultResponseHandler(response);
+        return response.json();
+      })
+      .finally(() => {
+        loading.value = false;
+      });
+  },
+
+  getJobsByStorageId(
+    loading: Ref<boolean>,
+    storageType: string,
+    uuid: string,
+    page = 1,
+    itemsPerPage = 10,
+    sortBy: string | null = null,
+    sortDesc = false
+  ): Promise<Page<JobList>> {
+    loading.value = true;
+    const params = new URLSearchParams();
+    params.append("page", page.toString());
+    params.append("itemsPerPage", itemsPerPage.toString());
+
+    if (sortBy) {
+      params.append("sortBy", sortBy);
+      params.append("sortDesc", sortDesc.toString());
+    }
+
+    return fetch(
+      `${getApiBase()}${JOB_BASE}/storage/${storageType}/${encodeURIComponent(uuid)}?${params.toString()}`,
+      getConfig()
+    )
+      .then((response) => {
+        defaultResponseHandler(response);
+        return response.json();
+      })
+      .finally(() => {
+        loading.value = false;
+      });
+  },
+
+  getJobsByOpenshiftNamespaceId(
+    loading: Ref<boolean>,
+    namespaceId: number,
+    page = 1,
+    itemsPerPage = 10,
+    sortBy: string | null = null,
+    sortDesc = false
+  ): Promise<Page<JobList>> {
+    loading.value = true;
+    const params = new URLSearchParams();
+    params.append("page", page.toString());
+    params.append("itemsPerPage", itemsPerPage.toString());
+
+    if (sortBy) {
+      params.append("sortBy", sortBy);
+      params.append("sortDesc", sortDesc.toString());
+    }
+
+    return fetch(
+      `${getApiBase()}${JOB_BASE}/openshift/${namespaceId}?${params.toString()}`,
+      getConfig()
+    )
+      .then((response) => {
+        defaultResponseHandler(response);
+        return response.json();
+      })
+      .finally(() => {
+        loading.value = false;
+      });
+  },
+
   getJobsByUsername(
     loading: Ref<boolean>,
     page = 1,
@@ -177,7 +271,12 @@ export default {
     appserviceId: number | null = null,
     awxVariables: string | null = null,
     actionIdentifier: string[] | null = null,
-    statusIdentifier: string | null = null
+    statusIdentifier: string | null = null,
+    lbVirtualServerId: number | null = null,
+    storageType: string | null = null,
+    storageUuid: string | null = null,
+    kubernetesNamespaceId: number | null = null,
+    searchText: string | null = null
   ): Promise<Page<JobList>> {
     loading.value = true;
     const params = new URLSearchParams();
@@ -201,6 +300,15 @@ export default {
     if (actionIdentifier && actionIdentifier.length)
       params.append("actionIdentifier", actionIdentifier.join(","));
     if (statusIdentifier) params.append("statusIdentifier", statusIdentifier);
+    if (lbVirtualServerId)
+      params.append("lbVirtualServerId", lbVirtualServerId.toString());
+    if (storageType && storageUuid) {
+      params.append("storageType", storageType);
+      params.append("storageUuid", storageUuid);
+    }
+    if (kubernetesNamespaceId)
+      params.append("kubernetesNamespaceId", kubernetesNamespaceId.toString());
+    if (searchText) params.append("searchText", searchText);
 
     return fetch(
       `${getApiBase()}${JOB_BASE}/search?${params.toString()}`,

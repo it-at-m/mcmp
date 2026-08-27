@@ -41,23 +41,23 @@ public record HostDTO(
         @JsonProperty("lhm_pn_exitstring")
         String lhmPnExitstring,
         @JsonProperty("oracle_db")
-        boolean oracleDb,
+        Boolean oracleDb,
         @JsonProperty("mssql_db")
-        boolean mssqlDb,
+        Boolean mssqlDb,
         @JsonProperty("maria_db")
-        boolean mariaDb,
+        Boolean mariaDb,
         @JsonProperty("mysql_db")
-        boolean mysqlDb,
+        Boolean mysqlDb,
         @JsonProperty("mongo_db")
-        boolean mongoDb,
+        Boolean mongoDb,
         @JsonProperty("adabas_db")
-        boolean adabasDb,
+        Boolean adabasDb,
         @JsonProperty("postgres_db")
-        boolean postgresDb,
-        boolean linux,
-        boolean windows,
+        Boolean postgresDb,
+        Boolean linux,
+        Boolean windows,
         @JsonProperty("tetration_agent_is_installed")
-        boolean tetrationAgentIsInstalled,
+        Boolean tetrationAgentIsInstalled,
         @JsonProperty("server_infos_owner_mail")
         String serverInfosOwnerMail,
         @JsonProperty("server_infos_ticketnr")
@@ -82,6 +82,19 @@ public record HostDTO(
         List<String> repositories,
         @JsonProperty("lhm_managed")
         List<String> lhmManaged
-) {}
+) {
+    public HostDTO {
+        if (oracleDb == null) oracleDb = false;
+        if (mssqlDb == null) mssqlDb = false;
+        if (mariaDb == null) mariaDb = false;
+        if (mysqlDb == null) mysqlDb = false;
+        if (mongoDb == null) mongoDb = false;
+        if (adabasDb == null) adabasDb = false;
+        if (postgresDb == null) postgresDb = false;
+        if (linux == null) linux = false;
+        if (windows == null) windows = false;
+        if (tetrationAgentIsInstalled == null) tetrationAgentIsInstalled = false;
+    }
+}
 
 

@@ -1,11 +1,11 @@
 package de.muenchen.mcmp.clients.db.oracle;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import de.muenchen.mcmp.database.*;
 import de.muenchen.mcmp.utils.DateTimeUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.ObjectMapper;
 
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;

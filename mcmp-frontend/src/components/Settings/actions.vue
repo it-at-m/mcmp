@@ -11,6 +11,15 @@
         @save="saveAction"
       />
       <action-add-edit
+        title="Action importieren"
+        :import-file="true"
+        :icon="mdiImport"
+        :awx-configs="awxConfigs"
+        :snow-configs="snowConfigs"
+        :all-actions="items"
+        @save="saveAction"
+      />
+      <action-add-edit
         title="Action hinzufügen"
         :icon="mdiPlus"
         :awx-configs="awxConfigs"
@@ -47,6 +56,13 @@
         {{ formatter.formatBooleanToGerman(item.awxJobEnabled) }}
       </template>
       <template #item.edit="{ item }">
+        <v-btn
+          v-tooltip="'Action exportieren'"
+          :icon="mdiExport"
+          variant="text"
+          aria-label="Action exportieren"
+          @click="exportAction(item)"
+        />
         <action-add-edit
           title="Action bearbeiten"
           :icon="mdiPencil"
@@ -66,7 +82,13 @@ import type Action from "@/types/Action";
 import type { AwxConfig } from "@/types/AwxConfig";
 import type { SnowConfig } from "@/types/SnowConfig";
 
-import { mdiContentCopy, mdiPencil, mdiPlus } from "@mdi/js";
+import {
+  mdiContentCopy,
+  mdiExport,
+  mdiImport,
+  mdiPencil,
+  mdiPlus,
+} from "@mdi/js";
 import { onMounted, ref } from "vue";
 
 import actionService from "@/api/actionService";
@@ -116,6 +138,18 @@ function saveAction(action: Action) {
   actionService.saveAction(action, loading).then(() => {
     getActions();
   });
+}
+
+function exportAction(action: Action) {
+  const blob = new Blob([JSON.stringify(action, null, 2)], {
+    type: "application/json",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `action-${action.identifier}.json`;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 function getAwxConfigs() {

@@ -2,6 +2,8 @@ package de.muenchen.mcmp.changelog;
 
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 import java.time.OffsetDateTime;
 
 /**
@@ -9,6 +11,8 @@ import java.time.OffsetDateTime;
  * Used for transferring changelog data between the server and clients.
  */
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class ChangelogDTO {
     private Long id;

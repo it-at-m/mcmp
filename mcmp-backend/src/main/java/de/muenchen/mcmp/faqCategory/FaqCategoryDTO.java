@@ -3,14 +3,18 @@ package de.muenchen.mcmp.faqCategory;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * Data Transfer Object for {@link FaqCategory} entities.
  * Used for transferring FAQ category data between the server and clients.
  */
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class FaqCategoryDTO {
     /**

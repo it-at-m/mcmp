@@ -1,5 +1,6 @@
 package de.muenchen.mcmp.clients.cloud;
 
+import de.muenchen.mcmp.clients.cloud.model.CloudDTO;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,7 +23,7 @@ public class CloudImportController {
 
     @PostMapping("/import")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public void processCloudData(@Valid @RequestBody final CloudImportDTO cloudDTO) {
+    public void processCloudData(@Valid @RequestBody final CloudDTO cloudDTO) {
         int importSize = (cloudDTO != null && cloudDTO.servers() != null) ? cloudDTO.servers().size() : 0;
         log.info("Received Cloud data with {} servers. Processing in background.", importSize);
 

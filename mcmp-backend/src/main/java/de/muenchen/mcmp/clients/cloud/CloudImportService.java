@@ -1,8 +1,10 @@
 
 package de.muenchen.mcmp.clients.cloud;
 
+import de.muenchen.mcmp.clients.cloud.model.CloudDTO;
+import de.muenchen.mcmp.clients.cloud.model.ServerDTO;
+import de.muenchen.mcmp.clients.cloud.model.SnapshotDTO;
 import de.muenchen.mcmp.cloud.Cloud;
-import de.muenchen.mcmp.cloud.CloudDTO;
 import de.muenchen.mcmp.cloud.CloudService;
 import de.muenchen.mcmp.server.Server;
 import de.muenchen.mcmp.server.ServerService;
@@ -32,7 +34,7 @@ public class CloudImportService {
     private final ServerService serverService;
     private final SnapshotRepository snapshotRepository;
 
-    public void importCloudData(final CloudImportDTO cloudDTO) {
+    public void importCloudData(final CloudDTO cloudDTO) {
         log.info("Starting Cloud import process for {} servers.", cloudDTO.servers().size());
 
         final Cloud cloud = findOrCreateCloud(cloudDTO);
@@ -57,7 +59,7 @@ public class CloudImportService {
         int updated = 0;
         int deleted = 0;
 
-        for (final CloudImportDTO.Server dto : cloudDTO.servers()) {
+        for (final ServerDTO dto : cloudDTO.servers()) {
             if (dto.uuid() == null || dto.uuid().isBlank()) {
                 log.warn("Server ohne UUID übersprungen: name={}", dto.name());
                 continue;
@@ -186,15 +188,15 @@ public class CloudImportService {
         }
     }
 
-    private Cloud findOrCreateCloud(final CloudImportDTO cloudImportDTO) {
-        if (cloudImportDTO == null) {
+    private Cloud findOrCreateCloud(final CloudDTO cloudDTO) {
+        if (cloudDTO == null) {
             throw new IllegalArgumentException("cloudImportDTO darf nicht null sein");
         }
-        if (cloudImportDTO.cloud() == null || cloudImportDTO.cloud().isBlank()) {
+        if (cloudDTO.cloud() == null || cloudDTO.cloud().isBlank()) {
             throw new IllegalArgumentException("cloudImportDTO.cloud darf nicht null/leer sein");
         }
 
-        final String endpoint = cloudImportDTO.cloud();
+        final String endpoint = cloudDTO.cloud();
 
         final Cloud byEndpoint = cloudService.findByApiEndpoint(endpoint);
         if (byEndpoint != null) {
@@ -204,13 +206,13 @@ public class CloudImportService {
 
         log.info("Cloud mit apiEndpoint/fqdn='{}' nicht vorhanden. Erstelle neue Cloud automatisch.", endpoint);
 
-        final CloudDTO newCloud = CloudDTO.builder()
+        final de.muenchen.mcmp.cloud.CloudDTO newCloud = de.muenchen.mcmp.cloud.CloudDTO.builder()
                 .id(null)
                 .name(endpoint)
                 .fqdn(endpoint)
                 .serverGui(null)
-                .cloudType(cloudImportDTO.cloudType())
-                .apiDescription(cloudImportDTO.cloudType() + " " + endpoint)
+                .cloudType(cloudDTO.cloudType())
+                .apiDescription(cloudDTO.cloudType() + " " + endpoint)
                 .apiUsername(null)
                 .apiPassword(null)
                 .apiEndpoint(endpoint)
@@ -235,7 +237,7 @@ public class CloudImportService {
         return created;
     }
 
-    private boolean hasChanges(final Server existing, final CloudImportDTO.Server dto) {
+    private boolean hasChanges(final Server existing, final ServerDTO dto) {
         return !Objects.equals(existing.getName(), dto.name())
                 || !Objects.equals(existing.getInstanceUuid(), dto.instanceUuid())
                 || !Objects.equals(existing.getVmId(), dto.vmId())
@@ -302,7 +304,7 @@ public class CloudImportService {
                 || !Objects.equals(existing.getCpuAllocationReservation(), dto.cpuAllocationReservation());
     }
 
-    private void applyChanges(final Server server, final CloudImportDTO.Server dto) {
+    private void applyChanges(final Server server, final ServerDTO dto) {
         // Memory-Änderung tracken
         if (!Objects.equals(server.getMemoryMb(), dto.memoryMB())) {
             if (server.getMemoryMbChangeDate() != null) {
@@ -395,7 +397,7 @@ public class CloudImportService {
         server.setCpuAllocationReservation(dto.cpuAllocationReservation());
     }
 
-    private Server buildNewServer(final CloudImportDTO.Server dto, final Cloud cloud) {
+    private Server buildNewServer(final ServerDTO dto, final Cloud cloud) {
         final Server server = new Server();
         server.setCloud(cloud);
         server.setUuid(dto.uuid());
@@ -416,7 +418,7 @@ public class CloudImportService {
         return server;
     }
 
-    private boolean snapshotHasChanges(final Snapshot existing, final CloudImportDTO.Snapshot dto) {
+    private boolean snapshotHasChanges(final Snapshot existing, final SnapshotDTO dto) {
         return !Objects.equals(existing.getName(), dto.name())
                 || !Objects.equals(existing.getDescription(), dto.description())
                 || !Objects.equals(existing.getCreateTime(), dto.createTime())
@@ -424,7 +426,7 @@ public class CloudImportService {
                 || !Objects.equals(existing.isReplaySupported(), dto.replaySupported());
     }
 
-    private Snapshot applySnapshotChanges(Snapshot snapshot, final CloudImportDTO.Snapshot dto) {
+    private Snapshot applySnapshotChanges(Snapshot snapshot, final SnapshotDTO dto) {
         snapshot.setName(dto.name());
         snapshot.setDescription(dto.description());
         snapshot.setCreateTime(dto.createTime());
@@ -434,7 +436,7 @@ public class CloudImportService {
         return snapshot;
     }
 
-    private Snapshot buildNewSnapshot(final CloudImportDTO.Snapshot dto, final Server server) {
+    private Snapshot buildNewSnapshot(final SnapshotDTO dto, final Server server) {
         final Snapshot snapshot = new Snapshot();
         snapshot.setSnapshotId(Math.abs(dto.name().hashCode()));
         snapshot.setServerId(server.getId());

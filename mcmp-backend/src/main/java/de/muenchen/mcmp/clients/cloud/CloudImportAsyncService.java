@@ -1,5 +1,6 @@
 package de.muenchen.mcmp.clients.cloud;
 
+import de.muenchen.mcmp.clients.cloud.model.CloudDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -13,7 +14,7 @@ public class CloudImportAsyncService {
     private final CloudImportService cloudImportService;
 
     @Async
-    public void importAsync(final CloudImportDTO cloudDTO) {
+    public void importAsync(final CloudDTO cloudDTO) {
         try {
             cloudImportService.importCloudData(cloudDTO);
         } catch (Exception e) {

@@ -23,6 +23,7 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -43,6 +44,7 @@ public class CloudImportService {
             return;
         }
 
+        // Fetch current DB state in advance.
         final Map<String, Server> existingServers = serverService.findAllByCloudId(cloud.getId())
                 .stream()
                 .collect(Collectors.toMap(Server::getUuid, Function.identity()));
@@ -71,56 +73,57 @@ public class CloudImportService {
             }
 
             var server = existingServers.get(dto.uuid());
-            if (server != null) {
-                if (hasChanges(server, dto)) {
-                    applyChanges(server, dto);
-                    server = saveServer(server);
+            if (server == null) {
+                server = tryApply(serverService::save, buildNewServer(dto, cloud), s ->
+                        "beim Insert von Server name=%s".formatted(s.getName()));
 
-                    if (server == null)
-                        continue;
-
-                    updated++;
-                }
-
-                // Synchronize snapshots
-                final Map<String, Snapshot> snapshots = existingSnapshots.get(server.getId());
-                final Set<String> importedNames = new HashSet<>();
-
-                for (final var snapshotDTO : dto.snapshots()) {
-                    importedNames.add(snapshotDTO.name());
-                    var snapshot = snapshots != null ? snapshots.get(snapshotDTO.name()) : null;
-                    if (snapshot != null) {
-                        if (snapshotHasChanges(snapshot, snapshotDTO))
-                            saveSnapshot(applySnapshotChanges(snapshot, snapshotDTO));
-                    } else {
-                        saveSnapshot(buildNewSnapshot(snapshotDTO, server));
-                    }
-                }
-
-                if (snapshots != null) {
-                    for (final var snapshot : snapshots.values()) {
-                        if (!importedNames.contains(snapshot.getName())) {
-                            deleteSnapshot(snapshot);
-                        }
-                    }
-                }
-            } else {
-                server = saveServer(buildNewServer(dto, cloud));
                 if (server == null)
                     continue;
 
                 inserted++;
+            } else if (hasChanges(server, dto)) {
+                applyChanges(server, dto);
+                server = tryApply(serverService::save, server, s ->
+                        "beim Update von Server name=%s".formatted(s.getName()));
 
-                for (final var snapshotDTO : dto.snapshots()) {
-                    saveSnapshot(buildNewSnapshot(snapshotDTO, server));
+                if (server == null)
+                    continue;
+
+                updated++;
+            }
+
+            // Synchronize snapshots
+            final Map<String, Snapshot> snapshots = Objects.requireNonNullElseGet(
+                    existingSnapshots.get(server.getId()), Collections::emptyMap);
+            final Set<String> importedNames = new HashSet<>();
+
+            for (final var snapshotDTO : dto.snapshots()) {
+                importedNames.add(snapshotDTO.name());
+                var snapshot = snapshots.get(snapshotDTO.name());
+                if (snapshot == null) {
+                    tryConsume(snapshotRepository::save, buildNewSnapshot(snapshotDTO, server), s ->
+                            "beim Insert von Snapshot serverID=%s name=%s".formatted(s.getServerId(), s.getName()));
+                } else if (snapshotHasChanges(snapshot, snapshotDTO)) {
+                    applySnapshotChanges(snapshot, snapshotDTO);
+                    tryConsume(snapshotRepository::save, snapshot, s ->
+                            "beim Update von Snapshot serverID=%s name=%s".formatted(s.getServerId(), s.getName()));
+                }
+            }
+
+            for (final var snapshot : snapshots.values()) {
+                if (!importedNames.contains(snapshot.getName())) {
+                    tryConsume(snapshotRepository::delete, snapshot, s ->
+                            "beim Delete von Snapshot serverID=%s name=%s".formatted(s.getServerId(), s.getName()));
                 }
             }
         }
 
         for (final var server : existingServers.values()) {
             if (!importedUuids.contains(server.getUuid())) {
-                if (deleteServer(server))
+                if(tryConsume(serverService::delete, server, s ->
+                        "beim Delete von Server name=%s".formatted(s.getName()))) {
                     deleted++;
+                }
             }
         }
 
@@ -128,84 +131,14 @@ public class CloudImportService {
                 inserted, updated, deleted);
     }
 
-    private Server saveServer(final Server server) {
-        try {
-            return serverService.save(server);
-        } catch (final ObjectOptimisticLockingFailureException e) {
-            log.warn("Versionskonflikt beim Update von Server uuid={}, name={} – wird beim nächsten Import erneut versucht.",
-                    server.getUuid(), server.getName());
-            return null;
-        } catch (final Exception e) {
-            log.error("Fehler beim Speichern von Server uuid={}, name={}: {}",
-                    server.getUuid(), server.getName(), e.getMessage());
-            return null;
-        }
-    }
-
-    private boolean deleteServer(final Server server) {
-        try {
-            serverService.delete(server);
-            return true;
-        } catch (final ObjectOptimisticLockingFailureException ex) {
-            log.warn("Versionskonflikt beim Löschen von Server uuid={}, name={} – wird beim nächsten Import erneut versucht.",
-                    server.getUuid(), server.getName());
-            return false;
-        } catch (final Exception e) {
-            log.error("Fehler beim Löschen von Server uuid={}, name={}: {}",
-                    server.getUuid(), server.getName(), e.getMessage());
-            return false;
-        }
-    }
-
-    @SuppressWarnings("UnusedReturnValue")
-    private Snapshot saveSnapshot(final Snapshot snapshot) {
-        try {
-            return snapshotRepository.save(snapshot);
-        } catch (final ObjectOptimisticLockingFailureException ex) {
-            log.warn("Versionskonflikt beim Update von Snapshot name={}, serverID={} – wird beim nächsten Import erneut versucht.",
-                    snapshot.getName(), snapshot.getServerId());
-            return null;
-        } catch (final Exception e) {
-            log.error("Fehler beim Update von Snapshot name={}, serverID={}: {}",
-                    snapshot.getName(), snapshot.getServerId(), e.getMessage());
-            return null;
-        }
-    }
-
-    @SuppressWarnings("UnusedReturnValue")
-    private boolean deleteSnapshot(final Snapshot snapshot) {
-        try {
-            snapshotRepository.delete(snapshot);
-            return true;
-        } catch (final ObjectOptimisticLockingFailureException ex) {
-            log.warn("Versionskonflikt beim Löschen von Snapshot name={}, serverID={} – wird beim nächsten Import erneut versucht.",
-                    snapshot.getName(), snapshot.getServerId());
-            return false;
-        } catch (final Exception e) {
-            log.error("Fehler beim Löschen von Snapshot name={}, serverID={}: {}",
-                    snapshot.getName(), snapshot.getServerId(), e.getMessage());
-            return false;
-        }
-    }
-
     private Cloud findOrCreateCloud(final CloudDTO cloudDTO) {
-        if (cloudDTO == null) {
-            throw new IllegalArgumentException("cloudImportDTO darf nicht null sein");
-        }
-        if (cloudDTO.cloud() == null || cloudDTO.cloud().isBlank()) {
-            throw new IllegalArgumentException("cloudImportDTO.cloud darf nicht null/leer sein");
-        }
-
-        final String endpoint = cloudDTO.cloud();
-
-        final Cloud byEndpoint = cloudService.findByApiEndpoint(endpoint);
-        if (byEndpoint != null) {
-            log.debug("Cloud mit apiEndpoint='{}' gefunden (id={})", endpoint, byEndpoint.getId());
-            return byEndpoint;
+        final var endpoint = cloudDTO.cloud();
+        final var cloud = cloudService.findByApiEndpoint(endpoint);
+        if (cloud != null) {
+            return cloud;
         }
 
-        log.info("Cloud mit apiEndpoint/fqdn='{}' nicht vorhanden. Erstelle neue Cloud automatisch.", endpoint);
-
+        log.info("Erstelle neue Cloud mit fqdn={}", endpoint);
         final de.muenchen.mcmp.cloud.CloudDTO newCloud = de.muenchen.mcmp.cloud.CloudDTO.builder()
                 .id(null)
                 .name(endpoint)
@@ -222,19 +155,10 @@ public class CloudImportService {
                 .configBaasId(null)
                 .greenItEnabled(false)
                 .build();
+        tryConsume(cloudService::createCloudEntry, newCloud, c ->
+                "beim Insert der Cloud fqdn=%s".formatted(endpoint));
 
-        try {
-            cloudService.createCloudEntry(newCloud);
-        } catch (Exception e) {
-            log.error("Fehler beim Erstellen der Cloud für endpoint='{}': {}", endpoint, e.getMessage(), e);
-            return null;
-        }
-
-        final Cloud created = cloudService.findByApiEndpoint(endpoint);
-        if (created == null) {
-            log.warn("Cloud wurde angelegt, konnte aber danach nicht per apiEndpoint='{}' geladen werden.", endpoint);
-        }
-        return created;
+        return cloudService.findByApiEndpoint(endpoint);
     }
 
     private boolean hasChanges(final Server existing, final ServerDTO dto) {
@@ -511,5 +435,45 @@ public class CloudImportService {
         } else {
             return mgmtFQDN;
         }
+    }
+
+    /**
+     * Wrapper for Functions such as
+     * <code>entityRepository::save</code> methods.  Logs errors with
+     * an appropriate message and returns the return value, or null if
+     * the operation failed.
+     *
+     * @param function The save function.
+     * @param input The entity to save.
+     * @param descriptor Function returning a human-readable
+     *                   description for error logging.
+     * @return The return value of the save function, or null if an
+     *         error occurred.
+     */
+    private <T, R> R tryApply(Function<T, R> function, T input, Function<T, String> descriptor) {
+        try {
+            return function.apply(input);
+        } catch (final ObjectOptimisticLockingFailureException ex) {
+            log.warn("Versionskonflikt {} (wird beim nächsten Import erneut versucht)", descriptor.apply(input));
+            return null;
+        } catch (final Exception e) {
+            log.error("Fehler {}: {}", descriptor.apply(input), e.getLocalizedMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Wrapper for Consumers such as
+     * <code>entityRepository::delete</code> methods, analogous to
+     * <code>save</code>.
+     * @param consumer The delete function.
+     * @param input The entity to delete.
+     * @param descriptor Function returning a human-readable
+     *                   description for error logging.
+     * @return Whether the operation succeeded.
+     */
+    private <T> boolean tryConsume(Consumer<T> consumer, T input, Function<T, String> descriptor) {
+        final var result = tryApply(i -> { consumer.accept(i); return true; }, input, descriptor);
+        return Boolean.TRUE.equals(result);
     }
 }

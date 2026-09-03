@@ -60,15 +60,19 @@ public class CloudImportService {
         int inserted = 0;
         int updated = 0;
         int deleted = 0;
+        int skipped = 0;
+        int errors = 0;
 
         for (final ServerDTO dto : cloudDTO.servers()) {
             if (dto.uuid() == null || dto.uuid().isBlank()) {
                 log.warn("Server ohne UUID übersprungen: name={}", dto.name());
+                skipped++;
                 continue;
             }
 
             if (!importedUuids.add(dto.uuid())) {
                 log.warn("Server mit duplizierter UUID übersprungen: name={}, uuid={}", dto.name(), dto.uuid());
+                skipped++;
                 continue;
             }
 
@@ -77,8 +81,10 @@ public class CloudImportService {
                 server = tryApply(serverService::save, buildNewServer(dto, cloud), s ->
                         "beim Insert von Server name=%s".formatted(s.getName()));
 
-                if (server == null)
+                if (server == null) {
+                    errors++;
                     continue;
+                }
 
                 inserted++;
             } else if (hasChanges(server, dto)) {
@@ -86,8 +92,10 @@ public class CloudImportService {
                 server = tryApply(serverService::save, server, s ->
                         "beim Update von Server name=%s".formatted(s.getName()));
 
-                if (server == null)
+                if (server == null) {
+                    errors++;
                     continue;
+                }
 
                 updated++;
             }
@@ -123,12 +131,14 @@ public class CloudImportService {
                 if(tryConsume(serverService::delete, server, s ->
                         "beim Delete von Server name=%s".formatted(s.getName()))) {
                     deleted++;
+                } else {
+                    errors++;
                 }
             }
         }
 
-        log.info("Cloud import finished. inserted={}, updated={}, deleted={}",
-                inserted, updated, deleted);
+        log.info("Cloud import finished. inserted={}, updated={}, deleted={}, skipped={}, errors={}",
+                inserted, updated, deleted, skipped, errors);
     }
 
     private Cloud findOrCreateCloud(final CloudDTO cloudDTO) {

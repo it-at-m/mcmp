@@ -68,5 +68,13 @@ public interface MountPointRepository extends JpaRepository<MountPoint, Long> {
      * @see #findByServerId
      */
     List<MountPoint> findAllByServerId(Long serverId);
-}
 
+    /* For internal use only */
+    @Query(value = """
+        SELECT mount_point.*
+        FROM cmp.mount_point
+        JOIN cmp.server ON mount_point.server_id = server.id
+        WHERE server.cloud_id = :cloudId
+    """, nativeQuery = true)
+    List<MountPoint> findByServerCloudId(@Param("cloudId") Long cloudId);
+}

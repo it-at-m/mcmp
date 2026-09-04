@@ -46,5 +46,13 @@ public interface DiskRepository extends JpaRepository<Disk, Long> {
                               @Param("hasSecurityRole") boolean hasSecurityRole,
                               @Param("hasOperatorRole") boolean hasOperatorRole,
                               @Param("hasNetworkRole") boolean hasNetworkRole);
-}
 
+    /* For internal use only */
+    @Query(value = """
+        SELECT disk.*
+        FROM cmp.disk
+        JOIN cmp.server ON disk.server_id = server.id
+        WHERE server.cloud_id = :cloudId
+    """, nativeQuery = true)
+    List<Disk> findByServerCloudId(@Param("cloudId") Long cloudId);
+}

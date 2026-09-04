@@ -46,5 +46,13 @@ public interface NicRepository extends JpaRepository<Nic, Long> {
                              @Param("hasSecurityRole") boolean hasSecurityRole,
                              @Param("hasOperatorRole") boolean hasOperatorRole,
                              @Param("hasNetworkRole") boolean hasNetworkRole);
-}
 
+    /* For internal use only */
+    @Query(value = """
+        SELECT nic.*
+        FROM cmp.nic
+        JOIN cmp.server ON nic.server_id = server.id
+        WHERE server.cloud_id = :cloudId
+    """, nativeQuery = true)
+    List<Nic> findByServerCloudId(@Param("cloudId") Long cloudId);
+}

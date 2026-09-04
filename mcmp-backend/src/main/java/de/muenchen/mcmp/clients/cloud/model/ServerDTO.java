@@ -77,7 +77,6 @@ public record ServerDTO(
         @JsonProperty("available_memory") Integer availableMemory,
         @JsonProperty("vendor") String vendor,
         @JsonProperty("vid") String vid,
-        @JsonProperty("snapshots") List<SnapshotDTO> snapshots,
         @JsonProperty("memory_allocation_expandable_reservation") Boolean memoryAllocationExpandableReservation,
         @JsonProperty("memory_allocation_limit") Long memoryAllocationLimit,
         @JsonProperty("memory_allocation_overhead_limit") Long memoryAllocationOverheadLimit,
@@ -85,8 +84,12 @@ public record ServerDTO(
         @JsonProperty("cpu_allocation_expandable_reservation") Boolean cpuAllocationExpandableReservation,
         @JsonProperty("cpu_allocation_limit") Long cpuAllocationLimit,
         @JsonProperty("cpu_allocation_overhead_limit") Long cpuAllocationOverheadLimit,
-        @JsonProperty("cpu_allocation_reservation") Long cpuAllocationReservation
-) {
+        @JsonProperty("cpu_allocation_reservation") Long cpuAllocationReservation,
+        @JsonProperty("disks") List<DiskDTO> disks,
+        @JsonProperty("mount_points") List<MountPointDTO> mountPoints,
+        @JsonProperty("nics") List<NicDTO> nics,
+        @JsonProperty("snapshots") List<SnapshotDTO> snapshots
+        ) {
     public ServerDTO {
         if (uuid == null)
             throw new NullPointerException("a server UUIDs is required.");
@@ -113,6 +116,9 @@ public record ServerDTO(
         if (cpuHotRemoveEnabled == null) cpuHotRemoveEnabled = false;
         if (overallStatus == null) overallStatus = ServerStatusType.gray;
         if (configStatus == null) configStatus = ServerStatusType.gray;
+        if (disks == null) disks = Collections.emptyList();
+        if (mountPoints == null) mountPoints = Collections.emptyList();
+        if (nics == null) nics = Collections.emptyList();
         if (snapshots == null) snapshots = Collections.emptyList();
     }
 

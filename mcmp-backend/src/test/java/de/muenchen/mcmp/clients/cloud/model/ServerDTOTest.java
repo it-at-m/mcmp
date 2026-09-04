@@ -5,7 +5,9 @@ import de.muenchen.mcmp.types.ServerKind;
 import de.muenchen.mcmp.types.ServerType;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.exc.ValueInstantiationException;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -13,6 +15,16 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class ServerDTOTest {
     private static final JsonMapper MAPPER = JsonMapper.builder().build();
+
+    private static String minimalJSON() {
+        return minimalJSON(new HashMap<>());
+    }
+
+    private static String minimalJSON(Map<String, String> extraAttrs) {
+        final var attrs = new HashMap<>(extraAttrs);
+        attrs.putIfAbsent("uuid", "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA");
+        return MAPPER.writeValueAsString(attrs);
+    }
 
     @Test
     void testRegularDeserialization() {
@@ -42,15 +54,15 @@ public class ServerDTOTest {
     }
 
     @Test
-    void testDeserializingEmpty() {
-        assertDoesNotThrow(() -> MAPPER.readValue("{}", ServerDTO.class));
+    void testRejectsMissingUUID() {
+        assertThrows(ValueInstantiationException.class, () -> MAPPER.readValue("{}", ServerDTO.class));
     }
 
     // Keep this test in sync with database nullability constraints
     // and default values if possible
     @Test
     void testDeserializationDefaults() {
-        final var server = MAPPER.readValue("{}", ServerDTO.class);
+        final var server = MAPPER.readValue(minimalJSON(), ServerDTO.class);
         assertEquals(ServerKind.UNKNOWN, server.serverKind());
         assertEquals(ServerType.UNKNOWN, server.serverType());
 
@@ -72,10 +84,7 @@ public class ServerDTOTest {
 
     @Test
     void testDeserializationNameFallback() {
-        final var json = """
-                { "uuid": "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA" }
-                """;
-        final var server = MAPPER.readValue(json, ServerDTO.class);
+        final var server = MAPPER.readValue(minimalJSON(), ServerDTO.class);
         assertEquals(server.uuid(), server.name());
     }
 
@@ -93,9 +102,15 @@ public class ServerDTOTest {
         );
 
         for (final var entry : mappings.entrySet()) {
-            final var json = String.format("{ \"power_state\": \"%s\" }", entry.getKey());
+            final var json = minimalJSON(Map.of("power_state", entry.getKey()));
             final var server = MAPPER.readValue(json, ServerDTO.class);
             assertEquals(entry.getValue(), server.powerState());
         }
+    }
+
+    @Test
+    void testNormalizeFQDN() {
+        assertEquals("dcwik102.example.org", ServerDTO.normalizeFQDN("dcwik102.example.org"));
+        assertEquals("dcwik102.example.org", ServerDTO.normalizeFQDN("dcwik102m.example.org"));
     }
 }

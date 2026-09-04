@@ -3,25 +3,17 @@ package de.muenchen.mcmp.clients.cloud;
 
 import de.muenchen.mcmp.clients.cloud.model.CloudDTO;
 import de.muenchen.mcmp.clients.cloud.model.ServerDTO;
-import de.muenchen.mcmp.clients.cloud.model.SnapshotDTO;
 import de.muenchen.mcmp.cloud.Cloud;
 import de.muenchen.mcmp.cloud.CloudService;
 import de.muenchen.mcmp.server.Server;
 import de.muenchen.mcmp.server.ServerService;
 import de.muenchen.mcmp.snapshot.Snapshot;
 import de.muenchen.mcmp.snapshot.SnapshotRepository;
-import de.muenchen.mcmp.types.CloudType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -78,7 +70,7 @@ public class CloudImportService {
 
             var server = existingServers.get(dto.uuid());
             if (server == null) {
-                server = tryApply(serverService::save, buildNewServer(dto, cloud), s ->
+                server = tryApply(serverService::save, dto.build(cloud), s ->
                         "beim Insert von Server name=%s".formatted(s.getName()));
 
                 if (server == null) {
@@ -87,8 +79,8 @@ public class CloudImportService {
                 }
 
                 inserted++;
-            } else if (hasChanges(server, dto)) {
-                applyChanges(server, dto);
+            } else if (dto.hasChanges(server)) {
+                dto.applyChanges(server);
                 server = tryApply(serverService::save, server, s ->
                         "beim Update von Server name=%s".formatted(s.getName()));
 
@@ -109,10 +101,10 @@ public class CloudImportService {
                 importedNames.add(snapshotDTO.name());
                 var snapshot = snapshots.get(snapshotDTO.name());
                 if (snapshot == null) {
-                    tryConsume(snapshotRepository::save, buildNewSnapshot(snapshotDTO, server), s ->
+                    tryConsume(snapshotRepository::save, snapshotDTO.build(server), s ->
                             "beim Insert von Snapshot serverID=%s name=%s".formatted(s.getServerId(), s.getName()));
-                } else if (snapshotHasChanges(snapshot, snapshotDTO)) {
-                    applySnapshotChanges(snapshot, snapshotDTO);
+                } else if (snapshotDTO.hasChanges(snapshot)) {
+                    snapshotDTO.applyChanges(snapshot);
                     tryConsume(snapshotRepository::save, snapshot, s ->
                             "beim Update von Snapshot serverID=%s name=%s".formatted(s.getServerId(), s.getName()));
                 }
@@ -128,7 +120,7 @@ public class CloudImportService {
 
         for (final var server : existingServers.values()) {
             if (!importedUuids.contains(server.getUuid())) {
-                if(tryConsume(serverService::delete, server, s ->
+                if (tryConsume(serverService::delete, server, s ->
                         "beim Delete von Server name=%s".formatted(s.getName()))) {
                     deleted++;
                 } else {
@@ -149,302 +141,10 @@ public class CloudImportService {
         }
 
         log.info("Erstelle neue Cloud mit fqdn={}", endpoint);
-        final de.muenchen.mcmp.cloud.CloudDTO newCloud = de.muenchen.mcmp.cloud.CloudDTO.builder()
-                .id(null)
-                .name(endpoint)
-                .fqdn(endpoint)
-                .serverGui(null)
-                .cloudType(cloudDTO.cloudType())
-                .apiDescription(cloudDTO.cloudType() + " " + endpoint)
-                .apiUsername(null)
-                .apiPassword(null)
-                .apiEndpoint(endpoint)
-                .enabled(true)
-                .locked(false)
-                .configInfobloxId(null)
-                .configBaasId(null)
-                .greenItEnabled(false)
-                .build();
-        tryConsume(cloudService::createCloudEntry, newCloud, c ->
+        tryConsume(cloudService::createCloudEntry, cloudDTO.build(), c ->
                 "beim Insert der Cloud fqdn=%s".formatted(endpoint));
 
         return cloudService.findByApiEndpoint(endpoint);
-    }
-
-    private boolean hasChanges(final Server existing, final ServerDTO dto) {
-        return !Objects.equals(existing.getName(), dto.name())
-                || !Objects.equals(existing.getInstanceUuid(), dto.instanceUuid())
-                || !Objects.equals(existing.getVmId(), dto.vmId())
-                || !Objects.equals(existing.getCluster(), dto.cluster())
-                || !Objects.equals(existing.getHost(), dto.host())
-                || !Objects.equals(existing.getLocation(), dto.location())
-                || !Objects.equals(existing.getPowerState(), dto.powerState())
-                || !Objects.equals(existing.getMemoryMb(), dto.memoryMB())
-                || !Objects.equals(existing.getNumCpu(), dto.numCPU())
-                || !Objects.equals(existing.getNumCoresPerSocket(), dto.numCoresPerSocket())
-                || !Objects.equals(existing.getMemoryHotAddEnabled(), dto.memoryHotAddEnabled())
-                || !Objects.equals(existing.getCpuHotAddEnabled(), dto.cpuHotAddEnabled())
-                || !Objects.equals(existing.getCpuHotRemoveEnabled(), dto.cpuHotRemoveEnabled())
-                || !Objects.equals(existing.getCpuTopology(), dto.cpuTopology())
-                || !Objects.equals(existing.getVmxVersion(), dto.vmxVersion())
-                || !Objects.equals(existing.getGuestConfigId(), dto.guestConfigId())
-                || !Objects.equals(existing.getGuestConfigFullName(), dto.guestConfigFullName())
-                || !Objects.equals(existing.getGuestToolsId(), dto.guestToolsId())
-                || !Objects.equals(existing.getGuestToolsFullName(), dto.guestToolsFullName())
-                || !Objects.equals(existing.getGuestToolsState(), dto.guestToolsState())
-                || !Objects.equals(existing.getGuestToolsRunningStatus(), dto.guestToolsRunningStatus())
-                || !Objects.equals(existing.getGuestToolsVersionStatus(), dto.guestToolsVersionStatus())
-                || !Objects.equals(existing.getGuestToolsVersionStatus2(), dto.guestToolsVersionStatus2())
-                || !Objects.equals(existing.getGuestToolsInstallType(), dto.guestToolsInstallType())
-                || !Objects.equals(existing.getGuestToolsVersion(), dto.guestToolsVersion())
-                || !Objects.equals(existing.getGuestToolsFamily(), dto.guestToolsFamily())
-                || !Objects.equals(existing.getGuestToolsHostname(), dto.guestToolsHostname())
-                || !Objects.equals(existing.getGuestToolsIpAddress(), dto.guestToolsIpAddress())
-                || !Objects.equals(existing.getGuestToolsArchitecture(), dto.guestToolsArchitecture())
-                || !Objects.equals(existing.getGuestToolsBitness(), dto.guestToolsBitness())
-                || !Objects.equals(existing.getGuestToolsBuildNumber(), dto.guestToolsBuildNumber())
-                || !Objects.equals(existing.getGuestToolsCpeString(), dto.guestToolsCpeString())
-                || !Objects.equals(existing.getGuestToolsDistroAddlVersion(), dto.guestToolsDistroAddlVersion())
-                || !Objects.equals(existing.getGuestToolsDistroName(), dto.guestToolsDistroName())
-                || !Objects.equals(existing.getGuestToolsDistroVersion(), dto.guestToolsDistroVersion())
-                || !Objects.equals(existing.getGuestToolsFamilyName(), dto.guestToolsFamilyName())
-                || !Objects.equals(existing.getGuestToolsKernelVersion(), dto.guestToolsKernelVersion())
-                || !Objects.equals(existing.getGuestToolsPrettyName(), dto.guestToolsPrettyName())
-                || !Objects.equals(existing.getHotPlugMemoryLimit(), dto.hotPlugMemoryLimit())
-                || !Objects.equals(existing.getHotPlugMemoryIncrementSize(), dto.hotPlugMemoryIncrementSize())
-                || !Objects.equals(existing.getDn(), dto.dn())
-                || !Objects.equals(existing.getAssociation(), dto.association())
-                || !Objects.equals(existing.getMemorySpeed(), dto.memorySpeed())
-                || !Objects.equals(existing.getModel(), dto.model())
-                || !Objects.equals(existing.getNumOfAdaptors(), dto.numOfAdaptors())
-                || !Objects.equals(existing.getNumOfCoresEnabled(), dto.numOfCoresEnabled())
-                || !Objects.equals(existing.getNumOfEthHostIfs(), dto.numOfEthHostIfs())
-                || !Objects.equals(existing.getNumOfFcHostIfs(), dto.numOfFcHostIfs())
-                || !Objects.equals(existing.getOperState(), dto.operState())
-                || !Objects.equals(existing.getUcsmChassisId(), dto.chassisId())
-                || !Objects.equals(existing.getUcsmChassisSlotId(), dto.slotId())
-                || !Objects.equals(existing.getUcsmServerId(), dto.serverId())
-                || !Objects.equals(existing.getVendor(), dto.vendor())
-                || !Objects.equals(existing.getVid(), dto.vid())
-                || !Objects.equals(existing.getServerKind(), dto.serverKind())
-                || !Objects.equals(existing.getServerType(), dto.serverType())
-                || !Objects.equals(existing.getMemoryAllocationExpandableReservation(), dto.memoryAllocationExpandableReservation())
-                || !Objects.equals(existing.getMemoryAllocationLimit(), dto.memoryAllocationLimit())
-                || !Objects.equals(existing.getMemoryAllocationOverheadLimit(), dto.memoryAllocationOverheadLimit())
-                || !Objects.equals(existing.getMemoryAllocationReservation(), dto.memoryAllocationReservation())
-                || !Objects.equals(existing.getCpuAllocationExpandableReservation(), dto.cpuAllocationExpandableReservation())
-                || !Objects.equals(existing.getCpuAllocationLimit(), dto.cpuAllocationLimit())
-                || !Objects.equals(existing.getCpuAllocationOverheadLimit(), dto.memoryAllocationOverheadLimit())
-                || !Objects.equals(existing.getCpuAllocationReservation(), dto.cpuAllocationReservation());
-    }
-
-    private void applyChanges(final Server server, final ServerDTO dto) {
-        // Memory-Änderung tracken
-        if (!Objects.equals(server.getMemoryMb(), dto.memoryMB())) {
-            if (server.getMemoryMbChangeDate() != null) {
-                server.setMemoryMbChangeDatePrev(server.getMemoryMbChangeDate());
-            }
-            server.setMemoryMbPrev(server.getMemoryMb());
-            server.setMemoryMbChangeDate(OffsetDateTime.now());
-        }
-        // CPU-Änderung tracken
-        if (!Objects.equals(server.getNumCpu(), dto.numCPU())) {
-            if (server.getNumCpuChangeDatePrev() != null) {
-                server.setNumCpuChangeDatePrev(server.getNumCpuChangeDate());
-            }
-            server.setNumCpuPrev(server.getNumCpu());
-            server.setNumCpuChangeDate(OffsetDateTime.now());
-        }
-
-        if (dto.name() == null || dto.name().isBlank()) {
-            server.setName(dto.uuid());
-        } else {
-            server.setName(dto.name().trim());
-        }
-        server.setInstanceUuid(dto.instanceUuid());
-        server.setVmId(dto.vmId());
-        server.setCluster(dto.cluster());
-        server.setHost(dto.host());
-        server.setLocation(dto.location());
-        server.setPowerState(dto.powerState());
-        server.setMemoryMb(dto.memoryMB());
-        server.setNumCpu(dto.numCPU());
-        server.setNumCoresPerSocket(dto.numCoresPerSocket());
-        server.setMemoryHotAddEnabled(Boolean.TRUE.equals(dto.memoryHotAddEnabled()));
-        server.setCpuHotAddEnabled(Boolean.TRUE.equals(dto.cpuHotAddEnabled()));
-        server.setCpuHotRemoveEnabled(Boolean.TRUE.equals(dto.cpuHotRemoveEnabled()));
-        server.setCpuTopology(dto.cpuTopology());
-        server.setVmxVersion(dto.vmxVersion());
-        server.setOverallStatus(dto.overallStatus());
-        server.setConfigStatus(dto.configStatus());
-        server.setGuestConfigId(dto.guestConfigId());
-        server.setGuestConfigFullName(dto.guestConfigFullName());
-        server.setGuestToolsId(dto.guestToolsId());
-        server.setGuestToolsFullName(dto.guestToolsFullName());
-        server.setGuestToolsState(dto.guestToolsState());
-        server.setGuestToolsRunningStatus(dto.guestToolsRunningStatus());
-        server.setGuestToolsVersionStatus(dto.guestToolsVersionStatus());
-        server.setGuestToolsVersionStatus2(dto.guestToolsVersionStatus2());
-        server.setGuestToolsInstallType(dto.guestToolsInstallType());
-        server.setGuestToolsVersion(dto.guestToolsVersion());
-        server.setGuestToolsFamily(dto.guestToolsFamily());
-        server.setGuestToolsHostname(dto.guestToolsHostname());
-        server.setGuestToolsIpAddress(dto.guestToolsIpAddress());
-        server.setGuestToolsArchitecture(dto.guestToolsArchitecture());
-        server.setGuestToolsBitness(dto.guestToolsBitness());
-        server.setGuestToolsBuildNumber(dto.guestToolsBuildNumber());
-        server.setGuestToolsCpeString(dto.guestToolsCpeString());
-        server.setGuestToolsDistroAddlVersion(dto.guestToolsDistroAddlVersion());
-        server.setGuestToolsDistroName(dto.guestToolsDistroName());
-        server.setGuestToolsDistroVersion(dto.guestToolsDistroVersion());
-        server.setGuestToolsFamilyName(dto.guestToolsFamilyName());
-        server.setGuestToolsKernelVersion(dto.guestToolsKernelVersion());
-        server.setGuestToolsPrettyName(dto.guestToolsPrettyName());
-        server.setBootTime(dto.bootTime());
-        server.setHotPlugMemoryLimit(dto.hotPlugMemoryLimit());
-        server.setHotPlugMemoryIncrementSize(dto.hotPlugMemoryIncrementSize());
-        server.setDn(dto.dn());
-        server.setAssociation(dto.association());
-        server.setMemorySpeed(dto.memorySpeed());
-        server.setMfgTime(dto.mfgTime());
-        server.setModel(dto.model());
-        server.setNumOfAdaptors(dto.numOfAdaptors());
-        server.setNumOfCoresEnabled(dto.numOfCoresEnabled());
-        server.setNumOfEthHostIfs(dto.numOfEthHostIfs());
-        server.setNumOfFcHostIfs(dto.numOfFcHostIfs());
-        server.setOperState(dto.operState());
-        server.setUcsmChassisId(dto.chassisId());
-        server.setUcsmChassisSlotId(dto.slotId());
-        server.setUcsmServerId(dto.serverId());
-        server.setMemoryMbAvailable(dto.availableMemory());
-        server.setVendor(dto.vendor());
-        server.setVid(dto.vid());
-        server.setServerKind(dto.serverKind());
-        server.setServerType(dto.serverType());
-        server.setMemoryAllocationExpandableReservation(dto.memoryAllocationExpandableReservation());
-        server.setMemoryAllocationReservation(dto.memoryAllocationReservation());
-        server.setMemoryAllocationLimit(dto.memoryAllocationLimit());
-        server.setMemoryAllocationOverheadLimit(dto.memoryAllocationOverheadLimit());
-        server.setCpuAllocationExpandableReservation(dto.cpuAllocationExpandableReservation());
-        server.setCpuAllocationLimit(dto.cpuAllocationLimit());
-        server.setCpuAllocationOverheadLimit(dto.cpuAllocationOverheadLimit());
-        server.setCpuAllocationReservation(dto.cpuAllocationReservation());
-    }
-
-    private Server buildNewServer(final ServerDTO dto, final Cloud cloud) {
-        final Server server = new Server();
-        server.setCloud(cloud);
-        server.setUuid(dto.uuid());
-        applyChanges(server, dto);
-
-        if (server.getFqdn() == null || server.getFqdn().isBlank()) {
-            if (cloud.getCloudType() == CloudType.UCS_CIMC) {
-                server.setFqdn(normalizeMgmtFQDN(cloud.getApiEndpoint().trim()));
-            } else {
-                if (dto.name() == null || dto.name().isBlank()) {
-                    server.setFqdn(dto.uuid());
-                } else {
-                    server.setFqdn(dto.name().trim());
-                }
-            }
-        }
-
-        return server;
-    }
-
-    private boolean snapshotHasChanges(final Snapshot existing, final SnapshotDTO dto) {
-        return !Objects.equals(existing.getName(), dto.name())
-                || !Objects.equals(existing.getDescription(), dto.description())
-                || !Objects.equals(existing.getCreateTime(), dto.createTime())
-                || !Objects.equals(existing.isQuiesced(), dto.quiesced())
-                || !Objects.equals(existing.isReplaySupported(), dto.replaySupported());
-    }
-
-    private Snapshot applySnapshotChanges(Snapshot snapshot, final SnapshotDTO dto) {
-        snapshot.setName(dto.name());
-        snapshot.setDescription(dto.description());
-        snapshot.setCreateTime(dto.createTime());
-        snapshot.setRetentionPeriod(calculateSnapshotRetentionTime(dto.name(), snapshot.getCreateTime()));
-        snapshot.setQuiesced(dto.quiesced());
-        snapshot.setReplaySupported(dto.replaySupported());
-        return snapshot;
-    }
-
-    private Snapshot buildNewSnapshot(final SnapshotDTO dto, final Server server) {
-        final Snapshot snapshot = new Snapshot();
-        snapshot.setSnapshotId(Math.abs(dto.name().hashCode()));
-        snapshot.setServerId(server.getId());
-        return applySnapshotChanges(snapshot, dto);
-    }
-
-
-    /**
-     * Calculate a Snapshot's retention period based on naming convention.
-     *
-     * <p>The following formats are recognized:</p>
-     * <ul>
-     *   <li>
-     *     <code>###YYYYMMDD###</code>, where Y, M and D are digits, is
-     *     parsed as the date YYYY-MM-DD.
-     *   </li>
-     *   <li>
-     *     <code>###n###</code>, where n is any other number, is parsed
-     *     as an offset from the creation date of n hours.
-     *   </li>
-     *   <li>
-     *     If the name does not match any of the previous patterns,
-     *     the date five days after creation of the snapshot is returned.
-     *   </li>
-     * </ul>
-     *
-     * @param name       the name of the snapshot.
-     * @param createTime the creation time of the snapshot
-     * @return the retention period/deletion date of the snapshot.
-     */
-    public static OffsetDateTime calculateSnapshotRetentionTime(String name, OffsetDateTime createTime) {
-        try {
-            final var retention = StringUtils.substringBetween(name, "###");
-            try {
-                return LocalDate.parse(retention, DateTimeFormatter.ofPattern("yyyyMMdd"))
-                        .atTime(0, 0)
-                        .atOffset(ZoneOffset.UTC);
-            } catch (DateTimeParseException ignored) {
-            }
-
-            try {
-                return createTime.plusHours(Long.parseLong(retention));
-            } catch (NumberFormatException ignored) {
-            }
-        } catch (NullPointerException ignored) {
-        }
-
-        return createTime.plusDays(5);
-    }
-
-    /**
-     * Normalizes a management FQDN by removing 'm' from the end of the hostname if present.
-     *
-     * <p>If the hostname (part before the first dot) ends with 'm', the 'm' is removed.</p>
-     *
-     * <p>Example: "dcwik102m.example.org" becomes "dcwik102.example.org"</p>
-     *
-     * @param mgmtFQDN the management FQDN to normalize, may be null
-     * @return the normalized FQDN, or null if input is null
-     */
-    public static String normalizeMgmtFQDN(final String mgmtFQDN) {
-        if (mgmtFQDN == null) return null;
-
-        int dotIndex = mgmtFQDN.indexOf('.');
-        if (dotIndex == -1) return mgmtFQDN; // no domain, return as is
-
-        String hostname = mgmtFQDN.substring(0, dotIndex);
-        String domain = mgmtFQDN.substring(dotIndex);
-
-        if (hostname.endsWith("m")) {
-            return hostname.substring(0, hostname.length() - 1) + domain;
-        } else {
-            return mgmtFQDN;
-        }
     }
 
     /**
@@ -453,12 +153,12 @@ public class CloudImportService {
      * an appropriate message and returns the return value, or null if
      * the operation failed.
      *
-     * @param function The save function.
-     * @param input The entity to save.
+     * @param function   The save function.
+     * @param input      The entity to save.
      * @param descriptor Function returning a human-readable
      *                   description for error logging.
      * @return The return value of the save function, or null if an
-     *         error occurred.
+     * error occurred.
      */
     private <T, R> R tryApply(Function<T, R> function, T input, Function<T, String> descriptor) {
         try {
@@ -476,14 +176,18 @@ public class CloudImportService {
      * Wrapper for Consumers such as
      * <code>entityRepository::delete</code> methods, analogous to
      * <code>save</code>.
-     * @param consumer The delete function.
-     * @param input The entity to delete.
+     *
+     * @param consumer   The delete function.
+     * @param input      The entity to delete.
      * @param descriptor Function returning a human-readable
      *                   description for error logging.
      * @return Whether the operation succeeded.
      */
     private <T> boolean tryConsume(Consumer<T> consumer, T input, Function<T, String> descriptor) {
-        final var result = tryApply(i -> { consumer.accept(i); return true; }, input, descriptor);
+        final var result = tryApply(i -> {
+            consumer.accept(i);
+            return true;
+        }, input, descriptor);
         return Boolean.TRUE.equals(result);
     }
 }

@@ -62,19 +62,21 @@ func (p *Processor) ProcessCloud(ctx context.Context) (*Cloud, error) {
 	}
 
 	go func() {
-		wg.Wait()
-		close(srvChan)
-		close(errChan)
+		for server := range srvChan {
+			cloud.Servers = append(cloud.Servers, server)
+		}
 	}()
 
-	for server := range srvChan {
-		cloud.Servers = append(cloud.Servers, server)
-	}
-
 	err = nil
-	for e := range errChan {
-		err = errors.Join(err, e)
-	}
+	go func() {
+		for e := range errChan {
+			err = errors.Join(err, e)
+		}
+	}()
+
+	wg.Wait()
+	close(srvChan)
+	close(errChan)
 
 	return cloud, err
 }

@@ -184,6 +184,12 @@ watch(
       delete copy.isLinuxCustom;
       delete copy.linuxCustomExtraVars;
 
+      Object.assign(copy, { middleware_user_deploy: copy.middlewareUser });
+      delete copy.middlewareUser;
+
+      // unused
+      delete copy.removeScheduleTime;
+
       if (copy.categoryType != categoryType.DB) {
         delete copy.dbParams;
         delete copy.nonPostgresReason;

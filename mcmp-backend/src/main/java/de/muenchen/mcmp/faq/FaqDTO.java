@@ -2,13 +2,17 @@ package de.muenchen.mcmp.faq;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * Data Transfer Object for transferring FAQ data between layers.
  */
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class FaqDTO {
     private Long id;

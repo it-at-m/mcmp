@@ -1,6 +1,8 @@
 package de.muenchen.mcmp.errorlog;
 
 import java.math.BigInteger;
+import java.util.Locale;
+import java.util.regex.Pattern;
 
 /**
  * Formats {@link ErrorLog} ids into a fixed-width, user-facing reference (e.g. {@code ERR-3F8K2QZ}).
@@ -24,6 +26,9 @@ public final class ErrorLogReference {
     /** base-36 digits needed to represent any value below {@link #MODULUS} (36^7 > 2^32 > 36^6). */
     private static final int ENCODED_WIDTH = 7;
 
+    /** {@link #format(Long)} always emits exactly {@link #ENCODED_WIDTH} upper-case base-36 digits. */
+    private static final Pattern BASE36_UPPER = Pattern.compile("^[0-9A-Z]{" + ENCODED_WIDTH + "}$");
+
     private ErrorLogReference() {
     }
 
@@ -35,8 +40,8 @@ public final class ErrorLogReference {
         if (id == null) {
             return null;
         }
-        long scrambled = (id * MULTIPLIER) % MODULUS;
-        String base36 = Long.toString(scrambled, 36).toUpperCase();
+        long scrambled = Math.floorMod(id * MULTIPLIER, MODULUS);
+        String base36 = Long.toString(scrambled, 36).toUpperCase(Locale.ROOT);
         return PREFIX + "0".repeat(Math.max(0, ENCODED_WIDTH - base36.length())) + base36;
     }
 
@@ -47,12 +52,23 @@ public final class ErrorLogReference {
      * @return the original {@link ErrorLog} id, or {@code null} if {@code reference} is not a valid reference
      */
     public static Long parse(final String reference) {
-        if (reference == null || !reference.toUpperCase().startsWith(PREFIX)) {
+        if (reference == null) {
+            return null;
+        }
+        String normalized = reference.toUpperCase(Locale.ROOT);
+        if (!normalized.startsWith(PREFIX)) {
+            return null;
+        }
+        String encoded = normalized.substring(PREFIX.length());
+        if (!BASE36_UPPER.matcher(encoded).matches()) {
             return null;
         }
         try {
-            long scrambled = Long.parseLong(reference.substring(PREFIX.length()), 36);
-            return (scrambled * INVERSE) % MODULUS;
+            long scrambled = Long.parseLong(encoded, 36);
+            if (scrambled < 0 || scrambled >= MODULUS) {
+                return null;
+            }
+            return Math.floorMod(scrambled * INVERSE, MODULUS);
         } catch (NumberFormatException e) {
             return null;
         }

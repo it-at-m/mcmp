@@ -8,9 +8,10 @@
     @dialog-confirm="save"
     @dialog-cancel="reset"
   >
-    <template #activator="{ props }">
+    <template #activator="{ props: btnProps }">
       <v-btn
-        v-bind="props"
+        v-tooltip="props.title"
+        v-bind="btnProps"
         :icon="icon"
         :aria-label="ariaLabel"
       >
@@ -29,7 +30,23 @@
           />
         </v-col>
       </v-row>
-      <div v-if="!props.copy || selectedAction">
+      <v-row v-if="props.importFile && !fileImported">
+        <v-col cols="12">
+          <v-file-input
+            v-model="importedFile"
+            label="Action JSON-Datei auswählen"
+            accept="application/json,.json"
+            prepend-icon=""
+            :prepend-inner-icon="mdiFileUploadOutline"
+            @update:model-value="handleFileImport"
+          />
+        </v-col>
+      </v-row>
+      <div
+        v-if="
+          (!props.copy || selectedAction) && (!props.importFile || fileImported)
+        "
+      >
         <v-row>
           <v-col cols="12">
             <v-toolbar color="backgroundLight">
@@ -774,19 +791,22 @@ import type Action from "@/types/Action";
 import type { AwxConfig } from "@/types/AwxConfig";
 import type { SnowConfig } from "@/types/SnowConfig";
 
-import { mdiInformation } from "@mdi/js";
+import { mdiFileUploadOutline, mdiInformation } from "@mdi/js";
 import { onMounted, ref, toRaw, watch } from "vue";
 
 import testenvService from "@/api/testenvService.ts";
 import CommonDialog from "@/components/common/CommonDialog.vue";
 import ActionImport from "@/components/Settings/actionImport.vue";
 import { useRules } from "@/composables/rules";
+import { STATUS_INDICATORS } from "@/constants";
+import { useSnackbarStore } from "@/stores/snackbar.ts";
 
 const props = defineProps<{
   title: string;
   icon: string;
   action?: Action;
   copy?: boolean;
+  importFile?: boolean;
   awxConfigs: AwxConfig[];
   snowConfigs: SnowConfig[];
   allActions: Action[];
@@ -807,6 +827,8 @@ const awxAdvancedOptions = ref(false);
 const testing = ref(false);
 const loadingTestEnv = ref(false);
 const selectedAction = ref<Action | null>(null);
+const importedFile = ref<File | File[] | null>(null);
+const fileImported = ref(false);
 
 const actionTmp = ref<Action>(
   props.action ? { ...props.action } : getEmptyAction()
@@ -829,6 +851,8 @@ watch(dialog, (val) => {
     if (!actionTmp.value.changeType) {
       actionTmp.value.changeType = "normal";
     }
+    importedFile.value = null;
+    fileImported.value = false;
   }
 });
 
@@ -855,7 +879,6 @@ watch(selectedAction, (action) => {
   }
 
   actionTmp.value = structuredClone(toRaw(action));
-  console.log(actionTmp.value);
 
   // Identifier zurücksetzen
   actionTmp.value.identifier = "";
@@ -921,12 +944,34 @@ function onImport(action: Action) {
   actionTmp.value = action;
 }
 
+function handleFileImport(files: File | File[] | null) {
+  const file = Array.isArray(files) ? files[0] : files;
+  if (!file) return;
+  file
+    .text()
+    .then((text) => {
+      const parsed = JSON.parse(text);
+      actionTmp.value = { ...getEmptyAction(), ...parsed };
+      fileImported.value = true;
+    })
+    .catch(() => {
+      useSnackbarStore().showMessage({
+        message:
+          "Die ausgewählte Datei konnte nicht als Action importiert werden. Bitte prüfen Sie das JSON-Format.",
+        level: STATUS_INDICATORS.ERROR,
+      });
+      importedFile.value = null;
+    });
+}
+
 function reset() {
   form.value?.resetValidation();
   dialog.value = false;
   actionTmp.value = getEmptyAction();
   awxAdvancedOptions.value = false;
   selectedAction.value = null;
+  importedFile.value = null;
+  fileImported.value = false;
 }
 
 function save() {

@@ -210,7 +210,7 @@ function mapTemplateToAction(t: any): Action {
     awxLimit: t.limit ?? "",
     awxJobTags: t.job_tags ?? "",
     awxSkipTags: t.skip_tags ?? "",
-    awxExtraVars: t.extra_vars ?? "",
+    awxExtraVars: t.extra_vars?.trim() === "---" ? "" : (t.extra_vars ?? ""),
     awxScmBranch: t.scm_branch ?? "",
     awxVerbosity: t.verbosity ?? 0,
     awxTimeout: t.timeout ?? 0,

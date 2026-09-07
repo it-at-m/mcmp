@@ -47,7 +47,7 @@
     submit-activated
     show-change-warning
     :check-for-enabled-actions="
-      selectedServer.guestConfigFullName?.toLowerCase().includes('linux')
+      isLinux
         ? ['LINUX_MOUNTPOINT_CHANGE']
         : ['WINDOWS_PARTITION_CHANGE']
     "
@@ -85,19 +85,16 @@
         </v-col>
         <v-col
           v-if="
-            ((newCapacityGB -
-              (formatter.calculateBtoGB(mountPoint?.freeSpaceInBytes) +
-                (newCapacityGB -
-                  formatter.calculateBtoGB(mountPoint?.capacityInBytes)))) *
-              100) /
-              newCapacityGB >
-            95
+            !isLinux &&
+            !newMountpoint &&
+            mountPoint != null &&
+            formatter.calculateBtoGB(mountPoint.freeSpaceInBytes) < 5
           "
           cols="12"
         >
           <common-alert type="warning">
             <h4>
-              Es wird empfohlen mindestens 5% freien Speicherplatz zu behalten.
+              Für eine Speichererweiterung müssen min. 5 GB freier Speicherplatz verfügbar sein.
             </h4>
           </common-alert>
         </v-col>
@@ -194,16 +191,8 @@
             v-model="newCapacityGB"
             label="Größe"
             :min="
-              Math.max(
-                Math.ceil(
-                  formatter.calculateBtoGB(mountPoint?.capacityInBytes ?? 0)
-                ),
-                Math.ceil(
-                  formatter.calculateBtoGB(
-                    (mountPoint?.capacityInBytes ?? 0) -
-                      (mountPoint?.freeSpaceInBytes ?? 0)
-                  ) / 0.95
-                )
+              Math.ceil(
+                formatter.calculateBtoGB(mountPoint?.capacityInBytes ?? 0)
               )
             "
             :max="2000"
@@ -219,17 +208,9 @@
             label="Größe in GB"
             type="number"
             :min="
-              Math.max(
-                Math.ceil(
-                  formatter.calculateBtoGB(
-                    mountPoint?.capacityInBytes ?? 1024 ** 3
-                  )
-                ),
-                Math.ceil(
-                  formatter.calculateBtoGB(
-                    (mountPoint?.capacityInBytes ?? 1024 ** 3) -
-                      (mountPoint?.freeSpaceInBytes ?? 0)
-                  ) / 0.95
+              Math.ceil(
+                formatter.calculateBtoGB(
+                  mountPoint?.capacityInBytes ?? 1024 ** 3
                 )
               )
             "
@@ -242,16 +223,13 @@
                     formatter.calculateBtoGB(
                       mountPoint?.capacityInBytes ?? 1024 ** 3
                     )
-                  ) || 'Neue Größe darf nicht kleiner als die alte Größe seien',
-              (v) =>
-                v >=
-                  Math.ceil(
-                    formatter.calculateBtoGB(
-                      (mountPoint?.capacityInBytes ?? 1024 ** 3) -
-                        (mountPoint?.freeSpaceInBytes ?? 0)
-                    ) / 0.95
-                  ) ||
-                'Neue Größe muss mindestens 5% freien Speicherplatz zulassen.',
+                  ) || 'Der neue Wert darf nicht kleiner oder gleich der alten Größe sein',
+              () =>
+                isLinux ||
+                newMountpoint ||
+                (mountPoint != null &&
+                  formatter.calculateBtoGB(mountPoint.freeSpaceInBytes) >= 5) ||
+                'Für eine Speichererweiterung müssen min. 5 GB freier Speicherplatz verfügbar sein',
               (v) => v <= 2000 || 'Neue Größe darf nicht größer 2TB sein.',
             ]"
           />
@@ -283,7 +261,7 @@
 
 <script setup lang="ts">
 import { mdiPencil, mdiPlus } from "@mdi/js";
-import { inject, ref, watch } from "vue";
+import { computed, inject, ref, watch } from "vue";
 
 import CommonAlert from "@/components/common/CommonAlert.vue";
 import CommonDialog from "@/components/common/CommonDialog.vue";
@@ -321,6 +299,10 @@ const mountPoint = ref<MountPoint | null>(null);
 const newCapacityGB = ref(5);
 const newPath = ref("");
 const newVolumeGroup = ref("data");
+
+const isLinux = computed(() =>
+  props.selectedServer.guestConfigFullName?.toLowerCase().includes("linux") ?? false
+);
 
 // Dialog-Status überwachen
 watch(dialog, (newValue) => {

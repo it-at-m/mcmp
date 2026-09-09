@@ -20,7 +20,9 @@
       <template #[`header.storageCategory`]>
         <div class="header-container">
           <v-badge
-            :model-value="selectedCategoryFilters.length !== 0"
+            :model-value="
+              selectedCategoryFilters.length !== 0 || editableFilter !== ''
+            "
             dot
           >
             <div class="filter-buttons">
@@ -55,6 +57,47 @@
                       density="compact"
                     />
                   </v-list-item>
+                  <v-divider class="my-2" />
+                  <v-list-subheader>Bearbeitbarkeit</v-list-subheader>
+                  <v-radio-group
+                    v-model="editableFilter"
+                    hide-details
+                    density="compact"
+                  >
+                    <v-list-item
+                      density="compact"
+                      class="py-0"
+                    >
+                      <v-radio
+                        label="Alle"
+                        value=""
+                        hide-details
+                        density="compact"
+                      />
+                    </v-list-item>
+                    <v-list-item
+                      density="compact"
+                      class="py-0"
+                    >
+                      <v-radio
+                        label="Bearbeitbar"
+                        value="editable"
+                        hide-details
+                        density="compact"
+                      />
+                    </v-list-item>
+                    <v-list-item
+                      density="compact"
+                      class="py-0"
+                    >
+                      <v-radio
+                        label="Nicht bearbeitbar"
+                        value="not-editable"
+                        hide-details
+                        density="compact"
+                      />
+                    </v-list-item>
+                  </v-radio-group>
                 </v-list>
               </v-menu>
             </div>
@@ -186,6 +229,10 @@ const sortBy = ref<SortByEntry[]>([{ key: "name", order: "asc" }]);
 const selected = ref<UnifiedStorageItemList[]>([]);
 const hasMore = ref(true);
 const selectedCategoryFilters = ref<string[]>([]);
+// "" = all, "editable" = only editable, "not-editable" = only non-editable
+const editableFilter = ref<string>(
+  localStorage.getItem("mcmp_storage_editable_filter") || ""
+);
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const allCategories = [
@@ -252,11 +299,15 @@ function normalizeType(type: string) {
   return (type ?? "").trim().toUpperCase();
 }
 
-watch(selectedCategoryFilters, async () => {
+watch([selectedCategoryFilters, editableFilter], async () => {
   currentPage.value = 1;
   await loadItems(1);
   await nextTick();
   tableRef.value?.triggerObserveScroll();
+});
+
+watch(editableFilter, (newVal) => {
+  localStorage.setItem("mcmp_storage_editable_filter", newVal);
 });
 
 function formatStorageCategory(category: string | undefined): string {
@@ -349,6 +400,11 @@ const loadItems = async (page = 1) => {
       ? selectedCategoryFilters.value
       : undefined;
 
+    const editableParam =
+      editableFilter.value === ""
+        ? undefined
+        : editableFilter.value === "editable";
+
     const response = await storageService.getUnifiedStorage(
       loading,
       page - 1,
@@ -356,7 +412,9 @@ const loadItems = async (page = 1) => {
       sortKey,
       sortOrder,
       sanitizedSearch,
-      categoriesParam
+      categoriesParam,
+      false,
+      editableParam
     );
 
     if (page === 1) {

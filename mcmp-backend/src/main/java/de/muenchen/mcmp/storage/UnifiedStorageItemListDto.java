@@ -14,6 +14,7 @@ public class UnifiedStorageItemListDto {
     private StorageCategory storageCategory;
     private String protocol;
     private String appserviceNames;
+    private boolean editable;
     // Explicit @JsonProperty: Lombok's isFavorite() getter would otherwise be inferred by
     // Jackson as bean property "favorite" (stripping the "is" prefix), not "isFavorite".
     @JsonProperty("isFavorite")

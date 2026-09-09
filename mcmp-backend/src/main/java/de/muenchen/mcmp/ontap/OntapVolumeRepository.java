@@ -132,6 +132,15 @@ public interface OntapVolumeRepository extends JpaRepository<OntapVolume, Long> 
     Boolean canUserEditVolume(@Param("uuid") UUID uuid, @Param("username") String username,
                               @Param("isAdmin") boolean isAdmin, @Param("isStorage") boolean isStorage);
 
+    @Query("SELECT v.volumeUuid FROM OntapVolume v " +
+            "WHERE v.volumeUuid IN :uuids " +
+            "AND SIZE(v.appservices) = 1 " +
+            "AND (:isAdmin = TRUE OR :isStorage = TRUE OR EXISTS (" +
+            "   SELECT 1 FROM v.appservices a JOIN a.changeGroup g JOIN g.users u WHERE u.username = :username" +
+            "))")
+    List<UUID> findEditableVolumeUuids(@Param("uuids") List<UUID> uuids, @Param("username") String username,
+                                       @Param("isAdmin") boolean isAdmin, @Param("isStorage") boolean isStorage);
+
     @Modifying
     @Query(value = """
             UPDATE cmp.ontap_volume

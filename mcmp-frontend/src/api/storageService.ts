@@ -17,7 +17,8 @@ export default {
     sortOrder: string,
     search?: string,
     categories?: string[],
-    favorites = false
+    favorites = false,
+    editable?: boolean
   ): Promise<Page<UnifiedStorageItemList>> {
     const params = new URLSearchParams({
       page: page.toString(),
@@ -32,6 +33,10 @@ export default {
 
     if (categories && categories.length > 0) {
       params.append("categories", categories.join(","));
+    }
+
+    if (editable !== undefined) {
+      params.append("editable", editable.toString());
     }
 
     return apiFetch(

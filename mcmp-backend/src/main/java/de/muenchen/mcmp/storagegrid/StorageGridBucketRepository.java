@@ -90,6 +90,15 @@ public interface StorageGridBucketRepository extends JpaRepository<StorageGridBu
     Boolean canUserEditBucket(@Param("id") Long id, @Param("username") String username,
                               @Param("isAdmin") boolean isAdmin, @Param("isStorage") boolean isStorage);
 
+    @Query("SELECT b.id FROM StorageGridBucket b JOIN b.storageGridAccount acc " +
+            "WHERE b.id IN :ids " +
+            "AND SIZE(acc.appservices) = 1 " +
+            "AND (:isAdmin = TRUE OR :isStorage = TRUE OR EXISTS (" +
+            "   SELECT 1 FROM acc.appservices a JOIN a.changeGroup g JOIN g.users u WHERE u.username = :username" +
+            "))")
+    List<Long> findEditableBucketIds(@Param("ids") List<Long> ids, @Param("username") String username,
+                                     @Param("isAdmin") boolean isAdmin, @Param("isStorage") boolean isStorage);
+
     @Modifying
     @Query(value = "UPDATE storagegrid_buckets SET snow_name = :snowName, snow_sys_id = :snowSysId, snow_sys_class = :snowSysClass, updated_at = CURRENT_TIMESTAMP WHERE id = :id", nativeQuery = true)
     void updateSnowFields(@Param("id") Long id, @Param("snowName") String snowName, @Param("snowSysId") String snowSysId, @Param("snowSysClass") String snowSysClass);

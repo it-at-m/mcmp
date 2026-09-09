@@ -17,15 +17,20 @@
         location="bottom"
       >
         <template #activator="{ props: tooltipProps }">
-          <v-btn
-            v-bind="{ ...activatorProps, ...tooltipProps }"
-            icon
-            variant="flat"
-            :disabled="!editable"
-            aria-label="Ressourcen bearbeiten"
+          <span
+            v-bind="tooltipProps"
+            style="display: inline-flex"
           >
-            <v-icon>{{ mdiPencil }}</v-icon>
-          </v-btn>
+            <v-btn
+              v-bind="activatorProps"
+              icon
+              variant="flat"
+              :disabled="!editable"
+              aria-label="Ressourcen bearbeiten"
+            >
+              <v-icon>{{ mdiPencil }}</v-icon>
+            </v-btn>
+          </span>
         </template>
       </v-tooltip>
     </template>
@@ -187,7 +192,8 @@ const editable = computed(
 );
 
 const disabledReason = computed(() => {
-  if (!isEditableCategory.value) return "Nicht bearbeitbar";
+  if (!isEditableCategory.value)
+    return "Nur NFS Standard/Clone/Worm und CIFS Standard/Clone/Worm Typen sind bearbeitbar";
   if (!props.selectedStorageItem.canEdit)
     return "Bearbeitung nur möglich, wenn genau ein Anwendungsservice zugeordnet ist und Sie berechtigt sind.";
   return "Nicht bearbeitbar";

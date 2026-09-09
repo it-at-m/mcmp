@@ -21,8 +21,8 @@ export default {
     &domain=${domain}${customNumber ? `&customNumber=${customNumber}` : ""}`,
       getConfig()
     )
-      .then((response) => {
-        defaultResponseHandler(response);
+      .then(async (response) => {
+        await defaultResponseHandler(response);
         return response.text();
       })
       .finally(() => {
@@ -41,13 +41,10 @@ export default {
       `${getApiBase()}${INFOBLOX_FQDN_BASE}/getFreeDnsEntry?dnsName=${dnsName}&appserviceId=${appserviceId}`,
       getConfig()
     )
-      .then((response) => {
-        defaultResponseHandler(response, false, undefined, true);
-        return response
-          .json()
-          .then((body) =>
-            body && typeof body.dnsEntry === "string" ? body.dnsEntry : ""
-          );
+      .then(async (response) => {
+        await defaultResponseHandler(response, false, undefined, true);
+        const body = await response.json();
+        return body && typeof body.dnsEntry === "string" ? body.dnsEntry : "";
       })
       .finally(() => {
         loading.value = false;

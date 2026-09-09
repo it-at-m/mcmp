@@ -94,13 +94,27 @@
           cols="1"
           class="pt-0 text-right"
         >
-          <v-btn
-            :icon="removedMembers.has(member) ? mdiUndo : mdiDelete"
-            size="small"
-            variant="text"
-            :color="removedMembers.has(member) ? undefined : 'error'"
-            @click="toggleRemove(member)"
-          />
+          <v-tooltip
+            :disabled="canRemove(member)"
+            text="Der letzte verbleibende Member kann nicht entfernt werden. Mindestens ein Member muss im Pool verbleiben."
+            location="bottom"
+          >
+            <template #activator="{ props: tooltipProps }">
+              <span
+                v-bind="tooltipProps"
+                style="display: inline-flex"
+              >
+                <v-btn
+                  :icon="removedMembers.has(member) ? mdiUndo : mdiDelete"
+                  size="small"
+                  variant="text"
+                  :color="removedMembers.has(member) ? undefined : 'error'"
+                  :disabled="!canRemove(member)"
+                  @click="toggleRemove(member)"
+                />
+              </span>
+            </template>
+          </v-tooltip>
         </v-col>
       </v-row>
     </template>
@@ -171,6 +185,14 @@
         class="pt-0 text-error"
       >
         {{ addError }}
+      </v-col>
+    </v-row>
+    <v-row v-if="membersError">
+      <v-col
+        cols="12"
+        class="pt-0 text-error"
+      >
+        {{ membersError }}
       </v-col>
     </v-row>
 
@@ -292,6 +314,7 @@ const addedMembers = ref<AddedMember[]>([]);
 const newServer = ref<ServerList | null>(null);
 const newPort = ref<number | null>(null);
 const addError = ref("");
+const membersError = ref("");
 
 const serverOptions = ref<ServerList[]>([]);
 const serverSearchInput = ref("");
@@ -367,10 +390,32 @@ function addMember() {
   serverOptions.value = [];
 }
 
+const remainingMembersAfterChange = computed(() => {
+  const remainingOriginal = props.pool.members.filter(
+    (m) => !removedMembers.value.has(m)
+  ).length;
+  return remainingOriginal + addedMembers.value.length;
+});
+
+function canRemove(member: LoadbalancerMember): boolean {
+  if (removedMembers.value.has(member)) return true;
+
+  const remainingOriginal = props.pool.members.filter(
+    (m) => !removedMembers.value.has(m)
+  ).length;
+
+  return remainingOriginal - 1 + addedMembers.value.length >= 1;
+}
+
 function toggleRemove(member: LoadbalancerMember) {
+  membersError.value = "";
   if (removedMembers.value.has(member)) {
     removedMembers.value.delete(member);
   } else {
+    if (!canRemove(member)) {
+      membersError.value = "Mindestens ein Member muss im Pool verbleiben.";
+      return;
+    }
     removedMembers.value.add(member);
   }
 }
@@ -378,7 +423,8 @@ function toggleRemove(member: LoadbalancerMember) {
 const canSubmit = computed(
   () =>
     !isManageDisabled.value &&
-    (removedMembers.value.size > 0 || addedMembers.value.length > 0)
+    (removedMembers.value.size > 0 || addedMembers.value.length > 0) &&
+    remainingMembersAfterChange.value > 0
 );
 
 function resetForm() {
@@ -387,6 +433,7 @@ function resetForm() {
   newServer.value = null;
   newPort.value = null;
   addError.value = "";
+  membersError.value = "";
   serverOptions.value = [];
 }
 

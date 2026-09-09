@@ -1498,6 +1498,19 @@ public class JobController {
             }
         }
 
+        final long currentMemberCount = pool.members().size();
+        final long removedMatchingCount = pool.members().stream()
+                .filter(m -> removedList.stream().anyMatch(removed ->
+                        m.ip() != null
+                                && m.ip().equals(removed.get("ip").toString())
+                                && m.port() == Integer.parseInt(removed.get("port").toString())))
+                .count();
+        final long remainingMemberCount = currentMemberCount - removedMatchingCount + addedList.size();
+        if (remainingMemberCount < 1) {
+            logTriedToCreateJob(LOADBALANCER_F5_CHANGE_POOL_MEMBERS, serverId);
+            throw new IllegalArgumentException("At least one member must remain in the pool.");
+        }
+
         logCreatedJob(LOADBALANCER_F5_CHANGE_POOL_MEMBERS, serverId);
         jobService.loadbalancerF5ChangePoolMembers(lbVirtualServerId, poolName, addedList, removedList, LOADBALANCER_F5_CHANGE_POOL_MEMBERS);
     }

@@ -47,9 +47,7 @@
     submit-activated
     show-change-warning
     :check-for-enabled-actions="
-      isLinux
-        ? ['LINUX_MOUNTPOINT_CHANGE']
-        : ['WINDOWS_PARTITION_CHANGE']
+      isLinux ? ['LINUX_MOUNTPOINT_CHANGE'] : ['WINDOWS_PARTITION_CHANGE']
     "
     @dialog-cancel="close"
     @dialog-confirm="save"
@@ -94,7 +92,8 @@
         >
           <common-alert type="warning">
             <h4>
-              Für eine Speichererweiterung müssen min. 5 GB freier Speicherplatz verfügbar sein.
+              Für eine Speichererweiterung müssen min. 5 GB freier Speicherplatz
+              verfügbar sein.
             </h4>
           </common-alert>
         </v-col>
@@ -223,7 +222,8 @@
                     formatter.calculateBtoGB(
                       mountPoint?.capacityInBytes ?? 1024 ** 3
                     )
-                  ) || 'Der neue Wert darf nicht kleiner oder gleich der alten Größe sein',
+                  ) ||
+                'Der neue Wert darf nicht kleiner oder gleich der alten Größe sein',
               () =>
                 isLinux ||
                 newMountpoint ||
@@ -300,8 +300,10 @@ const newCapacityGB = ref(5);
 const newPath = ref("");
 const newVolumeGroup = ref("data");
 
-const isLinux = computed(() =>
-  props.selectedServer.guestConfigFullName?.toLowerCase().includes("linux") ?? false
+const isLinux = computed(
+  () =>
+    props.selectedServer.guestConfigFullName?.toLowerCase().includes("linux") ??
+    false
 );
 
 // Dialog-Status überwachen

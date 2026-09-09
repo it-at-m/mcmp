@@ -317,6 +317,7 @@ class JobControllerValidRequestsTest {
 
     @Test
     void loadbalancerF5ChangePoolMembers_validPayload_succeeds() throws Exception {
+        allowServerEdit();
         when(loadbalancerService.canUserEditLoadbalancer(anyLong())).thenReturn(true);
         when(loadbalancerService.getLoadbalancerById(anyLong())).thenReturn(
                 UnifiedLoadbalancer.builder()
@@ -327,7 +328,7 @@ class JobControllerValidRequestsTest {
                                 .build()))
                         .build());
         perform("LOADBALANCER_F5_CHANGE_POOL_MEMBERS",
-                "{\"lb_virtual_server_id\":123,\"pool_name\":\"pool1\",\"removed\":[{\"ip\":\"10.0.0.1\",\"port\":443}]}");
+                "{\"lb_virtual_server_id\":123,\"pool_name\":\"pool1\",\"added\":[{\"server_id\":1001,\"port\":443}]}");
     }
 
     @Test

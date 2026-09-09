@@ -58,7 +58,7 @@ public class SnapshotDTOTest {
     void testRetentionPeriodSimpleOffset() {
         assertEquals(
                 datetime("2026-01-01 12:00"),
-                new SnapshotDTO("MCMP#name###12###", null, datetime("2026-01-01 00:00"), null, null, null)
+                new SnapshotDTO("MCMP_name___12___", null, datetime("2026-01-01 00:00"), null, null, null)
                         .retentionTime()
         );
     }
@@ -67,7 +67,7 @@ public class SnapshotDTOTest {
     void testRetentionPeriodOffsetLooksLikeDateButIsNot() {
         assertEquals(
                 datetime("2027-01-01 00:00"),
-                new SnapshotDTO("MCMP#name###00008760###", null, datetime("2026-01-01 00:00"), null, null, null)
+                new SnapshotDTO("MCMP_name___00008760___", null, datetime("2026-01-01 00:00"), null, null, null)
                         .retentionTime()
         );
     }
@@ -76,7 +76,7 @@ public class SnapshotDTOTest {
     void testRetentionPeriodDate() {
         assertEquals(
                 datetime("2026-01-31 00:00"),
-                new SnapshotDTO("MCMP#name###20260131###", null, datetime("2026-01-01 00:00"), null, null, null)
+                new SnapshotDTO("MCMP_name___20260131___", null, datetime("2026-01-01 00:00"), null, null, null)
                         .retentionTime()
         );
     }

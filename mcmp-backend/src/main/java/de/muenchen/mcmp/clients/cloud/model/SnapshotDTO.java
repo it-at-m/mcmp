@@ -75,11 +75,11 @@ public record SnapshotDTO(
      * <p>The following formats are recognized:</p>
      * <ul>
      *   <li>
-     *     <code>###YYYYMMDD###</code>, where Y, M and D are digits, is
+     *     <code>___YYYYMMDD___</code>, where Y, M and D are digits, is
      *     parsed as the date YYYY-MM-DD.
      *   </li>
      *   <li>
-     *     <code>###n###</code>, where n is any other number, is parsed
+     *     <code>___n___</code>, where n is any other number, is parsed
      *     as an offset from the creation date of n hours.
      *   </li>
      *   <li>
@@ -92,7 +92,7 @@ public record SnapshotDTO(
      */
     public OffsetDateTime retentionTime() {
         try {
-            final var retention = StringUtils.substringBetween(name, "###");
+            final var retention = StringUtils.substringBetween(name, "___");
             try {
                 return LocalDate.parse(retention, DateTimeFormatter.ofPattern("yyyyMMdd"))
                         .atTime(0, 0)

@@ -1,6 +1,5 @@
 <template>
   <common-dialog
-    v-if="canManagePool"
     v-model="dialog"
     title="Pool-Member bearbeiten"
     :icon="mdiPencil"
@@ -257,11 +256,10 @@ import type {
 import type { ServerList } from "@/types/ServerList";
 
 import { mdiDelete, mdiPencil, mdiUndo } from "@mdi/js";
-import { computed, inject, onMounted, ref } from "vue";
+import { computed, inject, ref } from "vue";
 
 import jobService from "@/api/jobService";
 import serverService from "@/api/serverService";
-import testenvService from "@/api/testenvService";
 import CommonDialog from "@/components/common/CommonDialog.vue";
 import { isCapPool } from "@/util/loadbalancerPool";
 
@@ -277,16 +275,6 @@ const unregisterOpenDialog = inject<() => void>("unregisterOpenDialog");
 
 const dialog = ref(false);
 const loading = ref(false);
-const testEnv = ref(false);
-const loadingTestEnv = ref(false);
-
-onMounted(() => {
-  testenvService.getTestEnabled(loadingTestEnv).then((enabled) => {
-    testEnv.value = enabled;
-  });
-});
-
-const canManagePool = computed(() => testEnv.value);
 
 const allMembersHaveNameAndIp = computed(() =>
   props.pool.members.every((member) => !!member.serverName && !!member.ip)

@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.exc.ValueInstantiationException;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,7 +21,7 @@ public class ServerDTOTest {
         return minimalJSON(new HashMap<>());
     }
 
-    private static String minimalJSON(Map<String, String> extraAttrs) {
+    private static String minimalJSON(Map<String, Object> extraAttrs) {
         final var attrs = new HashMap<>(extraAttrs);
         attrs.putIfAbsent("uuid", "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA");
         return MAPPER.writeValueAsString(attrs);
@@ -79,6 +80,24 @@ public class ServerDTOTest {
         assertEquals(ServerStatusType.gray, server.overallStatus());
         assertEquals(ServerStatusType.gray, server.configStatus());
 
+        assertEquals(List.of(), server.snapshots());
+    }
+
+    @Test
+    void testDeserializeExplicitNullAttribute() {
+        final var attrs = new HashMap<String, Object>();
+        attrs.put("memory_mb", null);
+        final var json = minimalJSON(attrs);
+        final var server = MAPPER.readValue(json, ServerDTO.class);
+        assertEquals(0, server.memoryMB());
+    }
+
+    @Test
+    void testDeserializeExplicitNullInListAttribute() {
+        final var snapshots = new ArrayList<SnapshotDTO>();
+        snapshots.add(null);
+        final var json = minimalJSON(Map.of("snapshots", snapshots));
+        final var server = MAPPER.readValue(json, ServerDTO.class);
         assertEquals(List.of(), server.snapshots());
     }
 

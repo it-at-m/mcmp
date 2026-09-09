@@ -89,7 +89,7 @@ public record ServerDTO(
         @JsonProperty("mount_points") List<MountPointDTO> mountPoints,
         @JsonProperty("nics") List<NicDTO> nics,
         @JsonProperty("snapshots") List<SnapshotDTO> snapshots
-        ) {
+) {
     public ServerDTO {
         if (uuid == null)
             throw new NullPointerException("a server UUIDs is required.");
@@ -116,10 +116,15 @@ public record ServerDTO(
         if (cpuHotRemoveEnabled == null) cpuHotRemoveEnabled = false;
         if (overallStatus == null) overallStatus = ServerStatusType.gray;
         if (configStatus == null) configStatus = ServerStatusType.gray;
+
         if (disks == null) disks = Collections.emptyList();
+        else disks.removeIf(Objects::isNull);
         if (mountPoints == null) mountPoints = Collections.emptyList();
+        else mountPoints.removeIf(Objects::isNull);
         if (nics == null) nics = Collections.emptyList();
+        else nics.removeIf(Objects::isNull);
         if (snapshots == null) snapshots = Collections.emptyList();
+        else snapshots.removeIf(Objects::isNull);
     }
 
     /**

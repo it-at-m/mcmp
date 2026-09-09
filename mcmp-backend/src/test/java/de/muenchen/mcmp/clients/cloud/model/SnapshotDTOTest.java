@@ -88,6 +88,5 @@ public class SnapshotDTOTest {
                 new SnapshotDTO("freeform", null, datetime("2026-01-01 00:00"), null, null, null)
                         .retentionTime()
         );
-
     }
 }

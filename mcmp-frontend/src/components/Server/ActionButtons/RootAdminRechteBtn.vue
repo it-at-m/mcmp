@@ -108,7 +108,17 @@
         ]"
         @input="tryValidation"
       ></v-text-field>
+
+      <!-- Textbox / Hinweisbox bei Windows und anderem Benutzer -->
+      <common-alert
+        v-if="isOtherUser && isWindowsSystem"
+        color="info"
+        class="mt-2"
+      >
+        Hinweis: .admin Accounts werden nicht unterstützt.
+      </common-alert>
     </v-form>
+
     <!-- Link Section -->
     <div
       v-if="confirmDialogLink"
@@ -164,7 +174,7 @@
 
 <script setup lang="ts">
 import { mdiOpenInNew } from "@mdi/js";
-import { inject, ref } from "vue";
+import { computed, inject, ref } from "vue";
 
 import jobService from "@/api/jobService";
 import CommonAlert from "@/components/common/CommonAlert.vue";
@@ -202,6 +212,24 @@ const otherUsername = ref("");
 const form = ref<HTMLFormElement>();
 const validated = ref(true);
 const rules = useRules();
+
+const isWindowsSystem = computed(() => {
+  if (props.server) {
+    return (props.server.os || "").toLowerCase().includes("windows");
+  }
+  if (props.jobToCall) {
+    return props.jobToCall.toUpperCase().includes("WINDOWS");
+  }
+  if (props.isBatchOperation && props.selectedServers?.length) {
+    const ids = props.selectedServerIds ?? [];
+    return props.selectedServers.some(
+      (s) =>
+        (!ids.length || ids.includes(s.id)) &&
+        (s.os || "").toLowerCase().includes("windows")
+    );
+  }
+  return false;
+});
 
 function tryValidation() {
   if (!isOtherUser.value) {
@@ -274,13 +302,6 @@ function makeJobCall() {
 
   // format duration in awx format e.g. 3 days or 72 hours
   const duration = "3 days";
-  /*if (rootUntilDate.value) {
-    const today = new Date();
-    const until = new Date(rootUntilDate.value);
-    const diffMs = until.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-    duration = `${diffDays} days`;
-  }*/
 
   jobService
     .startJob(loading, props.jobToCall, props.server!.id, {

@@ -8,6 +8,7 @@
         v-bind="props"
         :model-value="inputValue"
         :label="label"
+        :rounded="rounded"
         :prepend-inner-icon="mdiCalendar"
         :variant="variant"
         :density="density"
@@ -45,6 +46,7 @@ type DensityType = "default" | "comfortable" | "compact";
 interface Props {
   modelValue: string | Date | null;
   label: string;
+  rounded?: boolean;
   variant?: VariantType;
   density?: DensityType;
   clearable?: boolean;

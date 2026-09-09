@@ -203,7 +203,10 @@ public class JobController {
             @RequestParam(value = "itemsPerPage", defaultValue = "10") int itemsPerPage,
             @RequestParam(value = "sortBy", required = false) final String sortBy,
             @RequestParam(value = "sortDesc", defaultValue = "false") final boolean sortDesc,
-            @PathVariable("appserviceId") final Long appserviceId
+            @RequestParam(value = "searchText", required = false) final String searchText,
+            @RequestParam(value = "createdFrom", required = false) final String createdFrom,
+            @RequestParam(value = "createdTo", required = false) final String createdTo,
+            @PathVariable final Long appserviceId
     ) {
         if (page < 1) {
             page = 1;
@@ -211,7 +214,10 @@ public class JobController {
         if (itemsPerPage < 1 || itemsPerPage > 100) {
             itemsPerPage = 10;
         }
-        return jobService.findAllJobsByRole(page, itemsPerPage, sortBy, sortDesc, null, null, null, null, null, null, null, null, appserviceId, null, null, null);
+        final Instant createdFromInstant = createdFrom != null && !createdFrom.isBlank() ? Instant.parse(createdFrom) : null;
+        final Instant createdToInstant = createdTo != null && !createdTo.isBlank() ? Instant.parse(createdTo) : null;
+        return jobService.findAllJobsByRole(page, itemsPerPage, sortBy, sortDesc, null, null, createdFromInstant, createdToInstant,
+                null, null, null, null, appserviceId, null, null, null, null, null, null, null, null, searchText);
     }
 
     @HasUserOrSpecialRole

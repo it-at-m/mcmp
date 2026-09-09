@@ -208,7 +208,7 @@ function fetchErrorLogs() {
     ? errorLogService.searchByReference(loading, reference)
     : errorLogService.getErrorLogs(
         loading,
-        currentPage.value - 1,
+        (currentPage.value - 1) * itemsPerPage.value,
         itemsPerPage.value
       );
 

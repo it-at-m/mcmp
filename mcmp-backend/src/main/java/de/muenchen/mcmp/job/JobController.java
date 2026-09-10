@@ -1370,19 +1370,12 @@ public class JobController {
         if (monitors.isEmpty()) {
             throw new IllegalArgumentException("At least one monitor is required.");
         }
-        boolean serversideTls = Boolean.TRUE.equals(listener.get("serverside_tls"));
         java.util.regex.Pattern monitorPathPattern = java.util.regex.Pattern.compile("^/(?!/)[^?#\\s]*(?:\\?[^#\\s]*)?(?:#\\S*)?$");
         for (Object monitorObj : monitors) {
             if (monitorObj instanceof Map<?, ?> monitor) {
                 String monitorType = monitor.get("type") != null ? monitor.get("type").toString() : "";
                 if (!List.of("http", "https").contains(monitorType)) {
                     throw new IllegalArgumentException("Invalid monitor type: " + monitorType);
-                }
-                if (serversideTls && "http".equals(monitorType)) {
-                    throw new IllegalArgumentException("Monitor type 'http' is not allowed when server pool protocol is 'https'.");
-                }
-                if (!serversideTls && "https".equals(monitorType)) {
-                    throw new IllegalArgumentException("Monitor type 'https' is not allowed when server pool protocol is 'http'.");
                 }
                 Object path = monitor.get("path");
                 if (path == null || path.toString().isBlank()) {

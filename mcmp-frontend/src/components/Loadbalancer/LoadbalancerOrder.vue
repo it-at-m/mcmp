@@ -191,7 +191,7 @@ function createDefaultLoadbalancerOrder(): LoadbalancerOrder {
             method: "GET",
             path: "/status",
             headers: { Host: "example.muenchen.de" },
-            receive_string: "200 OK",
+            receive_string: "200",
           },
         ],
         loadbalancing_mode: "round-robin",

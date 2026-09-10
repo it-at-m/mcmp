@@ -65,6 +65,7 @@ public record SnapshotDTO(
         final Snapshot snapshot = new Snapshot();
         snapshot.setSnapshotId(Math.abs(name.hashCode()));
         snapshot.setServerId(server.getId());
+        snapshot.setName(name);
         applyChanges(snapshot);
         return snapshot;
     }

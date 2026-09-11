@@ -67,25 +67,27 @@
         ]"
         :counter="50"
       />
-      <common-alert
-        v-if="withShutdown"
-        color="notice_red"
-      >
-        <h4>Hinweis:</h4>
-        Vor der Erstellung des Snapshots wird der Server heruntergefahren um
-        eine mögliche Dateninkonsistenz zu vermeiden. Dadurch kommt es zu einer
-        kurzen Downtime. Nach der Erstellung wird der Server automatisch wieder
-        hochgefahren.
-      </common-alert>
-      <common-alert
-        v-if="!withShutdown"
-        color="notice_red"
-      >
-        <h4>Hinweis:</h4>
-        Vor der Erstellung des Snapshots wird der Server
-        <strong>NICHT</strong> heruntergefahren. Dies kann es zu einer möglichen
-        Dateninkonsistenz führen.
-      </common-alert>
+      <div v-if="serverPowerOnInDialog">
+        <common-alert
+          v-if="withShutdown"
+          color="notice_red"
+        >
+          <h4>Hinweis:</h4>
+          Vor der Erstellung des Snapshots wird der Server heruntergefahren um
+          eine mögliche Dateninkonsistenz zu vermeiden. Dadurch kommt es zu
+          einer kurzen Downtime. Nach der Erstellung wird der Server automatisch
+          wieder hochgefahren.
+        </common-alert>
+        <common-alert
+          v-if="!withShutdown"
+          color="notice_red"
+        >
+          <h4>Hinweis:</h4>
+          Vor der Erstellung des Snapshots wird der Server
+          <strong>NICHT</strong> heruntergefahren. Dies kann es zu einer
+          möglichen Dateninkonsistenz führen.
+        </common-alert>
+      </div>
     </v-form>
   </common-dialog>
 </template>

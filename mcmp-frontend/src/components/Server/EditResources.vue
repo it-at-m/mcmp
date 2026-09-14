@@ -64,7 +64,7 @@
           <common-alert color="notice_red">
             <h4>Hinweis:</h4>
             Die Speicherparameter der DB werden erst in der darauffolgenden
-            Nacht angepasst. Hierfür ist ein neustart der DB notwendig.
+            Nacht angepasst. Hierfür ist ein Neustart der DB notwendig.
           </common-alert>
         </v-col>
         <v-col
@@ -93,40 +93,20 @@
             <h4>Hinweis:</h4>
             Bei der Anpassung der Ressourcen kommt es zu einer
             Serviceunterbrechung.
-
-            <!--- v-if="(ram > formatter.calculateMBtoGB(server.memoryMb) || cpus > server.numCpu) && (server.memoryHotAddEnabled && server.cpuHotAddEnabled) ||
-            (ram > formatter.calculateMBtoGB(server.memoryMb) && cpus == server.numCpu) && (server.memoryHotAddEnabled) ||
-            (ram == formatter.calculateMBtoGB(server.memoryMb) && cpus > server.numCpu) && (server.cpuHotAddEnabled)
-            ">Bei der Anpassung der Ressourcen ist keine Downtime notwendig. --->
           </common-alert>
           <v-col cols="12"></v-col>
         </v-col>
-        <v-col
-          v-if="
-            !rightsize &&
-            ((ram >= 100 &&
-              (formatter.calculateMBtoGB(server.memoryMb) < 100 ||
-                ram > formatter.calculateMBtoGB(server.memoryMb))) ||
-              (cpus >= 72 && (server.numCpu < 72 || cpus > server.numCpu)))
-          "
-          cols="12"
-        >
-          <common-alert color="notice_red">
-            <div class="links">
-              <h4>Hinweis:</h4>
-              Zur Ressourcenerweiterung über die maximalen Werte von 72 CPUs
-              und/oder 100 GB RAM bitte
-              <a
-                href="https://it-services.muenchen.de/sp?id=sc_cat_item&sys_id=f2385ce61b76a050e52dfddacd4bcb3e"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Ticket
-              </a>
-              an IBS48 Linux-Server oder IBS49 Windows-Server
-            </div>
+
+        <!-- Hinweis bei Überschreitung der Grenzwerte -->
+        <v-col v-if="cpus > 72 || ram > 100" cols="12">
+          <common-alert color="info">
+            <h4>Hinweis:</h4>
+            Bei mehr als 72 CPUs und/oder 100GB RAM wird ein Change bei IBS4
+            eröffnet. Nach Prüfung und möglicher Freigabe erfolgt die Anpassung
+            automatisiert.
           </common-alert>
         </v-col>
+
         <v-col cols="6">
           <linear-progress-with-colors
             v-if="server.cpuUtil != null"
@@ -150,61 +130,59 @@
             :show-percentage="true"
           />
         </v-col>
+
+        <!-- CPU Slider: Bis 128 dimensioniert (oder höher, falls Server bereits mehr hat) -->
         <v-col cols="6">
           <v-slider
             v-model="cpus"
             label="CPU"
             :min="1"
-            :max="server.numCpu > 72 ? server.numCpu : 72"
+            :max="server.numCpu > 128 ? server.numCpu : 128"
             step="1"
             :disabled="!isNonOracleUser && (server.dbAdabas || server.dbMssql)"
           />
         </v-col>
+
+        <!-- RAM Slider: Bis 256 GB dimensioniert (oder höher, falls Server bereits mehr hat) -->
         <v-col cols="6">
           <v-slider
             v-model="ram"
             label="RAM (GB)"
             :min="2"
-            :max="currentRam > 100 ? currentRam : 100"
+            :max="currentRam > 256 ? currentRam : 256"
             step="1"
           />
         </v-col>
+
+        <!-- CPU Textfeld: Nur Mindestwert (1), keine Begrenzung nach oben -->
         <v-col cols="6">
           <v-text-field
             v-model="cpus"
             label="Anzahl CPUs"
             type="number"
             :min="1"
-            :max="server.numCpu > 72 ? server.numCpu : 72"
             step="1"
             :rules="[
               (v) => v >= 1 || 'CPU darf nicht kleiner 1 sein.',
-              (v) =>
-                v <= (server.numCpu > 72 ? server.numCpu : 72) ||
-                'CPU darf nicht größer ' +
-                  (server.numCpu > 72 ? server.numCpu : 72) +
-                  ' sein.',
             ]"
             :disabled="!isNonOracleUser && (server.dbAdabas || server.dbMssql)"
           />
         </v-col>
+
+        <!-- RAM Textfeld: Nur Mindestwert (2 GB), keine Begrenzung nach oben -->
         <v-col cols="6">
           <v-text-field
             v-model="ram"
             label="Arbeitsspeicher (GB)"
             type="number"
             :min="2"
-            :max="currentRam > 100 ? currentRam : 100"
+            step="1"
             :rules="[
               (v) => v >= 2 || 'RAM darf nicht kleiner 2 sein.',
-              (v) =>
-                v <= (currentRam > 100 ? currentRam : 100) ||
-                'RAM darf nicht größer ' +
-                  (currentRam > 100 ? currentRam : 100) +
-                  ' sein.',
             ]"
           />
         </v-col>
+
         <v-col cols="12">
           <v-checkbox
             v-model="schedule"

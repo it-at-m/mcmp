@@ -107,6 +107,9 @@ public class JobController {
     public static final String STORAGE_DELETE_SNAPSHOT_CIFS = "STORAGE_DELETE_SNAPSHOT_CIFS";
     public static final String STORAGE_CHANGE_SNAPSHOT_POLICY_NFS = "STORAGE_CHANGE_SNAPSHOT_POLICY_NFS";
     public static final String STORAGE_CHANGE_SNAPSHOT_POLICY_CIFS = "STORAGE_CHANGE_SNAPSHOT_POLICY_CIFS";
+    public static final String LINUX_DISK_UPGRADE = "LINUX_DISK_UPGRADE";
+    public static final String WINDOWS_DISK_UPGRADE = "WINDOWS_DISK_UPGRADE";
+    public static final String VM_RESSOURCE_UPGRADE = "VM_RESSOURCE_UPGRADE";
 
     @HasUserOrSpecialRole
     @GetMapping("/{jobId}/hierarchy")
@@ -367,42 +370,54 @@ public class JobController {
         jobService.restartServer(serverId, RESTART_SERVER, scheduleTime);
     }
 
-    @PostMapping("/create/" + CHANGE_CPU_RAM)
-    public void vmwareChangeCpuRam(@RequestParam(name = "serverId") final Long serverId,
+    @PostMapping({
+            "/create/{cloudPrefix}" + CHANGE_CPU_RAM,
+            "/create/{cloudPrefix}" + VM_RESSOURCE_UPGRADE
+    })
+    public void vmwareChangeCpuRam(@PathVariable(name = "cloudPrefix") final String cloudPrefix,
+                                   @RequestParam(name = "serverId") final Long serverId,
                                    @RequestBody final Map<String, Object> awxExtraVars) {
+
+        // 1. Rechteprüfung zwingend an erster Stelle
         if (!serverService.canUserEditServer(serverId)) {
-            logTriedToCreateJob(CHANGE_CPU_RAM, serverId);
+            logTriedToCreateJob(cloudPrefix + CHANGE_CPU_RAM, serverId);
             throw new AccessDeniedException("You are not allowed to create a job for this server.");
         }
 
+        // 2. Server- & Patchnight-Prüfung
         ServerFullDTO server = serverService.getServerById(serverId);
 
         Instant scheduleTime = parseOptionalScheduleTime(awxExtraVars.get("scheduleTime"));
         Object schedulePatchnightObj = awxExtraVars.get("schedulePatchnight");
         boolean schedulePatchnight = schedulePatchnightObj != null && Boolean.parseBoolean(schedulePatchnightObj.toString());
 
-        if (schedulePatchnight && !server.patchnightIncluded()){
+        if (schedulePatchnight && (server == null || !Boolean.TRUE.equals(server.patchnightIncluded()))) {
             log.warn("Schedule request by user: {} for serverId: {} can't be accomplished because no participation in the patchnight.", AuthUtils.getUsername(), serverId);
             throw new IllegalArgumentException("Can't set a schedule because no participation in the patchnight.");
         }
 
-        // Validate awxExtraVars for CPU and RAM
+        // 3. Parameter auslesen und validieren
         Object cpuObj = awxExtraVars.get("cpu");
         Object ramObj = awxExtraVars.get("ram");
         if (cpuObj == null || ramObj == null) {
             log.info("CPU or RAM values not provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
-            throw new MissingFormatArgumentException("CPU and RAM values must be provided.");
+            throw new IllegalArgumentException("CPU and RAM values must be provided.");
         }
+
         int cpu = Integer.parseInt(cpuObj.toString());
         int ram = Integer.parseInt(ramObj.toString());
 
-        if (cpu < 1 || (cpu > 72 && cpu > server.numCpu()) || ram < 2 || (ram > 72 && ram > server.memoryMb()*1024)) {
+        if (cpu < 1 || ram < 2) {
             log.warn("Invalid CPU or RAM values provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
-            throw new IllegalArgumentException("CPU must be between 1 and 72, RAM must be between 2 and 100.");
+            throw new IllegalArgumentException("CPU must be at least 1, RAM must be at least 2 GB.");
         }
 
-        logCreatedJob(CHANGE_CPU_RAM, serverId);
-        jobService.changeCpuRam(serverId, CHANGE_CPU_RAM, cpu, ram, scheduleTime, schedulePatchnight);
+        // 4. Nur das von den Schwellenwerten abhängige Suffix ermitteln
+        String actionSuffix = (ram > 100 || cpu > 72) ? VM_RESSOURCE_UPGRADE : CHANGE_CPU_RAM;
+
+        // 5. Job anlegen – Der JobService ermittelt die Cloud des Servers und baut den vollständigen Action-Namen
+        logCreatedJob(actionSuffix, serverId);
+        jobService.changeCpuRam(serverId, actionSuffix, cpu, ram, scheduleTime, schedulePatchnight);
     }
 
     @PostMapping("/create/" + CREATE_SNAPSHOT)
@@ -671,15 +686,11 @@ public class JobController {
         jobService.linuxTempRootOneServerOnly(serverId, LINUX_TEMP_ROOT, duration, otherUsername);
     }
 
-    @PostMapping("/create/" + LINUX_MOUNTPOINT_CHANGE)
+    @PostMapping({"/create/" + LINUX_MOUNTPOINT_CHANGE, "/create/" + LINUX_DISK_UPGRADE})
     public void linuxMountpointChange(@RequestParam(name = "serverId") final Long serverId,
                                       @RequestBody final Map<String, Object> awxExtraVars) {
-        if (!serverService.canUserEditServer(serverId)) {
-            logTriedToCreateJob(LINUX_MOUNTPOINT_CHANGE, serverId);
-            throw new AccessDeniedException("You are not allowed to create a job for this server.");
-        }
 
-        // Validate awxExtraVars
+        // 1. Validate awxExtraVars
         Object mountPointObj = awxExtraVars.get("mountPoint");
         Object newSizeObj = awxExtraVars.get("newSize");
         Object volumeGroupObj = awxExtraVars.get("volumeGroup");
@@ -694,6 +705,16 @@ public class JobController {
         String logicalName = "";
         String volumeGroup = volumeGroupObj != null ? volumeGroupObj.toString() : "";
 
+        // Action Name dynamisch anhand der Größe bestimmen
+        String actionName = newSize > 2000 ? LINUX_DISK_UPGRADE : LINUX_MOUNTPOINT_CHANGE;
+
+        // 2. Rechteprüfung
+        if (!serverService.canUserEditServer(serverId)) {
+            logTriedToCreateJob(actionName, serverId);
+            throw new AccessDeniedException("You are not allowed to create a job for this server.");
+        }
+
+        // 3. Pfad & VolumeGroup Validierung
         if (mountPointPath.length() > 50) {
             log.warn("Invalid lenth of Mountpoint path lengs had provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
             throw new AccessDeniedException("New Mountpoint path is too long (max 50 characters).");
@@ -720,11 +741,12 @@ public class JobController {
             throw new AccessDeniedException("This mountpoint is not editable and cannot be changed.");
         }
 
+        // 4. Größenvalidierung (Obergrenze >2000 entfernt)
         if (!volumeGroup.isEmpty()) {
             logicalName = mountPointPath.substring(mountPointPath.lastIndexOf('/') + 1);
-            if (newSize < 1 || newSize > 2000) {
+            if (newSize < 1) {
                 log.warn("Invalid size provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
-                throw new IllegalArgumentException("New Size must be between 1 and 2000 GB.");
+                throw new IllegalArgumentException("New Size must be at least 1 GB.");
             }
         }
         else {
@@ -732,16 +754,15 @@ public class JobController {
                 log.warn("Mountpoint {} not found for serverId: {} requested by user: {}", mountPointPath, serverId, AuthUtils.getUsername());
                 throw new IllegalArgumentException("Mountpoint not found.");
             }
-            if (newSize < (existingMountPoint.capacityInBytes() / (1024 * 1024 * 1024)) ||
-                    newSize > 2000) {
+            if (newSize < (existingMountPoint.capacityInBytes() / (1024 * 1024 * 1024))) {
                 log.warn("Invalid size provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
-                throw new IllegalArgumentException("New Size could not be smaller then the old size and not bigger then 2000 GB.");
+                throw new IllegalArgumentException("New Size could not be smaller then the old size.");
             }
         }
 
-        logCreatedJob(LINUX_MOUNTPOINT_CHANGE, serverId);
+        logCreatedJob(actionName, serverId);
 
-        jobService.linuxMountpointChange(serverId, LINUX_MOUNTPOINT_CHANGE, mountPointPath, newSize, logicalName, volumeGroup);
+        jobService.linuxMountpointChange(serverId, actionName, mountPointPath, newSize, logicalName, volumeGroup);
     }
 
     @PostMapping("/create/" + LINUX_RHEL10_SERVER)
@@ -910,15 +931,11 @@ public class JobController {
         jobService.windowsTempAdminOneServerOnly(serverId, WINDOWS_TEMP_ADMIN, otherUsername);
     }
 
-    @PostMapping("/create/" + WINDOWS_PARTITION_CHANGE)
+    @PostMapping({"/create/" + WINDOWS_PARTITION_CHANGE, "/create/" + WINDOWS_DISK_UPGRADE})
     public void windowsPartitionChange(@RequestParam(name = "serverId") final Long serverId,
                                        @RequestBody final Map<String, Object> awxExtraVars) {
-        if (!serverService.canUserEditServer(serverId)) {
-            logTriedToCreateJob(WINDOWS_PARTITION_CHANGE, serverId);
-            throw new AccessDeniedException("You are not allowed to create a job for this server.");
-        }
 
-        // Validate awxExtraVars
+        // 1. Validate awxExtraVars
         Object partitionObj = awxExtraVars.get("partition");
         Object newSizeObj = awxExtraVars.get("newSize");
 
@@ -930,6 +947,16 @@ public class JobController {
         String partition = partitionObj.toString();
         int newSize = Integer.parseInt(newSizeObj.toString());
 
+        // Action Name dynamisch anhand der Größe bestimmen
+        String actionName = newSize > 2000 ? WINDOWS_DISK_UPGRADE : WINDOWS_PARTITION_CHANGE;
+
+        // 2. Rechteprüfung
+        if (!serverService.canUserEditServer(serverId)) {
+            logTriedToCreateJob(actionName, serverId);
+            throw new AccessDeniedException("You are not allowed to create a job for this server.");
+        }
+
+        // 3. Partition Prüfungen
         MountPointDTO existingPartition = mountPointService.getMountPointByServerIdAndPath(serverId, partition);
         if (existingPartition == null) {
             log.warn("Partition {} not found for serverId: {} requested by user: {}", partition, serverId, AuthUtils.getUsername());
@@ -940,10 +967,18 @@ public class JobController {
             throw new AccessDeniedException("This partition is not editable and cannot be changed.");
         }
 
-        if (newSize < (existingPartition.capacityInBytes() / (1024 * 1024 * 1024)) ||
-                newSize > 2000) {
+        // --- ANPASSUNG DTO: freeSpaceInBytes() statt freeBytes() verwenden ---
+        long minFreeBytes = 5L * 1024 * 1024 * 1024; // 5 GB in Bytes
+        if (existingPartition.freeSpaceInBytes() == null || existingPartition.freeSpaceInBytes() < minFreeBytes) {
+            log.warn("Not enough free space on partition {} for serverId: {}. User: {}", partition, serverId, AuthUtils.getUsername());
+            throw new IllegalArgumentException("There must be at least 5 GB of free space on the partition to initiate a change.");
+        }
+
+        // --- ANPASSUNG: <= statt < prüfen, damit auch die gleiche Größe abgelehnt wird ---
+        long currentCapacityGb = existingPartition.capacityInBytes() / (1024 * 1024 * 1024);
+        if (newSize <= currentCapacityGb) {
             log.warn("Invalid size provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
-            throw new IllegalArgumentException("New Size could not be smaller then the old size and not bigger then 2000 GB.");
+            throw new IllegalArgumentException("New Size must be greater than current size.");
         }
 
         if (!snapshotService.getSnapshotsByServerId(serverId).isEmpty()) {
@@ -951,9 +986,9 @@ public class JobController {
             throw new AccessDeniedException("Can't change size of partition. Please remove the snapshot first and try it again.");
         }
 
-        logCreatedJob(WINDOWS_PARTITION_CHANGE, serverId);
+        logCreatedJob(actionName, serverId);
 
-        jobService.windowsPartitionChange(serverId, WINDOWS_PARTITION_CHANGE, partition, newSize);
+        jobService.windowsPartitionChange(serverId, actionName, partition, newSize);
     }
 
     @PostMapping("/create/" + WINDOWS_MAINTENANCE_MODE)

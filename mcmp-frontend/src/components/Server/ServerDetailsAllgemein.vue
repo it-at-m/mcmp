@@ -628,7 +628,18 @@ function change_cpu_ram(
   scheduleTime: string | null,
   schedulePatchnight: boolean
 ) {
-  jobService.startJob(loading, "CHANGE_CPU_RAM", props.selectedServer.id, {
+  let actionSuffix = "CHANGE_CPU_RAM";
+
+  if (ram > 100 || cpus > 72) {
+    actionSuffix = "VM_RESSOURCE_UPGRADE";
+  }
+
+  const cloudPrefix = props.selectedServer.cloud?.cloudType
+    ? `${props.selectedServer.cloud.cloudType}_`
+    : "";
+  const actionName = `${cloudPrefix}${actionSuffix}`;
+
+  jobService.startJob(loading, actionName, props.selectedServer.id, {
     cpu: cpus,
     ram: ram,
     scheduleTime: scheduleTime != null ? scheduleTime : undefined,

@@ -269,9 +269,14 @@ function editMountPoint(
   if (
     props.selectedServer?.guestConfigFullName?.toLowerCase().includes("linux")
   ) {
+    const actionName =
+      newCapacityGB > 2000
+        ? "LINUX_DISK_UPGRADE"
+        : "LINUX_MOUNTPOINT_CHANGE";
+
     jobService.startJob(
       jobLoading,
-      "LINUX_MOUNTPOINT_CHANGE",
+      actionName,
       props.selectedServer.id,
       {
         mountPoint: mountPoint.diskPath,
@@ -283,9 +288,14 @@ function editMountPoint(
   if (
     props.selectedServer?.guestConfigFullName?.toLowerCase().includes("windows")
   ) {
+    const actionName =
+      newCapacityGB > 2000
+        ? "WINDOWS_DISK_UPGRADE"
+        : "WINDOWS_PARTITION_CHANGE";
+
     jobService.startJob(
       jobLoading,
-      "WINDOWS_PARTITION_CHANGE",
+      actionName,
       props.selectedServer.id,
       {
         partition: mountPoint.diskPath,

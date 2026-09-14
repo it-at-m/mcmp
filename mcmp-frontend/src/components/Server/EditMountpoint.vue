@@ -54,31 +54,21 @@
   >
     <v-form ref="form">
       <v-row>
+        <!-- Blaue Infobox bei Überschreitung von 2000 GB -->
         <v-col
-          v-if="newCapacityGB >= 2000"
+          v-if="newCapacityGB > 2000"
           cols="12"
         >
-          <common-alert color="notice_red">
-            <div class="links">
-              <h4>Hinweis:</h4>
-              Für Ressourcenerweiterung >2000 GB bitte ein Ticket bei
-              <a
-                href="https://it-services.muenchen.de/sp?id=sc_cat_item&sys_id=73fd83e11bde1094588efddacd4bcb92"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                IBS48 Linux-Server
-              </a>
-              oder
-              <a
-                href="https://it-services.muenchen.de/sp?id=sc_cat_item&sys_id=1539a307c3e843d0d130f1fb050131a9"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                IBS49 Windows-Server
-              </a>
-              eröffnen.
-            </div>
+          <common-alert color="info">
+            <h4>Hinweis:</h4>
+            <span v-if="isLinux">
+              Bei mehr als 2000GB wird ein Change bei IBS48 eröffnet. Nach
+              Prüfung und möglicher Freigabe erfolgt die Anpassung automatisiert.
+            </span>
+            <span v-else>
+              Bei mehr als 2000GB wird ein Change bei IBS49 eröffnet. Nach
+              Prüfung und möglicher Freigabe erfolgt die Anpassung automatisiert.
+            </span>
           </common-alert>
         </v-col>
         <v-col
@@ -194,7 +184,7 @@
                 formatter.calculateBtoGB(mountPoint?.capacityInBytes ?? 0)
               )
             "
-            :max="2000"
+            :max="3000"
             step="1"
           />
         </v-col>
@@ -213,11 +203,10 @@
                 )
               )
             "
-            :max="2000"
             :rules="[
               (v) => v >= 1 || 'Neue Größe darf nicht kleiner 1 GB sein.',
               (v) =>
-                v >=
+                v >
                   Math.ceil(
                     formatter.calculateBtoGB(
                       mountPoint?.capacityInBytes ?? 1024 ** 3
@@ -230,7 +219,6 @@
                 (mountPoint != null &&
                   formatter.calculateBtoGB(mountPoint.freeSpaceInBytes) >= 5) ||
                 'Für eine Speichererweiterung müssen min. 5 GB freier Speicherplatz verfügbar sein',
-              (v) => v <= 2000 || 'Neue Größe darf nicht größer 2TB sein.',
             ]"
           />
         </v-col>

@@ -594,7 +594,7 @@
             <v-combobox
               v-model="actionTmp.changeAction"
               label="Change Action"
-              :items="['other', 'decommissioning']"
+              :items="['other', 'decommissioning', 'windows_disk_upgrade', 'linux_disk_upgrade', 'vm_ressource_upgrade']"
               maxlength="64"
               :rules="[
                 (v) => !!v || 'Change Action ist ein Pflichtfeld.',

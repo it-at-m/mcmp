@@ -199,8 +199,11 @@ export async function defaultResponseHandler(
 
     // 2. Handle Forbidden (403) - Potential Maintenance Mode
     if (response.status === 403) {
-      let message =
+      const permissionMessage =
         "Sie haben nicht die nötigen Rechte um diese Aktion durchzuführen.";
+      const maintenanceMessage = () =>
+        `Anwendung im Wartungsmodus: ${appStore.maintenanceMessage || "Bitte versuchen Sie es später erneut."}`;
+      let message = permissionMessage;
 
       try {
         const clone = response.clone();
@@ -208,12 +211,18 @@ export async function defaultResponseHandler(
         if (contentType && contentType.includes("application/json")) {
           const json = await clone.json();
           if (json.error === "MAINTENANCE_MODE_ACTIVE" || appStore.isLocked) {
-            message = `Anwendung im Wartungsmodus: ${appStore.maintenanceMessage || "Bitte versuchen Sie es später erneut."}`;
+            message = maintenanceMessage();
+          } else {
+            const code = extractErrorCode(json.message);
+            if (code) message = `${permissionMessage} ${code}`;
           }
         } else {
           const bodyText = await clone.text();
           if (bodyText === "MAINTENANCE_MODE_ACTIVE" || appStore.isLocked) {
-            message = `Anwendung im Wartungsmodus: ${appStore.maintenanceMessage || "Bitte versuchen Sie es später erneut."}`;
+            message = maintenanceMessage();
+          } else {
+            const code = extractErrorCode(bodyText);
+            if (code) message = `${permissionMessage} ${code}`;
           }
         }
       } catch (e) {
@@ -261,12 +270,13 @@ export async function defaultResponseHandler(
     if (isStatusInput(response)) {
       let message = errorMessage;
       try {
-        const contentType = response.headers.get("content-type");
+        const clone = response.clone();
+        const contentType = clone.headers.get("content-type");
         if (contentType && contentType.includes("application/json")) {
-          const json = await response.json();
+          const json = await clone.json();
           message = json.message || json.error || JSON.stringify(json);
         } else {
-          const bodyText = await response.text();
+          const bodyText = await clone.text();
           if (bodyText === "MAINTENANCE_MODE_ACTIVE") {
             message = `Anwendung im Wartungsmodus: ${appStore.maintenanceMessage || "Bitte versuchen Sie es später erneut."}`;
           } else {
@@ -294,16 +304,17 @@ export async function defaultResponseHandler(
       let message =
         "Serverfehler. Bitte versuchen Sie es später erneut, oder wenden Sie sich an die Administration.";
       try {
-        const contentType = response.headers.get("content-type");
+        const clone = response.clone();
+        const contentType = clone.headers.get("content-type");
         if (contentType && contentType.includes("application/json")) {
-          const json = await response.json();
-          if (json.message) {
-            message =
-              `${message} ${json.message.match(/\(Fehlercode:.*\)/)?.[0] ?? ""}`.trim();
+          const json = await clone.json();
+          const code = extractErrorCode(json.message);
+          if (code) {
+            message = `${message} ${code}`;
           }
         } else {
-          const bodyText = await response.text();
-          const code = bodyText.match(/\(Fehlercode:.*\)/)?.[0];
+          const bodyText = await clone.text();
+          const code = extractErrorCode(bodyText);
           if (code) {
             message = `${message} ${code}`;
           }
@@ -342,6 +353,17 @@ export async function defaultResponseHandler(
       level: STATUS_INDICATORS.SUCCESS,
     });
   }
+}
+
+/**
+ * Extracts the "(Fehlercode: XXXX-XXXX)" reference that the backend appends to
+ * user-facing error messages, so it can be surfaced regardless of the status code.
+ *
+ * @param text - The error message or raw response body to search.
+ * @returns The matched "(Fehlercode: ...)" substring, or null if none is present.
+ */
+function extractErrorCode(text?: string | null): string | null {
+  return text?.match(/\(Fehlercode:[^)]*\)/)?.[0] ?? null;
 }
 
 /**

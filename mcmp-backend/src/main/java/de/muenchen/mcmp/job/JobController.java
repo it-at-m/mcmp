@@ -203,7 +203,10 @@ public class JobController {
             @RequestParam(value = "itemsPerPage", defaultValue = "10") int itemsPerPage,
             @RequestParam(value = "sortBy", required = false) final String sortBy,
             @RequestParam(value = "sortDesc", defaultValue = "false") final boolean sortDesc,
-            @PathVariable("appserviceId") final Long appserviceId
+            @RequestParam(value = "searchText", required = false) final String searchText,
+            @RequestParam(value = "createdFrom", required = false) final String createdFrom,
+            @RequestParam(value = "createdTo", required = false) final String createdTo,
+            @PathVariable final Long appserviceId
     ) {
         if (page < 1) {
             page = 1;
@@ -211,7 +214,10 @@ public class JobController {
         if (itemsPerPage < 1 || itemsPerPage > 100) {
             itemsPerPage = 10;
         }
-        return jobService.findAllJobsByRole(page, itemsPerPage, sortBy, sortDesc, null, null, null, null, null, null, null, null, appserviceId, null, null, null);
+        final Instant createdFromInstant = createdFrom != null && !createdFrom.isBlank() ? Instant.parse(createdFrom) : null;
+        final Instant createdToInstant = createdTo != null && !createdTo.isBlank() ? Instant.parse(createdTo) : null;
+        return jobService.findAllJobsByRole(page, itemsPerPage, sortBy, sortDesc, null, null, createdFromInstant, createdToInstant,
+                null, null, null, null, appserviceId, null, null, null, null, null, null, null, null, searchText);
     }
 
     @HasUserOrSpecialRole
@@ -1364,19 +1370,12 @@ public class JobController {
         if (monitors.isEmpty()) {
             throw new IllegalArgumentException("At least one monitor is required.");
         }
-        boolean serversideTls = Boolean.TRUE.equals(listener.get("serverside_tls"));
         java.util.regex.Pattern monitorPathPattern = java.util.regex.Pattern.compile("^/(?!/)[^?#\\s]*(?:\\?[^#\\s]*)?(?:#\\S*)?$");
         for (Object monitorObj : monitors) {
             if (monitorObj instanceof Map<?, ?> monitor) {
                 String monitorType = monitor.get("type") != null ? monitor.get("type").toString() : "";
                 if (!List.of("http", "https").contains(monitorType)) {
                     throw new IllegalArgumentException("Invalid monitor type: " + monitorType);
-                }
-                if (serversideTls && "http".equals(monitorType)) {
-                    throw new IllegalArgumentException("Monitor type 'http' is not allowed when server pool protocol is 'https'.");
-                }
-                if (!serversideTls && "https".equals(monitorType)) {
-                    throw new IllegalArgumentException("Monitor type 'https' is not allowed when server pool protocol is 'http'.");
                 }
                 Object path = monitor.get("path");
                 if (path == null || path.toString().isBlank()) {
@@ -1496,6 +1495,19 @@ public class JobController {
             } catch (NumberFormatException e) {
                 throw new IllegalArgumentException("Port must be a valid number.");
             }
+        }
+
+        final long currentMemberCount = pool.members().size();
+        final long removedMatchingCount = pool.members().stream()
+                .filter(m -> removedList.stream().anyMatch(removed ->
+                        m.ip() != null
+                                && m.ip().equals(removed.get("ip").toString())
+                                && m.port() == Integer.parseInt(removed.get("port").toString())))
+                .count();
+        final long remainingMemberCount = currentMemberCount - removedMatchingCount + addedList.size();
+        if (remainingMemberCount < 1) {
+            logTriedToCreateJob(LOADBALANCER_F5_CHANGE_POOL_MEMBERS, serverId);
+            throw new IllegalArgumentException("At least one member must remain in the pool.");
         }
 
         logCreatedJob(LOADBALANCER_F5_CHANGE_POOL_MEMBERS, serverId);

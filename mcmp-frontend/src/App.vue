@@ -71,7 +71,7 @@
           >
             <template #activator="{ props: tooltipProps }">
               <router-link
-                to="/appservice"
+                to="/"
                 v-bind="tooltipProps"
               >
                 <img

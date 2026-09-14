@@ -24,6 +24,8 @@ import java.util.NoSuchElementException;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class GlobalExceptionHandlerTest {
@@ -157,14 +159,14 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void greenItServerLockedException_maps403WithGreenItDto() {
-        when(errorLogService.logError(any(), any(), any(), any(), any(), any())).thenReturn(12L);
+    void greenItServerLockedException_maps403WithGreenItDto_andIsNotLogged() {
         GreenITServerLockedException ex = new GreenITServerLockedException("Server is locked for maintenance.");
 
-        GreenITResponseDTO response = handler.handleServerLockedException(ex, request);
+        GreenITResponseDTO response = handler.handleServerLockedException(ex);
 
         assertNull(response.jobId());
-        assertTrue(response.message().startsWith("Server is locked for maintenance."));
+        assertEquals("Server is locked for maintenance.", response.message());
+        verify(errorLogService, never()).logError(any(), any(), any(), any(), any(), any());
     }
 
     @Test

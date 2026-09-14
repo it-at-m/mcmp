@@ -1,6 +1,5 @@
 <template>
   <common-dialog
-    v-if="testEnv"
     :model-value="dialog"
     title="Loadbalancer abbauen"
     :icon="mdiDelete"
@@ -57,7 +56,7 @@
   </common-dialog>
 
   <dialog-extra-sure
-    v-if="testEnv && extraSureDialog"
+    v-if="extraSureDialog"
     v-model="extraSureDialog"
     title="Loadbalancer abbauen"
     text="Wollen Sie diesen Loadbalancer wirklich abbauen?"
@@ -72,10 +71,9 @@
 import type { LoadbalancerDetail } from "@/types/LoadbalancerDetail";
 
 import { mdiDelete } from "@mdi/js";
-import { computed, inject, onMounted, ref } from "vue";
+import { computed, inject, ref } from "vue";
 
 import jobService from "@/api/jobService";
-import testenvService from "@/api/testenvService";
 import CommonAlert from "@/components/common/CommonAlert.vue";
 import CommonDialog from "@/components/common/CommonDialog.vue";
 import DialogExtraSure from "@/components/common/dialogExtraSure.vue";
@@ -90,14 +88,6 @@ const unregisterOpenDialog = inject<() => void>("unregisterOpenDialog");
 const loading = ref(false);
 const dialog = ref(false);
 const extraSureDialog = ref(false);
-const testEnv = ref(false);
-const loadingTestEnv = ref(false);
-
-onMounted(() => {
-  testenvService.getTestEnabled(loadingTestEnv).then((enabled) => {
-    testEnv.value = enabled;
-  });
-});
 
 const disableReason = computed(() => {
   if (props.lb.wafEnabled)

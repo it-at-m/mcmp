@@ -472,6 +472,87 @@ class JobControllerWebTest {
         verifyNoInteractions(jobService);
     }
 
+    /**
+     * Builds a pool member and registers the {@link ServerService} stubs so that
+     * {@code memberMatchesServerInDb} accepts it as fully resolved (serverId/serverName/ip
+     * all match a known server).
+     */
+    private UnifiedLoadbalancerMemberDTO resolvedMember(final long serverId, final String name, final String ip, final int port) {
+        final Server dbServer = new Server();
+        dbServer.setId(serverId);
+        dbServer.setName(name);
+        when(serverService.findById(serverId)).thenReturn(Optional.of(dbServer));
+        when(serverService.findServersByIpAddress(ip)).thenReturn(List.of(dbServer));
+        return UnifiedLoadbalancerMemberDTO.builder()
+                .ip(ip)
+                .port(port)
+                .serverId(serverId)
+                .serverName(name)
+                .build();
+    }
+
+    private void stubPoolWithMembers(final UnifiedLoadbalancerMemberDTO... members) {
+        when(loadbalancerService.canUserEditLoadbalancer(anyLong())).thenReturn(true);
+        when(loadbalancerService.getLoadbalancerById(anyLong())).thenReturn(
+                UnifiedLoadbalancer.builder()
+                        .wafEnabled(false)
+                        .pools(List.of(UnifiedLoadbalancerPoolDTO.builder()
+                                .name("pool1")
+                                .members(List.of(members))
+                                .build()))
+                        .build());
+    }
+
+    @Test
+    void loadbalancerPoolMembers_removingLastMember_isBlocked() throws Exception {
+        final UnifiedLoadbalancerMemberDTO member = resolvedMember(2002L, "app-server-1", "10.0.0.1", 443);
+        stubPoolWithMembers(member);
+
+        mockMvc.perform(post("/job/create/LOADBALANCER_F5_CHANGE_POOL_MEMBERS").param("serverId", "-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"lb_virtual_server_id":123,"pool_name":"pool1",
+                                 "removed":[{"ip":"10.0.0.1","port":443}]}"""))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void loadbalancerPoolMembers_removingOneOfTwoMembers_isAllowed() throws Exception {
+        final UnifiedLoadbalancerMemberDTO member1 = resolvedMember(2002L, "app-server-1", "10.0.0.1", 443);
+        final UnifiedLoadbalancerMemberDTO member2 = resolvedMember(2003L, "app-server-2", "10.0.0.2", 443);
+        stubPoolWithMembers(member1, member2);
+
+        mockMvc.perform(post("/job/create/LOADBALANCER_F5_CHANGE_POOL_MEMBERS").param("serverId", "-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"lb_virtual_server_id":123,"pool_name":"pool1",
+                                 "removed":[{"ip":"10.0.0.1","port":443}]}"""))
+                .andExpect(status().isOk());
+
+        verify(jobService).loadbalancerF5ChangePoolMembers(eq(123L), eq("pool1"), anyList(), anyList(),
+                eq("LOADBALANCER_F5_CHANGE_POOL_MEMBERS"));
+    }
+
+    @Test
+    void loadbalancerPoolMembers_removingLastMemberButAddingAnother_isAllowed() throws Exception {
+        final UnifiedLoadbalancerMemberDTO member = resolvedMember(2002L, "app-server-1", "10.0.0.1", 443);
+        stubPoolWithMembers(member);
+        when(serverService.canUserEditServer(SERVER_ID)).thenReturn(true);
+
+        mockMvc.perform(post("/job/create/LOADBALANCER_F5_CHANGE_POOL_MEMBERS").param("serverId", "-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"lb_virtual_server_id":123,"pool_name":"pool1",
+                                 "removed":[{"ip":"10.0.0.1","port":443}],
+                                 "added":[{"server_id":1001,"port":443}]}"""))
+                .andExpect(status().isOk());
+
+        verify(jobService).loadbalancerF5ChangePoolMembers(eq(123L), eq("pool1"), anyList(), anyList(),
+                eq("LOADBALANCER_F5_CHANGE_POOL_MEMBERS"));
+    }
+
     @Test
     void loadbalancerF5Delete_userCannotEditLoadbalancer_isBlocked() throws Exception {
         when(loadbalancerService.canUserEditLoadbalancer(anyLong())).thenReturn(false);

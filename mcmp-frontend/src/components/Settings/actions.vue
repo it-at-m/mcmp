@@ -56,22 +56,24 @@
         {{ formatter.formatBooleanToGerman(item.awxJobEnabled) }}
       </template>
       <template #item.edit="{ item }">
-        <v-btn
-          v-tooltip="'Action exportieren'"
-          :icon="mdiExport"
-          variant="text"
-          aria-label="Action exportieren"
-          @click="exportAction(item)"
-        />
-        <action-add-edit
-          title="Action bearbeiten"
-          :icon="mdiPencil"
-          :action="item"
-          :awx-configs="awxConfigs"
-          :snow-configs="snowConfigs"
-          :all-actions="items"
-          @save="editItem"
-        />
+        <div class="d-flex align-center justify-end ga-1">
+          <v-btn
+            v-tooltip="'Action exportieren'"
+            :icon="mdiExport"
+            variant="text"
+            aria-label="Action exportieren"
+            @click="exportAction(item)"
+          />
+          <action-add-edit
+            title="Action bearbeiten"
+            :icon="mdiPencil"
+            :action="item"
+            :awx-configs="awxConfigs"
+            :snow-configs="snowConfigs"
+            :all-actions="items"
+            @save="editItem"
+          />
+        </div>
       </template>
     </v-data-table>
   </common-card>

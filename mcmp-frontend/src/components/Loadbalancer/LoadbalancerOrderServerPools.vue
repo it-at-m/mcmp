@@ -183,7 +183,7 @@
                     method: 'GET',
                     path: '/status',
                     headers: headers,
-                    receive_string: '200 OK',
+                    receive_string: '200',
                   },
                 ];
                 showMonitors = true;
@@ -475,7 +475,7 @@ watch(
           method: "GET",
           path: "/status",
           headers: headers,
-          receive_string: "200 OK",
+          receive_string: "200",
         },
       ];
       showMonitors.value = true;

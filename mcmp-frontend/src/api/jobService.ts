@@ -71,7 +71,12 @@ export default {
     page = 1,
     itemsPerPage = 10,
     sortBy: string | null = null,
-    sortDesc = false
+    sortDesc = false,
+    filters: {
+      searchText?: string | null;
+      createdFrom?: string | null;
+      createdTo?: string | null;
+    } = {}
   ): Promise<Page<JobList>> {
     loading.value = true;
     const params = new URLSearchParams();
@@ -82,6 +87,10 @@ export default {
       params.append("sortBy", sortBy);
       params.append("sortDesc", sortDesc.toString());
     }
+
+    if (filters.searchText) params.append("searchText", filters.searchText);
+    if (filters.createdFrom) params.append("createdFrom", filters.createdFrom);
+    if (filters.createdTo) params.append("createdTo", filters.createdTo);
 
     return fetch(
       `${getApiBase()}${JOB_BASE}/appservice/${appServiceId}?${params.toString()}`,

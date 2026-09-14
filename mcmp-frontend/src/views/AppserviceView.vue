@@ -135,6 +135,7 @@
                   @update:page="handlePageUpdate($event)"
                   @update:items-per-page="handleItemsPerPageUpdate($event)"
                   @update:sort="onSort"
+                  @update:filters="onHistoryFilters"
                 />
               </v-tabs-window-item>
             </v-tabs-window>
@@ -150,6 +151,7 @@
 </template>
 
 <script setup lang="ts">
+import type { HistoryFilters } from "@/components/Appservice/AppServiceDetailHistory.vue";
 import type Appservice from "@/types/Appservice";
 import type AppserviceListItem from "@/types/AppserviceList";
 import type JobList from "@/types/JobList";
@@ -197,6 +199,11 @@ const currentPage = ref(1);
 const currentItemsPerPage = ref(10);
 const currentSortBy = ref<string | null>(null);
 const currentSortDesc = ref(false);
+const historyFilters = ref<HistoryFilters>({
+  searchText: null,
+  createdFrom: null,
+  createdTo: null,
+});
 
 const hasOpenDialog = ref(false);
 provide("registerOpenDialog", () => {
@@ -331,7 +338,8 @@ function fetchHistory(silent = false) {
         currentPage.value,
         currentItemsPerPage.value,
         currentSortBy.value,
-        currentSortDesc.value
+        currentSortDesc.value,
+        historyFilters.value
       )
       .then((res) => {
         history.value = res;
@@ -356,6 +364,12 @@ function handleItemsPerPageUpdate(items: number) {
 function onSort(sort: { by: string; desc: boolean }) {
   currentSortBy.value = sort.by;
   currentSortDesc.value = sort.desc;
+  void fetchHistory();
+}
+
+function onHistoryFilters(filters: HistoryFilters) {
+  historyFilters.value = filters;
+  currentPage.value = 1;
   void fetchHistory();
 }
 

@@ -200,10 +200,10 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(GreenITServerLockedException.class)
     @ResponseStatus(HttpStatus.FORBIDDEN)
-    public GreenITResponseDTO handleServerLockedException(GreenITServerLockedException ex, HttpServletRequest request) {
-        log.error("Server is locked: {}", ex.getReason());
-        Long referenceId = recordError(ex, request);
-        return new GreenITResponseDTO(null, withReference(ex.getReason(), referenceId));
+    public GreenITResponseDTO handleServerLockedException(GreenITServerLockedException ex) {
+        // Expected business condition (server currently locked); not persisted to the error log.
+        log.warn("Server is locked: {}", ex.getReason());
+        return new GreenITResponseDTO(null, ex.getReason());
     }
 
     @ExceptionHandler(ServerNotFoundException.class)

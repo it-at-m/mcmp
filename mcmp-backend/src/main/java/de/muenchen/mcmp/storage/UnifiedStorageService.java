@@ -254,7 +254,7 @@ public class UnifiedStorageService {
     }
 
     @Transactional(readOnly = true)
-    public Page<UnifiedStorageItemListDto> getUnifiedStorage(String search, List<String> categories, boolean favorites, Pageable pageable) {
+    public Page<UnifiedStorageItemListDto> getUnifiedStorage(String search, List<String> categories, boolean favorites, Boolean editable, Pageable pageable) {
         final UserRoles userRoles = AuthUtils.getCurrentUserRoles();
         String username = userRoles.getUsername();
         boolean isAdmin = userRoles.hasAdminRole();
@@ -286,6 +286,8 @@ public class UnifiedStorageService {
         List<Object[]> nfsItems = ontapVolumeRepository.findNfsVolumeListItems(searchTerm, username, isAdmin, isReadonly, isStorage, isOperator);
         List<UUID> nfsVolumeUuids = nfsItems.stream().map(row -> (UUID) row[0]).toList();
         Map<String, String> nfsAppserviceNames = loadVolumeAppserviceNames(nfsVolumeUuids);
+        Set<String> editableNfsUuids = nfsVolumeUuids.isEmpty() ? Set.of()
+                : toIdStrings(ontapVolumeRepository.findEditableVolumeUuids(nfsVolumeUuids, username, isAdmin, isStorage));
 
         for (Object[] row : nfsItems) {
             String uuidStr = row[0].toString();
@@ -301,6 +303,7 @@ public class UnifiedStorageService {
                     .storageCategory(row[3] != null ? StorageCategory.valueOf(row[3].toString()) : null)
                     .protocol(protocol)
                     .appserviceNames(nfsAppserviceNames.get(uuidStr))
+                    .editable(editableNfsUuids.contains(uuidStr))
                     .build());
         }
 
@@ -308,6 +311,8 @@ public class UnifiedStorageService {
         List<Object[]> cifsItems = ontapVolumeRepository.findCifsVolumeListItems(searchTerm, username, isAdmin, isReadonly, isStorage, isOperator);
         List<UUID> cifsVolumeUuids = cifsItems.stream().map(row -> (UUID) row[0]).toList();
         Map<String, String> cifsAppserviceNames = loadVolumeAppserviceNames(cifsVolumeUuids);
+        Set<String> editableCifsUuids = cifsVolumeUuids.isEmpty() ? Set.of()
+                : toIdStrings(ontapVolumeRepository.findEditableVolumeUuids(cifsVolumeUuids, username, isAdmin, isStorage));
 
         for (Object[] row : cifsItems) {
             String uuidStr = row[0].toString();
@@ -323,6 +328,7 @@ public class UnifiedStorageService {
                     .storageCategory(row[3] != null ? StorageCategory.valueOf(row[3].toString()) : null)
                     .protocol(protocol)
                     .appserviceNames(cifsAppserviceNames.get(uuidStr))
+                    .editable(editableCifsUuids.contains(uuidStr))
                     .build());
         }
 
@@ -330,6 +336,8 @@ public class UnifiedStorageService {
         List<Object[]> qtreeItems = ontapQtreeRepository.findNfsQtreeListItems(searchTerm, username, isAdmin, isReadonly, isStorage, isOperator);
         List<Long> qtreeIds = qtreeItems.stream().map(row -> (Long) row[0]).toList();
         Map<String, String> qtreeAppserviceNames = loadQtreeAppserviceNames(qtreeIds);
+        Set<String> editableQtreeIds = qtreeIds.isEmpty() ? Set.of()
+                : toIdStrings(ontapQtreeRepository.findEditableQtreeIds(qtreeIds, username, isAdmin, isStorage));
 
         for (Object[] row : qtreeItems) {
             String idStr = row[0].toString();
@@ -346,6 +354,7 @@ public class UnifiedStorageService {
                     .storageCategory(row[4] != null ? StorageCategory.valueOf(row[4].toString()) : null)
                     .protocol(protocol)
                     .appserviceNames(qtreeAppserviceNames.get(idStr))
+                    .editable(editableQtreeIds.contains(idStr))
                     .build());
         }
 
@@ -353,6 +362,8 @@ public class UnifiedStorageService {
         List<Object[]> bucketItems = storageGridBucketRepository.findBucketListItems(searchTerm, username, isAdmin, isReadonly, isStorage, isOperator);
         List<Long> bucketIds = bucketItems.stream().map(row -> (Long) row[0]).toList();
         Map<String, String> bucketAppserviceNames = loadBucketAppserviceNames(bucketIds);
+        Set<String> editableBucketIds = bucketIds.isEmpty() ? Set.of()
+                : toIdStrings(storageGridBucketRepository.findEditableBucketIds(bucketIds, username, isAdmin, isStorage));
 
         for (Object[] row : bucketItems) {
             String idStr = row[0].toString();
@@ -363,6 +374,7 @@ public class UnifiedStorageService {
                     .storageCategory(row[2] != null ? StorageCategory.valueOf(row[2].toString()) : null)
                     .protocol("S3")
                     .appserviceNames(bucketAppserviceNames.get(idStr))
+                    .editable(editableBucketIds.contains(idStr))
                     .build());
         }
 
@@ -376,6 +388,13 @@ public class UnifiedStorageService {
 
         if (favorites) {
             allItems = allItems.stream().filter(UnifiedStorageItemListDto::isFavorite).collect(Collectors.toList());
+        }
+
+        if (editable != null) {
+            final boolean wantEditable = editable;
+            allItems = allItems.stream()
+                    .filter(dto -> dto.isEditable() == wantEditable)
+                    .collect(Collectors.toList());
         }
 
         // 5. Global Sorting
@@ -707,6 +726,14 @@ public class UnifiedStorageService {
             return "CIFS";
         }
         return null;
+    }
+
+    private static Set<String> toIdStrings(List<?> ids) {
+        Set<String> result = new HashSet<>();
+        for (Object id : ids) {
+            result.add(id.toString());
+        }
+        return result;
     }
 
     private Map<String, String> loadVolumeAppserviceNames(List<UUID> uuids) {

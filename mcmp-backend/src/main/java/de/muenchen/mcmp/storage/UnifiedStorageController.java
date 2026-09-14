@@ -21,8 +21,9 @@ public class UnifiedStorageController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false) List<String> categories,
             @RequestParam(required = false, defaultValue = "false") boolean favorites,
+            @RequestParam(required = false) Boolean editable,
             Pageable pageable) {
-        return unifiedStorageService.getUnifiedStorage(search, categories, favorites, pageable);
+        return unifiedStorageService.getUnifiedStorage(search, categories, favorites, editable, pageable);
     }
 
     @GetMapping("/unified/{type}/{uuid}")

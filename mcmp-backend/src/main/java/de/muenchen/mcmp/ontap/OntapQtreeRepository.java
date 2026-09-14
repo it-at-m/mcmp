@@ -88,6 +88,16 @@ public interface OntapQtreeRepository extends JpaRepository<OntapQtree, Long> {
     Boolean canUserEditQtree(@Param("id") Long id, @Param("username") String username,
                              @Param("isAdmin") boolean isAdmin, @Param("isStorage") boolean isStorage);
 
+    @Query("SELECT q.id FROM OntapQtree q JOIN q.volume v " +
+            "WHERE q.id IN :ids " +
+            "AND SIZE(q.appservices) = 1 " +
+            "AND (:isAdmin = TRUE OR :isStorage = TRUE OR EXISTS (" +
+            "   SELECT 1 FROM q.appservices a JOIN a.changeGroup g JOIN g.users u " +
+            "   WHERE v.ontapCifsShares IS EMPTY AND u.username = :username" +
+            "))")
+    List<Long> findEditableQtreeIds(@Param("ids") List<Long> ids, @Param("username") String username,
+                                    @Param("isAdmin") boolean isAdmin, @Param("isStorage") boolean isStorage);
+
     @Query("SELECT DISTINCT q FROM OntapQtree q " +
             "LEFT JOIN FETCH q.appservices " +
             "LEFT JOIN FETCH q.volume v " +

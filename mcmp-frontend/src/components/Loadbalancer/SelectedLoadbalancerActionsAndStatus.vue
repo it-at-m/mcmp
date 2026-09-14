@@ -31,9 +31,8 @@
 import type { LoadbalancerDetail } from "@/types/LoadbalancerDetail";
 
 import { mdiSitemap } from "@mdi/js";
-import { computed, onMounted, ref } from "vue";
+import { computed } from "vue";
 
-import testenvService from "@/api/testenvService";
 import AppserviceAssignmentStatusChips from "@/components/common/AppserviceAssignmentStatusChips.vue";
 import DetailPageHeader from "@/components/common/DetailPageHeader.vue";
 import LoadbalancerDeleteBtn from "@/components/Loadbalancer/LoadbalancerDeleteBtn.vue";
@@ -42,16 +41,7 @@ const props = defineProps<{
   lb: LoadbalancerDetail;
 }>();
 
-const testEnv = ref(false);
-const loadingTestEnv = ref(false);
-
-onMounted(() => {
-  testenvService.getTestEnabled(loadingTestEnv).then((enabled) => {
-    testEnv.value = enabled;
-  });
-});
-
 const hasActions = computed(
-  () => props.lb.canEdit && props.lb.appservices?.length === 1 && testEnv.value
+  () => props.lb.canEdit && props.lb.appservices?.length === 1
 );
 </script>

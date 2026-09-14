@@ -253,6 +253,13 @@
           @click="toggleServerList(pool.name)"
         >
           <h3>Member ({{ pool.members.length }})</h3>
+          <v-spacer />
+          <loadbalancer-change-pool-members
+            v-if="lb.canEdit && lb.appservices.length === 1"
+            :lb="lb"
+            :pool="pool"
+            @click.stop
+          />
           <v-btn
             :icon="
               isServerListExpanded(pool.name) ? mdiChevronUp : mdiChevronDown
@@ -260,12 +267,6 @@
             variant="text"
             size="small"
             @click.stop="toggleServerList(pool.name)"
-          />
-          <loadbalancer-change-pool-members
-            v-if="lb.canEdit && lb.appservices.length === 1"
-            :lb="lb"
-            :pool="pool"
-            @click.stop
           />
         </v-col>
       </v-row>

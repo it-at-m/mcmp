@@ -109,7 +109,7 @@ public class JobController {
     public static final String STORAGE_CHANGE_SNAPSHOT_POLICY_CIFS = "STORAGE_CHANGE_SNAPSHOT_POLICY_CIFS";
     public static final String LINUX_DISK_UPGRADE = "LINUX_DISK_UPGRADE";
     public static final String WINDOWS_DISK_UPGRADE = "WINDOWS_DISK_UPGRADE";
-    public static final String VM_RESSOURCE_UPGRADE = "VM_RESSOURCE_UPGRADE";
+    public static final String VM_RESOURCE_UPGRADE = "VM_RESOURCE_UPGRADE";
 
     @HasUserOrSpecialRole
     @GetMapping("/{jobId}/hierarchy")
@@ -372,7 +372,7 @@ public class JobController {
 
     @PostMapping({
             "/create/{cloudPrefix}" + CHANGE_CPU_RAM,
-            "/create/{cloudPrefix}" + VM_RESSOURCE_UPGRADE
+            "/create/{cloudPrefix}" + VM_RESOURCE_UPGRADE
     })
     public void vmwareChangeCpuRam(@PathVariable(name = "cloudPrefix") final String cloudPrefix,
                                    @RequestParam(name = "serverId") final Long serverId,
@@ -413,7 +413,7 @@ public class JobController {
         }
 
         // 4. Nur das von den Schwellenwerten abhängige Suffix ermitteln
-        String actionSuffix = (ram > 100 || cpu > 72) ? VM_RESSOURCE_UPGRADE : CHANGE_CPU_RAM;
+        String actionSuffix = (ram > 100 || cpu > 72) ? VM_RESOURCE_UPGRADE : CHANGE_CPU_RAM;
 
         // 5. Job anlegen – Der JobService ermittelt die Cloud des Servers und baut den vollständigen Action-Namen
         logCreatedJob(actionSuffix, serverId);

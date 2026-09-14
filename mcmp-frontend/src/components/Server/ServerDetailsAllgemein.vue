@@ -631,7 +631,7 @@ function change_cpu_ram(
   let actionSuffix = "CHANGE_CPU_RAM";
 
   if (ram > 100 || cpus > 72) {
-    actionSuffix = "VM_RESSOURCE_UPGRADE";
+    actionSuffix = "VM_RESOURCE_UPGRADE";
   }
 
   const cloudPrefix = props.selectedServer.cloud?.cloudType

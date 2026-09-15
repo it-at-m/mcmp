@@ -4,9 +4,28 @@
      have priority over the log level maintained in this file.  -->
 <configuration>
 
+    <statusListener class="net.logstash.logback.status.LevelFilteringStatusListener">
+        <level>WARN</level>
+        <delegate class="ch.qos.logback.core.status.OnFileStatusListener">
+            <fileName>logs/siem-error.log</fileName>
+        </delegate>
+    </statusListener>
+
     <springProperty scope="context" name="springAppName" source="spring.application.name"/>
-    <springProperty scope="context" name="siemSyslogHost" source="siem.syslog.host" defaultValue="localhost"/>
-    <springProperty scope="context" name="siemSyslogPort" source="siem.syslog.port" defaultValue="514"/>
+
+    <!-- Primärer SIEM Server -->
+    <springProperty scope="context" name="siemPrimaryHost" source="siem.syslog.primary.host" defaultValue="localhost"/>
+    <springProperty scope="context" name="siemPrimaryPort" source="siem.syslog.primary.port" defaultValue="514"/>
+    <springProperty scope="context" name="siemPrimaryProtocol" source="siem.syslog.primary.protocol" defaultValue="TCP"/>
+    <springProperty scope="context" name="siemPrimarySsl" source="siem.syslog.primary.ssl" defaultValue="false"/>
+
+    <!-- Sekundärer SIEM Server (optional) -->
+    <springProperty scope="context" name="siemSecondaryEnabled" source="siem.syslog.secondary.enabled" defaultValue="false"/>
+    <springProperty scope="context" name="siemSecondaryHost" source="siem.syslog.secondary.host" defaultValue="localhost"/>
+    <springProperty scope="context" name="siemSecondaryPort" source="siem.syslog.secondary.port" defaultValue="514"/>
+    <springProperty scope="context" name="siemSecondaryProtocol" source="siem.syslog.secondary.protocol" defaultValue="UDP"/>
+    <springProperty scope="context" name="siemSecondarySsl" source="siem.syslog.secondary.ssl" defaultValue="false"/>
+
 
     <springProfile name="local | test | docker | podman">
 
@@ -20,14 +39,14 @@
                 <totalSizeCap>1GB</totalSizeCap>
             </rollingPolicy>
             <encoder>
-                <pattern>%date{yyyy.MM.dd HH:mm:ss.SSS} | ${springAppName} | TraceId: %X{traceId:-} | SpanId: %X{spanId:-}] | %level | [%thread] | %logger{0} | [%file : %line] - %replace(%replace(%msg){'\r\n|\r|\n', '_'}){'\s+', ' '}%n</pattern>
+                <pattern>%date{yyyy.MM.dd HH:mm:ss.SSS} | ${springAppName} | TraceId: %X{traceId:-} | SpanId: %X{spanId:-}] | %level | [%thread] | %logger{0} | [%file : %line] - %replace(%msg){'\s+', ' '}%n</pattern>
             </encoder>
         </appender>
 
         <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
             <encoder>
                 <!-- @formatter:off -->
-                <pattern>%date{yyyy.MM.dd HH:mm:ss.SSS} | ${springAppName} | TraceId: %X{traceId:-} | SpanId: %X{spanId:-}] | %level | [%thread] | %logger{0} | [%file : %line] - %replace(%replace(%msg){'\r\n|\r|\n', '_'}){'\s+', ' '}%n</pattern>
+                <pattern>%date{yyyy.MM.dd HH:mm:ss.SSS} | ${springAppName} | TraceId: %X{traceId:-} | SpanId: %X{spanId:-}] | %level | [%thread] | %logger{0} | [%file : %line] - %replace(%msg){'\s+', ' '}%n</pattern>
                 <!-- @formatter:on -->
             </encoder>
         </appender>
@@ -102,13 +121,89 @@
             </encoder>
         </appender>
 
-        <!-- SIEM/CEF Syslog Appender -->
-        <appender name="SIEM_SYSLOG" class="ch.qos.logback.classic.net.SyslogAppender">
-            <syslogHost>${siemSyslogHost}</syslogHost>
-            <port>${siemSyslogPort}</port>
-            <facility>USER</facility>
-            <suffixPattern>%replace(%msg){'[\r\n\t]', '_'}</suffixPattern>
-        </appender>
+        <!-- ===================== PRIMÄRER SIEM APPENDER ===================== -->
+        <if condition='property("siemPrimaryProtocol").equalsIgnoreCase("TCP")'>
+            <then>
+                <if condition='property("siemPrimarySsl").equalsIgnoreCase("true")'>
+                    <then>
+                        <!-- TCP mit Standard-TLS -->
+                        <appender name="SIEM_PRIMARY" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+                            <destination>${siemPrimaryHost}:${siemPrimaryPort}</destination>
+                            <ssl />
+                            <reconnectionDelay>10 second</reconnectionDelay>
+                            <connectionTimeout>5 second</connectionTimeout>
+                            <keepAliveDuration>1 minute</keepAliveDuration>
+                            <waitStrategyType>blocking</waitStrategyType>
+                            <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+                                <pattern>%replace(%msg){'[\r\n\t]', ' '}%n</pattern>
+                            </encoder>
+                        </appender>
+                    </then>
+                    <else>
+                        <!-- TCP unverschlüsselt -->
+                        <appender name="SIEM_PRIMARY" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+                            <destination>${siemPrimaryHost}:${siemPrimaryPort}</destination>
+                            <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+                                <pattern>%replace(%msg){'[\r\n\t]', ' '}%n</pattern>
+                            </encoder>
+                        </appender>
+                    </else>
+                </if>
+            </then>
+            <else>
+                <!-- UDP (immer unverschlüsselt) -->
+                <appender name="SIEM_PRIMARY" class="ch.qos.logback.classic.net.SyslogAppender">
+                    <syslogHost>${siemPrimaryHost}</syslogHost>
+                    <port>${siemPrimaryPort}</port>
+                    <facility>USER</facility>
+                    <suffixPattern>%replace(%msg){'[\r\n\t]', '_'}</suffixPattern>
+                </appender>
+            </else>
+        </if>
+
+        <!-- ===================== SEKUNDÄRER SIEM APPENDER ===================== -->
+        <if condition='property("siemSecondaryEnabled").equalsIgnoreCase("true")'>
+            <then>
+                <if condition='property("siemSecondaryProtocol").equalsIgnoreCase("TCP")'>
+                    <then>
+                        <if condition='property("siemSecondarySsl").equalsIgnoreCase("true")'>
+                            <then>
+                                <!-- TCP mit Standard-TLS -->
+                                <appender name="SIEM_SECONDARY" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+                                    <destination>${siemSecondaryHost}:${siemSecondaryPort}</destination>
+                                    <ssl />
+                                    <reconnectionDelay>10 second</reconnectionDelay>
+                                    <connectionTimeout>5 second</connectionTimeout>
+                                    <keepAliveDuration>1 minute</keepAliveDuration>
+                                    <waitStrategyType>blocking</waitStrategyType>
+                                    <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+                                        <pattern>%replace(%msg){'[\r\n\t]', ' '}%n</pattern>
+                                    </encoder>
+                                </appender>
+                            </then>
+                            <else>
+                                <!-- TCP unverschlüsselt -->
+                                <appender name="SIEM_SECONDARY" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+                                    <destination>${siemSecondaryHost}:${siemSecondaryPort}</destination>
+                                    <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+                                        <pattern>%replace(%msg){'[\r\n\t]', ' '}%n</pattern>
+                                    </encoder>
+                                </appender>
+                            </else>
+                        </if>
+                    </then>
+                    <else>
+                        <!-- UDP (immer unverschlüsselt) -->
+                        <appender name="SIEM_SECONDARY" class="ch.qos.logback.classic.net.SyslogAppender">
+                            <syslogHost>${siemSecondaryHost}</syslogHost>
+                            <port>${siemSecondaryPort}</port>
+                            <facility>USER</facility>
+                            <suffixPattern>%replace(%msg){'[\r\n\t]', '_'}</suffixPattern>
+                        </appender>
+                    </else>
+                </if>
+            </then>
+        </if>
 
         <!-- SIEM File Appender -->
         <appender name="SIEM_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
@@ -132,7 +227,12 @@
         </appender>
 
         <logger name="SIEM.CEF" level="INFO" additivity="false">
-            <appender-ref ref="SIEM_SYSLOG" />
+            <appender-ref ref="SIEM_PRIMARY" />
+            <if condition='property("siemSecondaryEnabled").equalsIgnoreCase("true")'>
+                <then>
+                    <appender-ref ref="SIEM_SECONDARY" />
+                </then>
+            </if>
             <appender-ref ref="SIEM_FILE" />
         </logger>
 

@@ -4,13 +4,6 @@
      have priority over the log level maintained in this file.  -->
 <configuration>
 
-    <statusListener class="net.logstash.logback.status.LevelFilteringStatusListener">
-        <level>WARN</level>
-        <delegate class="ch.qos.logback.core.status.OnFileStatusListener">
-            <fileName>logs/siem-error.log</fileName>
-        </delegate>
-    </statusListener>
-
     <springProperty scope="context" name="springAppName" source="spring.application.name"/>
 
     <!-- Primärer SIEM Server -->
@@ -92,6 +85,10 @@
     </springProfile>
 
     <springProfile name="!local &amp; !test &amp; !docker &amp; !podman">
+
+        <statusListener class="ch.qos.logback.core.status.OnFileStatusListener">
+            <fileName>logs/siem-error.log</fileName>
+        </statusListener>
 
         <appender name="JSON_STDOUT" class="ch.qos.logback.core.ConsoleAppender">
             <encoder class="net.logstash.logback.encoder.LogstashEncoder">

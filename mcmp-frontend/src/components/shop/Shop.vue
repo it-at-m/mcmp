@@ -2,6 +2,7 @@
   <v-menu
     v-model="isOpen"
     :location="railMode ? 'end' : 'bottom'"
+    eager
   >
     <template #activator="{ props }">
       <v-list-item
@@ -41,6 +42,7 @@
         <v-menu
           v-model="isLoadbalancerOpen"
           location="right"
+          eager
         >
           <template #activator="{ props }">
             <v-btn
@@ -67,15 +69,29 @@
                 >Ändern</v-btn
               >
             </v-list-item>
+          </v-list>
+        </v-menu>
+      </v-list-item>
+      <v-list-item>
+        <v-menu
+          v-model="isOpenshiftOpen"
+          location="right"
+          eager
+        >
+          <template #activator="{ props }">
+            <v-btn
+              v-bind="props"
+              flat
+            >
+              Openshift
+              <v-icon end>{{
+                isOpenshiftOpen ? mdiChevronUp : mdiChevronDown
+              }}</v-icon>
+            </v-btn>
+          </template>
+          <v-list>
             <v-list-item>
-              <v-btn
-                href="https://it-services.muenchen.de/sp?id=sc_cat_item&sys_id=4f8a347b2b2f76d05779ff1ece91bf1b"
-                target="_blank"
-                rel="noopener"
-                flat
-                :append-icon="mdiOpenInNew"
-                >Löschen</v-btn
-              >
+              <openshift-namespace-order />
             </v-list-item>
           </v-list>
         </v-menu>
@@ -140,10 +156,11 @@ import {
   mdiChevronUp,
   mdiOpenInNew,
 } from "@mdi/js";
-import { ref } from "vue";
+import { provide, ref } from "vue";
 
 import InstallDialog from "@/components/install/InstallDialog.vue";
 import LoadbalancerOrder from "@/components/Loadbalancer/LoadbalancerOrder.vue";
+import OpenshiftNamespaceOrder from "@/components/Openshift/OpenshiftNamespaceOrder.vue";
 import AnsibleUser from "@/components/shop/AnsibleUser.vue";
 import SnowTicketsOld from "@/components/shop/SnowTicketsOld.vue";
 
@@ -155,6 +172,15 @@ defineProps<{
 const isOpen = ref(false);
 const isAnwendOpen = ref(false);
 const isLoadbalancerOpen = ref(false);
+const isOpenshiftOpen = ref(false);
+
+function closeShopMenus() {
+  isOpen.value = false;
+  isAnwendOpen.value = false;
+  isLoadbalancerOpen.value = false;
+  isOpenshiftOpen.value = false;
+}
+provide("closeAncestorMenus", closeShopMenus);
 
 const anwendungsserviceSnowTickets = [
   {

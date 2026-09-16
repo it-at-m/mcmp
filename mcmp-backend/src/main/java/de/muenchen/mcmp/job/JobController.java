@@ -111,6 +111,8 @@ public class JobController {
     public static final String WINDOWS_DISK_UPGRADE = "WINDOWS_DISK_UPGRADE";
     public static final String VM_RESOURCE_UPGRADE = "VM_RESOURCE_UPGRADE";
 
+    public static final String OPENSHIFT_NAMESPACE_ORDER = "OPENSHIFT_NAMESPACE_ORDER";
+
     @HasUserOrSpecialRole
     @GetMapping("/{jobId}/hierarchy")
     public List<JobNodeHierarchy> getJobHierarchy(@PathVariable("jobId") final Long jobId) {
@@ -2026,6 +2028,117 @@ public class JobController {
         }
     }
 
+    // ----
+    // OPENSHIFT JOBs
+    // ----
+
+    @PostMapping("/create/" + OPENSHIFT_NAMESPACE_ORDER)
+    public void openshiftNamespaceOrder(@RequestParam(name = "serverId") final Long serverId,
+                                        @RequestBody final Map<String, Object> awxExtraVars) {
+        final Object appserviceIdObj = awxExtraVars.get("appserviceId");
+        if (appserviceIdObj == null) {
+            throw new MissingFormatArgumentException("Appservice ID must be provided.");
+        }
+        final long appserviceId;
+        try {
+            appserviceId = Long.parseLong(appserviceIdObj.toString());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Appservice ID is invalid.");
+        }
+        if (appserviceService.getAppservice(appserviceId) == null) {
+            logTriedToCreateJob(OPENSHIFT_NAMESPACE_ORDER, serverId);
+            throw new AccessDeniedException("You are not allowed to order an Openshift Namespace for this appservice.");
+        }
+        if (!appserviceService.canUserEditAppservice(appserviceId)) {
+            logTriedToCreateJob(OPENSHIFT_NAMESPACE_ORDER, serverId);
+            throw new AccessDeniedException("You are not allowed to order an Openshift Namespace for this appservice.");
+        }
+
+        final String namespaceName = requireNonBlankString(awxExtraVars.get("namespaceName"), "Namespace name");
+        if (namespaceName.isEmpty() || namespaceName.length() > 64) {
+            throw new IllegalArgumentException("Namespace name must be between 1 and 64 characters.");
+        }
+        if (!namespaceName.matches("^[a-z0-9-]+$")) {
+            throw new IllegalArgumentException("Namespace name contains invalid characters.");
+        }
+
+        final Object descriptionObj = awxExtraVars.get("description");
+        final String description = descriptionObj != null ? descriptionObj.toString() : "";
+        if (description.length() > 1024) {
+            throw new IllegalArgumentException("Project description must be less than 1024 characters.");
+        }
+
+        final String nodeSelector = requireNonBlankString(awxExtraVars.get("nodeSelector"), "Node selector");
+        if (!List.of("worker", "stargate", "holyplace").contains(nodeSelector)) {
+            throw new IllegalArgumentException("Invalid node selector: " + nodeSelector);
+        }
+
+        final String ingress = requireNonBlankString(awxExtraVars.get("ingress"), "Ingress");
+        if (!List.of("web2tier", "eai", "sysadm", "swvt", "monitor").contains(ingress)) {
+            throw new IllegalArgumentException("Invalid ingress: " + ingress);
+        }
+
+        final String memoryLimit = requireNonBlankString(awxExtraVars.get("memoryLimit"), "Memory limit");
+        validateMemoryLimit(memoryLimit);
+
+        final Object pvLimitObj = awxExtraVars.get("pvLimit");
+        if (pvLimitObj == null) {
+            throw new MissingFormatArgumentException("Persistent volume limit must be provided.");
+        }
+        final int pvLimit;
+        try {
+            pvLimit = Integer.parseInt(pvLimitObj.toString());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Persistent volume limit is invalid.");
+        }
+        if (pvLimit < 0 || pvLimit > 9) {
+            throw new IllegalArgumentException("Persistent volume limit must be between 0 and 9.");
+        }
+
+        final Object podLimitObj = awxExtraVars.get("podLimit");
+        if (podLimitObj == null) {
+            throw new MissingFormatArgumentException("Pod limit must be provided.");
+        }
+        final int podLimit;
+        try {
+            podLimit = Integer.parseInt(podLimitObj.toString());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Pod limit is invalid.");
+        }
+        if (podLimit < 2 || podLimit > 128) {
+            throw new IllegalArgumentException("Pod limit must be between 2 and 128.");
+        }
+
+        final Object loggingObj = awxExtraVars.get("logging");
+        final String logging = loggingObj != null ? loggingObj.toString() : "no";
+        if (!List.of("no", "yes", "jsonparsing").contains(logging)) {
+            throw new IllegalArgumentException("Invalid logging value: " + logging);
+        }
+
+        final Object quayOrgaObj = awxExtraVars.get("quayOrga");
+        final String quayOrga = quayOrgaObj != null ? quayOrgaObj.toString() : "";
+        if (!quayOrga.isBlank()) {
+            if (quayOrga.length() > 1024) {
+                throw new IllegalArgumentException("Quay Orga must be less than 1024 characters, or empty.");
+            }
+            if (!quayOrga.matches("^[a-z0-9-]+$")) {
+                throw new IllegalArgumentException("Quay Orga contains invalid characters.");
+            }
+        }
+
+        logCreatedJob(OPENSHIFT_NAMESPACE_ORDER, serverId);
+        jobService.openshiftNamespaceOrder(awxExtraVars, OPENSHIFT_NAMESPACE_ORDER);
+    }
+
+    private void validateMemoryLimit(final String memoryLimit) {
+        if (!memoryLimit.matches("^[0-9]+Gi$")) {
+            throw new IllegalArgumentException("Invalid memory limit format: " + memoryLimit);
+        }
+        final int gibibytes = Integer.parseInt(memoryLimit.substring(0, memoryLimit.length() - 2));
+        if (gibibytes < 1 || gibibytes > 32) {
+            throw new IllegalArgumentException("Memory limit must be between 1Gi and 32Gi.");
+        }
+    }
 
     // -----------------------------------------------------------------------------------------------------------------
     // Helper Methods
@@ -2201,4 +2314,10 @@ public class JobController {
         }
     }
 
+    private String requireNonBlankString(final Object value, final String fieldName) {
+        if (value == null || value.toString().isBlank()) {
+            throw new MissingFormatArgumentException(fieldName + " must be provided.");
+        }
+        return value.toString();
+    }
 }

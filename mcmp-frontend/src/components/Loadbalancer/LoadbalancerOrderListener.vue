@@ -11,7 +11,7 @@
           rounded
           variant="outlined"
           class="mt-2"
-          :menu-props="{ persistent: true, closeOnContentClick: true }"
+          :menu-props="{ closeOnContentClick: true }"
         />
       </v-col>
       <v-col cols="1">
@@ -56,7 +56,7 @@
             label="Persistenz*"
             rounded
             variant="outlined"
-            :menu-props="{ persistent: true, closeOnContentClick: true }"
+            :menu-props="{ closeOnContentClick: true }"
           />
         </v-col>
         <v-col cols="1">
@@ -160,7 +160,7 @@
             label="Persistenz*"
             rounded
             variant="outlined"
-            :menu-props="{ persistent: true, closeOnContentClick: true }"
+            :menu-props="{ closeOnContentClick: true }"
           />
         </v-col>
       </v-row>

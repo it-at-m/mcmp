@@ -63,11 +63,13 @@
             <h4>Hinweis:</h4>
             <span v-if="isLinux">
               Bei mehr als 2000GB wird ein Change bei IBS48 eröffnet. Nach
-              Prüfung und möglicher Freigabe erfolgt die Anpassung automatisiert.
+              Prüfung und möglicher Freigabe erfolgt die Anpassung
+              automatisiert.
             </span>
             <span v-else>
               Bei mehr als 2000GB wird ein Change bei IBS49 eröffnet. Nach
-              Prüfung und möglicher Freigabe erfolgt die Anpassung automatisiert.
+              Prüfung und möglicher Freigabe erfolgt die Anpassung
+              automatisiert.
             </span>
           </common-alert>
         </v-col>

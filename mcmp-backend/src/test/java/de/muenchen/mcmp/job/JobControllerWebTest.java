@@ -261,6 +261,285 @@ class JobControllerWebTest {
     }
 
     // -----------------------------------------------------------------------------------------------------------------
+    // Tests for OPENSHIFT_NAMESPACE_ORDER
+    // -----------------------------------------------------------------------------------------------------------------
+
+    private static final String VALID_OPENSHIFT_NAMESPACE_ORDER = """
+            {"appserviceId":2002,"namespaceName":"my-namespace","description":"desc",
+             "nodeSelector":"worker","ingress":"web2tier","memoryLimit":"4Gi",
+             "pvLimit":2,"podLimit":8,"logging":"no","quayOrga":"my-org"}""";
+
+    private void stubOpenshiftNamespaceOrderAppserviceChecksPass() {
+        final Appservice appservice = new Appservice();
+        appservice.setId(APPSERVICE_ID);
+        when(appserviceService.getAppservice(APPSERVICE_ID)).thenReturn(appservice);
+        when(appserviceService.canUserEditAppservice(APPSERVICE_ID)).thenReturn(true);
+    }
+
+    @Test
+    void openshiftNamespaceOrder_validPayload_succeeds() throws Exception {
+        stubOpenshiftNamespaceOrderAppserviceChecksPass();
+
+        mockMvc.perform(post("/job/create/OPENSHIFT_NAMESPACE_ORDER").param("serverId", "-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_OPENSHIFT_NAMESPACE_ORDER))
+                .andExpect(status().isOk());
+
+        verify(jobService).openshiftNamespaceOrder(any(), eq("OPENSHIFT_NAMESPACE_ORDER"));
+    }
+
+    @Test
+    void openshiftNamespaceOrder_emptyDescriptionAndQuayOrga_isAllowed() throws Exception {
+        stubOpenshiftNamespaceOrderAppserviceChecksPass();
+
+        mockMvc.perform(post("/job/create/OPENSHIFT_NAMESPACE_ORDER").param("serverId", "-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"appserviceId":2002,"namespaceName":"my-namespace","description":"",
+                                 "nodeSelector":"worker","ingress":"web2tier","memoryLimit":"4Gi",
+                                 "pvLimit":2,"podLimit":8,"logging":"no","quayOrga":""}"""))
+                .andExpect(status().isOk());
+
+        verify(jobService).openshiftNamespaceOrder(any(), eq("OPENSHIFT_NAMESPACE_ORDER"));
+    }
+
+    @Test
+    void openshiftNamespaceOrder_missingAppserviceId_isRejected() throws Exception {
+        mockMvc.perform(post("/job/create/OPENSHIFT_NAMESPACE_ORDER").param("serverId", "-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"namespaceName":"my-namespace","description":"desc",
+                                 "nodeSelector":"worker","ingress":"web2tier","memoryLimit":"4Gi",
+                                 "pvLimit":2,"podLimit":8,"logging":"no"}"""))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void openshiftNamespaceOrder_unknownAppservice_isBlocked() throws Exception {
+        when(appserviceService.getAppservice(APPSERVICE_ID)).thenReturn(null);
+
+        mockMvc.perform(post("/job/create/OPENSHIFT_NAMESPACE_ORDER").param("serverId", "-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_OPENSHIFT_NAMESPACE_ORDER))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void openshiftNamespaceOrder_userCannotEditAppservice_isBlocked() throws Exception {
+        final Appservice appservice = new Appservice();
+        appservice.setId(APPSERVICE_ID);
+        when(appserviceService.getAppservice(APPSERVICE_ID)).thenReturn(appservice);
+        when(appserviceService.canUserEditAppservice(APPSERVICE_ID)).thenReturn(false);
+
+        mockMvc.perform(post("/job/create/OPENSHIFT_NAMESPACE_ORDER").param("serverId", "-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_OPENSHIFT_NAMESPACE_ORDER))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void openshiftNamespaceOrder_uppercaseNamespaceName_isRejected() throws Exception {
+        stubOpenshiftNamespaceOrderAppserviceChecksPass();
+
+        mockMvc.perform(post("/job/create/OPENSHIFT_NAMESPACE_ORDER").param("serverId", "-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"appserviceId":2002,"namespaceName":"My-Namespace","description":"desc",
+                                 "nodeSelector":"worker","ingress":"web2tier","memoryLimit":"4Gi",
+                                 "pvLimit":2,"podLimit":8,"logging":"no"}"""))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void openshiftNamespaceOrder_namespaceNameTooLong_isRejected() throws Exception {
+        stubOpenshiftNamespaceOrderAppserviceChecksPass();
+        final String longName = "a".repeat(65);
+
+        mockMvc.perform(post("/job/create/OPENSHIFT_NAMESPACE_ORDER").param("serverId", "-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"appserviceId":2002,"namespaceName":"%s","description":"desc",
+                                 "nodeSelector":"worker","ingress":"web2tier","memoryLimit":"4Gi",
+                                 "pvLimit":2,"podLimit":8,"logging":"no"}""".formatted(longName)))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void openshiftNamespaceOrder_invalidNodeSelector_isRejected() throws Exception {
+        stubOpenshiftNamespaceOrderAppserviceChecksPass();
+
+        mockMvc.perform(post("/job/create/OPENSHIFT_NAMESPACE_ORDER").param("serverId", "-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"appserviceId":2002,"namespaceName":"my-namespace","description":"desc",
+                                 "nodeSelector":"bogus","ingress":"web2tier","memoryLimit":"4Gi",
+                                 "pvLimit":2,"podLimit":8,"logging":"no"}"""))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void openshiftNamespaceOrder_invalidIngress_isRejected() throws Exception {
+        stubOpenshiftNamespaceOrderAppserviceChecksPass();
+
+        mockMvc.perform(post("/job/create/OPENSHIFT_NAMESPACE_ORDER").param("serverId", "-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"appserviceId":2002,"namespaceName":"my-namespace","description":"desc",
+                                 "nodeSelector":"worker","ingress":"bogus","memoryLimit":"4Gi",
+                                 "pvLimit":2,"podLimit":8,"logging":"no"}"""))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void openshiftNamespaceOrder_memoryLimitInMebibytes_isRejected() throws Exception {
+        stubOpenshiftNamespaceOrderAppserviceChecksPass();
+
+        mockMvc.perform(post("/job/create/OPENSHIFT_NAMESPACE_ORDER").param("serverId", "-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"appserviceId":2002,"namespaceName":"my-namespace","description":"desc",
+                                 "nodeSelector":"worker","ingress":"web2tier","memoryLimit":"512Mi",
+                                 "pvLimit":2,"podLimit":8,"logging":"no"}"""))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void openshiftNamespaceOrder_memoryLimitAboveMax_isRejected() throws Exception {
+        stubOpenshiftNamespaceOrderAppserviceChecksPass();
+
+        mockMvc.perform(post("/job/create/OPENSHIFT_NAMESPACE_ORDER").param("serverId", "-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"appserviceId":2002,"namespaceName":"my-namespace","description":"desc",
+                                 "nodeSelector":"worker","ingress":"web2tier","memoryLimit":"33Gi",
+                                 "pvLimit":2,"podLimit":8,"logging":"no"}"""))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void openshiftNamespaceOrder_missingPvLimit_isRejected() throws Exception {
+        stubOpenshiftNamespaceOrderAppserviceChecksPass();
+
+        mockMvc.perform(post("/job/create/OPENSHIFT_NAMESPACE_ORDER").param("serverId", "-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"appserviceId":2002,"namespaceName":"my-namespace","description":"desc",
+                                 "nodeSelector":"worker","ingress":"web2tier","memoryLimit":"4Gi",
+                                 "podLimit":8,"logging":"no"}"""))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void openshiftNamespaceOrder_pvLimitAboveMax_isRejected() throws Exception {
+        stubOpenshiftNamespaceOrderAppserviceChecksPass();
+
+        mockMvc.perform(post("/job/create/OPENSHIFT_NAMESPACE_ORDER").param("serverId", "-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"appserviceId":2002,"namespaceName":"my-namespace","description":"desc",
+                                 "nodeSelector":"worker","ingress":"web2tier","memoryLimit":"4Gi",
+                                 "pvLimit":10,"podLimit":8,"logging":"no"}"""))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void openshiftNamespaceOrder_missingPodLimit_isRejected() throws Exception {
+        stubOpenshiftNamespaceOrderAppserviceChecksPass();
+
+        mockMvc.perform(post("/job/create/OPENSHIFT_NAMESPACE_ORDER").param("serverId", "-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"appserviceId":2002,"namespaceName":"my-namespace","description":"desc",
+                                 "nodeSelector":"worker","ingress":"web2tier","memoryLimit":"4Gi",
+                                 "pvLimit":2,"logging":"no"}"""))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void openshiftNamespaceOrder_podLimitBelowMin_isRejected() throws Exception {
+        stubOpenshiftNamespaceOrderAppserviceChecksPass();
+
+        mockMvc.perform(post("/job/create/OPENSHIFT_NAMESPACE_ORDER").param("serverId", "-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"appserviceId":2002,"namespaceName":"my-namespace","description":"desc",
+                                 "nodeSelector":"worker","ingress":"web2tier","memoryLimit":"4Gi",
+                                 "pvLimit":2,"podLimit":1,"logging":"no"}"""))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void openshiftNamespaceOrder_podLimitAboveMax_isRejected() throws Exception {
+        stubOpenshiftNamespaceOrderAppserviceChecksPass();
+
+        mockMvc.perform(post("/job/create/OPENSHIFT_NAMESPACE_ORDER").param("serverId", "-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"appserviceId":2002,"namespaceName":"my-namespace","description":"desc",
+                                 "nodeSelector":"worker","ingress":"web2tier","memoryLimit":"4Gi",
+                                 "pvLimit":2,"podLimit":129,"logging":"no"}"""))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void openshiftNamespaceOrder_invalidLogging_isRejected() throws Exception {
+        stubOpenshiftNamespaceOrderAppserviceChecksPass();
+
+        mockMvc.perform(post("/job/create/OPENSHIFT_NAMESPACE_ORDER").param("serverId", "-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"appserviceId":2002,"namespaceName":"my-namespace","description":"desc",
+                                 "nodeSelector":"worker","ingress":"web2tier","memoryLimit":"4Gi",
+                                 "pvLimit":2,"podLimit":8,"logging":"bogus"}"""))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void openshiftNamespaceOrder_quayOrgaInvalidCharacters_isRejected() throws Exception {
+        stubOpenshiftNamespaceOrderAppserviceChecksPass();
+
+        mockMvc.perform(post("/job/create/OPENSHIFT_NAMESPACE_ORDER").param("serverId", "-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"appserviceId":2002,"namespaceName":"my-namespace","description":"desc",
+                                 "nodeSelector":"worker","ingress":"web2tier","memoryLimit":"4Gi",
+                                 "pvLimit":2,"podLimit":8,"logging":"no","quayOrga":"My_Org"}"""))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(jobService);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------
     // Tests for security
     // -----------------------------------------------------------------------------------------------------------------
 

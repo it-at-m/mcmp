@@ -98,7 +98,10 @@
         </v-col>
 
         <!-- Hinweis bei Überschreitung der Grenzwerte -->
-        <v-col v-if="cpus > 72 || ram > 100" cols="12">
+        <v-col
+          v-if="cpus > 72 || ram > 100"
+          cols="12"
+        >
           <common-alert color="info">
             <h4>Hinweis:</h4>
             Bei mehr als 72 CPUs und/oder 100GB RAM wird ein Change bei IBS4
@@ -162,9 +165,7 @@
             type="number"
             :min="1"
             step="1"
-            :rules="[
-              (v) => v >= 1 || 'CPU darf nicht kleiner 1 sein.',
-            ]"
+            :rules="[(v) => v >= 1 || 'CPU darf nicht kleiner 1 sein.']"
             :disabled="!isNonOracleUser && (server.dbAdabas || server.dbMssql)"
           />
         </v-col>
@@ -177,9 +178,7 @@
             type="number"
             :min="2"
             step="1"
-            :rules="[
-              (v) => v >= 2 || 'RAM darf nicht kleiner 2 sein.',
-            ]"
+            :rules="[(v) => v >= 2 || 'RAM darf nicht kleiner 2 sein.']"
           />
         </v-col>
 

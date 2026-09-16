@@ -61,7 +61,7 @@ import CommonAlert from "@/components/common/CommonAlert.vue";
 import { useRules } from "@/composables/rules.ts";
 import { EnvironmentType } from "@/types/EnvironmentType.ts";
 
-const order = defineModel<OpenshiftNamespaceOrder>({ required: true });
+const order = defineModel<OpenshiftNamespaceOrder>("order", { required: true });
 const rules = useRules();
 const isValid = ref(false);
 const emit = defineEmits(["validation-change"]);

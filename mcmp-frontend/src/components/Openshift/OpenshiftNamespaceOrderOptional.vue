@@ -91,7 +91,7 @@ import { ref, watch } from "vue";
 import InlineTooltip from "@/components/common/InlineTooltip.vue";
 import { useRules } from "@/composables/rules.ts";
 
-const order = defineModel<OpenshiftNamespaceOrder>({ required: true });
+const order = defineModel<OpenshiftNamespaceOrder>("order", { required: true });
 const rules = useRules();
 const isValid = ref(false);
 const emit = defineEmits(["validation-change"]);

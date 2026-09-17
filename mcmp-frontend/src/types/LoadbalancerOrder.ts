@@ -14,7 +14,7 @@ interface Listener {
 interface ServerPools {
   member: { name: string; ip: string; ports: number[] }[];
   monitors: ["tcp"] | MonitorType[];
-  loadbalancing_mode: "round-robin" | "least-connections";
+  loadbalancing_mode: "round-robin" | "least-connections-member";
 }
 
 export interface MonitorType {

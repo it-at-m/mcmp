@@ -224,7 +224,10 @@ func NewConfigurationItemWithAppServices(rawCI map[string]any) ConfigurationItem
 }
 
 func (c *ConfigurationItemWithAppServices) GetSysID() string {
-	if val, ok := c.RawCI["sys_id"].(string); ok {
+	if val, ok := c.RawCI["sys_id"].(string); ok && val != "" {
+		return val
+	}
+	if val, ok := c.RawCI["configuration_item.sys_id"].(string); ok && val != "" {
 		return val
 	}
 	return ""

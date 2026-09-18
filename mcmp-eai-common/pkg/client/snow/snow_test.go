@@ -1251,6 +1251,78 @@ func TestIdentifyReconcilePackageRepository(t *testing.T) {
 	}
 }
 
+func TestGetConfigurationItemsWithAppServices_CloudObjectStorage(t *testing.T) {
+	mockHttpClient := &MockHttpClient{
+		DoFunc: func(req *http.Request) (*http.Response, error) {
+			queryParam := req.URL.Query().Get("sysparm_query")
+
+			// Mock für die Abfrage von getCmdbKeyValueServiceId
+			if strings.Contains(queryParam, "key=serviceid") {
+				body := `{
+					"result": [
+						{
+							"configuration_item.sys_id": "af8a83bba923f61444eaa7ef2f18136d",
+							"value": "SNSVC0012345"
+						}
+					]
+				}`
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(strings.NewReader(body)),
+				}, nil
+			}
+
+			// Mock für die Abfrage von getCmdbStoragegridTenantId
+			if strings.Contains(queryParam, "key=storagegrid-tenant-id") {
+				body := `{
+					"result": [
+						{
+							"name": "ent-test",
+							"sys_id": "af8a83bba923f61444eaa7ef2f18136d",
+							"sys_class": "cmdb_ci_cloud_object_storage",
+							"account_id": "1234567890"
+						}
+					]
+				}`
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(strings.NewReader(body)),
+				}, nil
+			}
+
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader(`{"result": []}`)),
+			}, nil
+		},
+	}
+
+	client := &Client{
+		httpClient:      mockHttpClient,
+		urlCmdbKeyValue: "http://example.com/cmdb_key_value",
+		DebugLogger:     logging.NewDebugLogger(nil),
+	}
+
+	results, err := client.GetCmdbCiCloudObjectStorageData()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(results) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(results))
+	}
+
+	ci := results[0]
+	if ci.GetSysID() != "af8a83bba923f61444eaa7ef2f18136d" {
+		t.Errorf("expected sys_id 'af8a83bba923f61444eaa7ef2f18136d', got '%s'", ci.GetSysID())
+	}
+
+	appServiceNumbers := ci.GetAppServiceNumbers()
+	if len(appServiceNumbers) != 1 || appServiceNumbers[0] != "SNSVC0012345" {
+		t.Errorf("expected appServiceNumber ['SNSVC0012345'], got %v", appServiceNumbers)
+	}
+}
+
 // compareUsers is a helper function that performs deep comparison of User structures.
 // This function compares all fields of two User instances to determine equality.
 // It's used by test cases to validate that user data was parsed correctly from JSON responses.

@@ -189,8 +189,15 @@ public class UnifiedStorageService {
                             .type(StorageType.S3)
                             .storageCategory(bucket.getStorageCategory())
                             .protocol("S3")
+                     /*
                             .appservices(bucket.getStorageGridAccount() != null ?
                                     bucket.getStorageGridAccount().getAppservices().stream()
+                                            .map(a -> new de.muenchen.mcmp.appservice.AppserviceNameAndSysIdDTO(a.getId(), a.getName(), a.getSysId()))
+                                            .toList() :
+                                    List.of())
+                      */
+                            .appservices(bucket.getAppservices() != null ?
+                                    bucket.getAppservices().stream()
                                             .map(a -> new de.muenchen.mcmp.appservice.AppserviceNameAndSysIdDTO(a.getId(), a.getName(), a.getSysId()))
                                             .toList() :
                                     List.of())

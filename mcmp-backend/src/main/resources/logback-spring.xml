@@ -19,7 +19,7 @@
     <springProperty scope="context" name="siemSecondaryProtocol" source="siem.syslog.secondary.protocol" defaultValue="TCP"/>
     <springProperty scope="context" name="siemSecondarySsl" source="siem.syslog.secondary.ssl" defaultValue="false"/>
 
-    <springProfile name="local | test | docker | podman">
+    <springProfile name="local | test | docker | podman | default">
 
         <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
             <file>logs/mcmp-backend.log</file>
@@ -83,7 +83,7 @@
         </root>
     </springProfile>
 
-    <springProfile name="!local &amp; !test &amp; !docker &amp; !podman">
+    <springProfile name="!local &amp; !test &amp; !docker &amp; !podman &amp; !default">
 
         <!-- Writes internal Logback framework errors and status messages to a dedicated log file -->
         <statusListener class="ch.qos.logback.core.status.OnFileStatusListener">

@@ -269,29 +269,27 @@ function editMountPoint(
   if (
     props.selectedServer?.guestConfigFullName?.toLowerCase().includes("linux")
   ) {
-    jobService.startJob(
-      jobLoading,
-      "LINUX_MOUNTPOINT_CHANGE",
-      props.selectedServer.id,
-      {
-        mountPoint: mountPoint.diskPath,
-        newSize: newCapacityGB,
-        volumeGroup: newVolumeGroup,
-      }
-    );
+    const actionName =
+      newCapacityGB > 2000 ? "LINUX_DISK_UPGRADE" : "LINUX_MOUNTPOINT_CHANGE";
+
+    jobService.startJob(jobLoading, actionName, props.selectedServer.id, {
+      mountPoint: mountPoint.diskPath,
+      newSize: newCapacityGB,
+      volumeGroup: newVolumeGroup,
+    });
   }
   if (
     props.selectedServer?.guestConfigFullName?.toLowerCase().includes("windows")
   ) {
-    jobService.startJob(
-      jobLoading,
-      "WINDOWS_PARTITION_CHANGE",
-      props.selectedServer.id,
-      {
-        partition: mountPoint.diskPath,
-        newSize: newCapacityGB,
-      }
-    );
+    const actionName =
+      newCapacityGB > 2000
+        ? "WINDOWS_DISK_UPGRADE"
+        : "WINDOWS_PARTITION_CHANGE";
+
+    jobService.startJob(jobLoading, actionName, props.selectedServer.id, {
+      partition: mountPoint.diskPath,
+      newSize: newCapacityGB,
+    });
   }
 }
 </script>

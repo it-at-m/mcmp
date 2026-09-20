@@ -2,6 +2,16 @@
 .links a:visited,
 .links a:hover,
 .links a:active {
+  /* noinspection CssUnresolvedCustomProperty */
   color: rgb(var(--v-theme-link));
+  text-decoration: none;
+}
+
+.links_inverted a,
+.links_inverted a:visited,
+.links_inverted a:hover,
+.links_inverted a:active {
+  /* noinspection CssUnresolvedCustomProperty */
+  color: rgb(var(--v-theme-link_inverted));
   text-decoration: none;
 }

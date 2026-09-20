@@ -20,7 +20,7 @@
           variant="outlined"
           class="mt-2"
           multiple
-          :menu-props="{ persistent: true, closeOnContentClick: true }"
+          :menu-props="{ closeOnContentClick: true }"
         >
           <template #selection="{ item }">
             <v-expansion-panels
@@ -111,7 +111,7 @@
           label="Protokoll*"
           rounded
           variant="outlined"
-          :menu-props="{ persistent: true, closeOnContentClick: true }"
+          :menu-props="{ closeOnContentClick: true }"
         />
       </v-col>
       <v-col cols="1">
@@ -142,7 +142,7 @@
           label="Loadbalancing Modus*"
           rounded
           variant="outlined"
-          :menu-props="{ persistent: true, closeOnContentClick: true }"
+          :menu-props="{ closeOnContentClick: true }"
         />
       </v-col>
       <v-col cols="1">

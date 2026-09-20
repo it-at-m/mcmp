@@ -11,7 +11,7 @@
           rounded
           variant="outlined"
           class="mt-2"
-          :menu-props="{ persistent: true, closeOnContentClick: true }"
+          :menu-props="{ closeOnContentClick: true }"
         />
       </v-col>
       <v-col cols="1">
@@ -56,7 +56,7 @@
             label="Persistenz*"
             rounded
             variant="outlined"
-            :menu-props="{ persistent: true, closeOnContentClick: true }"
+            :menu-props="{ closeOnContentClick: true }"
           />
         </v-col>
         <v-col cols="1">
@@ -160,7 +160,7 @@
             label="Persistenz*"
             rounded
             variant="outlined"
-            :menu-props="{ persistent: true, closeOnContentClick: true }"
+            :menu-props="{ closeOnContentClick: true }"
           />
         </v-col>
       </v-row>
@@ -199,7 +199,6 @@ watch(
     if (protocol === "tcp") {
       // Nur TCP verfügbar
       listenerProtocols.value = [{ title: "TCP", value: "tcp" }];
-      props.ldblOrder.listener[0].serverside_tls = false;
       if (
         props.ldblOrder.listener[0].listener_type !== "tcp" &&
         props.ldblOrder.listener[0].listener_type !== "fast-tcp"
@@ -214,7 +213,6 @@ watch(
       ];
       props.ldblOrder.listener[0].listener_type = "http";
       props.ldblOrder.listener[0].clientside_tls = true;
-      props.ldblOrder.listener[0].serverside_tls = true;
       props.ldblOrder.listener[0].port = 443;
     } else if (protocol === "https" || protocol === undefined) {
       // Nur HTTPS verfügbar (auch Standard wenn kein Protokoll gesetzt)
@@ -222,7 +220,6 @@ watch(
       // Listener bleibt of type 'http' but clientside_tls = true
       props.ldblOrder.listener[0].listener_type = "http";
       props.ldblOrder.listener[0].clientside_tls = true;
-      props.ldblOrder.listener[0].serverside_tls = true;
       props.ldblOrder.listener[0].port = 443;
     }
   },

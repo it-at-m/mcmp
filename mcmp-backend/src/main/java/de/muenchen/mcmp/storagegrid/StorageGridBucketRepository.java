@@ -62,12 +62,14 @@ public interface StorageGridBucketRepository extends JpaRepository<StorageGridBu
     List<StorageGridBucket> findByIdsWithAppservices(@Param("ids") List<Long> ids);
 
     @Query("SELECT b.id, b.name, b.storageCategory FROM StorageGridBucket b " +
-            "JOIN b.storageGridAccount.appservices ab " +
+            //"JOIN b.storageGridAccount.appservices ab " +
+            "JOIN b.appservices ab " +
             "WHERE ab.id = :appserviceId " +
             "AND b.storageCategory IS NOT NULL " +
             "AND (" +
             "   :isAdmin = TRUE OR :isReadonly = TRUE OR :isStorage = TRUE OR :isOperator = TRUE OR " +
-            "   EXISTS (SELECT 1 FROM b.storageGridAccount.appservices a JOIN a.changeGroup g JOIN g.users u WHERE u.username = :username)" +
+            //"   EXISTS (SELECT 1 FROM b.storageGridAccount.appservices a JOIN a.changeGroup g JOIN g.users u WHERE u.username = :username)" +
+            "   EXISTS (SELECT 1 FROM b.appservices a JOIN a.changeGroup g JOIN g.users u WHERE u.username = :username)" +
             ")")
     List<Object[]> findBucketListItemsByAppserviceId(@Param("appserviceId") Long appserviceId,
                                                      @Param("username") String username,

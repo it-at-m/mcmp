@@ -149,7 +149,7 @@
                       class="py-0"
                       ><v-radio
                         label="Windows Clients"
-                        value="windows-clients"
+                        value="windows-client"
                         hide-details
                         density="compact"
                     /></v-list-item>

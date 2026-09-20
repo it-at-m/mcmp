@@ -285,7 +285,7 @@ const disableReason = computed(() => {
   if (props.lb.wafEnabled)
     return "Bearbeitung ist bei aktivierter WAF nicht möglich.";
   if (!allMembersHaveNameAndIp.value)
-    return "Nicht alle Pool-Member sind vollständig aufgelöst (Name und IP erforderlich).";
+    return "Nicht alle Pool-Member Server sind in der MCMP oder haben eine bekannte IP";
   return "";
 });
 

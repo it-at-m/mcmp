@@ -179,22 +179,30 @@
 
 <script setup lang="ts">
 import { mdiCheck, mdiClose } from "@mdi/js";
-import { computed, ref, watch } from "vue";
+import { computed, inject, ref, watch } from "vue";
 
 import actionService from "@/api/actionService.ts";
 import CommonAlert from "@/components/common/CommonAlert.vue";
 
-const props = defineProps<{
-  modelValue: boolean;
-  title?: string;
-  icon?: string;
-  color?: string;
-  showActions?: boolean;
-  maxWidth?: number | string;
-  submitActivated: boolean;
-  showChangeWarning?: boolean;
-  checkForEnabledActions?: string[];
-}>();
+const props = withDefaults(
+  defineProps<{
+    modelValue: boolean;
+    title?: string;
+    icon?: string;
+    color?: string;
+    showActions?: boolean;
+    maxWidth?: number | string;
+    submitActivated: boolean;
+    showChangeWarning?: boolean;
+    checkForEnabledActions?: string[];
+    closeAncestorMenusOnOpen?: boolean;
+  }>(),
+  {
+    closeAncestorMenusOnOpen: true,
+  }
+);
+
+const closeAncestorMenus = inject<() => void>("closeAncestorMenus");
 const loading = ref(false);
 const actionsEnabled = ref<Record<string, boolean>>({});
 const actionsChecked = ref(false);
@@ -249,6 +257,9 @@ watch(
     if (val) {
       acknowledgedActionDisabled.value = false;
       onOpenedCheckActions();
+      if (props.closeAncestorMenusOnOpen) {
+        closeAncestorMenus?.();
+      }
     }
   },
   { immediate: true }

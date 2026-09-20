@@ -1094,6 +1094,36 @@ public class JobService {
     }
 
     // -----------------------------------------------------------------------------------------------------------------
+    // Openshift JOBs
+    // -----------------------------------------------------------------------------------------------------------------
+    public void openshiftNamespaceOrder(final Map<String, Object> awxExtraVars, final String openshift_namespace_order_identifier) {
+        final Long appserviceId = Long.valueOf(awxExtraVars.get("appserviceId").toString());
+        final Appservice appservice = getAppserviceOrThrow(appserviceId);
+
+        final String capAdmins = appservice.getChangeGroup() == null
+                ? ""
+                : appservice.getChangeGroup().getUsers().stream()
+                .map(User::getUsername)
+                .collect(Collectors.joining(","));
+
+        final Map<String, Object> params = new HashMap<>();
+        params.put("cap_admins", capAdmins);
+        params.put("projects_serviceid", appservice.getNumber());
+        params.put("application_service_environment", appservice.getEnvironment().name());
+        params.put("cap_project", awxExtraVars.get("namespaceName"));
+        params.put("cap_projectdescription", awxExtraVars.get("description"));
+        params.put("cap_node_selector", awxExtraVars.get("nodeSelector"));
+        params.put("cap_ingress_type", awxExtraVars.get("ingress"));
+        params.put("cap_memrequest", awxExtraVars.get("memoryLimit"));
+        params.put("cap_podlimit", awxExtraVars.get("podLimit"));
+        params.put("cap_pvlimit", awxExtraVars.get("pvLimit"));
+        params.put("cap_logging", awxExtraVars.get("logging"));
+        params.put("cap_quayorga", awxExtraVars.get("quayOrga"));
+
+        createJob(openshift_namespace_order_identifier, null, appservice, params, new HashMap<>(), job -> job.setHostname((String) params.get("cap_project")));
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------
     // GREEN-IT JOBs
     // -----------------------------------------------------------------------------------------------------------------
     public Long createGreenItRightsizingJob(final GreenItRightsizing greenItRightsizing) {

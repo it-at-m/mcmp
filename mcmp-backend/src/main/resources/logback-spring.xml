@@ -6,20 +6,23 @@
 
     <springProperty scope="context" name="springAppName" source="spring.application.name"/>
 
-    <!-- Primary SIEM server configuration -->
-    <springProperty scope="context" name="siemPrimaryHost" source="siem.syslog.primary.host" defaultValue="localhost"/>
-    <springProperty scope="context" name="siemPrimaryPort" source="siem.syslog.primary.port" defaultValue="514"/>
-    <springProperty scope="context" name="siemPrimaryProtocol" source="siem.syslog.primary.protocol" defaultValue="UDP"/>
-    <springProperty scope="context" name="siemPrimarySsl" source="siem.syslog.primary.ssl" defaultValue="false"/>
+    <!-- QRadar (Syslog UDP) -->
+    <springProperty scope="context" name="qradarHost" source="siem.qradar.host" defaultValue="localhost"/>
+    <springProperty scope="context" name="qradarPort" source="siem.qradar.port" defaultValue="514"/>
 
-    <!-- Secondary SIEM server configuration (optional) -->
-    <springProperty scope="context" name="siemSecondaryEnabled" source="siem.syslog.secondary.enabled" defaultValue="false"/>
-    <springProperty scope="context" name="siemSecondaryHost" source="siem.syslog.secondary.host" defaultValue="localhost"/>
-    <springProperty scope="context" name="siemSecondaryPort" source="siem.syslog.secondary.port" defaultValue="514"/>
-    <springProperty scope="context" name="siemSecondaryProtocol" source="siem.syslog.secondary.protocol" defaultValue="TCP"/>
-    <springProperty scope="context" name="siemSecondarySsl" source="siem.syslog.secondary.ssl" defaultValue="false"/>
+    <!-- Splunk (TCP TLS/SSL) -->
+    <springProperty scope="context" name="splunkHost" source="siem.splunk.host" defaultValue="localhost"/>
+    <springProperty scope="context" name="splunkPort" source="siem.splunk.port" defaultValue="6514"/>
 
     <springProfile name="local | test | docker | podman | default">
+
+        <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <!-- @formatter:off -->
+                <pattern>%date{yyyy.MM.dd HH:mm:ss.SSS} | ${springAppName} | TraceId: %X{traceId:-} | SpanId: %X{spanId:-}] | %level | [%thread] | %logger{0} | [%file : %line] - %replace(%msg){'\s+', ' '}%n</pattern>
+                <!-- @formatter:on -->
+            </encoder>
+        </appender>
 
         <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
             <file>logs/mcmp-backend.log</file>
@@ -32,14 +35,6 @@
             </rollingPolicy>
             <encoder>
                 <pattern>%date{yyyy.MM.dd HH:mm:ss.SSS} | ${springAppName} | TraceId: %X{traceId:-} | SpanId: %X{spanId:-}] | %level | [%thread] | %logger{0} | [%file : %line] - %replace(%msg){'\s+', ' '}%n</pattern>
-            </encoder>
-        </appender>
-
-        <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-            <encoder>
-                <!-- @formatter:off -->
-                <pattern>%date{yyyy.MM.dd HH:mm:ss.SSS} | ${springAppName} | TraceId: %X{traceId:-} | SpanId: %X{spanId:-}] | %level | [%thread] | %logger{0} | [%file : %line] - %replace(%msg){'\s+', ' '}%n</pattern>
-                <!-- @formatter:on -->
             </encoder>
         </appender>
 
@@ -68,7 +63,6 @@
             <appender-ref ref="STDOUT" />
         </logger>
 
-        <!-- Suppress DispatcherServlet exception logs completely -->
         <logger name="org.springframework.web.servlet.DispatcherServlet" level="OFF" />
         <logger name="org.apache.catalina.core.ContainerBase.[Tomcat].[localhost].[/].[dispatcherServlet]" level="OFF" />
 
@@ -83,9 +77,8 @@
         </root>
     </springProfile>
 
-    <springProfile name="!local &amp; !test &amp; !docker &amp; !podman &amp; !default">
+    <springProfile name="prod | production">
 
-        <!-- Writes internal Logback framework errors and status messages to a dedicated log file -->
         <statusListener class="ch.qos.logback.core.status.OnFileStatusListener">
             <filename>logs/logback-status.log</filename>
         </statusListener>
@@ -93,7 +86,7 @@
         <appender name="JSON_STDOUT" class="ch.qos.logback.core.ConsoleAppender">
             <encoder class="net.logstash.logback.encoder.LogstashEncoder">
                 <throwableConverter
-                        class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
+                    class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
                     <!-- default max size of one log line in docker is 16kb - UTF8 ~ 1 Character = 1 Byte -->
                     <!-- therefore limit stack_traces to a maximum of 8192 characters (to leave room for the rest of the message) -->
                     <maxLength>8192</maxLength>
@@ -118,162 +111,49 @@
             </encoder>
         </appender>
 
-        <!-- ===================== PRIMARY SIEM APPENDER ===================== -->
-        <!-- 1. Primary TCP with SSL/TLS -->
-        <if>
-            <condition class="ch.qos.logback.core.boolex.ExpressionPropertyCondition">
-                <expression>(propertyEquals("siemPrimaryProtocol", "TCP") || propertyEquals("siemPrimaryProtocol", "tcp")) &amp;&amp; propertyEquals("siemPrimarySsl", "true")</expression>
-            </condition>
-            <then>
-                <appender name="SIEM_PRIMARY" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
-                    <destination>${siemPrimaryHost}:${siemPrimaryPort}</destination>
-                    <ssl />
-                    <reconnectionDelay>10 second</reconnectionDelay>
-                    <connectionTimeout>5 second</connectionTimeout>
-                    <keepAliveDuration>1 minute</keepAliveDuration>
-                    <waitStrategyType>blocking</waitStrategyType>
-                    <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
-                        <pattern>%replace(%msg){'[\r\n\t]', ' '}%n</pattern>
-                    </encoder>
-                </appender>
-            </then>
-        </if>
-
-        <!-- 2. Primary TCP without SSL -->
-        <if>
-            <condition class="ch.qos.logback.core.boolex.ExpressionPropertyCondition">
-                <expression>(propertyEquals("siemPrimaryProtocol", "TCP") || propertyEquals("siemPrimaryProtocol", "tcp")) &amp;&amp; !propertyEquals("siemPrimarySsl", "true")</expression>
-            </condition>
-            <then>
-                <appender name="SIEM_PRIMARY" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
-                    <destination>${siemPrimaryHost}:${siemPrimaryPort}</destination>
-                    <reconnectionDelay>10 second</reconnectionDelay>
-                    <connectionTimeout>5 second</connectionTimeout>
-                    <keepAliveDuration>1 minute</keepAliveDuration>
-                    <waitStrategyType>blocking</waitStrategyType>
-                    <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
-                        <pattern>%replace(%msg){'[\r\n\t]', ' '}%n</pattern>
-                    </encoder>
-                </appender>
-            </then>
-        </if>
-
-        <!-- 3. Primary UDP (default) -->
-        <if>
-            <condition class="ch.qos.logback.core.boolex.ExpressionPropertyCondition">
-                <expression>!(propertyEquals("siemPrimaryProtocol", "TCP") || propertyEquals("siemPrimaryProtocol", "tcp"))</expression>
-            </condition>
-            <then>
-                <appender name="SIEM_PRIMARY" class="ch.qos.logback.classic.net.SyslogAppender">
-                    <syslogHost>${siemPrimaryHost}</syslogHost>
-                    <port>${siemPrimaryPort}</port>
-                    <facility>USER</facility>
-                    <suffixPattern>%replace(%msg){'[\r\n\t]', '_'}</suffixPattern>
-                </appender>
-            </then>
-        </if>
-
-        <!-- ===================== SECONDARY SIEM APPENDER ===================== -->
-        <!-- 1. Secondary TCP with SSL/TLS -->
-        <if>
-            <condition class="ch.qos.logback.core.boolex.ExpressionPropertyCondition">
-                <expression>propertyEquals("siemSecondaryEnabled", "true") &amp;&amp; (propertyEquals("siemSecondaryProtocol", "TCP") || propertyEquals("siemSecondaryProtocol", "tcp")) &amp;&amp; propertyEquals("siemSecondarySsl", "true")</expression>
-            </condition>
-            <then>
-                <appender name="SIEM_SECONDARY" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
-                    <destination>${siemSecondaryHost}:${siemSecondaryPort}</destination>
-                    <ssl />
-                    <reconnectionDelay>10 second</reconnectionDelay>
-                    <connectionTimeout>5 second</connectionTimeout>
-                    <keepAliveDuration>1 minute</keepAliveDuration>
-                    <waitStrategyType>blocking</waitStrategyType>
-                    <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
-                        <pattern>%replace(%msg){'[\r\n\t]', ' '}%n</pattern>
-                    </encoder>
-                </appender>
-            </then>
-        </if>
-
-        <!-- 2. Secondary TCP without SSL -->
-        <if>
-            <condition class="ch.qos.logback.core.boolex.ExpressionPropertyCondition">
-                <expression>propertyEquals("siemSecondaryEnabled", "true") &amp;&amp; (propertyEquals("siemSecondaryProtocol", "TCP") || propertyEquals("siemSecondaryProtocol", "tcp")) &amp;&amp; !propertyEquals("siemSecondarySsl", "true")</expression>
-            </condition>
-            <then>
-                <appender name="SIEM_SECONDARY" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
-                    <destination>${siemSecondaryHost}:${siemSecondaryPort}</destination>
-                    <reconnectionDelay>10 second</reconnectionDelay>
-                    <connectionTimeout>5 second</connectionTimeout>
-                    <keepAliveDuration>1 minute</keepAliveDuration>
-                    <waitStrategyType>blocking</waitStrategyType>
-                    <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
-                        <pattern>%replace(%msg){'[\r\n\t]', ' '}%n</pattern>
-                    </encoder>
-                </appender>
-            </then>
-        </if>
-
-        <!-- 3. Secondary UDP (default) -->
-        <if>
-            <condition class="ch.qos.logback.core.boolex.ExpressionPropertyCondition">
-                <expression>propertyEquals("siemSecondaryEnabled", "true") &amp;&amp; !(propertyEquals("siemSecondaryProtocol", "TCP") || propertyEquals("siemSecondaryProtocol", "tcp"))</expression>
-            </condition>
-            <then>
-                <appender name="SIEM_SECONDARY" class="ch.qos.logback.classic.net.SyslogAppender">
-                    <syslogHost>${siemSecondaryHost}</syslogHost>
-                    <port>${siemSecondaryPort}</port>
-                    <facility>USER</facility>
-                    <suffixPattern>%replace(%msg){'[\r\n\t]', '_'}</suffixPattern>
-                </appender>
-            </then>
-        </if>
-
-        <!-- SIEM File Appender -->
+        <!-- 1. SIEM File Appender -->
         <appender name="SIEM_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
             <file>logs/siem-cef.log</file>
             <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
                 <fileNamePattern>logs/siem-cef-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
-                <cleanHistoryOnStart>true</cleanHistoryOnStart>
                 <maxFileSize>100MB</maxFileSize>
                 <maxHistory>30</maxHistory>
                 <totalSizeCap>3GB</totalSizeCap>
             </rollingPolicy>
             <encoder>
-                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %replace(%msg){'[\r\n\t]', '_'}%n</pattern>
+                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %replace(%msg){'[\r\n\t]', ' '}%n</pattern>
             </encoder>
         </appender>
 
-        <appender name="SIEM_DEBUG" class="ch.qos.logback.core.ConsoleAppender">
-            <encoder>
-                <pattern>[SIEM-DEBUG] %replace(%msg){'[\r\n\t]', '_'}%n</pattern>
+        <!-- 2. QRadar via UDP Syslog -->
+        <appender name="SIEM_QRADAR_UDP" class="ch.qos.logback.classic.net.SyslogAppender">
+            <syslogHost>${qradarHost}</syslogHost>
+            <port>${qradarPort}</port>
+            <facility>USER</facility>
+            <suffixPattern>%replace(%msg){'[\r\n\t]', '_'}</suffixPattern>
+        </appender>
+
+        <!-- 3. Splunk via TCP mit SSL/TLS -->
+        <appender name="SIEM_SPLUNK_TCP_SSL" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+            <destination>${splunkHost}:${splunkPort}</destination>
+            <ssl />
+            <reconnectionDelay>10 second</reconnectionDelay>
+            <connectionTimeout>5 second</connectionTimeout>
+            <keepAliveDuration>1 minute</keepAliveDuration>
+            <waitStrategyType>sleeping</waitStrategyType>
+            <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+                <pattern>%replace(%msg){'[\r\n\t]', ' '}%n</pattern>
             </encoder>
         </appender>
 
-        <!-- SIEM CEF Logger: with or without secondary appender -->
-        <if>
-            <condition class="ch.qos.logback.core.boolex.ExpressionPropertyCondition">
-                <expression>propertyEquals("siemSecondaryEnabled", "true")</expression>
-            </condition>
-            <then>
-                <logger name="SIEM.CEF" level="INFO" additivity="false">
-                    <appender-ref ref="SIEM_PRIMARY" />
-                    <appender-ref ref="SIEM_SECONDARY" />
-                    <appender-ref ref="SIEM_FILE" />
-                </logger>
-            </then>
-            <else>
-                <logger name="SIEM.CEF" level="INFO" additivity="false">
-                    <appender-ref ref="SIEM_PRIMARY" />
-                    <appender-ref ref="SIEM_FILE" />
-                </logger>
-            </else>
-        </if>
-
-        <!-- Suppress DispatcherServlet exception logs completely -->
-        <logger name="org.springframework.web.servlet.DispatcherServlet" level="OFF" />
-        <logger name="org.apache.catalina.core.ContainerBase.[Tomcat].[localhost].[/].[dispatcherServlet]" level="OFF" />
+        <logger name="SIEM.CEF" level="INFO" additivity="false">
+            <appender-ref ref="SIEM_FILE" />
+            <appender-ref ref="SIEM_QRADAR_UDP" />
+            <appender-ref ref="SIEM_SPLUNK_TCP_SSL" />
+        </logger>
 
         <root level="info">
+            <appender-ref ref="JSON_STDOUT" />
             <appender-ref ref="FILE" />
         </root>
     </springProfile>

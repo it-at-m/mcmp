@@ -136,7 +136,11 @@
         <!-- 3. Splunk via TCP mit SSL/TLS -->
         <appender name="SIEM_SPLUNK_TCP_SSL" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
             <destination>${splunkHost}:${splunkPort}</destination>
-            <ssl />
+            <ssl>
+                <parameters>
+                    <hostnameVerification>false</hostnameVerification>
+                </parameters>
+            </ssl>
             <reconnectionDelay>10 second</reconnectionDelay>
             <connectionTimeout>5 second</connectionTimeout>
             <keepAliveDuration>1 minute</keepAliveDuration>

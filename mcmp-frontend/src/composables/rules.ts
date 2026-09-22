@@ -42,6 +42,12 @@ export function useRules() {
       (value != null && value >= min && value <= max) || message;
   }
 
+  function integerRule(message = "error") {
+    return (value: number | string | null | undefined) =>
+      (value != null && value !== "" && Number.isInteger(Number(value))) ||
+      message;
+  }
+
   type Config = SnowConfig | AwxConfig | InfobloxConfig | BaasConfig;
   function allowConfigSave(object: Config): boolean {
     return Object.entries(object).every(([k, v]) => {
@@ -334,5 +340,6 @@ export function useRules() {
     isNotPastTime,
     isNotAfterTime,
     rangeRule,
+    integerRule,
   };
 }

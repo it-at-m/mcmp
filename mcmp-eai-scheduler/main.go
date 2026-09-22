@@ -1193,7 +1193,11 @@ func tagVmwareInstanceCI(mcmpClient *db.Client, snowClient *snow.Client, foreman
 		logger.Error("Failed to save server assignment", "error", err)
 	}
 
-	logger.DebugPrintf(" -- Found server with ID %d, name %s, uuid %s, instance uuid %s for host %s\n", server.ID, server.Name, server.UUID, *server.InstanceUUID, *job.Hostname)
+	instanceUUID := "<nil>"
+	if server.InstanceUUID != nil {
+		instanceUUID = *server.InstanceUUID
+	}
+	logger.DebugPrintf(" -- Found server with ID %d, name %s, uuid %s, instance uuid %s for host %s\n", server.ID, server.Name, server.UUID, instanceUUID, *job.Hostname)
 	logger.DebugPrintf(" -- Determine sys_id for the VMware instance in Service Now using bios_uuid = %s\n", server.UUID)
 
 	vmwareInstanceCIs, err := snowClient.FindVMwareInstance(server.UUID)
@@ -1221,7 +1225,7 @@ func tagVmwareInstanceCI(mcmpClient *db.Client, snowClient *snow.Client, foreman
 
 	err = snowClient.PostTag(job.Appservice.Number, vmwareInstanceCI.SysId)
 	if err != nil {
-		return fmt.Errorf("failed to tag CI sys_id '%s' to AppService Number '%s': %v", *job.QuickDiscoveryCiSysid, job.Appservice.Number, err)
+		return fmt.Errorf("failed to tag CI sys_id '%s' to AppService Number '%s': %v", vmwareInstanceCI.SysId, job.Appservice.Number, err)
 	}
 
 	return nil

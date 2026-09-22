@@ -172,7 +172,10 @@ func run() error {
 
 	siemLogger := siem.NewSiemLogger(cfg.SIEM)
 	if cfg.SIEM.Enabled {
-		logger.DebugPrintf("SIEM Logger initialized. File: %s, Syslog: %s:%d", cfg.SIEM.File.Filename, cfg.SIEM.Syslog.Host, cfg.SIEM.Syslog.Port)
+		logger.DebugPrintf("SIEM Logger initialized. File: %s, QRadar: %s:%d (%s), Splunk: %s:%d (%s, TLS: %t)",
+			cfg.SIEM.File.Filename,
+			cfg.SIEM.QRadar.Host, cfg.SIEM.QRadar.Port, cfg.SIEM.QRadar.Protocol,
+			cfg.SIEM.Splunk.Host, cfg.SIEM.Splunk.Port, cfg.SIEM.Splunk.Protocol, cfg.SIEM.Splunk.UseTLS)
 	}
 
 	foremanClient, err := createForemanClient(cfg)

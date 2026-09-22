@@ -36,10 +36,17 @@ MaxBackups = 31   # number of files
 MaxAge     = 31   # days
 Compress   = true # disabled by default
 
-[SIEM.Syslog]
-Host     = "localhost"
+[SIEM.QRadar]
+Host     = "qradar.example.org"
 Port     = 514
-Protocol = "udp" # tcp or udp
+Protocol = "udp" # tcp oder udp
+
+[SIEM.Splunk]
+Host               = "splunk.example.org"
+Port               = 6514
+Protocol           = "tcp"
+UseTLS             = true
+InsecureSkipVerify = false
 
 [LOGGING]
 Level      = "INFO"   # DEBUG, INFO, WARN, ERROR

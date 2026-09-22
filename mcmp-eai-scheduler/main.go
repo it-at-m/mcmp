@@ -1185,6 +1185,10 @@ func tagVmwareInstanceCI(mcmpClient *db.Client, snowClient *snow.Client, foreman
 		logger.Error("Failed to update server", "id", server.ID, "error", err)
 	}
 
+	if job.Appservice == nil {
+		return fmt.Errorf("appservice is not set for job %d", job.ID)
+	}
+
 	serverAssignment := db.ServerAssignment{
 		ServerID:     server.ID,
 		AppserviceID: job.Appservice.ID,
@@ -1198,6 +1202,14 @@ func tagVmwareInstanceCI(mcmpClient *db.Client, snowClient *snow.Client, foreman
 		instanceUUID = *server.InstanceUUID
 	}
 	logger.DebugPrintf(" -- Found server with ID %d, name %s, uuid %s, instance uuid %s for host %s\n", server.ID, server.Name, server.UUID, instanceUUID, *job.Hostname)
+
+	if server.UUID == "" {
+		return fmt.Errorf("server UUID is empty for host %s", *job.Hostname)
+	}
+	if snowClient == nil {
+		return fmt.Errorf("snowClient is nil for job %d", job.ID)
+	}
+
 	logger.DebugPrintf(" -- Determine sys_id for the VMware instance in Service Now using bios_uuid = %s\n", server.UUID)
 
 	vmwareInstanceCIs, err := snowClient.FindVMwareInstance(server.UUID)

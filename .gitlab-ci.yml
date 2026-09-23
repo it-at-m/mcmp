@@ -246,7 +246,7 @@ cleanup-artifactory:
     # AQL-Format für relative Zeitangaben, "4w" = vor 4 Wochen
     RETENTION_PERIOD: "4w"
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "web"'
   script:
     - |
       JF_URL="$ARTIFACTORY_HOST/artifactory/jfrog-releases/artifactory/jfrog-cli/v2-jf/$CLI_VERSION/jfrog-cli-linux-amd64/jf"

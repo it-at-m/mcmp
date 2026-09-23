@@ -13,11 +13,13 @@ type VMConfig struct {
 	Cores   uint32         `json:"cores"`   // Number of cores per socket.
 	Hotplug string         `json:"hotplug"` // Enabled hotplug features.
 	OSType  string         `json:"ostype"`  // Guest operating system type.
+	Agent   Agent          `json:"agent"`   // Guest Agent configuration.
 	SMBIOS1 SMBIOS1        `json:"smbios1"` // SMBIOS type 1 fields.
 	Nets    map[string]Net `json:"-"`       // Network devices, mapped by their name.
 }
 
 type SMBIOS1 struct{ UUID string }
+type Agent struct{ Enabled bool }
 
 type Net struct {
 	Bridge     string // Bridge the device is attached to (can be a vlan)
@@ -60,6 +62,14 @@ func (result *VMConfig) UnmarshalJSON(b []byte) error {
 			uuid = attrs["uuid"]
 		}
 		result.SMBIOS1.UUID = uuid
+	}
+
+	if agent, ok := Get[string](values, "agent"); ok {
+		enabled, attrs := ParseCommaSeparatedMap(agent)
+		if enabled == "" {
+			enabled = attrs["enabled"]
+		}
+		result.Agent.Enabled = enabled == "1"
 	}
 
 	result.Nets = make(map[string]Net)

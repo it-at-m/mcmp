@@ -29,23 +29,24 @@ const (
 // A Server represents a single virtualized server accepted by the MCMP
 // backend's cloud import API.
 type Server struct {
-	ServerKind          ServerKind  `json:"server_kind,omitempty"`            // Must be "VIRTUAL"
-	ServerType          ServerType  `json:"server_type,omitempty"`            // Must be "VM_PROXMOX"
-	Name                string      `json:"name,omitempty"`                   // Name of the server on the hypervisor.
-	VMID                string      `json:"vm_id,omitempty"`                  // Sequential ID of the server on the hypervisor.
-	UUID                string      `json:"uuid,omitempty"`                   // Unique UUID for the server.
-	Cluster             string      `json:"cluster,omitempty"`                // Cluster the VM is hosted in.
-	Host                string      `json:"host,omitempty"`                   // Host/Node the VM is hosted on.
-	PowerState          PowerState  `json:"power_state,omitempty"`            // Must be "poweredOn" or "poweredOff"
-	MemoryMB            uint64      `json:"memory_mb,omitempty"`              // Available memory in MiB.
-	NumCpu              uint32      `json:"num_cpu,omitempty"`                // Number of CPUs.
-	NumCoresPerSocket   uint32      `json:"num_cores_per_socket,omitempty"`   // Cores per socket.
-	MemoryHotAddEnabled bool        `json:"memory_hot_add_enabled,omitempty"` // If memory hotplug is enabled.
-	CPUHotAddEnabled    bool        `json:"cpu_hot_add_enabled,omitempty"`    // If CPU hot-add is enabled.
-	BootTime            *time.Time  `json:"boot_time,omitempty"`              // Time of last boot.
-	GuestConfigID       string      `json:"guest_config_id,omitempty"`        // Identifier of the configured operating system.
-	Snapshots           []*Snapshot `json:"snapshots"`                        // Available Snapshots, excluding current.
-	Nics                []*Nic      `json:"nics"`                             // Attached NICs.
+	ServerKind          ServerKind    `json:"server_kind,omitempty"`            // Must be "VIRTUAL"
+	ServerType          ServerType    `json:"server_type,omitempty"`            // Must be "VM_PROXMOX"
+	Name                string        `json:"name,omitempty"`                   // Name of the server on the hypervisor.
+	VMID                string        `json:"vm_id,omitempty"`                  // Sequential ID of the server on the hypervisor.
+	UUID                string        `json:"uuid,omitempty"`                   // Unique UUID for the server.
+	Cluster             string        `json:"cluster,omitempty"`                // Cluster the VM is hosted in.
+	Host                string        `json:"host,omitempty"`                   // Host/Node the VM is hosted on.
+	PowerState          PowerState    `json:"power_state,omitempty"`            // Must be "poweredOn" or "poweredOff"
+	MemoryMB            uint64        `json:"memory_mb,omitempty"`              // Available memory in MiB.
+	NumCpu              uint32        `json:"num_cpu,omitempty"`                // Number of CPUs.
+	NumCoresPerSocket   uint32        `json:"num_cores_per_socket,omitempty"`   // Cores per socket.
+	MemoryHotAddEnabled bool          `json:"memory_hot_add_enabled,omitempty"` // If memory hotplug is enabled.
+	CPUHotAddEnabled    bool          `json:"cpu_hot_add_enabled,omitempty"`    // If CPU hot-add is enabled.
+	BootTime            *time.Time    `json:"boot_time,omitempty"`              // Time of last boot.
+	GuestConfigID       string        `json:"guest_config_id,omitempty"`        // Identifier of the configured operating system.
+	Snapshots           []*Snapshot   `json:"snapshots"`                        // Available Snapshots, excluding current.
+	Nics                []*Nic        `json:"nics"`                             // Attached NICs.
+	MountPoints         []*MountPoint `json:"mount_points,omitempty"`           // Mount points of the VM.
 }
 
 // ProcessServer processes a single server based on a pdm.Resource
@@ -105,11 +106,29 @@ func (p *Processor) ProcessServer(ctx context.Context, res *pdm.Resource) (*Serv
 	server.BootTime = &bootTime
 
 	if err := p.processNics(cfg, &server); err != nil {
-		p.logger.Warn(err.Error(), "name", res.Name)
+		p.logger.Error(err.Error(), "name", res.Name)
 	}
 
 	if err := p.processSnapshots(ctx, res, &server); err != nil {
-		p.logger.Warn(err.Error(), "name", res.Name)
+		p.logger.Error(err.Error(), "name", res.Name)
+	}
+
+	if res.Status == "running" && cfg.Agent.Enabled {
+		if p.client.ClusterConfigured(server.Cluster) {
+			if err := p.ProcessMountPoints(ctx, res, &server); err != nil {
+				// this failure is expected when the guest agent is not
+				// running on the host, which is undesirable but not an
+				// error as far as the EAI is concerned.
+				p.logger.Warn(err.Error(), "name", res.Name)
+			}
+		} else {
+			// this is an informational message as not having credentials
+			// for some clusters is legitimate, but the user should still
+			// know that we can't do everything we're being asked to do.
+			p.logger.Info("mount point import skipped (missing cluster configuration)",
+				"cluster", server.Cluster, "vmid", res.VMID, "name", res.Name)
+		}
+
 	}
 
 	return &server, nil

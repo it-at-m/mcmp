@@ -29,11 +29,21 @@ type GeneralConfig struct {
 // DatacenterConfig contains configuration for connecting to a Proxmox
 // Datacenter Manager.
 type DatacenterConfig struct {
-	URL                string // URL of the PDM instance.
-	InsecureSkipVerify bool   // Skip validating the PDM's TLS certificate.
-	MaxConns           int    // Maximum amount of parallel connections to PDM.
-	APITokenID         string // API Token ID for PDM.
-	APITokenSecret     string // API Token Secret for PDM.
+	URL                string          // URL of the PDM instance.
+	InsecureSkipVerify bool            // Skip validating the TLS certificate.
+	MaxConns           int             // Maximum amount of parallel connections.
+	APITokenID         string          // API Token ID.
+	APITokenSecret     string          // API Token Secret.
+	CLUSTER            []ClusterConfig // Configuration for individual clusters.
+}
+
+type ClusterConfig struct {
+	Cluster            string // Name of the Cluster (as it is known to PDM).
+	URL                string // URL of a PVE node or loadbalancer.
+	InsecureSkipVerify bool   // Skip validating the TLS certificate.
+	MaxConns           int    // Maximum amount of parallel connections.
+	APITokenID         string // API Token ID.
+	APITokenSecret     string // API Token Secret.
 }
 
 // LoadConfig loads the configuration from a TOML file.

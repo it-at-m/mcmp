@@ -2,6 +2,7 @@ stages:
   - test
   - deploy-test
   - deploy-prod
+  - cleanup
 
 workflow:
   rules:
@@ -131,7 +132,7 @@ build-npm:
     NPM_CONFIG_PROXY: $itm_httpProxy
     NPM_CONFIG_NOPROXY: $itm_noProxy
     ARTIFACTORY_HOST: https://artifactory.muenchen.de
-    CLI_VERSION: "2.71.0"
+    CLI_VERSION: "2.110.0"
     NPM_GROUP_ID: "de.muenchen.mcmp.frontend"
   rules:
     - if: '$DISABLE_TEST == "true"'
@@ -231,3 +232,49 @@ deploy-prod:mcmp:
     - awx job_templates launch $AWX_TEMPLATE
       --verbosity 4 --monitor -f human
       --conf.host $AWX_HOST --conf.username=$AWX_USER --conf.password=$AWX_PW
+
+# Löscht mcmp-Artefakte (Backend-Jars und Frontend-WARs), die älter als 4 Wochen sind,
+# aus dem Artifactory. Läuft nur über einen GitLab CI/CD-Schedule (nicht bei push/web).
+cleanup-artifactory:
+  stage: cleanup
+  tags:
+    - openshift-test-capk
+  image: $NPM_IMAGE
+  variables:
+    ARTIFACTORY_HOST: https://artifactory.muenchen.de
+    CLI_VERSION: "2.110.0"
+    # AQL-Format für relative Zeitangaben, "4w" = vor 4 Wochen
+    RETENTION_PERIOD: "4w"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+  script:
+    - JF_URL="$ARTIFACTORY_HOST/artifactory/jfrog-releases/artifactory/jfrog-cli/v2-jf/$CLI_VERSION/jfrog-cli-linux-amd64/jf"
+    - JF_SHA256_URL="$JF_URL.sha256"
+    - curl -fsSL -u $MAVEN_REPO_USER:$MAVEN_REPO_PASS "$JF_SHA256_URL" -o jf.sha256
+    - EXPECTED_SHA256=$(awk '{print $1}' jf.sha256)
+    - if [ -z "$EXPECTED_SHA256" ]; then echo "Fehler: Keine gueltige SHA256-Pruefsumme fuer jf erhalten"; exit 1; fi
+    - curl -fsSL -u $MAVEN_REPO_USER:$MAVEN_REPO_PASS "$JF_URL" -o jf
+    - ACTUAL_SHA256=$(sha256sum jf | awk '{print $1}')
+    - if [ "$ACTUAL_SHA256" != "$EXPECTED_SHA256" ]; then echo "Fehler: SHA256-Pruefsumme fuer jf stimmt nicht"; exit 1; fi
+    - chmod u+x jf
+    - ./jf config add artifactory --url=$ARTIFACTORY_HOST --user=$MAVEN_REPO_USER --password=$MAVEN_REPO_PASS
+    - |
+      for REPO in mvn-snapshot-local mvn-release-local; do
+        echo "Cleaning artifacts older than $RETENTION_PERIOD in $REPO/de/muenchen/mcmp/**"
+        cat > filespec.json <<SPEC
+      {
+        "files": [
+          {
+            "aql": {
+              "items.find": {
+                "repo": "$REPO",
+                "path": {"\$match": "de/muenchen/mcmp/*"},
+                "created": {"\$before": "$RETENTION_PERIOD"}
+              }
+            }
+          }
+        ]
+      }
+      SPEC
+        ./jf rt del --spec=filespec.json --quiet
+      done

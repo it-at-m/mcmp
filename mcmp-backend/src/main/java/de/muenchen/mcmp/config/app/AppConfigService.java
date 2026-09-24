@@ -8,7 +8,7 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.Date;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -93,7 +93,7 @@ public class AppConfigService {
                 });
         config.setConfigValue(value);
         config.setUpdatedBy(username);
-        config.setUpdatedAt(new Date());
+        config.setUpdatedAt(Instant.now());
         appConfigRepository.save(config);
         log.info("AppConfig updated: {} = {} by {}", key, value, username);
     }

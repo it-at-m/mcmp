@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -90,7 +91,7 @@ public class NetworkService {
         final NetworkGroup updatedGroup = networkMapper.toGroupEntity(networkGroupDTO);
         updatedGroup.setVersion(existingGroup.getVersion());
         updatedGroup.setCreatedAt(existingGroup.getCreatedAt());
-        updatedGroup.setUpdatedAt(new Date());
+        updatedGroup.setUpdatedAt(Instant.now());
         return networkMapper.toGroupDTO(networkGroupRepository.save(updatedGroup));
     }
 

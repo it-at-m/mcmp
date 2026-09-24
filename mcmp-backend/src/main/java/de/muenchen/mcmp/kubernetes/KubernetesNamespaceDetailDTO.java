@@ -2,7 +2,7 @@ package de.muenchen.mcmp.kubernetes;
 
 import lombok.Builder;
 
-import java.util.Date;
+import java.time.Instant;
 import java.util.List;
 
 @Builder
@@ -11,7 +11,7 @@ public record KubernetesNamespaceDetailDTO(
         String name,
         String sysId,
         String sysClass,
-        Date lastDiscovered,
+        Instant lastDiscovered,
         String k8sUid,
         String environment,
         String clusterName,

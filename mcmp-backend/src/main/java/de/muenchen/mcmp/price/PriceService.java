@@ -4,7 +4,6 @@ import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.Date;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -32,7 +31,7 @@ public class PriceService {
         updatedPrice.setId(existingPrice.getId());
         updatedPrice.setVersion(existingPrice.getVersion());
         updatedPrice.setCreatedAt(existingPrice.getCreatedAt());
-        updatedPrice.setUpdatedAt(Date.from(Instant.now()));
+        updatedPrice.setUpdatedAt(Instant.now());
 
         return priceMapper.toDTO(priceRepository.save(updatedPrice));
     }

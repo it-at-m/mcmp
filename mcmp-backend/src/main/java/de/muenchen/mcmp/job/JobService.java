@@ -157,8 +157,7 @@ public class JobService {
         final boolean hasActionIdentifier = actionIdentifier != null && !actionIdentifier.isEmpty();
         final List<String> actionIdentifierParam = hasActionIdentifier ? actionIdentifier : List.of("");
 
-        final UserRoles userRoles = AuthUtils.getCurrentUserRoles();
-        if (userRoles.hasAdminRole() || userRoles.hasSecurityRole()) {
+        if (AuthUtils.hasSpecialRole()) {
             return jobRepository.findAllJobsComplete(pageable, jobId, awxJobId, createdFrom, createdTo, changeStartFrom, changeStartTo, userId, serverId, appserviceId, lbVirtualServerId, ontapVolumeId, ontapQtreeId, storagegridBucketId, kubernetesNamespaceId, hasActionIdentifier, actionIdentifierParam, statusIdentifier, awxVariables, searchText);
         }
         return jobRepository.findAllJobsBasic(pageable, userId, serverId, appserviceId, lbVirtualServerId, ontapVolumeId, ontapQtreeId, storagegridBucketId, kubernetesNamespaceId, searchText);

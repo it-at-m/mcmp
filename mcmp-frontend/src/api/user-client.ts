@@ -17,13 +17,10 @@ import User from "@/types/User";
 export function getUser(): Promise<User> {
   return fetch(`${getApiBase()}${USER_BASE}`, getConfig())
     .catch(defaultCatchHandler)
-    .then((response) => {
-      defaultResponseHandler(
-        response,
-        false,
-        "",
-        "Beim Laden des Users ist ein Fehler aufgetreten."
-      );
+    .then(async (response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
       return response.json();
     })
     .then((json: Partial<User>) => {

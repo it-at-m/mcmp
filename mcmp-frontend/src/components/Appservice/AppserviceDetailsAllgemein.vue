@@ -180,6 +180,26 @@
       <v-col cols="3">
         <h3>Mikrosegmentiert</h3>
       </v-col>
+      <v-col cols="3">
+        <h3>
+          Loginberechtigungen verwalten<info-tooltip>
+            <div class="pa-1">
+              <strong>IAM-Rollenverwaltung:</strong>
+              <ul
+                class="mt-2 text-body-2"
+                style="padding-left: 1.2rem"
+              >
+                <li>
+                  Rollen neu angelegter Anwendungsservices sind per default nicht befüllt.
+                </li>
+                <li>
+                   Ein Login auf VMs des Anwendungsservices ist erst nach Zuweisung der berechtigten Personen zu der gewünschten Rolle möglich.
+                </li>
+              </ul>
+            </div>
+          </info-tooltip>
+        </h3>
+      </v-col>
     </v-row>
     <v-row>
       <v-col
@@ -220,6 +240,20 @@
             </template>
           </v-tooltip>
         </div>
+      </v-col>
+      <v-col
+        cols="3"
+        class="pt-0"
+      >
+        <p>
+          <a
+            href="https://iam.muenchen.de/IdentityManager/page.axd?RuntimeFormID=b0fc3e94-b056-406a-8574-83ab1548ad41&aeweb_handler=p&aeweb_rp=&wproj=0&MenuID=CCC_Menu_CMP_MGMT&ContextID=CCC_CMP_Eset_Mgmt"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            iam.muenchen.de
+          </a>
+        </p>
       </v-col>
     </v-row>
   </common-card>

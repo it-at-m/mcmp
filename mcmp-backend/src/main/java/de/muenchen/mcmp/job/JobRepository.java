@@ -210,7 +210,9 @@ public interface JobRepository extends JpaRepository<Job, Long> {
     LEFT JOIN cmp.config_awx ca on j.awx_id = ca.id
     LEFT JOIN cmp.appservice a on j.appservice_id = a.id
     WHERE (CAST(:jobId AS bigint) IS NULL OR j.id = :jobId)
-    AND (CAST(:awxJobId AS bigint) IS NULL OR j.awx_job_id = :awxJobId)
+    AND (CAST(:awxJobId AS bigint) IS NULL OR j.awx_job_id = :awxJobId OR EXISTS (
+        SELECT 1 FROM cmp.job_nodes jn WHERE jn.job_id = j.id AND jn.job_awx_id = :awxJobId
+    ))
     AND (CAST(:createdFrom AS timestamp with time zone) IS NULL OR j.created_at >= :createdFrom)
     AND (CAST(:createdTo AS timestamp with time zone) IS NULL OR j.created_at < :createdTo)
     AND (CAST(:changeStartFrom AS timestamp with time zone) IS NULL OR j.change_start_date >= :changeStartFrom)
@@ -233,7 +235,9 @@ public interface JobRepository extends JpaRepository<Job, Long> {
     SELECT COUNT(*)
     FROM cmp.job j
     WHERE (CAST(:jobId AS bigint) IS NULL OR j.id = :jobId)
-    AND (CAST(:awxJobId AS bigint) IS NULL OR j.awx_job_id = :awxJobId)
+    AND (CAST(:awxJobId AS bigint) IS NULL OR j.awx_job_id = :awxJobId OR EXISTS (
+        SELECT 1 FROM cmp.job_nodes jn WHERE jn.job_id = j.id AND jn.job_awx_id = :awxJobId
+    ))
     AND (CAST(:createdFrom AS timestamp with time zone) IS NULL OR j.created_at >= :createdFrom)
     AND (CAST(:createdTo AS timestamp with time zone) IS NULL OR j.created_at < :createdTo)
     AND (CAST(:changeStartFrom AS timestamp with time zone) IS NULL OR j.change_start_date >= :changeStartFrom)

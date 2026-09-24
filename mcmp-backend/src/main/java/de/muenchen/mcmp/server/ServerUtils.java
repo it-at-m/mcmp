@@ -70,7 +70,7 @@ public final class ServerUtils {
             }
         }
 
-        return serial.toLowerCase(Locale.ENGLISH);
+        return serial;
     }
 
 

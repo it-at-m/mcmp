@@ -124,17 +124,25 @@ public class CloudImportService {
                 updated++;
             }
 
-            final var serverSnapshots = snapshots.getOrDefault(server.getId(), new ArrayList<>());
-            importSnapshots(server, serverSnapshots, dto.snapshots());
+            if (dto.snapshots().isPresent()) {
+                final var serverSnapshots = snapshots.getOrDefault(server.getId(), new ArrayList<>());
+                importSnapshots(server, serverSnapshots, dto.snapshots().get());
+            }
 
-            final var serverDisks = disks.getOrDefault(server.getId(), new ArrayList<>());
-            importDisks(server, serverDisks, dto.disks());
+            if (dto.disks().isPresent()) {
+                final var serverDisks = disks.getOrDefault(server.getId(), new ArrayList<>());
+                importDisks(server, serverDisks, dto.disks().get());
+            }
 
-            final var serverMountPoints = mountPoints.getOrDefault(server.getId(), new ArrayList<>());
-            importMountPoints(server, serverMountPoints, dto.mountPoints());
+            if (dto.mountPoints().isPresent()) {
+                final var serverMountPoints = mountPoints.getOrDefault(server.getId(), new ArrayList<>());
+                importMountPoints(server, serverMountPoints, dto.mountPoints().get());
+            }
 
-            final var serverNics = nics.getOrDefault(server.getId(), new ArrayList<>());
-            importNics(server, serverNics, dto.nics());
+            if (dto.nics().isPresent()) {
+                final var serverNics = nics.getOrDefault(server.getId(), new ArrayList<>());
+                importNics(server, serverNics, dto.nics().get());
+            }
         }
 
         for (final var server : servers.values()) {

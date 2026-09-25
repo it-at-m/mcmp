@@ -17,6 +17,7 @@ import de.muenchen.mcmp.snapshot.SnapshotRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -35,6 +36,21 @@ public class CloudImportService {
     private final NicRepository nicRepository;
     private final MountPointRepository mountPointRepository;
 
+    /**
+     * Find server UUIDs with recently completed AWX jobs.  Using this
+     * data the cloud import EAI can make better decisions about which
+     * endpoints to fetch eagerly, and which ones to only fetch rarely
+     * (e.g. in an overnight full import).
+     * @return A list of Server UUIDs with recently completed AWX jobs.
+     */
+    public List<String> findServersWithRecentlyCompletedJobs() {
+        return serverService.findUUIDsWithRecentlyCompletedJobs();
+    }
+
+    /**
+     * Import an entire Cloud Import DTO asynchronously.
+     */
+    @Async
     public void importCloudData(final CloudDTO cloudDTO) {
         log.info("Starting Cloud import process for {} servers.", cloudDTO.servers().size());
 
@@ -64,7 +80,7 @@ public class CloudImportService {
         // Keep track of UUIDs to handle duplicates.
         final Set<String> importedUuids = new HashSet<>();
 
-        // Statistics
+        // Statistics (Server objects only).
         int inserted = 0;
         int updated = 0;
         int deleted = 0;

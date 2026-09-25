@@ -5,7 +5,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.context.annotation.Profile;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +21,7 @@ import java.time.LocalDate;
 public class ServerPerformancePartitionJob {
 
     private final ServerMetricsRepository serverMetricsRepository;
+    private final Environment environment;
 
     @Lazy
     @Autowired
@@ -70,26 +72,17 @@ public class ServerPerformancePartitionJob {
      * if the active Spring profile matches either "local" or "docker".
      * <p>
      * This method is triggered by the {@code ApplicationReadyEvent}, ensuring
-     * that it runs only after the application is fully initialized. It utilizes
-     * the {@code Profile} annotation to conditionally execute the logic based on
-     * the current runtime environment, specifically when the application is
-     * configured to run locally or in a Dockerized environment.
-     * <p>
-     * The method delegates the partition management logic to the {@code rotate()}
-     * method, ensuring that database partitions for server performance data are
-     * properly cleaned up and pre-created as per the defined business logic.
-     * <p>
-     * Note:
-     * - This method is invoked only when the profiles "local" or "docker" are active.
-     * - Logging is performed to indicate that the process has been triggered
-     *   during application startup.
-     * - The invocation of {@code rotate()} is done via the {@code self} proxy to
-     *   ensure proper handling of transactional and AOP-related behaviors.
+     * that it runs only after the application is fully initialized.
      */
     @EventListener(ApplicationReadyEvent.class)
-    @Profile("local | docker")
     public void runOnStartupIfLocal() {
-        log.info("Local/Docker profile detected – running partition job on startup");
-        self.rotate();
+        if (environment.acceptsProfiles(Profiles.of("local | docker | podman"))) {
+            final String[] activeProfiles = environment.getActiveProfiles().length > 0
+                    ? environment.getActiveProfiles()
+                    : environment.getDefaultProfiles();
+            log.info("Development environment detected (active profile(s): {}) – initializing server performance partitions on startup",
+                    String.join(", ", activeProfiles));
+            self.rotate();
+        }
     }
 }

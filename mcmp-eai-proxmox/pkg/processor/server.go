@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"mcmp-eai-proxmox/pkg/clients/pdm"
+	"mcmp-eai-proxmox/pkg/clients/proxmox"
 )
 
 type (
@@ -49,13 +49,13 @@ type Server struct {
 	MountPoints         []*MountPoint `json:"mount_points,omitempty"`           // Mount points of the VM.
 }
 
-// ProcessServer processes a single server based on a pdm.Resource
+// ProcessServer processes a single server based on a proxmox.Resource
 // record. It queries PDM for additional config data, so parallel
 // execution is recommended.
 //
 // Processing may fail if the VM config can not be retrieved from PDM,
 // as the config is required to determine a useful server UUID.
-func (p *Processor) ProcessServer(ctx context.Context, res *pdm.Resource) (*Server, error) {
+func (p *Processor) ProcessServer(ctx context.Context, res *proxmox.Resource) (*Server, error) {
 	server := Server{
 		ServerKind: ServerKindVirtual,
 		ServerType: ServerTypeProxmox,

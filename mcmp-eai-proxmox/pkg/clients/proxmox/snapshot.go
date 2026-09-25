@@ -1,4 +1,4 @@
-package pdm
+package proxmox
 
 import (
 	"context"

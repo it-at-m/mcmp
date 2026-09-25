@@ -57,10 +57,10 @@ func run(ctx context.Context, cfg *config.Config, logger logging.Logger) error {
 
 	// create data sources
 	if !cfg.GENERAL.SkipProxmox {
-		for i, datacenterCfg := range cfg.DATACENTER {
+		for i, datacenterCfg := range cfg.PROXMOX {
 			proc, err := processor.NewProcessor(datacenterCfg, logger)
 			if err != nil {
-				return fmt.Errorf("[DATACENTER %d] failed to create processors: %w", i, err)
+				return fmt.Errorf("[PROXMOX %d] failed to create processors: %w", i, err)
 			}
 
 			sources = append(sources, &datasource.JsonFileSource[*processor.Cloud]{

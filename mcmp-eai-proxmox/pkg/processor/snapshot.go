@@ -3,7 +3,7 @@ package processor
 import (
 	"context"
 	"fmt"
-	"mcmp-eai-proxmox/pkg/clients/pdm"
+	"mcmp-eai-proxmox/pkg/clients/proxmox"
 	"time"
 )
 
@@ -24,7 +24,7 @@ type Snapshot struct {
 // An error is returned if the API call fails, which may happen if the
 // resource is invalid (e.g. not a QEMU VM) or if the processor
 // is missing the required permissions.
-func (p *Processor) processSnapshots(ctx context.Context, res *pdm.Resource, server *Server) error {
+func (p *Processor) processSnapshots(ctx context.Context, res *proxmox.Resource, server *Server) error {
 	snapshots, err := p.client.Snapshots(ctx, server.Cluster, res.VMID)
 	if err != nil {
 		return fmt.Errorf("failed to fetch snapshots: %w", err)

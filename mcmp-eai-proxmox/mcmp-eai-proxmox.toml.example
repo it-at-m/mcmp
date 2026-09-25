@@ -4,9 +4,15 @@ TimeoutSeconds = 60
 [LOGGING]
 Level = 'Info'
 
-[[DATACENTER]]
+[[PROXMOX]]
 URL                 = 'https://proxmox-datacenter-manager.example.local:8443/api2/json'
 InsecureSkipVerify  = false
+APITokenID          = 'root@pam!token-name'
+APITokenSecret      = 'token-secret'
+
+[[PROXMOX.CLUSTER]]
+Cluster             = 'CL-EXAMPLE001'
+URL                 = 'https://pve-example001.example.local:8006/api2/json'
 APITokenID          = 'root@pam!token-name'
 APITokenSecret      = 'token-secret'
 

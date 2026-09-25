@@ -13,10 +13,10 @@ const (
 
 // Config contains the EAI's full configuration.
 type Config struct {
-	GENERAL    GeneralConfig      // General EAI configuration.
-	DATACENTER []DatacenterConfig // Proxmox Datacenter Manager configuration. Imports from all clusters.
-	MCMP       []mcmp.Config      // MCMP configuration. All instances will receive the same data.
-	LOGGING    logging.LogConfig  // Logging configuration.
+	GENERAL GeneralConfig     // General EAI configuration.
+	PROXMOX []ProxmoxConfig   // Proxmox Datacenter Manager configuration. Imports from all clusters.
+	MCMP    []mcmp.Config     // MCMP configuration. All instances will receive the same data.
+	LOGGING logging.LogConfig // Logging configuration.
 }
 
 // GeneralConfig contains general EAI configuration.
@@ -26,9 +26,9 @@ type GeneralConfig struct {
 	SkipMCMP       bool // Skip the MCMP export and only write an export file.
 }
 
-// DatacenterConfig contains configuration for connecting to a Proxmox
+// ProxmoxConfig contains configuration for connecting to a Proxmox
 // Datacenter Manager.
-type DatacenterConfig struct {
+type ProxmoxConfig struct {
 	URL                string          // URL of the PDM instance.
 	InsecureSkipVerify bool            // Skip validating the TLS certificate.
 	MaxConns           int             // Maximum amount of parallel connections.
@@ -57,11 +57,11 @@ func LoadConfig(appname string) (*Config, error) {
 		cfg.GENERAL.TimeoutSeconds = defaultTimeoutSeconds
 	}
 
-	for i := range cfg.DATACENTER {
-		if cfg.DATACENTER[i].MaxConns == 0 {
-			cfg.DATACENTER[i].MaxConns = defaultMaxConns
-		} else if cfg.DATACENTER[i].MaxConns < 0 {
-			cfg.DATACENTER[i].MaxConns = 0 // no limit
+	for i := range cfg.PROXMOX {
+		if cfg.PROXMOX[i].MaxConns == 0 {
+			cfg.PROXMOX[i].MaxConns = defaultMaxConns
+		} else if cfg.PROXMOX[i].MaxConns < 0 {
+			cfg.PROXMOX[i].MaxConns = 0 // no limit
 		}
 	}
 

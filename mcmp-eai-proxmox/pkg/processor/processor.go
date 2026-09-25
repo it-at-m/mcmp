@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"strings"
 
-	"mcmp-eai-proxmox/pkg/clients/pdm"
+	"mcmp-eai-proxmox/pkg/clients/proxmox"
 	"mcmp-eai-proxmox/pkg/config"
 
 	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/logging"
@@ -23,17 +23,17 @@ import (
 type Processor struct {
 	Name string // Name of the processed Cloud.
 
-	client *pdm.Client             // PDM API client.
-	logger logging.Logger          // Logger.
-	cfg    config.DatacenterConfig // Configuration.
+	client *proxmox.Client      // PDM API client.
+	logger logging.Logger       // Logger.
+	cfg    config.ProxmoxConfig // Configuration.
 
 	nodeFQDNs map[string]string // Map of node shortnames to FQDNs.
 }
 
 // NewProcessor creates a new processor processing a Proxmox Datacenter
 // managed by a Proxmox Datacenter Manager.
-func NewProcessor(cfg config.DatacenterConfig, logger logging.Logger) (*Processor, error) {
-	client, err := pdm.NewClient(cfg, logger)
+func NewProcessor(cfg config.ProxmoxConfig, logger logging.Logger) (*Processor, error) {
+	client, err := proxmox.NewClient(cfg, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create client: %w", err)
 	}

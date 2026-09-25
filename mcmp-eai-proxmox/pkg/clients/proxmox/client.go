@@ -1,4 +1,4 @@
-package pdm
+package proxmox
 
 import (
 	"context"
@@ -24,7 +24,7 @@ type Client struct {
 }
 
 // NewClient creates a new Client.
-func NewClient(cfg config.DatacenterConfig, logger logging.Logger) (*Client, error) {
+func NewClient(cfg config.ProxmoxConfig, logger logging.Logger) (*Client, error) {
 	client := &Client{logger: logger}
 
 	baseURL, err := url.Parse(cfg.URL)

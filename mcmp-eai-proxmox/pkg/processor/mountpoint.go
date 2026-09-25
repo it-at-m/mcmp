@@ -3,7 +3,7 @@ package processor
 import (
 	"context"
 	"fmt"
-	"mcmp-eai-proxmox/pkg/clients/pdm"
+	"mcmp-eai-proxmox/pkg/clients/proxmox"
 )
 
 const MountPointSourceProxmox = "proxmox"
@@ -23,7 +23,7 @@ type MountPoint struct {
 //
 // Warning: This query may take quite a bit of time. Frequently
 // fetching this data is discouraged.
-func (p *Processor) ProcessMountPoints(ctx context.Context, res *pdm.Resource, server *Server) error {
+func (p *Processor) ProcessMountPoints(ctx context.Context, res *proxmox.Resource, server *Server) error {
 	filesystems, err := p.client.Filesystems(ctx, server.Cluster, res.Node, res.VMID)
 	if err != nil {
 		return fmt.Errorf("failed to fetch filesystems: %w", err)

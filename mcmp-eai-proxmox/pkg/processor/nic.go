@@ -2,7 +2,7 @@ package processor
 
 import (
 	"fmt"
-	"mcmp-eai-proxmox/pkg/clients/pdm"
+	"mcmp-eai-proxmox/pkg/clients/proxmox"
 	"regexp"
 	"strconv"
 )
@@ -19,7 +19,7 @@ type Nic struct {
 
 // processNics processes all Nics from the given VMConfig data and
 // writes their data to the given Server object.
-func (p *Processor) processNics(cfg *pdm.VMConfig, server *Server) error {
+func (p *Processor) processNics(cfg *proxmox.VMConfig, server *Server) error {
 	server.Nics = make([]*Nic, 0, len(cfg.Nets))
 
 	for name, net := range cfg.Nets {

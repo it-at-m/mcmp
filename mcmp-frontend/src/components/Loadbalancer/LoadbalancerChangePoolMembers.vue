@@ -140,6 +140,7 @@
           return-object
           hide-details
           @update:search="onServerSearch"
+          @focus="onServerFocus"
         >
           <template #no-data>
             <div class="px-4 py-2">Kein Server gefunden</div>
@@ -309,40 +310,69 @@ const serverSearchInput = ref("");
 const serverSearchLoading = ref(false);
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
 
+// Flag, das angibt, dass durch Fokussierung ein "zeige alle" angefordert wurde
+let showAllRequested = false;
+
 function memberKey(member: LoadbalancerMember): string {
   return `${member.ip}:${member.port}`;
 }
 
+function fetchServers(searchText: string) {
+  serverSearchLoading.value = true;
+  serverService
+    .getVisibleServers(
+      ref(false),
+      0,
+      20,
+      "name",
+      "asc",
+      searchText,
+      [],
+      "",
+      false
+    )
+    .then((page) => {
+      serverOptions.value = page.content;
+    })
+    .catch(() => {
+      serverOptions.value = [];
+    })
+    .finally(() => {
+      serverSearchLoading.value = false;
+      showAllRequested = false;
+    });
+}
+
+function onServerFocus() {
+  if (!serverSearchInput.value || serverSearchInput.value.trim() === "") {
+    showAllRequested = true;
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+      searchTimeout = null;
+    }
+    fetchServers("");
+  }
+}
+
 function onServerSearch(searchText: string) {
   serverSearchInput.value = searchText;
+
   if (searchTimeout) clearTimeout(searchTimeout);
-  searchTimeout = setTimeout(() => {
-    if (!searchText || searchText.trim().length < 2) {
-      serverOptions.value = [];
+
+  if (!searchText || searchText.trim().length < 2) {
+    if (showAllRequested && searchText.trim().length === 0) {
+      fetchServers("");
       return;
     }
-    serverSearchLoading.value = true;
-    serverService
-      .getVisibleServers(
-        ref(false),
-        0,
-        20,
-        "name",
-        "asc",
-        searchText,
-        [],
-        "",
-        false
-      )
-      .then((page) => {
-        serverOptions.value = page.content;
-      })
-      .catch(() => {
-        serverOptions.value = [];
-      })
-      .finally(() => {
-        serverSearchLoading.value = false;
-      });
+
+    // ansonsten leere Vorschläge
+    serverOptions.value = [];
+    return;
+  }
+
+  // Bei >= 2 Zeichen: debounce und suchen
+  searchTimeout = setTimeout(() => {
+    fetchServers(searchText);
   }, 300);
 }
 

@@ -23,8 +23,8 @@ public class ErrorLogCleanupScheduler {
     public void cleanupOldErrorLogs() {
         log.info("Starting scheduled cleanup of old error log entries");
         try {
-            errorLogService.cleanupOldEntries();
-            log.info("Cleanup of old error log entries completed successfully");
+            int deletedCount = errorLogService.cleanupOldEntries();
+            log.info("Cleanup of old error log entries completed successfully, deleted {} entries", deletedCount);
         } catch (Exception e) {
             log.error("Error during cleanup of old error log entries: {}", e.getMessage(), e);
         }

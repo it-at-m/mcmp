@@ -114,9 +114,9 @@ public class ErrorLogService {
      * ({@code error-log.retention-days}, default 30 days).
      */
     @Transactional
-    public void cleanupOldEntries() {
-        Date threshold = Date.from(Instant.now().minus(Duration.ofDays(retentionDays)));
-        repository.deleteByCreatedAtBefore(threshold);
+    public int cleanupOldEntries() {
+        Instant threshold = Instant.now().minus(Duration.ofDays(retentionDays));
+        return repository.deleteByCreatedAtBefore(threshold);
     }
 
     /**

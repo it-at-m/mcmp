@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -19,17 +20,7 @@ import (
 	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/logging"
 )
 
-const (
-	// Name of the EAI. Used to annotate logs and to name files.
-	appName = "mcmp-eai-proxmox"
-
-	// Having multiple instances running at a time probably won't break
-	// anything but would indicate something likely undesirable, so
-	// prevent it and hope somebody looks at the logs for failing EAIs.
-	//
-	// See also: defaultTimeoutSeconds.
-	lockEnabled = true
-)
+const appName = "mcmp-eai-proxmox"
 
 // Run the EAI.
 func run(ctx context.Context, cfg *config.Config, logger logging.Logger) error {
@@ -52,6 +43,15 @@ func run(ctx context.Context, cfg *config.Config, logger logging.Logger) error {
 
 			mcmpClients = append(mcmpClients, *mcmpClient)
 			mcmpEndpoints = append(mcmpEndpoints, mcmpCfg.ApiEndpoint)
+
+			var updatedEndpoint = strings.Replace(mcmpCfg.ApiEndpoint, "import", "maybe-updated", 1)
+			var additionalCompleteImportUUIDs []string
+			if err := mcmpClient.GetJSONUnmarshal(ctx, updatedEndpoint, &additionalCompleteImportUUIDs); err != nil {
+				logger.Error("[MCMP %d] failed to fetch possibly updated servers", "err", err)
+			} else {
+				cfg.GENERAL.CompleteImportUUIDs = slices.Concat(cfg.GENERAL.CompleteImportUUIDs, additionalCompleteImportUUIDs)
+				cfg.PushCompleteImportConfig()
+			}
 		}
 	}
 
@@ -120,7 +120,7 @@ func run(ctx context.Context, cfg *config.Config, logger logging.Logger) error {
 	// configure & run the EAI
 	eaiCfg := app.EAIConfig{
 		AppName:     appName,
-		LockEnabled: lockEnabled,
+		LockEnabled: !cfg.GENERAL.DisableLock,
 	}
 
 	return app.RunEAI(ctx, eaiCfg, sources, logger)
@@ -134,19 +134,32 @@ func main() {
 			flag.PrintDefaults()
 		}
 
+		disableLock := flag.Bool("no-lock", false, "Disable PID locking and allow concurrent instances")
+		completeImport := flag.Bool("complete", false, "Force a complete import")
+
 		flag.Parse()
 
-		if len(os.Args) != 1 {
+		if flag.NArg() > 0 {
 			flag.Usage()
-			return errors.New("wrong number of arguments")
+			return errors.New("too many arguments")
 		}
 
-		// setup
+		// parse configuration
 		cfg, err := config.LoadConfig(appName)
 		if err != nil {
 			return fmt.Errorf("failed to load config: %w", err)
 		}
 
+		if *disableLock {
+			cfg.GENERAL.DisableLock = *disableLock
+		}
+
+		if *completeImport {
+			cfg.GENERAL.CompleteImport = *completeImport
+			cfg.PushCompleteImportConfig()
+		}
+
+		// set up logging & cancellation
 		logger, err := logging.SetupGlobalLogger(cfg.LOGGING)
 		if err != nil {
 			return fmt.Errorf("failed to initialize logger: %w", err)

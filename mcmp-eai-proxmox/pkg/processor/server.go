@@ -3,6 +3,7 @@ package processor
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -113,23 +114,51 @@ func (p *Processor) ProcessServer(ctx context.Context, res *proxmox.Resource) (*
 		p.logger.Error(err.Error(), "name", res.Name)
 	}
 
-	if res.Status == "running" && cfg.Agent.Enabled {
-		if p.client.ClusterConfigured(server.Cluster) {
-			if err := p.ProcessMountPoints(ctx, res, &server); err != nil {
-				// this failure is expected when the guest agent is not
-				// running on the host, which is undesirable but not an
-				// error as far as the EAI is concerned.
-				p.logger.Warn(err.Error(), "name", res.Name)
-			}
-		} else {
-			// this is an informational message as not having credentials
-			// for some clusters is legitimate, but the user should still
-			// know that we can't do everything we're being asked to do.
-			p.logger.Info("mount point import skipped (missing cluster configuration)",
+	if p.wantsCompleteImport(&server) {
+		if !cfg.Agent.Enabled {
+			p.logger.Info("skipped complete import (guest agent disabled)",
 				"cluster", server.Cluster, "vmid", res.VMID, "name", res.Name)
+			goto done
 		}
 
+		if res.Status != "running" {
+			p.logger.Info("skipped complete import (VM not running)",
+				"cluster", server.Cluster, "vmid", res.VMID, "name", res.Name)
+			goto done
+		}
+
+		if !p.client.ClusterConfigured(server.Cluster) {
+			p.logger.Info("skipped complete import (cluster not configured)",
+				"cluster", server.Cluster, "vmid", res.VMID, "name", res.Name)
+			goto done
+		}
+
+		if err := p.ProcessMountPoints(ctx, res, &server); err != nil {
+			// this failure is expected when the guest agent is enabled
+			// in PVE but not actually running, which is undesirable
+			// but not really an error.
+			p.logger.Warn(err.Error(), "name", res.Name)
+		}
 	}
 
+done:
 	return &server, nil
+}
+
+func (p *Processor) wantsCompleteImport(server *Server) bool {
+	if p.cfg.CompleteImport || slices.Contains(p.cfg.CompleteImportUUIDs, server.UUID) {
+		return true
+	}
+
+	for _, cfg := range p.cfg.CLUSTER {
+		if cfg.Cluster == server.Cluster {
+			if cfg.CompleteImport || slices.Contains(cfg.CompleteImportUUIDs, server.UUID) {
+				return true
+			}
+
+			break
+		}
+	}
+
+	return false
 }

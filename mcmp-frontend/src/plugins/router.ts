@@ -126,6 +126,11 @@ router.beforeEach(async (to) => {
   const userStore = useUserStore();
 
   if (to.path === "/") {
+    // Only fetch login page if user is authenticated
+    if (userStore.getUser === null) {
+      return "/appservice";
+    }
+
     if (userStore.getLoginPage === null) {
       await userStore.fetchLoginPage();
     }

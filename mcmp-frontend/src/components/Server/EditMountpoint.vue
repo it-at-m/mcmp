@@ -206,6 +206,7 @@
               )
             "
             :rules="[
+              rules.integerRule('Größe muss eine ganze Zahl sein.'),
               (v) => v >= 1 || 'Neue Größe darf nicht kleiner 1 GB sein.',
               (v) =>
                 v >

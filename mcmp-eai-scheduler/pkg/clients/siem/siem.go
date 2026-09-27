@@ -1,6 +1,8 @@
 package siem
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
 	"log"
@@ -23,6 +25,16 @@ const (
 
 var berlinLocation *time.Location
 
+// SyslogTargetConfig defines network targets (e.g. QRadar, Splunk)
+type SyslogTargetConfig struct {
+	Host               string
+	Port               int
+	Protocol           string // tcp or udp
+	UseTLS             bool   // true for TCP over TLS (Splunk)
+	InsecureSkipVerify bool   // skip TLS certificate verification
+	CaCertPath         string // optional custom CA certificate path
+}
+
 // SiemConfig holds the configuration for SIEM logging
 type SiemConfig struct {
 	Enabled bool
@@ -33,11 +45,8 @@ type SiemConfig struct {
 		MaxAge     int  // days
 		Compress   bool // disabled by default
 	}
-	Syslog struct {
-		Host     string
-		Port     int
-		Protocol string // tcp or udp
-	}
+	QRadar SyslogTargetConfig
+	Splunk SyslogTargetConfig
 }
 type SiemLogger struct {
 	writer   io.Writer
@@ -45,10 +54,12 @@ type SiemLogger struct {
 	enabled  bool
 }
 
-// networkWriter is a simple helper to write to a network connection
+// networkWriter is a helper to write to a network connection (supports UDP, plain TCP, and TCP over TLS)
 type networkWriter struct {
-	network string
-	address string
+	network   string
+	address   string
+	useTLS    bool
+	tlsConfig *tls.Config
 }
 
 func init() {
@@ -90,21 +101,24 @@ func NewSiemLogger(cfg SiemConfig) *SiemLogger {
 		writers = append(writers, fileLogger)
 	}
 
-	// 2. External Syslog/Network Logger
-	if cfg.Syslog.Host != "" && cfg.Syslog.Port != 0 {
-		protocol := strings.ToLower(cfg.Syslog.Protocol)
-		if protocol == "" {
-			protocol = "udp"
+	// 2. QRadar Target
+	if cfg.QRadar.Host != "" && cfg.QRadar.Port != 0 {
+		writer, err := createNetworkWriter(cfg.QRadar)
+		if err != nil {
+			log.Printf("Failed to configure QRadar SIEM writer: %v", err)
+		} else {
+			writers = append(writers, writer)
 		}
-		address := fmt.Sprintf("%s:%d", cfg.Syslog.Host, cfg.Syslog.Port)
+	}
 
-		// Simple network writer
-		// Note: For production, you might want a more robust writer that handles reconnection automatically
-		netWriter := &networkWriter{
-			network: protocol,
-			address: address,
+	// 3. Splunk Target (with TLS support)
+	if cfg.Splunk.Host != "" && cfg.Splunk.Port != 0 {
+		writer, err := createNetworkWriter(cfg.Splunk)
+		if err != nil {
+			log.Printf("Failed to configure Splunk SIEM writer: %v", err)
+		} else {
+			writers = append(writers, writer)
 		}
-		writers = append(writers, netWriter)
 	}
 
 	if len(writers) > 0 {
@@ -117,15 +131,69 @@ func NewSiemLogger(cfg SiemConfig) *SiemLogger {
 	return logger
 }
 
+func createNetworkWriter(cfg SyslogTargetConfig) (*networkWriter, error) {
+	protocol := strings.ToLower(cfg.Protocol)
+	if protocol == "" {
+		protocol = "udp"
+	}
+
+	nw := &networkWriter{
+		network: protocol,
+		address: fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
+		useTLS:  cfg.UseTLS,
+	}
+
+	if cfg.UseTLS {
+		tlsConf := &tls.Config{
+			InsecureSkipVerify: cfg.InsecureSkipVerify,
+			ServerName:         cfg.Host,
+		}
+
+		if cfg.CaCertPath != "" {
+			caCert, err := os.ReadFile(cfg.CaCertPath)
+			if err != nil {
+				return nil, fmt.Errorf("failed to read CA certificate: %w", err)
+			}
+			caCertPool := x509.NewCertPool()
+			if !caCertPool.AppendCertsFromPEM(caCert) {
+				return nil, fmt.Errorf("failed to append CA certificate from %s", cfg.CaCertPath)
+			}
+			tlsConf.RootCAs = caCertPool
+		}
+
+		nw.tlsConfig = tlsConf
+	}
+
+	return nw, nil
+}
+
 func (n *networkWriter) Write(p []byte) (int, error) {
-	// Connect, write, close for each message to be stateless (UDP) or simple (TCP)
-	// For high volume TCP, a persistent connection with reconnection logic would be better
-	conn, err := net.DialTimeout(n.network, n.address, 5*time.Second)
+	dialer := &net.Dialer{Timeout: 5 * time.Second}
+
+	var conn net.Conn
+	var err error
+
+	if n.useTLS {
+		conn, err = tls.DialWithDialer(dialer, n.network, n.address, n.tlsConfig)
+	} else {
+		conn, err = dialer.Dial(n.network, n.address)
+	}
+
 	if err != nil {
-		return 0, err
+		// Log the error instead of returning it to io.MultiWriter,
+		// so that a failure in one target (e.g. QRadar down) doesn't prevent delivery to the other (Splunk)
+		log.Printf("Failed to send SIEM message to %s (%s): %v", n.address, n.network, err)
+		return len(p), nil
 	}
 	defer conn.Close()
-	return conn.Write(p)
+
+	_, err = conn.Write(p)
+	if err != nil {
+		log.Printf("Failed to write SIEM data to %s: %v", n.address, err)
+		return len(p), nil
+	}
+
+	return len(p), nil
 }
 
 func (s *SiemLogger) LogAuthSuccess(username, remoteIp string, authorities []string, details string) {

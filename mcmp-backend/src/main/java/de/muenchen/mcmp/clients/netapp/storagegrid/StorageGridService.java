@@ -15,6 +15,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -88,7 +89,7 @@ public class StorageGridService {
         try {
             final ConfigStorageGrid newCluster = new ConfigStorageGrid();
             newCluster.setApiEndpoint(hostname);
-            newCluster.setUpdatedAt(new Date());
+            newCluster.setUpdatedAt(Instant.now());
 
             final ConfigStorageGrid savedCluster = configStorageGridRepository.save(newCluster);
             log.info("Neuer StorageGrid Cluster-Eintrag erfolgreich erstellt: endpoint='{}', id={}",
@@ -167,7 +168,7 @@ public class StorageGridService {
         }
 
         // Update Cluster-Timestamp
-        cluster.setUpdatedAt(new Date());
+        cluster.setUpdatedAt(Instant.now());
         configStorageGridRepository.save(cluster);
     }
 

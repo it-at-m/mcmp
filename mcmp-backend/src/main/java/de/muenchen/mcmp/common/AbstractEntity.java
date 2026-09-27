@@ -6,7 +6,7 @@ import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.io.Serializable;
-import java.util.Date;
+import java.time.Instant;
 import java.util.Objects;
 
 @MappedSuperclass
@@ -30,25 +30,23 @@ public abstract class AbstractEntity implements Serializable {
     @Basic
     @ColumnDefault("CURRENT_TIMESTAMP(3)")
     @Column(name = "created_at")
-    @Temporal(TemporalType.TIMESTAMP)
-    protected Date createdAt;
+    protected Instant createdAt;
 
     @Basic
     @ColumnDefault("CURRENT_TIMESTAMP(3)")
     @Column(name = "updated_at")
-    @Temporal(TemporalType.TIMESTAMP)
-    protected Date updatedAt;
+    protected Instant updatedAt;
 
     @PrePersist
     protected void onCreate() {
-        Date now = new Date();
+        Instant now = Instant.now();
         this.createdAt = now;
         this.updatedAt = now;
     }
 
     @PreUpdate
     protected void onUpdate() {
-        this.updatedAt = new Date();
+        this.updatedAt = Instant.now();
     }
 
     @Override

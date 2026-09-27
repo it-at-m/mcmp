@@ -6,7 +6,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.ColumnTransformer;
 
-import java.util.Date;
+import java.time.Instant;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -28,8 +28,7 @@ public class KubernetesCluster extends AbstractEntity {
     private String sysClass;
 
     @Column(name = "last_discovered")
-    @Temporal(TemporalType.TIMESTAMP)
-    private Date lastDiscovered;
+    private Instant lastDiscovered;
 
     @Column(name = "k8s_uid", unique = true, columnDefinition = "text")
     private String k8sUid;

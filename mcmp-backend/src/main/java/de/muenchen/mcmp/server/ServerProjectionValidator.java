@@ -85,8 +85,13 @@ public class ServerProjectionValidator {
         projectionGetters.remove("getCloudType");
         projectionGetters.remove("getCloudName");
         projectionGetters.remove("getNumberOfAssignedAppservices");
+        projectionGetters.remove("getOs");
+        projectionGetters.remove("getServerCustomAttributes");
+        projectionGetters.remove("getCpuUtil");
+        projectionGetters.remove("getMemUsedPercent");
         serverGetters.remove("getCloud");
         serverGetters.remove("getAppservices");
+        serverGetters.remove("getRepositories");
         if (!serverGetters.equals(projectionGetters)) {
             log.warn("ServerWithPermissions Projection is not synchronized with Server Entity!");
             log.warn("Missing in Projection: {}", serverGetters.stream().filter(g -> !projectionGetters.contains(g)).collect(Collectors.toSet()));

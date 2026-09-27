@@ -609,6 +609,10 @@ func (c *Client) PostTag(tag string, ciSysId string) error {
 	// Make API request using the existing postRequest method
 	resp, err := c.postRequest(c.urlTag+url.PathEscape(tag), jsonData)
 	if err != nil {
+		if strings.Contains(err.Error(), "There is already a Key Value record with the specified properties") {
+			c.DebugPrintf("Tag already exists, ignoring error: %v\n", err)
+			return nil
+		}
 		return fmt.Errorf("failed to post tag request: %w", err)
 	}
 	c.DebugPrintf("ServiceNow Tag Response: %s\n", resp)

@@ -2,8 +2,24 @@ import type { Ref } from "vue";
 
 import { ApiError } from "@/api/ApiError";
 import { STATUS_INDICATORS } from "@/constants";
+import router from "@/plugins/router.ts";
 import { useAppStore } from "@/stores/app";
 import { useSnackbarStore } from "@/stores/snackbar";
+import { useUserStore } from "@/stores/user";
+
+/**
+ * Handles 401 Unauthorized responses globally by clearing the user state
+ * and navigating to the unauthorized/session-expired view.
+ */
+export function handleUnauthorized(): void {
+  const userStore = useUserStore();
+  userStore.setUser(null);
+  router.push("/unauthorized").catch((err) => {
+    if (err.name !== "NavigationDuplicated") {
+      console.debug("Navigation error:", err);
+    }
+  });
+}
 
 /**
  * Sends an HTTP request to the specified URL with the given options and returns the parsed response.
@@ -33,6 +49,13 @@ export async function apiFetch<T>(
       ...getConfig(),
       ...options,
     });
+    if (response.status === 401) {
+      handleUnauthorized();
+      throw new ApiError({
+        level: STATUS_INDICATORS.ERROR,
+        message: "Nicht authentifiziert.",
+      });
+    }
     if (!skipGlobalHandler) {
       await defaultResponseHandler(response);
     }
@@ -192,6 +215,17 @@ export async function defaultResponseHandler(
   errorMessage = "Es ist ein unbekannter Fehler aufgetreten."
 ): Promise<void> {
   if (!response.ok) {
+    // Skip all further processing for 401 – session is gone, no point making more requests
+    if (response.status === 401) {
+      const userStore = useUserStore();
+      userStore.setUser(null);
+      router.push("/unauthorized").catch(() => {});
+      throw new ApiError({
+        level: STATUS_INDICATORS.ERROR,
+        message: "Nicht authentifiziert.",
+      });
+    }
+
     const appStore = useAppStore();
 
     // 1. Sync system status (e.g. to get current maintenanceMessage)

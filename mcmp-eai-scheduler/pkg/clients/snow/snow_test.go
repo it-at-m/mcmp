@@ -1057,7 +1057,7 @@ func TestPostTag(t *testing.T) {
 				}`)),
 			},
 			httpError:     nil,
-			expectedError: errors.New("failed to post tag request: HTTP status code: 400, body: {\n\t\t\t\t\t\"message\":\"There is already a Key Value record with the specified properties (Record: 133af8a5c33cb61046f91d73e40131de)!\"\n\t\t\t\t}"),
+			expectedError: nil,
 		},
 	}
 

@@ -243,9 +243,16 @@ func (c *Client) UpdateJob(job *Job) error {
 	}
 
 	return c.retryOperation(func() error {
-		// 1. Reload latest state from DB to get current Version/status
+		// 1. Reload latest state from DB with associations to ensure they are not lost on caller side
 		var freshJob Job
-		if err := c.db.First(&freshJob, job.ID).Error; err != nil {
+		if err := c.db.
+			Preload("Snow").
+			Preload("Awx").
+			Preload("User").
+			Preload("Server").
+			Preload("Appservice").
+			Preload("Appservice.ChangeGroup").
+			First(&freshJob, job.ID).Error; err != nil {
 			return fmt.Errorf("failed to reload job %d: %w", job.ID, err)
 		}
 

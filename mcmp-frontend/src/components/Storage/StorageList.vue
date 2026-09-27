@@ -24,6 +24,7 @@
               selectedCategoryFilters.length !== 0 || editableFilter !== ''
             "
             dot
+            color="warning"
           >
             <div class="filter-buttons">
               <v-menu :close-on-content-click="false">

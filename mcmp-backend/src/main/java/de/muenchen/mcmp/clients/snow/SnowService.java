@@ -1550,7 +1550,7 @@ public class SnowService {
     private void updateKubernetesClusterFields(KubernetesCluster cluster, SnowDataRequestDTO.KubernetesClusterDTO dto) {
         cluster.setName(dto.name());
         cluster.setSysClass(dto.sysClass());
-        cluster.setLastDiscovered(dto.lastDiscovered() != null ? Date.from(parseSnowDateTime(dto.lastDiscovered()).toInstant()) : null);
+        cluster.setLastDiscovered(dto.lastDiscovered() != null ? parseSnowDateTime(dto.lastDiscovered()).toInstant() : null);
         cluster.setK8sUid(dto.k8sUid());
         cluster.setEnvironment(parseEnvironmentType(dto.environment()));
     }
@@ -1597,7 +1597,7 @@ public class SnowService {
     private void updateKubernetesNamespaceFields(KubernetesNamespace namespace, SnowDataRequestDTO.KubernetesNamespaceDTO dto) {
         namespace.setName(dto.name());
         namespace.setSysClass(dto.sysClass());
-        namespace.setLastDiscovered(dto.lastDiscovered() != null ? Date.from(parseSnowDateTime(dto.lastDiscovered()).toInstant()) : null);
+        namespace.setLastDiscovered(dto.lastDiscovered() != null ? parseSnowDateTime(dto.lastDiscovered()).toInstant() : null);
         namespace.setK8sUid(dto.k8sUid());
         namespace.setEnvironment(parseEnvironmentType(dto.environment()));
     }

@@ -172,7 +172,10 @@ func run() error {
 
 	siemLogger := siem.NewSiemLogger(cfg.SIEM)
 	if cfg.SIEM.Enabled {
-		logger.DebugPrintf("SIEM Logger initialized. File: %s, Syslog: %s:%d", cfg.SIEM.File.Filename, cfg.SIEM.Syslog.Host, cfg.SIEM.Syslog.Port)
+		logger.DebugPrintf("SIEM Logger initialized. File: %s, QRadar: %s:%d (%s), Splunk: %s:%d (%s, TLS: %t)",
+			cfg.SIEM.File.Filename,
+			cfg.SIEM.QRadar.Host, cfg.SIEM.QRadar.Port, cfg.SIEM.QRadar.Protocol,
+			cfg.SIEM.Splunk.Host, cfg.SIEM.Splunk.Port, cfg.SIEM.Splunk.Protocol, cfg.SIEM.Splunk.UseTLS)
 	}
 
 	foremanClient, err := createForemanClient(cfg)
@@ -1182,6 +1185,10 @@ func tagVmwareInstanceCI(mcmpClient *db.Client, snowClient *snow.Client, foreman
 		logger.Error("Failed to update server", "id", server.ID, "error", err)
 	}
 
+	if job.Appservice == nil {
+		return fmt.Errorf("appservice is not set for job %d", job.ID)
+	}
+
 	serverAssignment := db.ServerAssignment{
 		ServerID:     server.ID,
 		AppserviceID: job.Appservice.ID,
@@ -1190,7 +1197,19 @@ func tagVmwareInstanceCI(mcmpClient *db.Client, snowClient *snow.Client, foreman
 		logger.Error("Failed to save server assignment", "error", err)
 	}
 
-	logger.DebugPrintf(" -- Found server with ID %d, name %s, uuid %s, instance uuid %s for host %s\n", server.ID, server.Name, server.UUID, *server.InstanceUUID, *job.Hostname)
+	instanceUUID := "<nil>"
+	if server.InstanceUUID != nil {
+		instanceUUID = *server.InstanceUUID
+	}
+	logger.DebugPrintf(" -- Found server with ID %d, name %s, uuid %s, instance uuid %s for host %s\n", server.ID, server.Name, server.UUID, instanceUUID, *job.Hostname)
+
+	if server.UUID == "" {
+		return fmt.Errorf("server UUID is empty for host %s", *job.Hostname)
+	}
+	if snowClient == nil {
+		return fmt.Errorf("snowClient is nil for job %d", job.ID)
+	}
+
 	logger.DebugPrintf(" -- Determine sys_id for the VMware instance in Service Now using bios_uuid = %s\n", server.UUID)
 
 	vmwareInstanceCIs, err := snowClient.FindVMwareInstance(server.UUID)
@@ -1218,7 +1237,7 @@ func tagVmwareInstanceCI(mcmpClient *db.Client, snowClient *snow.Client, foreman
 
 	err = snowClient.PostTag(job.Appservice.Number, vmwareInstanceCI.SysId)
 	if err != nil {
-		return fmt.Errorf("failed to tag CI sys_id '%s' to AppService Number '%s': %v", *job.QuickDiscoveryCiSysid, job.Appservice.Number, err)
+		return fmt.Errorf("failed to tag CI sys_id '%s' to AppService Number '%s': %v", vmwareInstanceCI.SysId, job.Appservice.Number, err)
 	}
 
 	return nil

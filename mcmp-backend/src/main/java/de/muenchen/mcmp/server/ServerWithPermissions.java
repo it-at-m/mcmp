@@ -169,4 +169,10 @@ public interface ServerWithPermissions {
     Long getCpuAllocationLimit();
     Long getCpuAllocationOverheadLimit();
     Long getCpuAllocationReservation();
+
+    Boolean getManagedMiddlewareFilebeat();
+    Boolean getManagedMiddlewareHttpd();
+    Boolean getManagedMiddlewareJava();
+    Boolean getManagedMiddlewarePhp();
+    Boolean getManagedMiddlewareTomcat();
 }

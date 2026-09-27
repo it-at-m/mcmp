@@ -13,6 +13,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.function.Function;
@@ -97,7 +98,7 @@ public class OntapImportService {
 
         for (final ConfigOntapCluster cluster : allClusters) {
             if (cluster.getUpdatedAt() != null &&
-                    cluster.getUpdatedAt().toInstant().isBefore(threshold.toInstant())) {
+                    cluster.getUpdatedAt().isBefore(threshold.toInstant())) {
                 log.info("Deleting stale data for cluster: {} (last update: {})", cluster.getApiEndpoint(), cluster.getUpdatedAt());
                 deleteAllClusterData(cluster.getId());
             }
@@ -118,7 +119,7 @@ public class OntapImportService {
         try {
             final ConfigOntapCluster newCluster = new ConfigOntapCluster();
             newCluster.setApiEndpoint(hostname);
-            newCluster.setUpdatedAt(new Date());
+            newCluster.setUpdatedAt(Instant.now());
 
             final ConfigOntapCluster savedCluster = clusterRepository.save(newCluster);
             log.info("New cluster entry successfully created: endpoint='{}', id={}", hostname, savedCluster.getId());
@@ -283,7 +284,7 @@ public class OntapImportService {
         setSnapshotVolumeRelationships(volumePairs, context);
 
         // Update Cluster-Timestamp
-        cluster.setUpdatedAt(new Date());
+        cluster.setUpdatedAt(Instant.now());
         clusterRepository.save(cluster);
     }
 

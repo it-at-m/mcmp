@@ -618,43 +618,83 @@ public class UserInfoAuthoritiesService {
         return username;
     }
 
+    /**
+     * Retrieves the current remote IP address of the client making the request.
+     * The method attempts to determine the IP address based on various headers
+     * (e.g., X-Forwarded-For, X-Real-IP, Forwarded) or falls back to the
+     * remote address provided by the servlet request. Each header is
+     * validated to ensure it contains a valid public or client IP.
+     *
+     * @return The extracted remote IP address if available and valid;
+     *         otherwise, a constant representing an unknown remote IP.
+     */
     protected String getCurrentRemoteIp() {
         try {
             final ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
             if (attributes != null) {
                 HttpServletRequest request = attributes.getRequest();
 
-                // RFC 7239 'Forwarded' header
-                final String authorization = request.getHeader(HEADER_FORWARDED);
+                // 1. X-Forwarded-For (Standard bei Spring Cloud Gateway)
+                final String xForwardedFor = request.getHeader(HEADER_X_FORWARDED_FOR);
+                if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
+                    final String clientIp = xForwardedFor.split(",")[0].trim();
+                    if (isPublicOrClientIp(clientIp)) {
+                        log.debug("Extracted IP from X-Forwarded-For header: {}", clientIp);
+                        return clientIp;
+                    }
+                }
 
-                if (authorization != null && !authorization.isEmpty()) {
-                    final String forwardedIp = extractIpFromAuthorizationHeader(authorization);
-                    if (forwardedIp != null && (isValidIpv4(forwardedIp) || isValidIpv6(forwardedIp))) {
+                // 2. X-Real-IP (falls vom Gateway gesetzt)
+                final String xRealIp = request.getHeader(HEADER_X_REAL_IP);
+                if (xRealIp != null && !xRealIp.isEmpty()) {
+                    final String clientIp = xRealIp.trim();
+                    if (isPublicOrClientIp(clientIp)) {
+                        log.debug("Extracted IP from X-Real-IP header: {}", clientIp);
+                        return clientIp;
+                    }
+                    log.warn("Invalid IP format in X-Real-IP header: {}", xRealIp.replaceAll("[\r\n]", "_"));
+                }
+
+                // 3. RFC 7239 'Forwarded' header
+                final String forwarded = request.getHeader(HEADER_FORWARDED);
+                if (forwarded != null && !forwarded.isEmpty()) {
+                    final String forwardedIp = extractIpFromAuthorizationHeader(forwarded);
+                    if (forwardedIp != null && isPublicOrClientIp(forwardedIp)) {
                         log.debug("Extracted IP from Forwarded header: {}", forwardedIp);
                         return forwardedIp;
                     }
                 }
 
-                final String xForwardedFor = request.getHeader(HEADER_X_FORWARDED_FOR);
-                if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
-                    log.debug("Extracted IP from X-Forwarded-For header: {}", xForwardedFor);
-                    return xForwardedFor.split(",")[0].trim();
+                // 4. RemoteAddr (wird bei aktivem Tomcat RemoteIpValve bereits auf die Client-IP umgeschrieben)
+                final String remoteAddr = request.getRemoteAddr();
+                if (remoteAddr != null && !remoteAddr.isEmpty()) {
+                    return remoteAddr;
                 }
-
-                final String xRealIp = request.getHeader(HEADER_X_REAL_IP);
-                if (xRealIp != null && !xRealIp.isEmpty()) {
-                    if (isValidIpv4(xRealIp) || isValidIpv6(xRealIp)) {
-                        log.debug("Extracted IP from X-Real-IP header: {}", xRealIp);
-                        return xRealIp;
-                    }
-                    log.warn("Invalid IP format in X-Real-IP header: {}", xRealIp.replaceAll("[\r\n]", "_"));
-                }
-                return request.getRemoteAddr();
             }
         } catch (Exception e) {
             log.debug("Could not determine remote IP: {}", e.getMessage());
         }
         return UNKNOWN_REMOTE_IP;
+    }
+
+    /**
+     * Determines if the given IP address is a public or client IP address.
+     * This method filters out local loopback addresses such as 127.0.0.1, 0:0:0:0:0:0:0:1, and ::1.
+     * Validity of the IP address is verified before further checks are conducted.
+     *
+     * @param ip the IP address to be evaluated, provided as a string.
+     * @return {@code true} if the IP address is a public or client IP; {@code false} otherwise,
+     * including cases where the IP is null, blank, invalid, or a loopback address.
+     */
+    private boolean isPublicOrClientIp(String ip) {
+        if (ip == null || ip.isBlank()) {
+            return false;
+        }
+        if (!isValidIpv4(ip) && !isValidIpv6(ip)) {
+            return false;
+        }
+        // 127.0.0.1 oder ::1 aus Forwarded-Headern ignorieren, wenn das lokale Gateway sich selbst eingetragen hat
+        return !ip.equals("127.0.0.1") && !ip.equals("0:0:0:0:0:0:0:1") && !ip.equals("::1");
     }
 
     /**

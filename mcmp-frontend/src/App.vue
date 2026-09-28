@@ -273,6 +273,7 @@ import User, { UserLocalDevelopment } from "@/types/User";
 import UnauthorizedView from "@/views/UnauthorizedView.vue";
 
 const userLoaded = ref(false);
+const isSessionExpired = ref(false);
 
 const appStore = useAppStore();
 const userStore = useUserStore();
@@ -330,6 +331,10 @@ onMounted(() => {
   loadVersion();
   loadMaintenanceData();
   loadTestEnv();
+
+  window.addEventListener("session-expired", () => {
+    isSessionExpired.value = true;
+  });
 
   setInterval(() => loadUser(), 1000 * 60 * 5);
   setInterval(() => appStore.fetchSystemStatus(), 1000 * 60);
@@ -389,6 +394,7 @@ function loadUser(): void {
     .then((user: User) => {
       userStore.setUser(user);
       userLoaded.value = true;
+      isSessionExpired.value = false;
       sessionStorage.removeItem("mcmp_auth_redirect_reload");
     })
     .catch(() => {
@@ -397,6 +403,7 @@ function loadUser(): void {
         userStore.setUser(UserLocalDevelopment());
       } else {
         userStore.setUser(null);
+        isSessionExpired.value = true;
       }
       userLoaded.value = true;
     });

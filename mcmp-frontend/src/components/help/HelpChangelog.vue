@@ -54,7 +54,7 @@
               size="x-small"
               color="success"
               variant="tonal"
-              class="mr-1"
+              class="ml-2"
             >
               Veröffentlicht
             </v-chip>

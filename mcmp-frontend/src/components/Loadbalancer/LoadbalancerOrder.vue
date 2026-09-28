@@ -9,14 +9,31 @@
     :check-for-enabled-actions="['LOADBALANCER_F5']"
     @dialog-cancel="close"
   >
-    <template #activator="{ props }">
-      <v-btn
-        v-bind="props"
-        flat
-        @click="registerOpenDialog"
-        >Bestellen
-      </v-btn>
+    <template #activator="{ props: slotProps }">
+      <slot
+        name="activator"
+        :props="{
+          ...slotProps,
+          onClick: (e: MouseEvent) => {
+            reset();
+            registerOpenDialog?.();
+            slotProps.onClick?.(e);
+          }
+        }"
+      >
+        <v-btn
+          flat
+          v-bind="slotProps"
+          @click="
+            reset();
+            registerOpenDialog?.();
+          "
+        >
+          Bestellen
+        </v-btn>
+      </slot>
     </template>
+
     <v-stepper
       v-model="step"
       :items="pages"
@@ -66,7 +83,8 @@
             class="action-btn cancel-btn"
             :disabled="step == 1"
             @click="prev"
-            >Zurück
+          >
+            Zurück
           </v-btn>
           <v-btn
             :append-icon="mdiArrowRight"
@@ -88,6 +106,8 @@
 </template>
 
 <script setup lang="ts">
+import type Appservice from "@/types/Appservice.ts";
+
 import { mdiArrowLeft, mdiArrowRight } from "@mdi/js";
 import { inject, ref, watch } from "vue";
 
@@ -99,6 +119,14 @@ import LoadbalancerOrderListener from "@/components/Loadbalancer/LoadbalancerOrd
 import LoadbalancerOrderServerPools from "@/components/Loadbalancer/LoadbalancerOrderServerPools.vue";
 import LoadbalancerOrderSummary from "@/components/Loadbalancer/LoadbalancerOrderSummary.vue";
 import LoadbalancerOrder from "@/types/LoadbalancerOrder.ts";
+
+const props = defineProps<{
+  appservice?: Appservice | null;
+}>();
+
+const emit = defineEmits<{
+  (e: "order-done"): void;
+}>();
 
 const registerOpenDialog = inject<() => void>("registerOpenDialog");
 const unregisterOpenDialog = inject<() => void>("unregisterOpenDialog");
@@ -131,12 +159,31 @@ const pages = ref([
   { title: "Zusammenfassung" },
 ]);
 
-function close() {
-  dialog.value = false;
+// Hält den appservice im Order-Objekt synchron mit der Prop
+watch(
+  () => props.appservice,
+  (newAppservice) => {
+    if (newAppservice) {
+      LoadbalancerOrderProp.value.appservice = newAppservice;
+    }
+  },
+  { immediate: true }
+);
+
+function reset() {
   step.value = 1;
   LoadbalancerOrderProp.value = createDefaultLoadbalancerOrder();
+  // WICHTIG: Nach dem Zurücksetzen sofort die Prop wiederherstellen
+  if (props.appservice) {
+    LoadbalancerOrderProp.value.appservice = props.appservice;
+  }
   protocol.value = "http";
   stepValidity.value = {};
+}
+
+function close() {
+  dialog.value = false;
+  reset();
   unregisterOpenDialog?.();
 }
 
@@ -162,13 +209,14 @@ function submitOrder() {
       JSON.parse(JSON.stringify(LoadbalancerOrderProp.value))
     )
     .then(() => {
+      emit("order-done");
       close();
     });
 }
 
 function createDefaultLoadbalancerOrder(): LoadbalancerOrder {
   return new LoadbalancerOrder(
-    null,
+    props.appservice ?? null, // Hier direkt den übergebenen Service verwenden
     "",
     [
       {
@@ -201,11 +249,13 @@ function createDefaultLoadbalancerOrder(): LoadbalancerOrder {
 }
 
 function getServers() {
+  if (!LoadbalancerOrderProp.value.appservice?.id) return;
+
   hasServers.value = true;
   serverService
     .getFullServersByAppserviceId(
       loading,
-      LoadbalancerOrderProp.value.appservice!.id
+      LoadbalancerOrderProp.value.appservice.id
     )
     .then((response) => {
       if (response.length === 0) {
@@ -228,10 +278,8 @@ watch(
       servers.value = [];
       return;
     }
-    if (newVal) {
-      LoadbalancerOrderProp.value.server_pools[0].member = [];
-      getServers();
-    }
+    LoadbalancerOrderProp.value.server_pools[0].member = [];
+    getServers();
   },
   { immediate: true }
 );

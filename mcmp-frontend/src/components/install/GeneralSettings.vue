@@ -9,8 +9,9 @@
     <v-autocomplete
       v-model="selectedAppService"
       v-model:search="search"
-      :items="applicationServices"
+      :items="selectableApplicationServices"
       item-title="name"
+      item-value="id"
       :loading="loading"
       return-object
       rounded
@@ -18,9 +19,9 @@
       variant="outlined"
       @update:search="onSearchUpdate"
     >
-      <template #no-data
-        ><a class="ml-2">Keine Anwendungsservices gefunden</a></template
-      >
+      <template #no-data>
+        <a class="ml-2">Keine Anwendungsservices gefunden</a>
+      </template>
       <template #append-item>
         <div
           v-if="hasMore"
@@ -271,6 +272,7 @@ import { categorys, serverTypeMixes } from "@/types/ServerTypes";
 const props = defineProps<{
   instlServerDetails: installServerDetails;
 }>();
+
 const applicationServices = ref<AppserviceList[]>([]);
 const selectedAppService = ref<AppserviceList | null>(null);
 const loading = ref(false);
@@ -280,12 +282,36 @@ const limit = 50;
 const hasMore = ref(true);
 const nonPostgresOption = ref<"lcm" | "newDb" | null>(null);
 
+// 1. Initialisierung und Übernahme von Änderungen aus den Props
+watch(
+  () => props.instlServerDetails.appservice,
+  (val) => {
+    selectedAppService.value = (val as AppserviceList) ?? null;
+  },
+  { immediate: true }
+);
+
+// 2. Rücksynchronisation bei Auswahl durch den Benutzer
 watch(selectedAppService, (newVal) => {
   if (newVal) {
     props.instlServerDetails.appservice = newVal;
   } else {
     props.instlServerDetails.appservice = null;
   }
+});
+
+// 3. Computed Items für Vuetify:
+// Erhält die Paginierung vollständig intakt. Falls der ausgewählte Service noch nicht
+// in den geladenen API-Ergebnissen (z. B. Seite 1) vorhanden ist, wird er dem Dropdown
+// virtuell bereitgestellt, ohne das originale applicationServices-Array zu mutieren.
+const selectableApplicationServices = computed(() => {
+  if (
+    selectedAppService.value &&
+    !applicationServices.value.some((s) => s.id === selectedAppService.value?.id)
+  ) {
+    return [selectedAppService.value, ...applicationServices.value];
+  }
+  return applicationServices.value;
 });
 
 const serverCategoryOptions = computed(() => {

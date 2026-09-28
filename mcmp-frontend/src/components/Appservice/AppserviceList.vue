@@ -12,6 +12,7 @@
       :search="search"
       search-label="Anwendungsservice suchen"
       search-tooltip="Name oder SNSVC des Anwendungsservice"
+      @update:sort-by="updateSortBy"
       @update:search="onSearchUpdate"
       @row-click="onRowClick"
       @load-more="onLoadMore"
@@ -73,16 +74,15 @@
               </h2>
               <div v-else>
                 <h2>Keine Appservices verfügbar</h2>
-                <span
-                  >Bitte überprüfen Sie, das Sie einer Changegroup mit
+                <span>
+                  Bitte überprüfen Sie, das Sie einer Changegroup mit
                   Anwendungsservices zugewiesen sind.<br />Weitere Informationen
                   finden Sie
                 </span>
                 <a
                   :href="APPSERVICE_EXPLAIN_URL"
                   target="_blank"
-                  >hier</a
-                >
+                >hier</a>
               </div>
             </v-alert>
           </v-col>
@@ -134,7 +134,9 @@ const curOffset = ref(0);
 const itemsAvailableToLoad = ref(0);
 const appservicesItems = ref<AppserviceList[]>([]);
 const selectedId = ref<number | null>(null);
-const sortBy = ref([{ key: "name", order: "asc" as "asc" | "desc" }]);
+
+const defaultSort = { key: "name", order: "asc" as "asc" | "desc" };
+const sortBy = ref([{ ...defaultSort }]);
 const itemsPerPage = ref(50);
 const tableRef = ref<{
   resetSelection: () => void;
@@ -203,10 +205,11 @@ function onRowKeydown({ key, item }: { key: string; item: AppserviceList }) {
 }
 
 function sortByFavorite() {
+  const currentOrder = sortBy.value[0]?.order === "desc" ? -1 : 1;
   appservicesItems.value = [...appservicesItems.value].sort((a, b) => {
     const favDiff = (b.isFavorite ? 1 : 0) - (a.isFavorite ? 1 : 0);
     if (favDiff !== 0) return favDiff;
-    return a.name.localeCompare(b.name);
+    return currentOrder * (a.name || "").localeCompare(b.name || "");
   });
 }
 
@@ -227,6 +230,20 @@ async function toggleFavorite(item: AppserviceList) {
   }
 }
 
+async function updateSortBy(newSortBy: { key: string; order: "asc" | "desc" }[]) {
+  if (!newSortBy || newSortBy.length === 0) {
+    sortBy.value = [{ ...defaultSort }];
+  } else {
+    sortBy.value = newSortBy;
+  }
+
+  curOffset.value = 0;
+  appservicesItems.value = [];
+  await loadAppservices();
+  await nextTick();
+  tableRef.value?.triggerObserveScroll();
+}
+
 async function onLoadMore() {
   await loadAppservices();
   await nextTick();
@@ -236,20 +253,24 @@ async function onLoadMore() {
 async function loadAppservices() {
   loading.value = true;
   try {
+    const currentOrder = sortBy.value[0]?.order ?? "asc";
+
     const res = await appserviceService.getAppservices(
       loading,
       curOffset.value,
       itemsPerPage.value,
-      "asc",
+      currentOrder,
       search.value.trim()
     );
     itemsAvailableToLoad.value = res.page.totalElements;
+
+    const orderFactor = currentOrder === "desc" ? -1 : 1;
     const newItems = res.content
       .slice()
       .sort((a: AppserviceList, b: AppserviceList) => {
         const favDiff = (b.isFavorite ? 1 : 0) - (a.isFavorite ? 1 : 0);
         if (favDiff !== 0) return favDiff;
-        return a.name.localeCompare(b.name);
+        return orderFactor * (a.name || "").localeCompare(b.name || "");
       });
 
     if (curOffset.value === 0) {

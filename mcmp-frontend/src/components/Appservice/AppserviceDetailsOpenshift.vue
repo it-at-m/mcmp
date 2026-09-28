@@ -1,6 +1,5 @@
 <template>
   <common-card
-    v-if="namespaces.length"
     :title="cardTitle"
     top-margin="0"
     :is-default-expanded="false"
@@ -8,14 +7,50 @@
     <template #append-title>
       <count-badge :count="namespaceCount" />
     </template>
+
+    <template #toolbar-actions>
+      <div class="action-buttons">
+        <openshift-namespace-order
+          v-if="props.selectedAppservice"
+          :key="props.selectedAppservice.id"
+          :appservice="props.selectedAppservice"
+          @order-done="loadNamespaces(props.selectedAppservice)"
+        >
+          <template #activator="{ props: activatorProps }">
+            <v-tooltip
+              location="top"
+              text="zusätzlichen Namespace bestellen"
+            >
+              <template #activator="{ props: tooltipProps }">
+                <v-btn
+                  v-bind="{ ...activatorProps, ...tooltipProps }"
+                  icon
+                  flat
+                  aria-label="zusätzlichen Namespace bestellen"
+                >
+                  <v-icon :icon="mdiPlus" />
+                </v-btn>
+              </template>
+            </v-tooltip>
+          </template>
+        </openshift-namespace-order>
+      </div>
+    </template>
+
     <v-data-table
       :headers="headers"
       :items="namespaces"
+      :loading="loading"
       :items-per-page="-1"
       density="compact"
       class="elevation-1"
       hide-default-footer
     >
+      <template #no-data>
+        <div class="py-4 text-center text-medium-emphasis">
+          Keine Namespaces vorhanden
+        </div>
+      </template>
       <template #item.name="{ item }">
         <div class="links">
           <router-link :to="`/openshift/${item.id}`">
@@ -36,11 +71,13 @@
 import type Appservice from "@/types/Appservice";
 import type { OpenshiftNamespaceRef } from "@/types/OpenshiftNamespaceListItem";
 
+import { mdiPlus } from "@mdi/js";
 import { computed, ref, watch } from "vue";
 
 import openshiftService from "@/api/openshiftService";
 import CommonCard from "@/components/common/CommonCard.vue";
 import CountBadge from "@/components/common/CountBadge.vue";
+import OpenshiftNamespaceOrder from "@/components/Openshift/OpenshiftNamespaceOrder.vue";
 import { useFormatter } from "@/composables/formatter.ts";
 
 const props = defineProps<{
@@ -84,4 +121,10 @@ watch(
 );
 </script>
 
-<!--suppress CssUnresolvedCustomProperty -->
+<style scoped>
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+</style>

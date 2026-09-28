@@ -9,14 +9,31 @@
     :check-for-enabled-actions="['OPENSHIFT_NAMESPACE_ORDER']"
     @dialog-cancel="close"
   >
-    <template #activator="{ props }">
-      <v-btn
-        v-bind="props"
-        flat
-        @click="registerOpenDialog"
-        >Namespace Bestellen
-      </v-btn>
+    <template #activator="{ props: slotProps }">
+      <slot
+        name="activator"
+        :props="{
+          ...slotProps,
+          onClick: (e: MouseEvent) => {
+            reset();
+            registerOpenDialog?.();
+            slotProps?.onClick?.(e);
+          }
+        }"
+      >
+        <v-btn
+          v-bind="slotProps"
+          flat
+          @click="
+            reset();
+            registerOpenDialog?.();
+          "
+        >
+          Namespace Bestellen
+        </v-btn>
+      </slot>
     </template>
+
     <v-stepper
       v-model="step"
       :items="pages"
@@ -68,7 +85,8 @@
             class="action-btn cancel-btn"
             :disabled="step == 1"
             @click="prev"
-            >Zurück
+          >
+            Zurück
           </v-btn>
           <v-btn
             :append-icon="mdiArrowRight"
@@ -90,10 +108,11 @@
 </template>
 
 <script setup lang="ts">
+import type Appservice from "@/types/Appservice.ts";
 import type { ComponentPublicInstance } from "vue";
 
 import { mdiArrowLeft, mdiArrowRight } from "@mdi/js";
-import { inject, ref } from "vue";
+import { inject, ref, watch } from "vue";
 
 import jobService from "@/api/jobService.ts";
 import CommonDialog from "@/components/common/CommonDialog.vue";
@@ -103,6 +122,14 @@ import OpenshiftNamespaceOrderNamespace from "@/components/Openshift/OpenshiftNa
 import OpenshiftNamespaceOrderNetwork from "@/components/Openshift/OpenshiftNamespaceOrderNetwork.vue";
 import OpenshiftNamespaceOrderOptional from "@/components/Openshift/OpenshiftNamespaceOrderOptional.vue";
 import OpenshiftNamespaceOrder from "@/types/OpenshiftNamespaceOrder.ts";
+
+const props = defineProps<{
+  appservice?: Appservice | null;
+}>();
+
+const emit = defineEmits<{
+  (e: "order-done"): void;
+}>();
 
 const registerOpenDialog = inject<() => void>("registerOpenDialog");
 const unregisterOpenDialog = inject<() => void>("unregisterOpenDialog");
@@ -126,9 +153,19 @@ const pages = ref([
   { title: "Optionales" },
 ]);
 
+watch(
+  () => props.appservice,
+  (newVal) => {
+    if (newVal) {
+      orderProp.value.appservice = newVal;
+    }
+  },
+  { immediate: true }
+);
+
 function createDefaultOrder(): OpenshiftNamespaceOrder {
   return new OpenshiftNamespaceOrder(
-    null,
+    props.appservice ?? null,
     "",
     "",
     null,
@@ -142,11 +179,18 @@ function createDefaultOrder(): OpenshiftNamespaceOrder {
   );
 }
 
-function close() {
-  dialog.value = false;
+function reset() {
   step.value = 1;
   orderProp.value = createDefaultOrder();
+  if (props.appservice) {
+    orderProp.value.appservice = props.appservice;
+  }
   stepValidity.value = {};
+}
+
+function close() {
+  dialog.value = false;
+  reset();
   unregisterOpenDialog?.();
 }
 
@@ -181,6 +225,7 @@ function submitOrder() {
   jobService
     .startJob(loading, "OPENSHIFT_NAMESPACE_ORDER", -1, payload)
     .then(() => {
+      emit("order-done");
       close();
     });
 }

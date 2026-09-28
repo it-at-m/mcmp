@@ -13,16 +13,25 @@
     ]"
     @dialog-cancel="close"
   >
-    <template #activator="{ props }">
-      <v-btn
-        flat
-        v-bind="props"
-        @click="
-          reset();
-          registerOpenDialog;
-        "
-        >Server
-      </v-btn>
+    <template #activator="{ props: slotProps }">
+      <slot
+        name="activator"
+        :props="{
+          ...slotProps,
+          onClick: (e: MouseEvent) => {
+            openDialog();
+            slotProps?.onClick?.(e);
+          }
+        }"
+      >
+        <v-btn
+          flat
+          v-bind="slotProps"
+          @click="openDialog"
+        >
+          Server
+        </v-btn>
+      </slot>
     </template>
 
     <v-stepper
@@ -129,7 +138,8 @@
             class="action-btn cancel-btn"
             :disabled="step == 1"
             @click="prev"
-            >Zurück
+          >
+            Zurück
           </v-btn>
           <v-btn
             :append-icon="mdiArrowRight"
@@ -150,10 +160,11 @@
 </template>
 
 <script setup lang="ts">
+import type Appservice from "@/types/Appservice.ts";
 import type { ServerCategoryType } from "@/types/ServerTypes.ts";
 
 import { mdiArrowLeft, mdiArrowRight } from "@mdi/js";
-import { computed, inject, ref } from "vue";
+import { computed, inject, ref, watch } from "vue";
 
 import jobService from "@/api/jobService";
 import CommonDialog from "@/components/common/CommonDialog.vue";
@@ -173,11 +184,15 @@ import installServerDetails, {
 } from "@/types/installServerDetails";
 import NewServername from "@/types/NewServername.ts";
 
-const validationRules = useRules();
+const props = defineProps<{
+  appservice?: Appservice | null;
+}>();
 
-const instlServerDetails = ref<installServerDetails>(
-  createDefaultInstallServerDetails()
-);
+const emit = defineEmits<{
+  (e: "order-done"): void;
+}>();
+
+const validationRules = useRules();
 const userStore = useUserStore();
 
 const registerOpenDialog = inject<() => void>("registerOpenDialog");
@@ -185,8 +200,12 @@ const unregisterOpenDialog = inject<() => void>("unregisterOpenDialog");
 
 const dialog = ref(false);
 const loading = ref(false);
-
 const step = ref(1);
+
+const instlServerDetails = ref<installServerDetails>(
+  createDefaultInstallServerDetails()
+);
+
 const pages = computed(() => [
   "Allgemein",
   ...(instlServerDetails.value.categoryType === categoryType.DB ||
@@ -199,6 +218,29 @@ const pages = computed(() => [
   "Zusammenfassung",
 ]);
 
+watch(
+  () => props.appservice,
+  (newAppservice) => {
+    if (newAppservice) {
+      instlServerDetails.value.appservice = newAppservice;
+    }
+  },
+  { immediate: true, deep: true }
+);
+
+watch(dialog, (isOpen) => {
+  if (isOpen) {
+    if (props.appservice) {
+      instlServerDetails.value.appservice = props.appservice;
+    }
+  }
+});
+
+function openDialog() {
+  reset();
+  registerOpenDialog?.();
+}
+
 function close() {
   dialog.value = false;
   reset();
@@ -208,13 +250,16 @@ function close() {
 function reset() {
   step.value = 1;
   instlServerDetails.value = createDefaultInstallServerDetails();
+  if (props.appservice) {
+    instlServerDetails.value.appservice = props.appservice;
+  }
 }
 
 function createDefaultInstallServerDetails(): installServerDetails {
-  return new installServerDetails(
+  const details = new installServerDetails(
     null,
     null,
-    null,
+    props.appservice ?? null,
     null,
     null,
     {
@@ -298,10 +343,15 @@ function createDefaultInstallServerDetails(): installServerDetails {
     },
     null
   );
+
+  if (props.appservice) {
+    details.appservice = props.appservice;
+  }
+
+  return details;
 }
 
 function order() {
-  // custom linux
   let schedule = {};
   if (instlServerDetails.value.schedule) {
     schedule = {
@@ -326,6 +376,7 @@ function order() {
         ...json,
         ...schedule,
       });
+      emit("order-done");
       close();
       return;
     }
@@ -337,6 +388,7 @@ function order() {
         ...json,
         ...schedule,
       });
+      emit("order-done");
       close();
       return;
     }
@@ -364,7 +416,6 @@ function order() {
     }
   }
 
-  // set Os prefix only if no kenner is set
   if (serverType.length == 0) {
     if (OperatingSystem.Linux.includes(instlServerDetails.value.osVersion!)) {
       serverType = serverType + "lx";
@@ -485,6 +536,8 @@ function order() {
     );
     return;
   }
+
+  emit("order-done");
   close();
 }
 </script>

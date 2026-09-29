@@ -26,8 +26,8 @@ public record MountPointDTO(
      */
     public boolean hasChanges(MountPoint existing) {
         return !Objects.equals(existing.getCapacityInBytes(), capacityInBytes)
-                || Objects.equals(existing.getFreeSpaceInBytes(), freeSpaceInBytes)
-                || Objects.equals(existing.getFilesystemType(), filesystemType);
+                || !Objects.equals(existing.getFreeSpaceInBytes(), freeSpaceInBytes)
+                || !Objects.equals(existing.getFilesystemType(), filesystemType);
     }
 
     /**

@@ -48,7 +48,7 @@ func run(ctx context.Context, cfg *config.Config, logger logging.Logger) error {
 			var updatedEndpoint = strings.Replace(mcmpCfg.ApiEndpoint, "import", "maybe-updated", 1)
 			var additionalCompleteImportUUIDs []string
 			if err := mcmpClient.GetJSONUnmarshal(ctx, updatedEndpoint, &additionalCompleteImportUUIDs); err != nil {
-				logger.Error("[MCMP %d] failed to fetch possibly updated servers", "err", err)
+				logger.Error(fmt.Sprintf("[MCMP %d] failed to fetch possibly updated servers: %s", i, err.Error()))
 			} else {
 				cfg.GENERAL.CompleteImportUUIDs = slices.Concat(cfg.GENERAL.CompleteImportUUIDs, additionalCompleteImportUUIDs)
 				cfg.PushCompleteImportConfig()
@@ -66,7 +66,7 @@ func run(ctx context.Context, cfg *config.Config, logger logging.Logger) error {
 				return fmt.Errorf("[PROXMOX %d] failed to create processors: %w", i, err)
 			}
 
-			filename = proc.Name
+			filename = fmt.Sprintf("%s.json", proc.Name)
 			fetcher = proc.AggregateData
 		} else {
 			dcUrl, err := url.Parse(datacenterCfg.URL)
@@ -74,7 +74,7 @@ func run(ctx context.Context, cfg *config.Config, logger logging.Logger) error {
 				return fmt.Errorf("[PROXMOX %d] failed to parse Proxmox URL: %w", i, err)
 			}
 
-			filename = fmt.Sprintf("%s-%s.json", appName, dcUrl.Hostname())
+			filename = fmt.Sprintf("%s.json", dcUrl.Hostname())
 			fetcher = func(_ context.Context) (*processor.Cloud, error) {
 				logger.DebugPrintf("sourcing data from JSON dump %s", filename)
 

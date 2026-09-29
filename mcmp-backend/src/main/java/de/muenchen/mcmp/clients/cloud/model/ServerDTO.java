@@ -9,9 +9,9 @@ import de.muenchen.mcmp.types.ServerKind;
 import de.muenchen.mcmp.types.ServerType;
 
 import java.time.OffsetDateTime;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 public record ServerDTO(
         @JsonProperty("server_kind") ServerKind serverKind,
@@ -85,10 +85,15 @@ public record ServerDTO(
         @JsonProperty("cpu_allocation_limit") Long cpuAllocationLimit,
         @JsonProperty("cpu_allocation_overhead_limit") Long cpuAllocationOverheadLimit,
         @JsonProperty("cpu_allocation_reservation") Long cpuAllocationReservation,
-        @JsonProperty("disks") List<DiskDTO> disks,
-        @JsonProperty("mount_points") List<MountPointDTO> mountPoints,
-        @JsonProperty("nics") List<NicDTO> nics,
-        @JsonProperty("snapshots") List<SnapshotDTO> snapshots
+
+        // semantics for optional lists:
+        //  (1) missing / `null` => ignored
+        //  (2) `[]`             => clears DB (special case of (3))
+        //  (3) `[ ... ]`        => synchronizes DB state to match input list
+        @JsonProperty("disks") Optional<List<DiskDTO>> disks,
+        @JsonProperty("mount_points") Optional<List<MountPointDTO>> mountPoints,
+        @JsonProperty("nics") Optional<List<NicDTO>> nics,
+        @JsonProperty("snapshots") Optional<List<SnapshotDTO>> snapshots
 ) {
     public ServerDTO {
         if (uuid == null)
@@ -117,14 +122,10 @@ public record ServerDTO(
         if (overallStatus == null) overallStatus = ServerStatusType.gray;
         if (configStatus == null) configStatus = ServerStatusType.gray;
 
-        if (disks == null) disks = Collections.emptyList();
-        else disks.removeIf(Objects::isNull);
-        if (mountPoints == null) mountPoints = Collections.emptyList();
-        else mountPoints.removeIf(Objects::isNull);
-        if (nics == null) nics = Collections.emptyList();
-        else nics.removeIf(Objects::isNull);
-        if (snapshots == null) snapshots = Collections.emptyList();
-        else snapshots.removeIf(Objects::isNull);
+        disks.ifPresent(lst -> lst.removeIf(Objects::isNull));
+        mountPoints.ifPresent(lst -> lst.removeIf(Objects::isNull));
+        nics.ifPresent(lst -> lst.removeIf(Objects::isNull));
+        snapshots.ifPresent(lst -> lst.removeIf(Objects::isNull));
     }
 
     /**

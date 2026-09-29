@@ -26,9 +26,8 @@ public record MountPointDTO(
      */
     public boolean hasChanges(MountPoint existing) {
         return !Objects.equals(existing.getCapacityInBytes(), capacityInBytes)
-                || Objects.equals(existing.getFreeSpaceInBytes(), freeSpaceInBytes)
-                || Objects.equals(existing.getFilesystemType(), filesystemType)
-                || Objects.equals(existing.getSource(), source);
+                || !Objects.equals(existing.getFreeSpaceInBytes(), freeSpaceInBytes)
+                || !Objects.equals(existing.getFilesystemType(), filesystemType);
     }
 
     /**
@@ -40,7 +39,6 @@ public record MountPointDTO(
         existing.setCapacityInBytes(capacityInBytes);
         existing.setFreeSpaceInBytes(freeSpaceInBytes);
         existing.setFilesystemType(filesystemType);
-        existing.setSource(source);
     }
 
     /**
@@ -54,6 +52,7 @@ public record MountPointDTO(
         var mountPoint = new MountPoint();
         mountPoint.setServerId(server.getId());
         mountPoint.setDiskPath(diskPath);
+        mountPoint.setSource(source);
         applyChanges(mountPoint);
         return mountPoint;
     }

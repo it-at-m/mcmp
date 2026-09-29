@@ -7,10 +7,7 @@ import org.junit.jupiter.api.Test;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.exc.ValueInstantiationException;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -80,7 +77,10 @@ public class ServerDTOTest {
         assertEquals(ServerStatusType.gray, server.overallStatus());
         assertEquals(ServerStatusType.gray, server.configStatus());
 
-        assertEquals(List.of(), server.snapshots());
+        assertTrue(server.nics().isEmpty());
+        assertTrue(server.disks().isEmpty());
+        assertTrue(server.mountPoints().isEmpty());
+        assertTrue(server.snapshots().isEmpty());
     }
 
     @Test
@@ -98,7 +98,7 @@ public class ServerDTOTest {
         snapshots.add(null);
         final var json = minimalJSON(Map.of("snapshots", snapshots));
         final var server = MAPPER.readValue(json, ServerDTO.class);
-        assertEquals(List.of(), server.snapshots());
+        assertTrue(server.snapshots().orElseGet(Collections::emptyList).isEmpty());
     }
 
     @Test

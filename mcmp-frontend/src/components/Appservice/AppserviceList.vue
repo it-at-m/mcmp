@@ -82,7 +82,8 @@
                 <a
                   :href="APPSERVICE_EXPLAIN_URL"
                   target="_blank"
-                >hier</a>
+                  >hier</a
+                >
               </div>
             </v-alert>
           </v-col>
@@ -230,7 +231,9 @@ async function toggleFavorite(item: AppserviceList) {
   }
 }
 
-async function updateSortBy(newSortBy: { key: string; order: "asc" | "desc" }[]) {
+async function updateSortBy(
+  newSortBy: { key: string; order: "asc" | "desc" }[]
+) {
   if (!newSortBy || newSortBy.length === 0) {
     sortBy.value = [{ ...defaultSort }];
   } else {

@@ -307,7 +307,9 @@ watch(selectedAppService, (newVal) => {
 const selectableApplicationServices = computed(() => {
   if (
     selectedAppService.value &&
-    !applicationServices.value.some((s) => s.id === selectedAppService.value?.id)
+    !applicationServices.value.some(
+      (s) => s.id === selectedAppService.value?.id
+    )
   ) {
     return [selectedAppService.value, ...applicationServices.value];
   }

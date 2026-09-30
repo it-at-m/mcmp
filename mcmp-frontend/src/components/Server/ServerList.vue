@@ -301,7 +301,8 @@
               <a
                 :href="APPSERVICE_EXPLAIN_URL"
                 target="_blank"
-              >hier</a>
+                >hier</a
+              >
             </v-alert>
           </v-col>
         </v-row>

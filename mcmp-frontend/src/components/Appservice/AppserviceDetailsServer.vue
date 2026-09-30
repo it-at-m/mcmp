@@ -626,13 +626,17 @@ const windowsMaintenanceDisabledTooltip = computed(() => {
 const powerStartTooltip = computed(() => {
   if (selectedServers.value.length === 0) return noSelectionTooltip;
   if (!allSelectedDataLoaded()) return "Wird geladen...";
-  return allSelectedServersEligibleToStart.value ? "Start" : "die/eine ausgewählte VM ist bereits gestartet";
+  return allSelectedServersEligibleToStart.value
+    ? "Start"
+    : "die/eine ausgewählte VM ist bereits gestartet";
 });
 
 const powerStopTooltip = computed(() => {
   if (selectedServers.value.length === 0) return noSelectionTooltip;
   if (!allSelectedDataLoaded()) return "Wird geladen...";
-  return allSelectedServersEligibleToStop.value ? "Stop" : "die/eine ausgewählte VM ist bereits gestoppt";
+  return allSelectedServersEligibleToStop.value
+    ? "Stop"
+    : "die/eine ausgewählte VM ist bereits gestoppt";
 });
 
 const powerPauseTooltip = computed(() => {

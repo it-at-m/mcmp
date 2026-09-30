@@ -18,7 +18,7 @@
             reset();
             registerOpenDialog?.();
             slotProps?.onClick?.(e);
-          }
+          },
         }"
       >
         <v-btn

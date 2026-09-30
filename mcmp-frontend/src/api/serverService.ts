@@ -44,25 +44,22 @@ export default {
 
   getServerById(loading: Ref<boolean>, serverId: number): Promise<Server> {
     return apiFetch<Server>(
-      `${getApiBase()}${SERVER_BASE}/${serverId}`,
-      {},
-      loading
+        `${getApiBase()}${SERVER_BASE}/${serverId}`,
+        {},
+        loading,
+        true
     );
   },
 
-  getServerById(loading: Ref<boolean>, serverId: number): Promise<Server> {
-    return apiFetch<Server>(
-      `${getApiBase()}${SERVER_BASE}/${serverId}`,
-      {},
-      loading,
-      true // skipGlobalHandler: ServerView fängt 404 selbst ab
-    ).catch((err) => {
-      // Status anreichen für den Check in ServerView.vue
-      if (!err.status && err instanceof Response) {
-        err.status = err.status;
-      }
-      throw err;
-    });
+  getServersByAppserviceId(
+      loading: Ref<boolean>,
+      appserviceId: number
+  ): Promise<ServerListExtended[]> {
+    return apiFetch(
+        `${getApiBase()}${SERVER_BASE}/appservice/${appserviceId}`,
+        {},
+        loading
+    );
   },
 
   getFullServersByAppserviceId(

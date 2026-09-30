@@ -19,14 +19,12 @@
     >
       <template #[`header.storageCategory`]>
         <div class="header-container">
-          <v-badge
-            :model-value="
-              selectedCategoryFilters.length !== 0 || editableFilter !== ''
-            "
-            dot
-            color="warning"
-          >
-            <div class="filter-buttons">
+          <div class="filter-buttons">
+            <v-badge
+              :model-value="hasActiveFilters"
+              dot
+              color="warning"
+            >
               <v-menu :close-on-content-click="false">
                 <template #activator="{ props: filterActivatorProps }">
                   <v-btn
@@ -101,8 +99,20 @@
                   </v-radio-group>
                 </v-list>
               </v-menu>
-            </div>
-          </v-badge>
+            </v-badge>
+
+            <!-- Reset-Button rechts neben dem Filter-Button -->
+            <v-btn
+              v-if="hasActiveFilters"
+              icon
+              size="x-small"
+              variant="text"
+              title="Filter zurücksetzen"
+              @click.stop="resetFilters"
+            >
+              <v-icon size="18">{{ mdiClose }}</v-icon>
+            </v-btn>
+          </div>
         </div>
       </template>
 
@@ -157,8 +167,8 @@
               class="links"
             >
               <h2>Keine Storages verfügbar</h2>
-              <span
-                >Bitte überprüfen Sie das Ihre Storages einem Anwendungsservice
+              <span>
+                Bitte überprüfen Sie das Ihre Storages einem Anwendungsservice
                 zugeordnet sind.<br />Weitere Informationen finden Sie
               </span>
               <a
@@ -185,6 +195,7 @@ import type { DataTableHeader } from "vuetify";
 
 import {
   mdiBucketOutline,
+  mdiClose,
   mdiFilterVariant,
   mdiFolderNetworkOutline,
   mdiFolderOutline,
@@ -295,6 +306,18 @@ const tableItems = computed<TableItem[]>(() =>
 const normalizedUrlParamId = computed(() =>
   typeof route.params.id === "string" ? route.params.id : undefined
 );
+
+const hasActiveFilters = computed(() => {
+  return (
+    selectedCategoryFilters.value.length !== 0 || editableFilter.value !== ""
+  );
+});
+
+function resetFilters() {
+  selectedCategoryFilters.value = [];
+  editableFilter.value = "";
+  localStorage.removeItem("mcmp_storage_editable_filter");
+}
 
 function normalizeType(type: string) {
   return (type ?? "").trim().toUpperCase();
@@ -496,8 +519,6 @@ onUnmounted(() => {
   if (searchTimeout) clearTimeout(searchTimeout);
 });
 
-// watch for selectedTypeFilters is defined above to reload from backend
-
 watch(
   () => props.modelValue,
   (newVal) => {
@@ -544,18 +565,17 @@ onMounted(async () => {
 .header-container {
   display: flex;
   align-items: center;
-  justify-content: left;
   width: 100%;
-  margin-left: 0;
 }
 
 .header-container .filter-buttons {
-  margin-left: auto;
+  margin-right: auto;
 }
 
 .filter-buttons {
   display: flex;
-  gap: 4px;
+  align-items: center;
+  gap: 2px;
 }
 
 :deep(td:first-child),

@@ -132,7 +132,7 @@ func runApp(ctx context.Context) error {
 //   - error: Any error that prevents successful execution
 func run(ctx context.Context) error {
 	// Timeout for the entire operation
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Minute)
 	defer cancel()
 
 	cfg, err := loadConfig[Config](appName)
@@ -155,7 +155,7 @@ func run(ctx context.Context) error {
 		Hostname:        cfg.Patchnight.Hostname,
 		Debug:           debug,
 		EnableTLSVerify: true, // Security improvement: Enable TLS verification
-		RequestTimeout:  30 * time.Second,
+		RequestTimeout:  500 * time.Second,
 		MaxRetries:      3,
 		RetryDelay:      1 * time.Second,
 		UserAgent:       "MCMP-EAI-PatchnightConfig/1.0",
@@ -200,7 +200,7 @@ func run(ctx context.Context) error {
 		ClientID:        cfg.MCMP.OAuthClientId,
 		ClientSecret:    cfg.MCMP.OAuthClientSecret,
 		EnableTLSVerify: true, // Backward compatibility
-		RequestTimeout:  30 * time.Second,
+		RequestTimeout:  500 * time.Second,
 		Scopes:          []string{},
 	}
 	mcmpClient, err := mcmp.NewClient(mcmpConfig)

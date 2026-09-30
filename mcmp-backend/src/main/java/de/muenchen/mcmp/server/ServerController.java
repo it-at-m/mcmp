@@ -6,7 +6,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 
 @RestController
 @AllArgsConstructor
@@ -43,11 +42,7 @@ public class ServerController {
 
     @GetMapping("/appservice/{appserviceId}")
     public List<ServerListExtendedDTO> findServersByAppserviceId(@PathVariable("appserviceId") final Long appserviceId) {
-        final List<ServerListExtendedDTO> servers = serverService.findServersByAppserviceId(appserviceId);
-        if (servers.isEmpty()) {
-            throw new NoSuchElementException("No servers found for the given appservice ID.");
-        }
-        return servers;
+        return serverService.findServersByAppserviceId(appserviceId);
     }
 
     @HasSpecialRole
@@ -58,11 +53,7 @@ public class ServerController {
 
     @GetMapping("/appservice/{appserviceId}/full")
     public List<ServerFullDTO> findFullServersByAppserviceId(@PathVariable("appserviceId") final Long appserviceId) {
-        final List<ServerFullDTO> servers = serverService.findFullServersByAppserviceId(appserviceId);
-        if (servers.isEmpty()) {
-            throw new NoSuchElementException("No servers found for the given appservice ID.");
-        }
-        return servers;
+        return serverService.findFullServersByAppserviceId(appserviceId);
     }
 
     @HasSpecialRole

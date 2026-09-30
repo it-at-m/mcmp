@@ -1,6 +1,6 @@
 <template>
   <div
-    v-if="props.selectedAppservice?.servers?.length"
+    v-if="props.selectedAppservice"
     class="links"
   >
     <common-card
@@ -26,6 +26,7 @@
           </template>
         </v-tooltip>
       </template>
+
       <template #toolbar-actions>
         <div class="action-buttons">
           <add-snapshot
@@ -50,7 +51,7 @@
             "
             job-to-call="START_SERVER"
             show-confirm-dialog
-            confirm-dialog-title="VM Starten"
+            confirm-dialog-title="VM starten"
             confirm-dialog-text="Wollen Sie diese VMs wirklich starten?"
             @change="onBatchOrderCompleteDone"
           />
@@ -114,7 +115,7 @@
             @change="onBatchOrderCompleteDone"
           />
           <check-mk-dialog
-            title="Downtime setzen"
+            title="checkmk Überwachung Downtime"
             :is-batch-operation="true"
             :selected-server-ids="selectedServers"
             :parent-all-selected-servers-eligible="
@@ -131,8 +132,50 @@
             :parent-disabled-tooltip="windowsMaintenanceDisabledTooltip"
             @save="onBatchOrderCompleteDone"
           />
+          <action-button
+            color="btn_red"
+            :icon="mdiDelete"
+            :tooltip="deleteTooltip"
+            :is-batch-operation="true"
+            :selected-server-ids="selectedServers"
+            :selected-servers="serversForBatch"
+            :parent-all-selected-servers-eligible="
+              allSelectedServersEligibleToDelete
+            "
+            job-to-call="LINUX_DELETE_SERVER"
+            show-confirm-dialog
+            confirm-dialog-title="Server abbauen"
+            confirm-dialog-text="Wollen Sie die ausgewählten Server wirklich abbauen?"
+            use-extra-sure-dialog
+            extra-sure-checkbox-text="Ich bin mir sicher, dass ich die ausgewählten Server abbauen möchte."
+            @change="onBatchOrderCompleteDone"
+          />
+          <install-dialog
+            :key="props.selectedAppservice.id"
+            :appservice="props.selectedAppservice"
+            @order-done="onBatchOrderCompleteDone"
+          >
+            <template #activator="{ props: activatorProps }">
+              <v-tooltip
+                location="top"
+                text="zusätzlichen Server bestellen"
+              >
+                <template #activator="{ props: tooltipProps }">
+                  <v-btn
+                    v-bind="{ ...activatorProps, ...tooltipProps }"
+                    icon
+                    flat
+                    aria-label="zusätzlichen Server bestellen"
+                  >
+                    <v-icon :icon="mdiPlus" />
+                  </v-btn>
+                </template>
+              </v-tooltip>
+            </template>
+          </install-dialog>
         </div>
       </template>
+
       <v-data-table
         v-model="selectedServers"
         :headers="headers"
@@ -145,6 +188,11 @@
         hide-default-footer
         class="server-table"
       >
+        <template #no-data>
+          <div class="py-4 text-center text-medium-emphasis">
+            Keine Server zugewiesen
+          </div>
+        </template>
         <template #item.serverKind="{ item }">
           <v-icon
             v-if="serverKindText(item.serverKind)"
@@ -270,10 +318,12 @@ import type { DataTableHeader } from "vuetify";
 import {
   mdiAlert,
   mdiCloud,
+  mdiDelete,
   mdiKeyChain,
   mdiPauseCircle,
   mdiPlay,
   mdiPlayCircle,
+  mdiPlus,
   mdiRestart,
   mdiServer,
   mdiStop,
@@ -286,6 +336,7 @@ import serverService from "@/api/serverService";
 import snapshotService from "@/api/snapshotService";
 import CommonCard from "@/components/common/CommonCard.vue";
 import CountBadge from "@/components/common/CountBadge.vue";
+import InstallDialog from "@/components/install/InstallDialog.vue";
 import ActionButton from "@/components/Server/ActionButtons/ActionButton.vue";
 import CheckMkDialog from "@/components/Server/ActionButtons/CheckMkDialog.vue";
 import PauseServerBtn from "@/components/Server/ActionButtons/PauseServerBtn.vue";
@@ -306,7 +357,7 @@ const isOperator = computed(() =>
   userStore.getUser?.authorities.includes("ROLE_OPERATOR")
 );
 
-const cardTitle = computed(() => "Zugeordnete Server");
+const cardTitle = computed(() => "Server");
 const serverCount = computed(
   () => props.selectedAppservice?.servers?.length ?? 0
 );
@@ -384,7 +435,7 @@ const loadFullServer = async (id: number) => {
     const server = await serverService.getServerById(loading, numId);
     fullServerCache.value.set(numId, server as Server);
     loadSnapshotCount(numId);
-  } catch (e) {
+  } catch {
     fullServerCache.value.set(numId, null);
     loadSnapshotCount(numId);
   }
@@ -404,7 +455,7 @@ const loadSnapshotCount = async (id: number) => {
   try {
     const snaps = await snapshotService.getSnapshotsByServerId(loading, numId);
     snapshotCountCache.value.set(numId, snaps?.length ?? 0);
-  } catch (e) {
+  } catch {
     snapshotCountCache.value.set(numId, null);
   }
 };
@@ -501,7 +552,6 @@ const allSelectedServersEligibleToPause = computed(() =>
   )
 );
 
-// Nur noch "poweredOn" erlaubt:
 const allSelectedServersEligibleToRestart = computed(() =>
   allSelectedPass(
     (s: any) =>
@@ -510,6 +560,19 @@ const allSelectedServersEligibleToRestart = computed(() =>
         (s as any).cloud?.cloudType === "PROXMOX") &&
       (s as any).powerState === "poweredOn"
   )
+);
+
+const allSelectedServersEligibleToDelete = computed(() =>
+  allSelectedPass((s: any) => {
+    const cloudType = (s as any).cloud?.cloudType;
+    const hasValidOsRole = !!(s as any).roleLinux || !!(s as any).roleWindows;
+    return (
+      !!(s as any).canEdit &&
+      !!(s as any).managed &&
+      hasValidOsRole &&
+      (cloudType === "VMWARE" || cloudType === "PROXMOX")
+    );
+  })
 );
 
 const allSelectedServersEligibleForDowntime = computed(() =>
@@ -563,20 +626,24 @@ const windowsMaintenanceDisabledTooltip = computed(() => {
 const powerStartTooltip = computed(() => {
   if (selectedServers.value.length === 0) return noSelectionTooltip;
   if (!allSelectedDataLoaded()) return "Wird geladen...";
-  return allSelectedServersEligibleToStart.value ? "Start" : "Nicht möglich";
+  return allSelectedServersEligibleToStart.value
+    ? "Start"
+    : "die/eine ausgewählte VM ist bereits gestartet";
 });
 
 const powerStopTooltip = computed(() => {
   if (selectedServers.value.length === 0) return noSelectionTooltip;
   if (!allSelectedDataLoaded()) return "Wird geladen...";
-  return allSelectedServersEligibleToStop.value ? "Stop" : "Nicht möglich";
+  return allSelectedServersEligibleToStop.value
+    ? "Stop"
+    : "die/eine ausgewählte VM ist bereits gestoppt";
 });
 
 const powerPauseTooltip = computed(() => {
   if (selectedServers.value.length === 0) return noSelectionTooltip;
   if (!allSelectedDataLoaded()) return "Wird geladen...";
   return allSelectedServersEligibleToPause.value
-    ? "Pausieren / Geplante Downtime"
+    ? "Pausieren / geplante Server Downtime"
     : "Nicht möglich";
 });
 
@@ -592,6 +659,15 @@ const powerRestartTooltip = computed(() => {
   return allSelectedServersEligibleToRestart.value
     ? "Restart"
     : "Nicht möglich";
+});
+
+const deleteTooltip = computed(() => {
+  if (selectedServers.value.length === 0) return noSelectionTooltip;
+  if (!allSelectedDataLoaded()) return "Wird geladen...";
+  if (allSelectedServersEligibleToDelete.value) {
+    return `Ausgewählte ${selectedServers.value.length} Server abbauen`;
+  }
+  return "Nur möglich, wenn ALLE ausgewählten Server verwaltete VMware/Proxmox-Server mit Bestellberechtigung sind.";
 });
 
 const rootAdminTooltip = computed(() => {
@@ -646,7 +722,6 @@ const rootAdminTooltip = computed(() => {
 });
 </script>
 
-<!--suppress CssUnresolvedCustomProperty -->
 <style scoped>
 .server-table {
   table-layout: fixed;

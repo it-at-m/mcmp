@@ -91,6 +91,8 @@ public class ServerService {
     }
 
     public List<ServerListExtendedDTO> findServersByAppserviceId(final Long appserviceId) {
+        checkAppserviceExists(appserviceId);
+
         final UserRoles userRoles = AuthUtils.getCurrentUserRoles();
         return repository.findServersByAppserviceId(
                 appserviceId,
@@ -108,6 +110,8 @@ public class ServerService {
     }
 
     public List<ServerFullDTO> findFullServersByAppserviceId(final Long appserviceId) {
+        checkAppserviceExists(appserviceId);
+
         final UserRoles userRoles = AuthUtils.getCurrentUserRoles();
         return repository.findFullServersByAppserviceId(
                         appserviceId,
@@ -124,6 +128,13 @@ public class ServerService {
                 ).stream()
                 .map(serverMapper::toFullDTOWithoutAppservices)
                 .toList();
+    }
+
+    private void checkAppserviceExists(final Long appserviceId) {
+        if (appserviceService.getAppservice(appserviceId) == null) {
+            log.warn("Appservice not found or not accessible: id={}", appserviceId);
+            throw new EntityNotFoundException("Anwendungsservice mit ID " + appserviceId + " nicht gefunden.");
+        }
     }
 
     private ServerListDTO mapProjectionToDTO(final ServerList serverList) {
@@ -314,7 +325,6 @@ public class ServerService {
         return repository.findByPatchnightExitcodeNot((short) 0).stream().map(serverMapper::toFullDTOWithoutAppservices).toList();
     }
 
-
     /**
      * Saves server data in a NEW transaction, independent of any existing transaction.
      * This ensures that even if the calling transaction rolls back, this save is committed.
@@ -350,7 +360,18 @@ public class ServerService {
         return serverRepository.findForAutocomplete(query);
     }
 
+    /**
+     * For internal use by the cloud import service.
+     */
     public List<Server> findAllByCloudId(final Long cloudId) {
         return repository.findAllByCloudId(cloudId);
+    }
+
+    /**
+     * For internal use by the cloud import service.
+     * @return UUIDs of servers with recently completed AWX jobs.
+     */
+    public List<String> findUUIDsWithRecentlyCompletedJobs() {
+        return repository.findUUIDsWithRecentlyCompletedJobs();
     }
 }

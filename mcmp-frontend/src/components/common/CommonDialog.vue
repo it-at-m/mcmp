@@ -202,7 +202,10 @@ const props = withDefaults(
   }
 );
 
-const closeAncestorMenus = inject<() => void>("closeAncestorMenus");
+const closeAncestorMenus = inject<(() => void) | null>(
+  "closeAncestorMenus",
+  null
+);
 const loading = ref(false);
 const actionsEnabled = ref<Record<string, boolean>>({});
 const actionsChecked = ref(false);

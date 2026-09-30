@@ -19,14 +19,13 @@
     >
       <template #[`header.status`]>
         <div class="header-container">
-          <v-badge
-            :model-value="
-              statusFilter.length !== 0 || osFilter !== '' || favoritesFilter
-            "
-            dot
-            color="warning"
-          >
-            <div class="filter-buttons">
+          <div class="filter-buttons">
+            <!-- Filter-Symbol bleibt ganz links -->
+            <v-badge
+              :model-value="hasActiveFilters"
+              dot
+              color="warning"
+            >
               <v-menu :close-on-content-click="false">
                 <template #activator="{ props: activatorProps }">
                   <v-btn
@@ -85,84 +84,102 @@
                     <v-list-item
                       density="compact"
                       class="py-0"
-                      ><v-radio
+                    >
+                      <v-radio
                         label="Alle"
                         value=""
                         hide-details
                         density="compact"
-                    /></v-list-item>
+                      />
+                    </v-list-item>
                     <v-list-item
                       density="compact"
                       class="py-0"
-                      ><v-radio
+                    >
+                      <v-radio
                         label="Alle Windows"
                         value="windows"
                         hide-details
                         density="compact"
-                    /></v-list-item>
+                      />
+                    </v-list-item>
                     <v-list-item
                       density="compact"
                       class="py-0"
-                      ><v-radio
+                    >
+                      <v-radio
                         label="Managed Windows"
                         value="mng-windows"
                         hide-details
                         density="compact"
-                    /></v-list-item>
+                      />
+                    </v-list-item>
                     <v-list-item
                       density="compact"
                       class="py-0"
-                      ><v-radio
+                    >
+                      <v-radio
                         label="Alle Linux"
                         value="linux"
                         hide-details
                         density="compact"
-                    /></v-list-item>
+                      />
+                    </v-list-item>
                     <v-list-item
                       density="compact"
                       class="py-0"
-                      ><v-radio
+                    >
+                      <v-radio
                         label="Managed Linux"
                         value="mng-linux"
                         hide-details
                         density="compact"
-                    /></v-list-item>
+                      />
+                    </v-list-item>
                     <v-list-item
                       density="compact"
                       class="py-0"
-                      ><v-radio
+                    >
+                      <v-radio
                         label="Managed Oracle"
                         value="oracle"
                         hide-details
                         density="compact"
-                    /></v-list-item>
+                      />
+                    </v-list-item>
                     <v-list-item
                       density="compact"
                       class="py-0"
-                      ><v-radio
+                    >
+                      <v-radio
                         label="Managed Non-Oracle"
                         value="non-oracle"
                         hide-details
                         density="compact"
-                    /></v-list-item>
+                      />
+                    </v-list-item>
                     <v-list-item
                       density="compact"
                       class="py-0"
-                      ><v-radio
+                    >
+                      <v-radio
                         label="Windows Clients"
                         value="windows-client"
                         hide-details
                         density="compact"
-                    /></v-list-item>
+                      />
+                    </v-list-item>
                     <v-list-item
                       density="compact"
                       class="py-0"
-                      ><v-radio
+                    >
+                      <v-radio
                         label="Unmanaged"
                         value="unmanaged"
                         hide-details
                         density="compact"
-                    /></v-list-item>
+                      />
+                    </v-list-item>
                     <v-list-item
                       density="compact"
                       class="py-0"
@@ -177,8 +194,20 @@
                   </v-radio-group>
                 </v-list>
               </v-menu>
-            </div>
-          </v-badge>
+            </v-badge>
+
+            <!-- X-Button rechts neben dem Filter-Button -->
+            <v-btn
+              v-if="hasActiveFilters"
+              icon
+              size="x-small"
+              variant="text"
+              title="Filter zurücksetzen"
+              @click.stop="resetFilters"
+            >
+              <v-icon size="18">{{ mdiClose }}</v-icon>
+            </v-btn>
+          </div>
         </div>
       </template>
 
@@ -265,8 +294,8 @@
               type="info"
             >
               <h2>Keine Server verfügbar</h2>
-              <span
-                >Bitte überprüfen Sie das Ihre Server einem Anwendungsservice
+              <span>
+                Bitte überprüfen Sie das Ihre Server einem Anwendungsservice
                 zugeordnet sind.<br />Weitere Informationen finden Sie
               </span>
               <a
@@ -294,6 +323,7 @@ import type { DataTableHeader } from "vuetify";
 
 import {
   mdiAlert,
+  mdiClose,
   mdiFilterVariant,
   mdiPauseCircle,
   mdiPlayCircle,
@@ -339,6 +369,7 @@ function onPowerStateIconHover(event: Event, item: ServerList) {
 function onPowerStateIconLeave() {
   powerStateTooltipActivator.value = undefined;
 }
+
 const loadingServer = ref(false);
 const servers = ref<ServerList[]>([]);
 const totalServers = ref(0);
@@ -347,11 +378,16 @@ const currentPage = ref(1);
 const itemsPerPage = ref(25);
 const hasMore = ref(true);
 const selectedRow = ref<string | null>(null);
-const sortBy = ref([{ key: "name", order: "asc" as "asc" | "desc" }]);
+
+// Standard-Sortierung: Immer 'name' aufsteigend
+const defaultSort = { key: "name", order: "asc" as "asc" | "desc" };
+const sortBy = ref([{ ...defaultSort }]);
+
 const tableRef = ref<{
   triggerObserveScroll: () => void;
   resetSelection: () => void;
 } | null>(null);
+
 const statusFilter = ref<string[]>(
   JSON.parse(localStorage.getItem("mcmp_status_filter") || "[]")
 );
@@ -370,6 +406,24 @@ const headers = ref<DataTableHeader[]>([
 ]);
 
 const filteredServers = computed(() => servers.value);
+
+const hasActiveFilters = computed(() => {
+  return (
+    statusFilter.value.length !== 0 ||
+    osFilter.value !== "" ||
+    favoritesFilter.value
+  );
+});
+
+function resetFilters() {
+  statusFilter.value = [];
+  osFilter.value = "";
+  favoritesFilter.value = false;
+
+  localStorage.removeItem("mcmp_status_filter");
+  localStorage.removeItem("mcmp_os_filter");
+  localStorage.removeItem("mcmp_favorites_filter");
+}
 
 function sortServersByFavorite() {
   const order = sortBy.value[0]?.order === "desc" ? -1 : 1;
@@ -443,6 +497,7 @@ watch(favoritesFilter, (newValue) => {
 watch(statusFilter, (newVal) => {
   localStorage.setItem("mcmp_status_filter", JSON.stringify(newVal));
 });
+
 watch(osFilter, (newVal) => {
   localStorage.setItem("mcmp_os_filter", newVal);
 });
@@ -460,7 +515,12 @@ watch(
 );
 
 function updateSortBy(newSortBy: { key: string; order: "asc" | "desc" }[]) {
-  sortBy.value = newSortBy;
+  // Wenn Vuetify beim dritten Klick das Sortier-Array leert, immer wieder auf "name, asc" setzen
+  if (!newSortBy || newSortBy.length === 0) {
+    sortBy.value = [{ ...defaultSort }];
+  } else {
+    sortBy.value = newSortBy;
+  }
   currentPage.value = 1;
   loadServers(1, statusFilter.value, osFilter.value, favoritesFilter.value);
   nextTick(() => tableRef.value?.triggerObserveScroll());
@@ -495,7 +555,7 @@ async function loadServers(
 ) {
   loadingServer.value = true;
   const offset = (page - 1) * itemsPerPage.value;
-  const currentSort = sortBy.value[0] ?? { key: "name", order: "asc" };
+  const currentSort = sortBy.value[0] ?? defaultSort;
 
   search.value = (search.value ?? "").replace(/[^a-zA-Z0-9 .-]/g, "").trim();
 
@@ -658,17 +718,18 @@ defineExpose({ updateServerPowerState });
 .header-container {
   display: flex;
   align-items: center;
-  gap: 4px;
   width: 100%;
 }
 
 .header-container .filter-buttons {
-  margin-left: auto;
+  /* Hält den Filter-Button ganz links im Header */
+  margin-right: auto;
 }
 
 .filter-buttons {
   display: flex;
-  gap: 4px;
+  align-items: center;
+  gap: 2px;
 }
 
 :deep(td:first-child),

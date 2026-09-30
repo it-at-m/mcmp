@@ -43,33 +43,22 @@ export default {
   },
 
   getServerById(loading: Ref<boolean>, serverId: number): Promise<Server> {
-    loading.value = true;
-    return fetch(`${getApiBase()}${SERVER_BASE}/${serverId}`, getConfig())
-      .then((response) => {
-        if (!response.ok) {
-          throw Object.assign(
-            new Error("Server konnte nicht geladen werden."),
-            {
-              status: response.status,
-            }
-          );
-        }
-        defaultResponseHandler(response);
-        return response.json();
-      })
-      .finally(() => {
-        loading.value = false;
-      });
+    return apiFetch<Server>(
+        `${getApiBase()}${SERVER_BASE}/${serverId}`,
+        {},
+        loading,
+        true
+    );
   },
 
   getServersByAppserviceId(
-    loading: Ref<boolean>,
-    appserviceId: number
+      loading: Ref<boolean>,
+      appserviceId: number
   ): Promise<ServerListExtended[]> {
     return apiFetch(
-      `${getApiBase()}${SERVER_BASE}/appservice/${appserviceId}`,
-      {},
-      loading
+        `${getApiBase()}${SERVER_BASE}/appservice/${appserviceId}`,
+        {},
+        loading
     );
   },
 
@@ -77,20 +66,16 @@ export default {
     loading: Ref<boolean>,
     appserviceId: number
   ): Promise<Server[]> {
-    return fetch(
+    return apiFetch<Server[]>(
       `${getApiBase()}${SERVER_BASE}/appservice/${appserviceId}/full`,
-      getConfig()
-    )
-      .then((response) => {
-        if (response.status === 404) {
-          return [];
-        }
-        defaultResponseHandler(response.clone());
-        return response.json();
-      })
-      .finally(() => {
-        loading.value = false;
-      });
+      {},
+      loading
+    ).catch((err) => {
+      if (err?.status === 404) {
+        return [];
+      }
+      throw err;
+    });
   },
 
   getPatchnightErrorServers(loading: Ref<boolean>): Promise<Server[]> {

@@ -31,15 +31,12 @@ export default {
   },
 
   getAppservice(loading: Ref<boolean>, id: number): Promise<Appservice> {
-    loading.value = true;
-    return fetch(`${getApiBase()}${APPSERVICE_BASE}/${id}`, getConfig())
-      .then((response) => {
-        defaultResponseHandler(response);
-        return response.json();
-      })
-      .finally(() => {
-        loading.value = false;
-      });
+    return apiFetch<Appservice>(
+      `${getApiBase()}${APPSERVICE_BASE}/${id}`,
+      {},
+      loading,
+      true
+    );
   },
 
   addAppserviceToFavorites(appserviceId: number): Promise<void> {

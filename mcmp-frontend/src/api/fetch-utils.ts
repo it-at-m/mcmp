@@ -14,6 +14,7 @@ import { useUserStore } from "@/stores/user";
 export function handleUnauthorized(): void {
   const userStore = useUserStore();
   userStore.setUser(null);
+  window.dispatchEvent(new CustomEvent("session-expired"));
   router.push("/unauthorized").catch((err) => {
     if (err.name !== "NavigationDuplicated") {
       console.debug("Navigation error:", err);
@@ -51,13 +52,21 @@ export async function apiFetch<T>(
     });
     if (response.status === 401) {
       handleUnauthorized();
-      throw new ApiError({
-        level: STATUS_INDICATORS.ERROR,
-        message: "Nicht authentifiziert.",
-      });
+      throw Object.assign(
+        new ApiError({
+          level: STATUS_INDICATORS.ERROR,
+          message: "Nicht authentifiziert.",
+        }),
+        { status: 401 }
+      );
     }
     if (!skipGlobalHandler) {
       await defaultResponseHandler(response);
+    } else if (!response.ok) {
+      throw Object.assign(
+        new Error(`Request failed with status ${response.status}`),
+        { status: response.status }
+      );
     }
 
     // Falls 204 No Content oder Content-Length 0, direkt zurückkehren

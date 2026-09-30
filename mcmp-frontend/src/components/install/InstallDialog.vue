@@ -21,7 +21,7 @@
           onClick: (e: MouseEvent) => {
             openDialog();
             slotProps?.onClick?.(e);
-          }
+          },
         }"
       >
         <v-btn

@@ -190,10 +190,13 @@
                 style="padding-left: 1.2rem"
               >
                 <li>
-                  Rollen neu angelegter Anwendungsservices sind per default nicht befüllt.
+                  Rollen neu angelegter Anwendungsservices sind per default
+                  nicht befüllt.
                 </li>
                 <li>
-                   Ein Login auf VMs des Anwendungsservices ist erst nach Zuweisung der berechtigten Personen zu der gewünschten Rolle möglich.
+                  Ein Login auf VMs des Anwendungsservices ist erst nach
+                  Zuweisung der berechtigten Personen zu der gewünschten Rolle
+                  möglich.
                 </li>
               </ul>
             </div>

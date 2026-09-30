@@ -174,7 +174,8 @@
               <a
                 :href="APPSERVICE_EXPLAIN_URL"
                 target="_blank"
-              >hier</a>
+                >hier</a
+              >
             </v-alert>
           </v-col>
         </v-row>
@@ -308,8 +309,7 @@ const normalizedUrlParamId = computed(() =>
 
 const hasActiveFilters = computed(() => {
   return (
-    selectedCategoryFilters.value.length !== 0 ||
-    editableFilter.value !== ""
+    selectedCategoryFilters.value.length !== 0 || editableFilter.value !== ""
   );
 });
 

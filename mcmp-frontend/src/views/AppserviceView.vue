@@ -40,8 +40,8 @@
                 prominent
               >
                 <div class="text-subtitle-1">
-                  Der Anwendungsservice existiert nicht (mehr) oder Sie haben keine
-                  Berechtigung.
+                  Der Anwendungsservice existiert nicht (mehr) oder Sie haben
+                  keine Berechtigung.
                 </div>
                 <div class="text-body-2 mt-2">
                   Bitte aktualisieren Sie Ihr Lesezeichen oder wählen Sie einen

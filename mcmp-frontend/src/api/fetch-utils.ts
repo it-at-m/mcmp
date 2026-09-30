@@ -1,14 +1,11 @@
 import type { Ref } from "vue";
 
-
-
 import { ApiError } from "@/api/ApiError";
 import { STATUS_INDICATORS } from "@/constants";
 import router from "@/plugins/router.ts";
 import { useAppStore } from "@/stores/app";
 import { useSnackbarStore } from "@/stores/snackbar";
 import { useUserStore } from "@/stores/user";
-
 
 /**
  * Handles 401 Unauthorized responses globally by clearing the user state

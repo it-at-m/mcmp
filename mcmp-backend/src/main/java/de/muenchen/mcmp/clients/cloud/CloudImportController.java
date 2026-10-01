@@ -7,25 +7,18 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
 @AllArgsConstructor
 @RequestMapping("/cloud")
 @Slf4j
 public class CloudImportController {
 
-    private final CloudImportService cloudService;
+    private final CloudImportAsyncService cloudService;
 
     @GetMapping("/ping")
     public String ping() {
         log.debug("Health check request received for Cloud API endpoint");
         return "Cloud EAI API is accessible";
-    }
-
-    @GetMapping("/maybe-updated")
-    public List<String> maybeUpdated() {
-        return cloudService.findServersWithRecentlyCompletedJobs();
     }
 
     @PostMapping("/import")
@@ -40,7 +33,7 @@ public class CloudImportController {
         }
 
         try {
-            cloudService.importCloudData(cloudDTO);
+            cloudService.importAsync(cloudDTO);
             log.debug("Cloud import task successfully submitted to background queue. Task is now pending in the execution queue.");
         } catch (Exception e) {
             log.error("Cloud import task submission failed. error='{}'. The request was received and validated but could not be queued for background processing.", e.getMessage(), e);

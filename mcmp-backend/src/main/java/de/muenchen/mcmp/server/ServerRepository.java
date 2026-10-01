@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.util.Collection;
@@ -14,6 +15,8 @@ import java.util.List;
 import java.util.Optional;
 
 public interface ServerRepository extends JpaRepository<Server, Long> {
+
+    Server findByName(final String name);
 
     Page<Server> findAll(final Specification<Server> spec, final Pageable pageable);
 
@@ -675,6 +678,11 @@ ORDER BY s.name ASC
     @Query("SELECT s FROM Server s WHERE s.cloud.id = :cloudId")
     List<Server> findAllByCloudId(@Param("cloudId") Long cloudId);
 
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM Server s WHERE s.cloud.id = :cloudId AND s.uuid IN :uuids")
+    void deleteByCloudIdAndUuidIn(@Param("cloudId") Long cloudId, @Param("uuids") Collection<String> uuids);
+
     @Query("SELECT new de.muenchen.mcmp.server.ServerAutocompleteDTO(s.id, s.name) FROM Server s WHERE LOWER(s.name) LIKE LOWER(CONCAT('%', :query, '%')) ORDER BY s.name")
     List<ServerAutocompleteDTO> findForAutocomplete(@Param("query") String query);
 
@@ -685,17 +693,4 @@ ORDER BY s.name ASC
         Long getId();
         String getGuestToolsIpAddress();
     }
-
-    /**
-     * For internal use by the cloud import service.
-     * @return Server UUIDs with recently completed AWX jobs.
-     */
-    @Query(value = """
-        SELECT server.uuid
-        FROM server
-        JOIN job ON server.id = job.server_id
-        WHERE job.awx_status = 'successful'
-          AND job.updated_at > NOW() - INTERVAL '2 minutes'
-    """, nativeQuery = true)
-    List<String> findUUIDsWithRecentlyCompletedJobs();
 }

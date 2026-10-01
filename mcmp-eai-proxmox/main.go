@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"slices"
-	"strings"
 	"time"
 
 	"mcmp-eai-proxmox/pkg/config"
@@ -44,15 +42,6 @@ func run(ctx context.Context, cfg *config.Config, logger logging.Logger) error {
 
 			mcmpClients = append(mcmpClients, *mcmpClient)
 			mcmpEndpoints = append(mcmpEndpoints, mcmpCfg.ApiEndpoint)
-
-			var updatedEndpoint = strings.Replace(mcmpCfg.ApiEndpoint, "import", "maybe-updated", 1)
-			var additionalCompleteImportUUIDs []string
-			if err := mcmpClient.GetJSONUnmarshal(ctx, updatedEndpoint, &additionalCompleteImportUUIDs); err != nil {
-				logger.Error(fmt.Sprintf("[MCMP %d] failed to fetch possibly updated servers: %s", i, err.Error()))
-			} else {
-				cfg.GENERAL.CompleteImportUUIDs = slices.Concat(cfg.GENERAL.CompleteImportUUIDs, additionalCompleteImportUUIDs)
-				cfg.PushCompleteImportConfig()
-			}
 		}
 	}
 
@@ -121,7 +110,6 @@ func main() {
 		}
 
 		disableLock := flag.Bool("no-lock", false, "Disable PID locking and allow concurrent instances")
-		completeImport := flag.Bool("complete", false, "Force a complete import")
 
 		flag.Parse()
 
@@ -138,11 +126,6 @@ func main() {
 
 		if *disableLock {
 			cfg.GENERAL.DisableLock = *disableLock
-		}
-
-		if *completeImport {
-			cfg.GENERAL.CompleteImport = *completeImport
-			cfg.PushCompleteImportConfig()
 		}
 
 		// set up logging & cancellation

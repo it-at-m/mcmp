@@ -6,6 +6,7 @@ import de.muenchen.mcmp.mountPoint.MountPoint;
 import de.muenchen.mcmp.mountPoint.MountPointRepository;
 import de.muenchen.mcmp.server.Server;
 import de.muenchen.mcmp.server.ServerService;
+import de.muenchen.mcmp.types.ServerType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -43,6 +44,9 @@ public class CheckMkImportService {
 
         // load current DB state
         final List<Server> servers = serverService.findAll();
+        final Map<Long, Server> serversById = servers
+                .stream()
+                .collect(Collectors.toMap(Server::getId, Function.identity()));
         final Map<Long, Map<String, MountPoint>> mounts = mountPointRepository
                 .findAll()
                 .stream()
@@ -88,30 +92,40 @@ public class CheckMkImportService {
                     hostData.memUsedPercent()
             ));
 
-            if (hostData.filesystemMetrics() != null) {
-                mountsToSave.addAll(hostData
-                        .filesystemMetrics()
-                        .stream()
-                        .map(dto -> {
-                            var mount = mounts.getOrDefault(serverId, Map.of()).get(dto.path());
-                            if (mount != null && !Objects.equals(mount.getSource(), "checkmk")) {
-                                return null; // ignore mounts created by vcenter eai
-                            }
+            // handle mounts
+            if (hostData.filesystemMetrics() == null)
+                continue;
 
-                            if (mount == null) {
-                                mount = new MountPoint();
-                                mount.setServerId(serverId);
-                                mount.setDiskPath(dto.path());
-                                mount.setSource("checkmk");
-                            }
+            final var server = serversById.get(serverId);
+            if (server.getServerType() == ServerType.VM_VMWARE)
+                continue;
 
-                            mount.setCapacityInBytes((long) (dto.sizeMiB() * 1024 * 1024));
-                            mount.setFreeSpaceInBytes((long) (dto.freeMiB() * 1024 * 1024));
-                            return mount;
-                        })
-                        .filter(Objects::nonNull)
-                        .toList());
-            }
+            final var serverMounts = hostData
+                    .filesystemMetrics()
+                    .stream()
+                    .map(dto -> {
+                        // Fix Windows paths with "erroneous" forward
+                        // slashes to be consistent with VMware.
+                        final var path = fixWindowsPath(dto.path());
+
+                        var mount = mounts.getOrDefault(serverId, Map.of()).get(path);
+                        if (mount != null && !Objects.equals(mount.getSource(), "checkmk"))
+                            return null; // ignore mounts created by other importers
+
+                        if (mount == null) {
+                            mount = new MountPoint();
+                            mount.setServerId(serverId);
+                            mount.setDiskPath(path);
+                            mount.setSource("checkmk");
+                        }
+
+                        mount.setCapacityInBytes((long) (dto.sizeMiB() * 1024 * 1024));
+                        mount.setFreeSpaceInBytes((long) (dto.freeMiB() * 1024 * 1024));
+                        return mount;
+                    })
+                    .filter(Objects::nonNull)
+                    .toList();
+            mountsToSave.addAll(serverMounts);
         }
 
         if (!missingHostnames.isEmpty()) {
@@ -191,5 +205,22 @@ public class CheckMkImportService {
             log.info("Mount import complete: saved={}/{}, skipped_deleted_servers={}, skipped_duplicates={}",
                     saved, mounts.size(), skippedDeleted, skippedDuplicate);
         }
+    }
+
+    /**
+     * Converts any forward slashes into backslashes if the path looks like
+     * a Windows path.
+     * <p>
+     *     A path is considered to "look like a Windows path" if it
+     *     starts with a single alphabetic character, followed by
+     *     a colon, and a forward slash.
+     * </p>
+     */
+    private static String fixWindowsPath(String path) {
+        if (Character.isAlphabetic(path.charAt(0)) && path.charAt(1) == ':') {
+            return path.replace('/', '\\');
+        }
+
+        return path;
     }
 }

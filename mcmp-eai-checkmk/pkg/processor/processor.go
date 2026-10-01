@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/it-at-m/mcmp/mcmp-eai-checkmk/pkg/client/checkmk"
 	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/logging"
@@ -69,6 +70,19 @@ func (p *Processor) AggregateData(ctx context.Context) (*CheckmkAggregatedData, 
 			if val, ok := item.Extensions.PerformanceData["mem_used_percent"]; ok && val >= 0 {
 				hostMetrics.MemUsedPercent = val
 			}
+		default:
+			name, path, _ := strings.Cut(item.Extensions.Description, " ")
+			if name != "Filesystem" {
+				p.logger.Warn(fmt.Sprintf("Unexpected performance item '%s', skipping",
+					item.Extensions.Description))
+				continue
+			}
+
+			hostMetrics.FilesystemMetrics = append(hostMetrics.FilesystemMetrics, FilesystemMetrics{
+				Path: path,
+				Size: item.Extensions.PerformanceData["fs_size"],
+				Free: item.Extensions.PerformanceData["fs_free"],
+			})
 		}
 
 		aggregatedData.Hosts[hostName] = hostMetrics

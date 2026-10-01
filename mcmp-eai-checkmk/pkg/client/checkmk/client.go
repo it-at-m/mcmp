@@ -23,7 +23,7 @@ var (
 		Query: Query{
 			Op:    "~",
 			Left:  "description",
-			Right: "Memory|CPU utilization",
+			Right: "Memory|CPU utilization|Filesystem",
 		},
 	}
 )

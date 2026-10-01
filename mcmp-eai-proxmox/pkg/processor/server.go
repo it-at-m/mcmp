@@ -46,6 +46,7 @@ type Server struct {
 	GuestConfigID       string      `json:"guest_config_id,omitempty"`        // Identifier of the configured operating system.
 	Snapshots           []*Snapshot `json:"snapshots"`                        // Available Snapshots, excluding current.
 	Nics                []*Nic      `json:"nics"`                             // Attached NICs.
+	Disks               []*Disk     `json:"disks"`                            // Attached Disks.
 }
 
 // ProcessServer processes a single server based on a proxmox.Resource
@@ -104,12 +105,14 @@ func (p *Processor) ProcessServer(ctx context.Context, res *proxmox.Resource) (*
 	bootTime := time.Now().Add(time.Duration(-res.Uptime) * time.Second)
 	server.BootTime = &bootTime
 
-	if err := p.processNics(cfg, &server); err != nil {
-		p.logger.Error(err.Error(), "name", res.Name)
-	}
+	server.Disks = p.processDisks(cfg)
+	server.Nics = p.processNics(cfg)
 
-	if err := p.processSnapshots(ctx, res, &server); err != nil {
+	snapshots, err := p.processSnapshots(ctx, server.Cluster, res.VMID)
+	if err != nil {
 		p.logger.Error(err.Error(), "name", res.Name)
+	} else {
+		server.Snapshots = snapshots
 	}
 
 	return &server, nil

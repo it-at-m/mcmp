@@ -3,7 +3,6 @@ package processor
 import (
 	"context"
 	"fmt"
-	"mcmp-eai-proxmox/pkg/clients/proxmox"
 	"time"
 )
 
@@ -15,22 +14,21 @@ type Snapshot struct {
 	State       SnapshotState `json:"state,omitempty"`       // If the snapshot is powered on or off.
 }
 
-// ProcessSnapshots processes a QEMU resource's snapshots. This involves
+// processSnapshots processes a QEMU resource's snapshots. This involves
 // an API call to the PDM instance.
 //
-// The results are written to the outparam server. The "current" snapshot
-// is not included in the snapshot list.
+// The "current" snapshot is omitted from the output.
 //
 // An error is returned if the API call fails, which may happen if the
 // resource is invalid (e.g. not a QEMU VM) or if the processor
 // is missing the required permissions.
-func (p *Processor) processSnapshots(ctx context.Context, res *proxmox.Resource, server *Server) error {
-	snapshots, err := p.client.Snapshots(ctx, server.Cluster, res.VMID)
+func (p *Processor) processSnapshots(ctx context.Context, cluster string, vmid uint64) ([]*Snapshot, error) {
+	snapshots, err := p.client.Snapshots(ctx, cluster, vmid)
 	if err != nil {
-		return fmt.Errorf("failed to fetch snapshots: %w", err)
+		return nil, fmt.Errorf("failed to fetch snapshots: %w", err)
 	}
 
-	server.Snapshots = make([]*Snapshot, 0, len(snapshots)-1)
+	result := make([]*Snapshot, 0, len(snapshots)-1)
 	for _, snapshot := range snapshots {
 		if snapshot.Name == "current" {
 			continue
@@ -45,7 +43,7 @@ func (p *Processor) processSnapshots(ctx context.Context, res *proxmox.Resource,
 			state = SnapshotPoweredOff
 		}
 
-		server.Snapshots = append(server.Snapshots, &Snapshot{
+		result = append(result, &Snapshot{
 			Name:        snapshot.Name,
 			Description: snapshot.Description,
 			CreateTime:  &createTime,
@@ -53,5 +51,5 @@ func (p *Processor) processSnapshots(ctx context.Context, res *proxmox.Resource,
 		})
 	}
 
-	return nil
+	return result, nil
 }

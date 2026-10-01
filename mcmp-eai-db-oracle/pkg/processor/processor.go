@@ -18,56 +18,128 @@ import (
 )
 
 const (
-	sqlInstanceInfo = `
-SELECT sys_context('USERENV', 'CON_NAME')                          AS pdb_name,
-       i.host_name                                                 AS host_name,
-       nls.value                                                   AS characterset,
-       to_char(i.startup_time, 'YYYY-MM-DD HH24:MI:SS')            AS startup_time,
+	sqlSizeDB = `
+select sum(bytes) db_size_b from (select bytes from dba_data_files union all select bytes from dba_temp_files)
+`
+
+	sqlSizeSGA = `
+SELECT sum(value) sga_b FROM gv$sga
+`
+
+	sqlSizePGA = `
+SELECT sum(value) pga_b FROM gv$pgastat WHERE name='maximum PGA allocated'
+`
+
+	sqlOptionsDB = `
+SELECT comp_name FROM dba_registry WHERE comp_id in ('ORDIM','SDO','CONTEXT','JAVAVM','RAC') AND status!='OPTION OFF' ORDER BY 1
+`
+
+	sqlConnectionsMax = `
+SELECT sum(value) max_conn FROM gv$parameter WHERE name='processes'
+`
+	sqlConnectionsActive = `
+SELECT inst_id, -- hidden
+       sid, -- hidden
+       serial#, -- hidden
+	   username,
+	   machine, -- db client
+	   status,
+	   last_call_et -- in status since (sec)
+FROM gv$session 
+WHERE type!='BACKGROUND' AND username!='C##MCMP'
+ORDER by 3,4,5,6
+`
+
+	sqlInstances = `
+SELECT sys_context('USERENV', 'CON_NAME')                              AS pdb_name,
+       CASE WHEN i.database_type='RAC' THEN 'RAC' ELSE i.host_name END AS host_name,
+       nls.value                                                       AS characterset,
+       to_char(i.startup_time, 'YYYY-MM-DD HH24:MI:SS')                AS startup_time,
        i.database_type -- hidden
 FROM   v$instance i, v$nls_parameters nls
-WHERE  nls.parameter='NLS_CHARACTERSET'`
+WHERE  nls.parameter='NLS_CHARACTERSET'
+`
 
-	sqlUserInfo = `
-SELECT 
-    u.username as user_name,
-    CASE WHEN u.profile LIKE '%LHM_APP%' THEN 'Application' 
-         WHEN u.profile LIKE '%LHM_USER%' THEN 'End User'
-         ELSE 'General'
-    END as profile,
-    u.account_status,
-    to_char(u.last_login,'YYYY-MM-DD HH24:MI:SS') as last_login,
-    listagg(s.tablespace_name,', '  ON OVERFLOW TRUNCATE) WITHIN GROUP (ORDER BY tablespace_name) as tablespaces
-FROM dba_users u 
-LEFT JOIN (SELECT owner,tablespace_name FROM dba_segments GROUP BY owner,tablespace_name) s
-  ON u.username = s.owner
-WHERE u.common = 'NO'
-  and u.profile like '%LHM_APP%'
-GROUP BY u.username,u.profile,u.account_status,u.last_login
-ORDER BY u.username`
+	sqlUsers = `
+SELECT u.username                                          AS user_name,
+       CASE
+           WHEN u.profile LIKE '%LHM_APP%'  THEN 'Application'
+           WHEN u.profile LIKE '%LHM_USER%' THEN 'End User'
+           ELSE 'General'
+           END                                                 AS profile,
+       u.account_status                                    AS account_status,
+       TO_CHAR(u.last_login, 'YYYY-MM-DD HH24:MI:SS')      AS last_login,
+       LISTAGG(s.tablespace_name, ', ' ON OVERFLOW TRUNCATE)
+               WITHIN GROUP (ORDER BY s.tablespace_name)       AS tablespaces
+FROM   dba_users u
+           LEFT JOIN (SELECT owner, tablespace_name
+                      FROM   dba_segments
+                      GROUP  BY owner, tablespace_name) s
+                     ON u.username = s.owner
+WHERE  u.common = 'NO'
+  AND  u.profile LIKE '%LHM_APP%'
+GROUP  BY u.username,
+          u.profile,
+          u.account_status,
+          u.last_login
+ORDER  BY u.username
+`
 
-	sqlTablespaceInfo = `
-SELECT 
-    r.tablespace_name,
-    decode(r.contents,'PERMANENT','Persistent Data','Temporary Data') as tablespace_type,
-    sum(r.bytes) as data_used_in_b,
-    sum(r.maxbytes) as data_max_in_b
-FROM
-    (SELECT t.tablespace_name,t.contents,sum(ds.bytes) bytes,sum(decode(dd.maxbytes,0,dd.bytes,dd.maxbytes)) maxbytes
-    FROM dba_tablespaces t
-    LEFT JOIN dba_data_files dd
-      ON t.tablespace_name = dd.tablespace_name
-    LEFT JOIN dba_segments ds
-      ON t.tablespace_name = ds.tablespace_name
-    GROUP BY t.tablespace_name,t.contents
-    UNION
-    /* TEMP has no active bytes */
-    SELECT t.tablespace_name,t.contents,0 bytes,sum(decode(dt.maxbytes,0,dt.bytes,dt.maxbytes)) maxbytes
-    FROM dba_tablespaces t
-    LEFT JOIN dba_temp_files dt
-      ON t.tablespace_name = dt.tablespace_name
-    GROUP BY t.tablespace_name,t.contents) r
-GROUP BY r.tablespace_name,r.contents
-ORDER BY r.tablespace_name`
+	sqlTablespaces = `
+SELECT r.tablespace_name,
+       DECODE(r.contents, 'PERMANENT', 'Persistent Data', 'Temporary Data') AS tablespace_type,
+       SUM(r.bytes)                                                         AS data_used_in_b,
+       SUM(r.maxbytes)                                                      AS data_max_in_b
+FROM   (SELECT t.tablespace_name,
+               t.contents,
+               SUM(ds.bytes) AS bytes,
+               SUM(DECODE(dd.maxbytes, 0, dd.bytes, dd.maxbytes)) AS maxbytes
+        FROM   dba_tablespaces t
+                   LEFT JOIN dba_data_files dd
+                             ON t.tablespace_name = dd.tablespace_name
+                   LEFT JOIN dba_segments ds
+                             ON t.tablespace_name = ds.tablespace_name
+        GROUP  BY t.tablespace_name, t.contents
+        UNION
+        /* TEMP has no active bytes */
+        SELECT t.tablespace_name,
+               t.contents,
+               0 AS bytes,
+               SUM(DECODE(dt.maxbytes, 0, dt.bytes, dt.maxbytes)) AS maxbytes
+        FROM   dba_tablespaces t
+                   LEFT JOIN dba_temp_files dt
+                             ON t.tablespace_name = dt.tablespace_name
+        GROUP  BY t.tablespace_name, t.contents) r
+GROUP  BY r.tablespace_name,
+          r.contents
+ORDER  BY r.tablespace_name
+`
+
+	sqlBackups = `
+select start_time,
+       case when backup_type like '%D%' or backup_type like '%I%' then 'FULL' else 'ARCH' end backup_type,
+	   tag,
+	   keep_until,
+	   db_size_mb,
+	   bu_size_mb,
+	   duration_min
+from (
+  SELECT min(sd.start_time) start_time,
+  	   LISTAGG(sd.backup_type, '' ON OVERFLOW TRUNCATE)
+                 WITHIN GROUP (ORDER BY sd.backup_type) backup_type,
+         p.tag,
+         min(sd.keep_until) keep_until,
+         round(sum(sd.original_input_bytes)/1024/1024) DB_SIZE_MB,
+         round(sum(sd.output_bytes)/1024/1024) BU_SIZE_MB,
+         ceil(sum(sd.elapsed_seconds)/60) duration_min
+  FROM V$BACKUP_SET_DETAILS sd
+  join v$backup_piece p
+    on sd.set_stamp = p.set_stamp and sd.set_count=p.set_count
+  where sd.keep_until is not null and p.tag like 'RP_%' 
+  group by p.tag)
+where start_time>sysdate-4
+ORDER BY start_time desc
+`
 )
 
 var (
@@ -156,9 +228,16 @@ func NewProcessor(serverProvider OracleServerProvider, logger logging.Logger, co
 		logger:         logger,
 		config:         config,
 		queries: []NamedQuery{
-			{Name: "instance_info", SQL: sqlInstanceInfo},
-			{Name: "user_info", SQL: sqlUserInfo},
-			{Name: "tablespace_info", SQL: sqlTablespaceInfo},
+			{Name: "size_db", SQL: sqlSizeDB},
+			{Name: "size_sga", SQL: sqlSizeSGA},
+			{Name: "size_pga", SQL: sqlSizePGA},
+			{Name: "options_db", SQL: sqlOptionsDB},
+			{Name: "connections_max", SQL: sqlConnectionsMax},
+			{Name: "connections_active", SQL: sqlConnectionsActive},
+			{Name: "instances", SQL: sqlInstances},
+			{Name: "users", SQL: sqlUsers},
+			{Name: "tablespaces", SQL: sqlTablespaces},
+			{Name: "backups", SQL: sqlBackups},
 		},
 	}, nil
 }

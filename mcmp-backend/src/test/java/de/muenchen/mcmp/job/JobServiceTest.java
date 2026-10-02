@@ -1,7 +1,7 @@
 package de.muenchen.mcmp.job;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import de.muenchen.mcmp.action.Action;
 import de.muenchen.mcmp.action.ActionRepository;
 import de.muenchen.mcmp.appservice.Appservice;
@@ -44,7 +44,7 @@ import static org.mockito.Mockito.when;
 public class JobServiceTest {
 
     @Test
-    public void testMergeJsonStrings() throws JsonProcessingException {
+    public void testMergeJsonStrings() throws JacksonException {
         ObjectMapper objectMapper = new ObjectMapper();
         JobService jobService = new JobService(
                 null, null, null, null, null, null, null, null, null, null, null, null, null

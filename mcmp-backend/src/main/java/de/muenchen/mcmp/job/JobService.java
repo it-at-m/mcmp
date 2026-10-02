@@ -1,8 +1,8 @@
 package de.muenchen.mcmp.job;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import de.muenchen.mcmp.action.Action;
 import de.muenchen.mcmp.action.ActionRepository;
 import de.muenchen.mcmp.appservice.Appservice;
@@ -1497,7 +1497,7 @@ public class JobService {
                 }
             }
             return serializeParams(mergedMap);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalArgumentException("JSON String of AwxExtraVars is malformed (String Placeholders in Quotes? \"${some_var}\")", e);
         }
     }

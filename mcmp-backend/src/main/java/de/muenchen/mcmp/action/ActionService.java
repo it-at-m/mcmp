@@ -1,9 +1,9 @@
 package de.muenchen.mcmp.action;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
 import de.muenchen.mcmp.awxConfig.AwxConfig;
 import de.muenchen.mcmp.awxConfig.AwxConfigDTO;
 import de.muenchen.mcmp.awxConfig.AwxConfigRepository;

@@ -73,7 +73,7 @@ func (p *Processor) AggregateData(ctx context.Context) (*CheckmkAggregatedData, 
 		default:
 			name, path, _ := strings.Cut(item.Extensions.Description, " ")
 			if name != "Filesystem" {
-				p.logger.Warn(fmt.Sprintf("Unexpected performance item '%s', skipping",
+				p.logger.Debug(fmt.Sprintf("Unexpected performance item '%s', skipping",
 					item.Extensions.Description))
 				continue
 			}

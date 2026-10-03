@@ -251,6 +251,7 @@ public interface ServerMapper {
                 .cpuAllocationLimit(dto.cpuAllocationLimit())
                 .cpuAllocationOverheadLimit(dto.cpuAllocationOverheadLimit())
                 .cpuAllocationReservation(dto.cpuAllocationReservation())
+                .virtualAppliance(dto.virtualAppliance())
                 .build();
     }
 

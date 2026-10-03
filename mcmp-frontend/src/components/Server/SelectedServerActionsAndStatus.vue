@@ -267,6 +267,15 @@
         tooltip="Bearbeitung nur eingeschränkt möglich."
         href="https://mcmp.muenchen.de/#/help/9"
       />
+      <status-chip
+        v-if="selectedServer.virtualAppliance"
+        :value="false"
+        :check-value="true"
+        match-text=""
+        not-match-text="Virtual Appliance"
+        match-mode="equal"
+        :tooltip="virtualApplianceTooltipText"
+      />
     </template>
   </detail-page-header>
 </template>
@@ -353,6 +362,14 @@ const isRunning = computed(() => {
 
 const Admin72hTooltipText = "Adminrechte für 72h beantragen";
 const Root72hTooltipText = "Rootrechte für 72h beantragen";
+const virtualApplianceTooltipText = [
+  "Eine Virtual Appliance ist ein gebrauchsfertiges Software-Paket,",
+  "bei dem die Anwendung und das Betriebssystem fest verschmolzen sind.",
+  "Es funktioniert wie eine geschlossene, vom Hersteller versiegelte Box:",
+  "Es ist keine Installation nötig – das System wird einfach eingeschaltet.",
+  "Die serviceverantwortliche Person übernimmt die komplette Betreuung,",
+  "einschließlich aller Konfigurationen, Updates und der Systemwartung.",
+].join("\n");
 
 const isWindows = computed(() => {
   return props.selectedServer?.roleWindows;

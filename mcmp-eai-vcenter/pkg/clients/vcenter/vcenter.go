@@ -1,7 +1,3 @@
-// SPDX-FileCopyrightText: 2023 Landeshauptstadt München | it@M
-//
-// SPDX-License-Identifier: MIT
-
 package vcenter
 
 import (
@@ -439,7 +435,7 @@ func (c *Client) ReadVcenterData() (map[int32]string, []mo.VirtualMachine, []mo.
 	var vms []mo.VirtualMachine
 	err = v1.Retrieve(c.context, []string{"VirtualMachine"}, []string{"guest", "config", "runtime", "summary", "snapshot", "layoutEx", "overallStatus", "configStatus"}, &vms)
 	if err != nil {
-		fmt.Printf("m.Retrieve VirtualMachine / Error : %#v\n", err)
+		fmt.Printf("m.Retrieve VirtualMachine / Error : %s\n", formatVimError(err))
 		return nil, nil, nil, nil, nil, err
 	}
 
@@ -452,7 +448,7 @@ func (c *Client) ReadVcenterData() (map[int32]string, []mo.VirtualMachine, []mo.
 	var hosts []mo.HostSystem
 	err = v2.Retrieve(c.context, []string{"HostSystem"}, []string{"name", "vm"}, &hosts)
 	if err != nil {
-		fmt.Printf("m.Retrieve HostSystem / Error : %v\n", err)
+		fmt.Printf("m.Retrieve HostSystem / Error : %s\n", formatVimError(err))
 		return nil, nil, nil, nil, nil, err
 	}
 
@@ -465,7 +461,7 @@ func (c *Client) ReadVcenterData() (map[int32]string, []mo.VirtualMachine, []mo.
 	var cluster []mo.ComputeResource
 	err = v3.Retrieve(c.context, []string{"ClusterComputeResource"}, []string{"name", "host"}, &cluster)
 	if err != nil {
-		fmt.Printf("m.Retrieve ClusterComputeResource / Error : %v\n", err)
+		fmt.Printf("m.Retrieve ClusterComputeResource / Error : %s\n", formatVimError(err))
 		return nil, nil, nil, nil, nil, err
 	}
 
@@ -478,7 +474,7 @@ func (c *Client) ReadVcenterData() (map[int32]string, []mo.VirtualMachine, []mo.
 	var dvp []mo.DistributedVirtualPortgroup
 	err = v4.Retrieve(c.context, []string{"DistributedVirtualPortgroup"}, []string{"name", "key", "config"}, &dvp)
 	if err != nil {
-		fmt.Printf("m.Retrieve DistributedVirtualPortgroup / Error : %v\n", err)
+		fmt.Printf("m.Retrieve DistributedVirtualPortgroup / Error : %s\n", formatVimError(err))
 		return nil, nil, nil, nil, nil, err
 	}
 
@@ -651,9 +647,74 @@ func (c *Client) ReadTagsBulk() (map[string][]TagInfo, error) {
 	return vmTagsMap, nil
 }
 
+// GetVMIDsByTag retrieves a set of VM MoRef IDs (e.g. "vm-1317297") that have the specified tag attached.
+// This is done via direct tag name lookup, avoiding expensive iterations over all tags in the vCenter.
+func (c *Client) GetVMIDsByTag(tagName string) (map[string]struct{}, error) {
+	restClient := rest.NewClient(c.client)
+
+	err := restClient.Login(c.context, c.url.User)
+	if err != nil {
+		return nil, fmt.Errorf("REST login failed: %w", err)
+	}
+	defer restClient.Logout(c.context)
+
+	manager := tags.NewManager(restClient)
+
+	// Direct lookup by tag name (1 API call instead of fetching all tags individually)
+	tag, err := manager.GetTag(c.context, tagName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tag %q: %w", tagName, err)
+	}
+	if tag == nil {
+		return make(map[string]struct{}), nil
+	}
+
+	attachedObjects, err := manager.ListAttachedObjects(c.context, tag.ID)
+	if err != nil {
+		return nil, fmt.Errorf("could not list attached objects for tag %q: %w", tagName, err)
+	}
+
+	vmIDSet := make(map[string]struct{}, len(attachedObjects))
+	for _, objRef := range attachedObjects {
+		ref := objRef.Reference()
+		if ref.Type == "VirtualMachine" {
+			vmIDSet[ref.Value] = struct{}{}
+		}
+	}
+
+	return vmIDSet, nil
+}
+
+// GetVirtualApplianceVMIDs is a convenience wrapper for retrieving all VM IDs with the "Virtual Appliance" tag.
+func (c *Client) GetVirtualApplianceVMIDs() (map[string]struct{}, error) {
+	return c.GetVMIDsByTag("Virtual Appliance")
+}
+
 func safeDestroyView(ctx context.Context, v *view.ContainerView) {
 	if err := v.Destroy(ctx); err != nil {
 		// Loggen oder anderweitiges Behandeln des Fehlers
 		fmt.Printf("Fehler beim Zerstören der View: %v\n", err)
 	}
+}
+
+func formatVimError(err error) string {
+	if err == nil {
+		return ""
+	}
+
+	if soap.IsVimFault(err) {
+		fault := soap.ToVimFault(err)
+		switch f := fault.(type) {
+		case *types.NoPermission:
+			objStr := "unknown"
+			if f.Object != nil {
+				objStr = fmt.Sprintf("%s:%s", f.Object.Type, f.Object.Value)
+			}
+			return fmt.Sprintf("NoPermission (Privilege: %q, Object: %s)", f.PrivilegeId, objStr)
+		default:
+			return fmt.Sprintf("VimFault (%T): %+v", f, f)
+		}
+	}
+
+	return err.Error()
 }

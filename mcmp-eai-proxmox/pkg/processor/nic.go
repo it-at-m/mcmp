@@ -1,10 +1,7 @@
 package processor
 
 import (
-	"fmt"
 	"mcmp-eai-proxmox/pkg/clients/proxmox"
-	"regexp"
-	"strconv"
 )
 
 // A Nic object to save to the MCMP database.
@@ -17,19 +14,13 @@ type Nic struct {
 	CardType   string `json:"card_type,omitempty"`
 }
 
-// processNics processes all Nics from the given VMConfig data and
-// writes their data to the given Server object.
-func (p *Processor) processNics(cfg *proxmox.VMConfig, server *Server) error {
-	server.Nics = make([]*Nic, 0, len(cfg.Nets))
+// processNics processes all Nics from the given VMConfig data.
+func (p *Processor) processNics(cfg *proxmox.VMConfig) []*Nic {
+	result := make([]*Nic, 0, len(cfg.Nets))
 
 	for name, net := range cfg.Nets {
-		seq, err := trailingNumber(name)
-		if err != nil {
-			return err
-		}
-
-		server.Nics = append(server.Nics, &Nic{
-			VNicKey:    uint32(seq),
+		result = append(result, &Nic{
+			VNicKey:    uint32(net.Seq),
 			Device:     name,
 			MacAddress: net.MacAddress,
 			Network:    net.Bridge,
@@ -38,16 +29,5 @@ func (p *Processor) processNics(cfg *proxmox.VMConfig, server *Server) error {
 		})
 	}
 
-	return nil
-}
-
-var trailingNumberRegexp = regexp.MustCompile("([0-9]+)$")
-
-// Retrieve a trailing number from a string.
-func trailingNumber(s string) (uint64, error) {
-	matches := trailingNumberRegexp.FindStringSubmatch(s)
-	if len(matches) < 2 {
-		return 0, fmt.Errorf("missing trailing number in: %s", s)
-	}
-	return strconv.ParseUint(matches[1], 10, 64)
+	return result
 }

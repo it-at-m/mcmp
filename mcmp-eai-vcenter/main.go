@@ -188,6 +188,7 @@ type (
 		CpuAllocationLimit                    *int64     `gorm:"column:cpu_allocation_limit"`
 		CpuAllocationOverheadLimit            *int64     `gorm:"column:cpu_allocation_overhead_limit"`
 		CpuAllocationReservation              *int64     `gorm:"column:cpu_allocation_reservation"`
+		VirtualAppliance                      bool       `gorm:"column:virtual_appliance;not null;type:boolean;default:FALSE"`
 	}
 
 	// Disk represents a virtual disk attached to a server
@@ -467,7 +468,8 @@ func (storedVM *Server) CompareAndUpdate(newVM Server, timeNow time.Time) bool {
 		(storedVM.Fqdn == "" || (newVM.GuestToolsHostname != "" && storedVM.Fqdn != newVM.GuestToolsHostname)) ||
 		storedVM.Locked != newVM.Locked ||
 		storedVM.ServerKind != newVM.ServerKind ||
-		storedVM.ServerType != newVM.ServerType {
+		storedVM.ServerType != newVM.ServerType ||
+		storedVM.VirtualAppliance != newVM.VirtualAppliance {
 
 		storedVM.UpdatedAt = timeNow
 		storedVM.Version = storedVM.Version + 1
@@ -547,6 +549,7 @@ func (storedVM *Server) CompareAndUpdate(newVM Server, timeNow time.Time) bool {
 		storedVM.Locked = newVM.Locked
 		storedVM.ServerKind = newVM.ServerKind
 		storedVM.ServerType = newVM.ServerType
+		storedVM.VirtualAppliance = newVM.VirtualAppliance
 		return true
 	}
 	return false
@@ -764,7 +767,7 @@ func bot() {
 					log.Printf("Error decrypting for %s: %v", vcenter.Fqdn, err)
 					return
 				}
-				customFieldMap, serverGUI, vms, hosts, cluster, portgroups, err := loadCloudData(vcenter.Fqdn, vcenter.Username, password)
+				customFieldMap, serverGUI, vms, hosts, cluster, portgroups, virtualApplianceVMs, err := loadCloudData(vcenter.Fqdn, vcenter.Username, password)
 				if err != nil {
 					log.Printf("vCenter %s : loadCloudData Error: %v\n", vcenter.Fqdn, err)
 					return
@@ -776,7 +779,7 @@ func bot() {
 				}
 				ipRecordMap := updateIPs(postgres, vms)
 				updatePortgroups(postgres, cloud, portgroups)
-				updateServer(postgres, cloud, vms, hosts, cluster, vcenter.Locked, vcenter.UnlockedUUIDs, ipRecordMap, customFieldMap)
+				updateServer(postgres, cloud, vms, hosts, cluster, vcenter.Locked, vcenter.UnlockedUUIDs, ipRecordMap, customFieldMap, virtualApplianceVMs)
 
 				vcenterEndTime := time.Now()
 				vcenterDuration := vcenterEndTime.Sub(vcenterStartTime)
@@ -832,31 +835,43 @@ func debugPrintf(format string, a ...interface{}) {
 
 // loadCloudData fetches and returns data from vCenter, including custom fields, VMs, hosts, clusters, portgroups, and server GUI.
 // Returns an error if the connection, login, data retrieval, or logout process fails.
-func loadCloudData(fqdn string, username string, password string) (map[int32]string, string, []mo.VirtualMachine, []mo.HostSystem, []mo.ComputeResource, []mo.DistributedVirtualPortgroup, error) {
+func loadCloudData(fqdn string, username string, password string) (map[int32]string, string, []mo.VirtualMachine, []mo.HostSystem, []mo.ComputeResource, []mo.DistributedVirtualPortgroup, map[string]struct{}, error) {
 	// Read data from vCenter
 	debugPrintf("Environment: %s\n", fqdn)
 	c, err := vcenter.New(fqdn, username, password)
 	if err != nil {
 		log.Printf("vCenter: %s / Method: New / Error message: %s\n", fqdn, err)
-		return nil, "", nil, nil, nil, nil, err
+		return nil, "", nil, nil, nil, nil, nil, err
 	}
 	err = c.Login()
 	if err != nil {
 		log.Printf("vCenter: %s / Method: Login / Error message: %s\n", fqdn, err)
-		return nil, "", nil, nil, nil, nil, err
+		return nil, "", nil, nil, nil, nil, nil, err
 	}
+
+	tagsStartTime := time.Now()
+	virtualApplianceVMs, err := c.GetVirtualApplianceVMIDs()
+	tagsDuration := time.Since(tagsStartTime)
+
+	if err != nil {
+		log.Printf("[%s] GetVirtualApplianceVMIDs failed after %s (%.2f s) - Error: %v\n", fqdn, tagsDuration, tagsDuration.Seconds(), err)
+		virtualApplianceVMs = nil
+	} else {
+		log.Printf("[%s] GetVirtualApplianceVMIDs completed in %s (%.2f s) - %d VMs found", fqdn, tagsDuration, tagsDuration.Seconds(), len(virtualApplianceVMs))
+	}
+
 	serverGUI := c.ReadServerGUI()
 	customFieldMap, vms, hosts, clusters, portgroups, err := c.ReadVcenterData()
 	if err != nil {
 		log.Printf("vCenter: %s / Method: ReadVcenterData / Error message: %s\n", fqdn, err)
-		return nil, "", nil, nil, nil, nil, err
+		return nil, "", nil, nil, nil, nil, nil, err
 	}
 	err = c.Logout()
 	if err != nil {
 		log.Printf("vCenter: %s / Method: Logout / Error message: %s\n", fqdn, err)
-		return nil, "", nil, nil, nil, nil, err
+		return nil, "", nil, nil, nil, nil, nil, err
 	}
-	return customFieldMap, serverGUI, vms, hosts, clusters, portgroups, nil
+	return customFieldMap, serverGUI, vms, hosts, clusters, portgroups, virtualApplianceVMs, nil
 }
 
 // fetchAndStoreCloud checks if a Cloud record exists in the database by its FQDN and inserts or updates it accordingly.
@@ -1053,7 +1068,7 @@ func updateIPs(db *gorm.DB, vmList []mo.VirtualMachine) map[string]Ip {
 }
 
 // updateServer synchronizes cloud resources with the database, processing VMs, hosts, clusters, and IP records concurrently.
-func updateServer(db *gorm.DB, cloud Cloud, vmList []mo.VirtualMachine, hosts []mo.HostSystem, cluster []mo.ComputeResource, locked bool, unlockedUUIDs string, ipRecordMap map[string]Ip, customFieldMap map[int32]string) {
+func updateServer(db *gorm.DB, cloud Cloud, vmList []mo.VirtualMachine, hosts []mo.HostSystem, cluster []mo.ComputeResource, locked bool, unlockedUUIDs string, ipRecordMap map[string]Ip, customFieldMap map[int32]string, virtualApplianceVMs map[string]struct{}) {
 	existingVMs := map[string]bool{}
 	timeNow := time.Now()
 
@@ -1098,7 +1113,7 @@ func updateServer(db *gorm.DB, cloud Cloud, vmList []mo.VirtualMachine, hosts []
 			defer wg.Done()
 
 			for vm := range vmChan {
-				processVM(db, cloud, vm, hostClusterMap, hostNameMap, vmHostMap, portGroupMap, unlockedUuuidSet, locked, timeNow, &existingVMs, &existingVMsMutex, ipRecordMap, customFieldMap)
+				processVM(db, cloud, vm, hostClusterMap, hostNameMap, vmHostMap, portGroupMap, unlockedUuuidSet, locked, timeNow, &existingVMs, &existingVMsMutex, ipRecordMap, customFieldMap, virtualApplianceVMs)
 			}
 		}()
 	}
@@ -1124,7 +1139,7 @@ func processVM(db *gorm.DB, cloud Cloud, vm mo.VirtualMachine,
 	portGroupMap map[string]PortGroup, // Neuer Parameter
 	unlockedUuuidSet map[string]bool, locked bool, timeNow time.Time,
 	existingVMs *map[string]bool, existingVMsMutex *sync.Mutex, ipRecordMap map[string]Ip,
-	customFieldMap map[int32]string,
+	customFieldMap map[int32]string, virtualApplianceVMs map[string]struct{},
 ) {
 	// DetailedData splitten (Beispiel "architecture='X86' distroAddVersion='9.5 (Plow)'"
 	detailsMap := make(map[string]string)
@@ -1233,7 +1248,7 @@ func processVM(db *gorm.DB, cloud Cloud, vm mo.VirtualMachine,
 		ServerType:                            ServerTypeVmVmware,
 	}
 
-	// Thread-sicherer Zugriff auf existingVMs
+	// Thread-safe access to existingVMs
 	existingVMsMutex.Lock()
 	(*existingVMs)[newVM.UUID] = true
 	existingVMsMutex.Unlock()
@@ -1241,6 +1256,10 @@ func processVM(db *gorm.DB, cloud Cloud, vm mo.VirtualMachine,
 	var storedVM Server
 	result := db.Where("uuid = ? AND cloud_id = ?", newVM.UUID, cloud.ID).First(&storedVM)
 	if result.RowsAffected == 0 {
+		if virtualApplianceVMs != nil {
+			_, isVirtualAppliance := virtualApplianceVMs[vm.Summary.Vm.Value]
+			newVM.VirtualAppliance = isVirtualAppliance
+		}
 		if newVM.GuestToolsHostname != "" {
 			newVM.Fqdn = newVM.GuestToolsHostname
 		}
@@ -1250,6 +1269,13 @@ func processVM(db *gorm.DB, cloud Cloud, vm mo.VirtualMachine,
 		}
 		storedVM = newVM
 	} else {
+		if virtualApplianceVMs != nil {
+			_, isVirtualAppliance := virtualApplianceVMs[vm.Summary.Vm.Value]
+			newVM.VirtualAppliance = isVirtualAppliance
+		} else {
+			// If retrieving tags failed, retain the existing database value
+			newVM.VirtualAppliance = storedVM.VirtualAppliance
+		}
 		if storedVM.CompareAndUpdate(newVM, timeNow) {
 			if err := db.Save(&storedVM).Error; err != nil {
 				log.Printf("Error updating VM %s: %v", newVM.Name, err)

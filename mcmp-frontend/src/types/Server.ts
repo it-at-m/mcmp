@@ -151,6 +151,7 @@ export default class Server {
     public cpuUtil: number,
     public memUsedPercent: number,
     public memoryAllocationExpandableReservation: boolean,
-    public cpuAllocationExpandableReservation: boolean
+    public cpuAllocationExpandableReservation: boolean,
+    public virtualAppliance: boolean
   ) {}
 }

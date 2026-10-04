@@ -83,20 +83,6 @@
             <filename>logs/logback-status.log</filename>
         </statusListener>
 
-        <appender name="JSON_STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
-                <throwableConverter
-                    class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
-                    <!-- default max size of one log line in docker is 16kb - UTF8 ~ 1 Character = 1 Byte -->
-                    <!-- therefore limit stack_traces to a maximum of 8192 characters (to leave room for the rest of the message) -->
-                    <maxLength>8192</maxLength>
-                    <exclude>sun\.reflect\..*\.invoke.*</exclude>
-                    <exclude>net\.sf\.cglib\.proxy\.MethodProxy\.invoke</exclude>
-                    <rootCauseFirst>true</rootCauseFirst>
-                </throwableConverter>
-            </encoder>
-        </appender>
-
         <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
             <file>logs/mcmp-backend.log</file>
             <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
@@ -136,11 +122,7 @@
         <!-- 3. Splunk via TCP mit SSL/TLS -->
         <appender name="SIEM_SPLUNK_TCP_SSL" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
             <destination>${splunkHost}:${splunkPort}</destination>
-            <ssl>
-                <parameters>
-                    <hostnameVerification>false</hostnameVerification>
-                </parameters>
-            </ssl>
+            <ssl />
             <reconnectionDelay>10 second</reconnectionDelay>
             <connectionTimeout>5 second</connectionTimeout>
             <keepAliveDuration>1 minute</keepAliveDuration>
@@ -157,7 +139,6 @@
         </logger>
 
         <root level="info">
-            <appender-ref ref="JSON_STDOUT" />
             <appender-ref ref="FILE" />
         </root>
     </springProfile>

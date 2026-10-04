@@ -175,4 +175,6 @@ public interface ServerWithPermissions {
     Boolean getManagedMiddlewareJava();
     Boolean getManagedMiddlewarePhp();
     Boolean getManagedMiddlewareTomcat();
+
+    Boolean getVirtualAppliance();
 }

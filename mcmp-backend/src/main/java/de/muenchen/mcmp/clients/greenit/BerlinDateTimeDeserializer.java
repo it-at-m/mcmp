@@ -1,8 +1,8 @@
 package de.muenchen.mcmp.clients.greenit;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonDeserializer;
+import tools.jackson.core.JsonParser;
+import tools.jackson.databind.DeserializationContext;
+import tools.jackson.databind.ValueDeserializer;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -12,7 +12,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.format.ResolverStyle;
 
-public class BerlinDateTimeDeserializer extends JsonDeserializer<OffsetDateTime> {
+public class BerlinDateTimeDeserializer extends ValueDeserializer<OffsetDateTime> {
 
     private static final ZoneId BERLIN = ZoneId.of("Europe/Berlin");
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter
@@ -20,13 +20,18 @@ public class BerlinDateTimeDeserializer extends JsonDeserializer<OffsetDateTime>
             .withResolverStyle(ResolverStyle.STRICT);
 
     @Override
-    public OffsetDateTime deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
-        final String value = p.getText();
+    public OffsetDateTime deserialize(JsonParser p, DeserializationContext ctxt) {
+        final String value = p.getString();
         try {
             final LocalDateTime localDateTime = LocalDateTime.parse(value, FORMATTER);
             return localDateTime.atZone(BERLIN).toOffsetDateTime();
         } catch (DateTimeParseException e) {
-            throw new IOException("Invalid dateTime format. Expected: dd.MM.yyyy HH:mm:ss, got: " + value, e);
+            return (OffsetDateTime) ctxt.handleWeirdStringValue(
+                    OffsetDateTime.class,
+                    value,
+                    "Invalid dateTime format. Expected: dd.MM.yyyy HH:mm:ss, got: %s",
+                    value
+            );
         }
     }
 }

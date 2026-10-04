@@ -159,5 +159,6 @@ public record  ServerFullDTO(
         Boolean cpuAllocationExpandableReservation,
         Long cpuAllocationLimit,
         Long cpuAllocationOverheadLimit,
-        Long cpuAllocationReservation
+        Long cpuAllocationReservation,
+        Boolean virtualAppliance
 ) {}

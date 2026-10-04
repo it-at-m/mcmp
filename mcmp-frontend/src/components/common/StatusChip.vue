@@ -3,6 +3,7 @@
     :text="tooltip"
     location="bottom"
     :aria-label="tooltip"
+    content-class="status-chip-tooltip"
   >
     <template #activator="{ props: tooltipProps }">
       <v-chip
@@ -57,3 +58,8 @@ const isMatch = computed(() => {
   }
 });
 </script>
+<style scoped>
+:deep(.status-chip-tooltip) {
+  white-space: pre-line;
+}
+</style>

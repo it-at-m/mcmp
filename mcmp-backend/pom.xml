@@ -11,7 +11,7 @@
 
     <groupId>de.muenchen.mcmp</groupId>
     <artifactId>mcmp-backend</artifactId>
-    <version>1.0.50</version>
+    <version>1.0.51</version>
 
     <name>mcmp-backend</name>
     <description>This is the backend project for the MCMP</description>
@@ -44,31 +44,26 @@
         <maven.compiler.target>${java.version}</maven.compiler.target>
         <maven.compiler.release>${java.version}</maven.compiler.release>
 
-        <!-- Core Frameworks -->
-        <spring-cloud-dependencies.version>2025.0.2</spring-cloud-dependencies.version> <!-- Must match the chosen Spring Boot version -->
-
         <!-- Linting & Formatting -->
-        <spotless-maven-plugin.version>3.4.0</spotless-maven-plugin.version>
+        <spotless-maven-plugin.version>3.10.3</spotless-maven-plugin.version>
         <itm-java-codeformat.version>1.0.10</itm-java-codeformat.version>
         <pmd-maven-plugin.version>3.28.0</pmd-maven-plugin.version>
-        <spotbugs-maven-plugin.version>4.9.8.3</spotbugs-maven-plugin.version>
-        <spotbugs-annotations.version>4.9.8</spotbugs-annotations.version> <!-- must match the patch version of spotbugs-maven-plugin -->
+        <spotbugs-maven-plugin.version>4.10.4.1</spotbugs-maven-plugin.version>
+        <!-- spotbugs-annotations.version must match the patch version of spotbugs-maven-plugin.version -->
+        <spotbugs-annotations.version>4.10.4</spotbugs-annotations.version>
         <findsecbugs-plugin.version>1.14.0</findsecbugs-plugin.version>
 
         <!-- Testing -->
-        <jacoco-maven-plugin.version>0.8.14</jacoco-maven-plugin.version>
-        <argLine /> <!-- Must be empty, definition needed for integration of Jacoco and Surefire via @{argLine} lazy property evaluation -->
+        <jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
+        <!-- Must be empty, definition needed for integration of Jacoco and Surefire via @{argLine} lazy property evaluation -->
+        <argLine />
 
         <!-- Release -->
         <maven-release-plugin.version>3.3.1</maven-release-plugin.version>
 
         <!-- Utility -->
-        <commons-collections4.version>4.5.0</commons-collections4.version>
-        <commons-io.version>2.21.0</commons-io.version>
-        <commons-text.version>1.15.0</commons-text.version>
         <mapstruct.version>1.6.3</mapstruct.version>
-        <refarch-tools.version>1.2.2</refarch-tools.version>
-        <logstash-logback-encoder.version>8.1</logstash-logback-encoder.version>
+        <refarch-tools.version>1.4.0</refarch-tools.version>
         <apache-poi.version>5.5.1</apache-poi.version>
         <commonmark.version>0.28.0</commonmark.version>
         <junixsocket.version>2.10.1</junixsocket.version>
@@ -99,27 +94,13 @@
         <address.repository>https://artifactory.muenchen.de/artifactory</address.repository>
     </properties>
 
-
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <!-- Import dependency management from Spring Cloud -->
-                <groupId>org.springframework.cloud</groupId>
-                <artifactId>spring-cloud-dependencies</artifactId>
-                <version>${spring-cloud-dependencies.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
-
-
     <dependencies>
 
         <!-- Spring Boot -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
+
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -211,11 +192,7 @@
             <artifactId>mapstruct</artifactId>
             <version>${mapstruct.version}</version>
         </dependency>
-        <dependency>
-            <groupId>com.github.spotbugs</groupId>
-            <artifactId>spotbugs-annotations</artifactId>
-            <version>${spotbugs-annotations.version}</version>
-        </dependency>
+
         <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml</artifactId>
@@ -254,6 +231,14 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- Developer Tools -->
+        <dependency>
+            <groupId>com.github.spotbugs</groupId>
+            <artifactId>spotbugs-annotations</artifactId>
+            <version>${spotbugs-annotations.version}</version>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Logging -->
         <dependency>
             <groupId>io.micrometer</groupId>
@@ -264,11 +249,6 @@
             <artifactId>micrometer-tracing-bridge-brave</artifactId>
         </dependency>
         <dependency>
-            <groupId>net.logstash.logback</groupId>
-            <artifactId>logstash-logback-encoder</artifactId>
-            <version>${logstash-logback-encoder.version}</version>
-        </dependency>
-        <dependency>
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
@@ -276,27 +256,10 @@
             <groupId>org.slf4j</groupId>
             <artifactId>jul-to-slf4j</artifactId>
         </dependency>
-
-        <!-- Apache Commons -->
         <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-collections4</artifactId>
-            <version>${commons-collections4.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-text</artifactId>
-            <version>${commons-text.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>commons-io</groupId>
-            <artifactId>commons-io</artifactId>
-            <version>${commons-io.version}</version>
-        </dependency>
-        <dependency> <!-- Added to fix CVE-2025-48924-->
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-lang3</artifactId>
-            <version>3.20.0</version>
+            <groupId>net.logstash.logback</groupId>
+            <artifactId>logstash-logback-encoder</artifactId>
+            <version>9.0</version>
         </dependency>
 
         <!-- Configuration Processor -->

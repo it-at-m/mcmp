@@ -514,4 +514,9 @@ public class Server extends AbstractEntity {
     @Column(name = "managed_middleware_tomcat", nullable = false)
     private Boolean managedMiddlewareTomcat = false;
 
+    @NotNull
+    @ColumnDefault("false")
+    @Column(name = "virtual_appliance", nullable = false)
+    private Boolean virtualAppliance = false;
+
 }

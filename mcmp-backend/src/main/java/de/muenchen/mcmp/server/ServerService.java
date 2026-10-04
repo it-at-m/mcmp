@@ -360,18 +360,7 @@ public class ServerService {
         return serverRepository.findForAutocomplete(query);
     }
 
-    /**
-     * For internal use by the cloud import service.
-     */
     public List<Server> findAllByCloudId(final Long cloudId) {
         return repository.findAllByCloudId(cloudId);
-    }
-
-    /**
-     * For internal use by the cloud import service.
-     * @return UUIDs of servers with recently completed AWX jobs.
-     */
-    public List<String> findUUIDsWithRecentlyCompletedJobs() {
-        return repository.findUUIDsWithRecentlyCompletedJobs();
     }
 }

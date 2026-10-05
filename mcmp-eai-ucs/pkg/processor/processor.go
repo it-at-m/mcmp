@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/logging"
@@ -96,9 +97,16 @@ func (p *Processor) parseServerAttributes(attrs map[string]string, serverType Se
 		mfgTimeStr = new(mfgTime.Format(time.RFC3339))
 	}
 
+	var name *string
+	if p.ucsClient.IsCIMC() {
+		name = new(cleanCimcHostname(p.ucsClient.Hostname()))
+	} else {
+		name = new(attrs["usrLbl"])
+	}
+
 	server := Server{
 		DN:                new(attrs["dn"]),
-		Name:              new(attrs["usrLbl"]),
+		Name:              name,
 		Association:       new(attrs["association"]),
 		MemorySpeed:       new(parseUint(attrs["memorySpeed"])),
 		MfgTime:           mfgTimeStr,
@@ -157,4 +165,20 @@ func parseUint64(value string) uint64 {
 		return 0
 	}
 	return uint64(u)
+}
+
+// cleanCimcHostname normalizes the CIMC hostname to lower case. When the configured hostname
+// represents the management LAN interface, it strips the trailing "m" from the host part
+// (e.g. "xyzm.example.org" -> "xyz.example.org") to retrieve the actual server hostname.
+func cleanCimcHostname(hostname string) string {
+	hostname = strings.ToLower(hostname)
+	hostPart, domainPart, hasDomain := strings.Cut(hostname, ".")
+	if before, ok := strings.CutSuffix(hostPart, "m"); ok {
+		hostPart = before
+		if hasDomain {
+			return hostPart + "." + domainPart
+		}
+		return hostPart
+	}
+	return hostname
 }

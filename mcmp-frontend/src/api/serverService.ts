@@ -1,10 +1,11 @@
 import type { Page } from "@/types/Page";
 import type { ServerAutocomplete } from "@/types/ServerAutocomplete.ts";
+import type { ServerFqdn } from "@/types/ServerFqdn";
 import type { ServerList } from "@/types/ServerList";
 import type { ServerListExtended } from "@/types/ServerListExtended";
 import type { Ref } from "vue";
 
-import { apiFetch, defaultResponseHandler, getConfig } from "@/api/fetch-utils";
+import { apiFetch } from "@/api/fetch-utils";
 import { getApiBase, SERVER_BASE } from "@/constants";
 import Server from "@/types/Server";
 
@@ -44,21 +45,21 @@ export default {
 
   getServerById(loading: Ref<boolean>, serverId: number): Promise<Server> {
     return apiFetch<Server>(
-        `${getApiBase()}${SERVER_BASE}/${serverId}`,
-        {},
-        loading,
-        true
+      `${getApiBase()}${SERVER_BASE}/${serverId}`,
+      {},
+      loading,
+      true
     );
   },
 
   getServersByAppserviceId(
-      loading: Ref<boolean>,
-      appserviceId: number
+    loading: Ref<boolean>,
+    appserviceId: number
   ): Promise<ServerListExtended[]> {
     return apiFetch(
-        `${getApiBase()}${SERVER_BASE}/appservice/${appserviceId}`,
-        {},
-        loading
+      `${getApiBase()}${SERVER_BASE}/appservice/${appserviceId}`,
+      {},
+      loading
     );
   },
 
@@ -93,6 +94,37 @@ export default {
     return apiFetch<ServerAutocomplete[]>(
       `${getApiBase()}${SERVER_BASE}/autocomplete${params}`,
       {}
+    );
+  },
+
+  /** Servers the current user can attach a repository to. */
+  getRepoTargetServers(
+    loading: Ref<boolean>,
+    search: string | null
+  ): Promise<ServerFqdn[]> {
+    const params = search?.trim()
+      ? `?search=${encodeURIComponent(search.trim())}`
+      : "";
+    return apiFetch(
+      `${getApiBase()}${SERVER_BASE}/repo-targets${params}`,
+      {},
+      loading
+    );
+  },
+
+  /** Servers that have one of the repositories attached and that the current user can detach them from. */
+  getRepoTargetServersByRepositoryIds(
+    loading: Ref<boolean>,
+    repositoryIds: number[]
+  ): Promise<ServerFqdn[]> {
+    const params = new URLSearchParams();
+    repositoryIds.forEach((id) =>
+      params.append("repositoryIds", id.toString())
+    );
+    return apiFetch(
+      `${getApiBase()}${SERVER_BASE}/repo-targets/attached?${params.toString()}`,
+      {},
+      loading
     );
   },
 

@@ -199,6 +199,37 @@ export default {
       });
   },
 
+  getJobsByRepositoryId(
+    loading: Ref<boolean>,
+    repositoryId: number,
+    page = 1,
+    itemsPerPage = 10,
+    sortBy: string | null = null,
+    sortDesc = false
+  ): Promise<Page<JobList>> {
+    loading.value = true;
+    const params = new URLSearchParams();
+    params.append("page", page.toString());
+    params.append("itemsPerPage", itemsPerPage.toString());
+
+    if (sortBy) {
+      params.append("sortBy", sortBy);
+      params.append("sortDesc", sortDesc.toString());
+    }
+
+    return fetch(
+      `${getApiBase()}${JOB_BASE}/repository/${repositoryId}?${params.toString()}`,
+      getConfig()
+    )
+      .then((response) => {
+        defaultResponseHandler(response);
+        return response.json();
+      })
+      .finally(() => {
+        loading.value = false;
+      });
+  },
+
   getJobsByUsername(
     loading: Ref<boolean>,
     page = 1,

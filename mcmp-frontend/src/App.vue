@@ -250,6 +250,7 @@ import {
   mdiMenuOpen,
   mdiMessageTextOutline,
   mdiMoonWaningCrescent,
+  mdiPackageVariant,
   mdiServer,
   mdiSitemap,
   mdiTools,
@@ -530,6 +531,12 @@ const buttonsCenter = computed(() => [
     icon: mdiKubernetes,
     path: "/openshift",
     isNew: !seenNewNavPaths.value.includes("/openshift"),
+  },
+  {
+    text: "Repo",
+    icon: mdiPackageVariant,
+    path: "/repo",
+    isNew: false,
   },
 ]);
 

@@ -2,6 +2,7 @@ package de.muenchen.mcmp.job;
 
 import de.muenchen.mcmp.appservice.Appservice;
 import de.muenchen.mcmp.appservice.AppserviceDTO;
+import de.muenchen.mcmp.appservice.AppserviceNameAndSysId;
 import de.muenchen.mcmp.appservice.AppserviceService;
 import de.muenchen.mcmp.config.app.MaintenanceModeConfiguration;
 import de.muenchen.mcmp.config.app.MaintenanceModeInterceptor;
@@ -14,6 +15,9 @@ import de.muenchen.mcmp.loadbalancer.UnifiedLoadbalancerPoolDTO;
 import de.muenchen.mcmp.mountPoint.MountPointDTO;
 import de.muenchen.mcmp.mountPoint.MountPointService;
 import de.muenchen.mcmp.network.NetworkService;
+import de.muenchen.mcmp.repository.Repository;
+import de.muenchen.mcmp.repository.RepositoryLockStatus;
+import de.muenchen.mcmp.repository.RepositoryService;
 import de.muenchen.mcmp.security.RequestBodyCachingFilter;
 import de.muenchen.mcmp.security.RequestResponseLoggingFilter;
 import de.muenchen.mcmp.server.Server;
@@ -40,8 +44,11 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultMatcher;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -90,6 +97,8 @@ class JobControllerWebTest {
     private UserService userService;
     @MockitoBean
     private LoadbalancerService loadbalancerService;
+    @MockitoBean
+    private RepositoryService repositoryService;
     @MockitoBean
     private ErrorLogService errorLogService;
 
@@ -535,6 +544,299 @@ class JobControllerWebTest {
                                  "nodeSelector":"worker","ingress":"web2tier","memoryLimit":"4Gi",
                                  "pvLimit":2,"podLimit":8,"logging":"no","quayOrga":"My_Org"}"""))
                 .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(jobService);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------
+    // Tests for PAKETSHOP_REPO_*
+    // -----------------------------------------------------------------------------------------------------------------
+
+    private static final long REPO_ID = 4004L;
+    private static final String PAKETSHOP_ATTACH_PAYLOAD = """
+            {"name":"my-repo-test","enabled":true,"gpgcheck":false,
+             "control_paketshop_repos_systems":["test.srv.muenchen.de"]}""";
+
+    private void performPaketshop(final String job, final String body, final ResultMatcher expectedStatus) throws Exception {
+        mockMvc.perform(post("/job/create/" + job)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(expectedStatus);
+    }
+
+    private void stubPaketshopAppservice(final boolean canEdit) {
+        final Appservice appservice = new Appservice();
+        appservice.setId(APPSERVICE_ID);
+        when(appserviceService.getAppservice(APPSERVICE_ID)).thenReturn(appservice);
+        when(appserviceService.canUserEditAppservice(APPSERVICE_ID)).thenReturn(canEdit);
+    }
+
+    private void stubPaketshopRepository(final boolean locked, final int appserviceCount, final boolean canEdit) {
+        stubPaketshopRepository(locked ? RepositoryLockStatus.LOCKED : RepositoryLockStatus.OPEN, appserviceCount, canEdit);
+    }
+
+    private void stubPaketshopRepository(final RepositoryLockStatus lockStatus, final int appserviceCount, final boolean canEdit) {
+        final Repository repository = new Repository();
+        repository.setId(REPO_ID);
+        repository.setName("my-repo-test");
+        repository.setLockStatus(lockStatus);
+        final Set<Appservice> appservices = new LinkedHashSet<>();
+        for (int i = 0; i < appserviceCount; i++) {
+            final Appservice appservice = new Appservice();
+            appservice.setId(APPSERVICE_ID + i);
+            appservices.add(appservice);
+        }
+        repository.setAppservices(appservices);
+        when(repositoryService.findByNameWithAppservices("my-repo-test")).thenReturn(Optional.of(repository));
+        when(repositoryService.canUserEditRepository(REPO_ID)).thenReturn(canEdit);
+    }
+
+    private void stubPaketshopServer(final boolean canEdit, final int appserviceCount) {
+        final Server server = new Server();
+        server.setId(SERVER_ID);
+        server.setFqdn("test.srv.muenchen.de");
+        when(serverService.findByFqdnIn(anyList())).thenReturn(List.of(server));
+        when(serverService.canUserEditServer(SERVER_ID)).thenReturn(canEdit);
+        final List<AppserviceNameAndSysId> appservices = new ArrayList<>();
+        for (int i = 0; i < appserviceCount; i++) {
+            appservices.add(mock(AppserviceNameAndSysId.class));
+        }
+        when(appserviceService.getAppservicesByServerId(SERVER_ID)).thenReturn(appservices);
+    }
+
+    @Test
+    void paketshopRepoCreate_userCannotEditAppservice_isBlocked() throws Exception {
+        stubPaketshopAppservice(false);
+
+        performPaketshop("PAKETSHOP_REPO_CREATE", "{\"appserviceId\":2002,\"name\":\"my-repo-test\"}", status().isForbidden());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void paketshopRepoCreate_nameWithoutTestOrProdSuffix_isRejected() throws Exception {
+        stubPaketshopAppservice(true);
+
+        performPaketshop("PAKETSHOP_REPO_CREATE", "{\"appserviceId\":2002,\"name\":\"my-repo\"}", status().isBadRequest());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void paketshopRepoCreate_nameWithInvalidCharacters_isRejected() throws Exception {
+        stubPaketshopAppservice(true);
+
+        performPaketshop("PAKETSHOP_REPO_CREATE", "{\"appserviceId\":2002,\"name\":\"my repo;rm-test\"}", status().isBadRequest());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void paketshopRepoCreate_nameWithSlashAndExclamationMark_isAllowed() throws Exception {
+        stubPaketshopAppservice(true);
+
+        performPaketshop("PAKETSHOP_REPO_CREATE", "{\"appserviceId\":2002,\"name\":\"team/my!repo-test\"}", status().isOk());
+
+        verify(jobService).paketshopRepoCreate(eq("PAKETSHOP_REPO_CREATE"), eq("team/my!repo-test"), eq(APPSERVICE_ID),
+                isNull(), isNull(), isNull(), isNull(), isNull(), eq(false));
+    }
+
+    @Test
+    void paketshopRepoCreate_selfOnly_isPassedToJobService() throws Exception {
+        stubPaketshopAppservice(true);
+
+        performPaketshop("PAKETSHOP_REPO_CREATE", "{\"appserviceId\":2002,\"name\":\"my-repo-test\",\"self_only\":true}", status().isOk());
+
+        verify(jobService).paketshopRepoCreate(eq("PAKETSHOP_REPO_CREATE"), eq("my-repo-test"), eq(APPSERVICE_ID),
+                isNull(), isNull(), isNull(), isNull(), isNull(), eq(true));
+    }
+
+    @Test
+    void paketshopRepoCreate_nonBooleanSelfOnly_isRejected() throws Exception {
+        stubPaketshopAppservice(true);
+
+        performPaketshop("PAKETSHOP_REPO_CREATE", "{\"appserviceId\":2002,\"name\":\"my-repo-test\",\"self_only\":\"yes\"}", status().isBadRequest());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void paketshopRepoCreate_existingName_isRejected() throws Exception {
+        stubPaketshopAppservice(true);
+        when(repositoryService.existsByName("my-repo-test")).thenReturn(true);
+
+        performPaketshop("PAKETSHOP_REPO_CREATE", "{\"appserviceId\":2002,\"name\":\"my-repo-test\"}", status().isBadRequest());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void paketshopRepoCreate_nonHttpUpstreamUrl_isRejected() throws Exception {
+        stubPaketshopAppservice(true);
+
+        performPaketshop("PAKETSHOP_REPO_CREATE",
+                "{\"appserviceId\":2002,\"name\":\"my-repo-test\",\"upstream-url\":\"ftp://mirror.example.org/repo\"}",
+                status().isBadRequest());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void paketshopRepoCreate_nonBooleanUpstreamAllPackages_isRejected() throws Exception {
+        stubPaketshopAppservice(true);
+
+        performPaketshop("PAKETSHOP_REPO_CREATE",
+                "{\"appserviceId\":2002,\"name\":\"my-repo-test\",\"upstream-all-packages\":\"yes\"}",
+                status().isBadRequest());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void paketshopRepoCopy_newNameWithoutTestOrProdSuffix_isRejected() throws Exception {
+        stubPaketshopRepository(false, 1, true);
+
+        performPaketshop("PAKETSHOP_REPO_COPY", "{\"name\":\"my-copy\",\"copy-from\":\"my-repo-test\"}", status().isBadRequest());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void paketshopRepoCopy_sourceLocked_isRejected() throws Exception {
+        stubPaketshopRepository(true, 1, true);
+
+        performPaketshop("PAKETSHOP_REPO_COPY", "{\"name\":\"my-copy-prod\",\"copy-from\":\"my-repo-test\"}", status().isBadRequest());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void paketshopRepoCopy_userCannotEditSource_isBlocked() throws Exception {
+        stubPaketshopRepository(false, 1, false);
+
+        performPaketshop("PAKETSHOP_REPO_COPY", "{\"name\":\"my-copy-prod\",\"copy-from\":\"my-repo-test\"}", status().isForbidden());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void paketshopRepoDelete_unknownRepository_isRejected() throws Exception {
+        when(repositoryService.findByNameWithAppservices("my-repo-test")).thenReturn(Optional.empty());
+
+        performPaketshop("PAKETSHOP_REPO_DELETE", "{\"name\":\"my-repo-test\"}", status().isBadRequest());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void paketshopRepoDelete_repositoryWithMultipleAppservices_isBlocked() throws Exception {
+        stubPaketshopRepository(false, 2, true);
+
+        performPaketshop("PAKETSHOP_REPO_DELETE", "{\"name\":\"my-repo-test\"}", status().isForbidden());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void paketshopRepoAttachOwnedRepo_userCannotEditRepository_isBlocked() throws Exception {
+        stubPaketshopRepository(false, 1, false);
+        stubPaketshopServer(true, 1);
+
+        performPaketshop("PAKETSHOP_REPO_ATTACH_OWNED_REPO", PAKETSHOP_ATTACH_PAYLOAD, status().isForbidden());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void paketshopRepoAttachNotOwnedRepo_userCanEditRepository_isRejected() throws Exception {
+        stubPaketshopRepository(false, 1, true);
+        stubPaketshopServer(true, 1);
+
+        performPaketshop("PAKETSHOP_REPO_ATTACH_NOT_OWNED_REPO", PAKETSHOP_ATTACH_PAYLOAD, status().isBadRequest());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void paketshopRepoAttachNotOwnedRepo_selfOnlyRepository_isBlocked() throws Exception {
+        stubPaketshopRepository(RepositoryLockStatus.SELF_ONLY, 1, false);
+        stubPaketshopServer(true, 1);
+
+        performPaketshop("PAKETSHOP_REPO_ATTACH_NOT_OWNED_REPO", PAKETSHOP_ATTACH_PAYLOAD, status().isForbidden());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void paketshopRepoAttachOwnedRepo_selfOnlyRepository_isAllowed() throws Exception {
+        stubPaketshopRepository(RepositoryLockStatus.SELF_ONLY, 1, true);
+        stubPaketshopServer(true, 1);
+
+        performPaketshop("PAKETSHOP_REPO_ATTACH_OWNED_REPO", PAKETSHOP_ATTACH_PAYLOAD, status().isOk());
+
+        verify(jobService).paketshopRepoAttach(eq("PAKETSHOP_REPO_ATTACH_OWNED_REPO"), any(), eq(true), eq(false),
+                eq(List.of("test.srv.muenchen.de")));
+    }
+
+    @Test
+    void paketshopRepoAttachNotOwnedRepo_repositoryWithMultipleAppservices_isBlocked() throws Exception {
+        stubPaketshopRepository(false, 2, false);
+        stubPaketshopServer(true, 1);
+
+        performPaketshop("PAKETSHOP_REPO_ATTACH_NOT_OWNED_REPO", PAKETSHOP_ATTACH_PAYLOAD, status().isForbidden());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void paketshopRepoAttach_userCannotEditServer_isBlocked() throws Exception {
+        stubPaketshopRepository(false, 1, true);
+        stubPaketshopServer(false, 1);
+
+        performPaketshop("PAKETSHOP_REPO_ATTACH_OWNED_REPO", PAKETSHOP_ATTACH_PAYLOAD, status().isForbidden());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void paketshopRepoAttach_serverWithMultipleAppservices_isBlocked() throws Exception {
+        stubPaketshopRepository(false, 1, true);
+        stubPaketshopServer(true, 2);
+
+        performPaketshop("PAKETSHOP_REPO_ATTACH_OWNED_REPO", PAKETSHOP_ATTACH_PAYLOAD, status().isForbidden());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void paketshopRepoAttach_unknownServerFqdn_isRejected() throws Exception {
+        stubPaketshopRepository(false, 1, true);
+        when(serverService.findByFqdnIn(anyList())).thenReturn(List.of());
+
+        performPaketshop("PAKETSHOP_REPO_ATTACH_OWNED_REPO", PAKETSHOP_ATTACH_PAYLOAD, status().isBadRequest());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void paketshopRepoAttach_systemsNotAList_isRejected() throws Exception {
+        stubPaketshopRepository(false, 1, true);
+
+        performPaketshop("PAKETSHOP_REPO_ATTACH_OWNED_REPO", """
+                {"name":"my-repo-test","enabled":true,"gpgcheck":false,
+                 "control_paketshop_repos_systems":"test.srv.muenchen.de"}""", status().isBadRequest());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void paketshopRepoDetach_userCannotEditRepository_isBlocked() throws Exception {
+        stubPaketshopRepository(false, 1, false);
+        stubPaketshopServer(true, 1);
+
+        performPaketshop("PAKETSHOP_REPO_DETACH",
+                "{\"name\":\"my-repo-test\",\"control_paketshop_repos_systems\":[\"test.srv.muenchen.de\"]}",
+                status().isForbidden());
 
         verifyNoInteractions(jobService);
     }

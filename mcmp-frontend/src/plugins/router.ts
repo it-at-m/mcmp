@@ -11,6 +11,7 @@ import HilfeView from "@/views/HilfeView.vue";
 import HistoryView from "@/views/HistoryView.vue";
 import LoadbalancerView from "@/views/LoadbalancerView.vue";
 import OpenshiftView from "@/views/OpenshiftView.vue";
+import RepoView from "@/views/RepoView.vue";
 import ServerView from "@/views/ServerView.vue";
 import SettingsView from "@/views/SettingsView.vue";
 import StorageView from "@/views/StorageView.vue";
@@ -74,6 +75,16 @@ const manualRoutes = [
     path: "/openshift/:id",
     name: "OpenshiftDetail",
     component: OpenshiftView,
+  },
+  {
+    path: "/repo",
+    name: "Repo",
+    component: RepoView,
+  },
+  {
+    path: "/repo/:id",
+    name: "RepoDetail",
+    component: RepoView,
   },
   {
     path: "/help",

@@ -6,5 +6,7 @@ import lombok.Builder;
 public record RepositoryDTO(
     Long id,
     String name,
-    boolean locked
+    RepositoryLockStatus lockStatus,
+    boolean isFavorite,
+    boolean canEdit
 ) {}

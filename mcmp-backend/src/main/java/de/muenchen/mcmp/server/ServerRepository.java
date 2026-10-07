@@ -686,6 +686,85 @@ ORDER BY s.name ASC
     @Query("SELECT new de.muenchen.mcmp.server.ServerAutocompleteDTO(s.id, s.name) FROM Server s WHERE LOWER(s.name) LIKE LOWER(CONCAT('%', :query, '%')) ORDER BY s.name")
     List<ServerAutocompleteDTO> findForAutocomplete(@Param("query") String query);
 
+    /**
+     * Servers a repository can be attached to / detached from by the current user: managed Linux servers
+     * with exactly one appservice that the user can edit (same rules as {@link #canUserEditServer} plus the
+     * single-appservice check in JobController). Requires the alias {@code s} for the server.
+     */
+    String REPO_TARGET_SERVER_CONDITION = """
+        s.managed = TRUE
+        AND s.role_linux = TRUE
+        AND s.locked = FALSE
+        AND :isMaintenanceMode = FALSE
+        AND (SELECT COUNT(*) FROM cmp.server_assignment sac WHERE sac.server_id = s.id) = 1
+        AND (
+            :isAdmin
+            OR (:hasLinuxRole AND s.role_linux)
+            OR (:hasWindowsRole AND s.role_windows)
+            OR (:hasOracleRole AND s.role_oracle)
+            OR (:hasNonOracleRole AND s.role_non_oracle)
+            OR EXISTS (
+                SELECT 1
+                FROM cmp.server_assignment sae
+                JOIN cmp.appservice ae ON sae.appservice_id = ae.id
+                JOIN cmp.group_membership gme ON ae.change_group_id = gme.group_id
+                JOIN cmp."user" ue ON gme.user_id = ue.id
+                WHERE sae.server_id = s.id
+                  AND ue.username = :username
+            )
+        )
+        """;
+
+    @Query(value = """
+        SELECT s.id AS id, s.name AS name, s.fqdn AS fqdn
+        FROM cmp.server s
+        WHERE s.fqdn IS NOT NULL
+          AND (:search IS NULL OR :search = '' OR s.name ILIKE CONCAT('%', :search, '%') OR s.fqdn ILIKE CONCAT('%', :search, '%'))
+          AND (""" + REPO_TARGET_SERVER_CONDITION + """
+        )
+        ORDER BY LOWER(s.name)
+        LIMIT 50
+        """, nativeQuery = true)
+    List<ServerFqdnProjection> findRepoTargetServers(@Param("search") String search,
+                                                     @Param("username") String username,
+                                                     @Param("isAdmin") boolean isAdmin,
+                                                     @Param("hasLinuxRole") boolean hasLinuxRole,
+                                                     @Param("hasWindowsRole") boolean hasWindowsRole,
+                                                     @Param("hasOracleRole") boolean hasOracleRole,
+                                                     @Param("hasNonOracleRole") boolean hasNonOracleRole,
+                                                     @Param("isMaintenanceMode") boolean isMaintenanceMode);
+
+    /**
+     * All servers the repository is attached to. Access to the repository must be checked by the caller.
+     */
+    @Query(value = """
+        SELECT s.id AS id, s.name AS name, s.fqdn AS fqdn
+        FROM cmp.server s
+        JOIN cmp.repository_assignment ra ON ra.server_id = s.id
+        WHERE ra.repository_id = :repositoryId
+        ORDER BY LOWER(s.name)
+        """, nativeQuery = true)
+    List<ServerFqdnProjection> findAllByRepositoryId(@Param("repositoryId") Long repositoryId);
+
+    @Query(value = """
+        SELECT DISTINCT s.id AS id, s.name AS name, s.fqdn AS fqdn, LOWER(s.name) AS sort_name
+        FROM cmp.server s
+        JOIN cmp.repository_assignment ra ON ra.server_id = s.id
+        WHERE ra.repository_id IN (:repositoryIds)
+          AND s.fqdn IS NOT NULL
+          AND (""" + REPO_TARGET_SERVER_CONDITION + """
+        )
+        ORDER BY sort_name
+        """, nativeQuery = true)
+    List<ServerFqdnProjection> findRepoTargetServersByRepositoryIds(@Param("repositoryIds") List<Long> repositoryIds,
+                                                                    @Param("username") String username,
+                                                                    @Param("isAdmin") boolean isAdmin,
+                                                                    @Param("hasLinuxRole") boolean hasLinuxRole,
+                                                                    @Param("hasWindowsRole") boolean hasWindowsRole,
+                                                                    @Param("hasOracleRole") boolean hasOracleRole,
+                                                                    @Param("hasNonOracleRole") boolean hasNonOracleRole,
+                                                                    @Param("isMaintenanceMode") boolean isMaintenanceMode);
+
     @Query("SELECT s.id AS id, s.guestToolsIpAddress AS guestToolsIpAddress FROM Server s WHERE s.guestToolsIpAddress IN :ipAddresses")
     List<ServerIpProjection> findIdsByGuestToolsIpAddressIn(@Param("ipAddresses") Collection<String> ipAddresses);
 

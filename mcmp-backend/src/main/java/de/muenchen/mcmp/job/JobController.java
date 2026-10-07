@@ -11,6 +11,9 @@ import de.muenchen.mcmp.loadbalancer.UnifiedLoadbalancerPoolDTO;
 import de.muenchen.mcmp.mountPoint.MountPointDTO;
 import de.muenchen.mcmp.mountPoint.MountPointService;
 import de.muenchen.mcmp.network.NetworkService;
+import de.muenchen.mcmp.repository.Repository;
+import de.muenchen.mcmp.repository.RepositoryLockStatus;
+import de.muenchen.mcmp.repository.RepositoryService;
 import de.muenchen.mcmp.security.AuthUtils;
 import de.muenchen.mcmp.security.HasSpecialRole;
 import de.muenchen.mcmp.security.HasUserOrSpecialRole;
@@ -56,6 +59,7 @@ public class JobController {
     private final UnifiedStorageService unifiedStorageService;
     private final UserService userService;
     private final LoadbalancerService loadbalancerService;
+    private final RepositoryService repositoryService;
 
     public static final String START_SERVER = "START_SERVER";
     public static final String STOP_SERVER = "STOP_SERVER";
@@ -112,6 +116,13 @@ public class JobController {
     public static final String VM_RESOURCE_UPGRADE = "VM_RESOURCE_UPGRADE";
 
     public static final String OPENSHIFT_NAMESPACE_ORDER = "OPENSHIFT_NAMESPACE_ORDER";
+
+    public static final String PAKETSHOP_REPO_CREATE = "PAKETSHOP_REPO_CREATE";
+    public static final String PAKETSHOP_REPO_COPY = "PAKETSHOP_REPO_COPY";
+    public static final String PAKETSHOP_REPO_DELETE = "PAKETSHOP_REPO_DELETE";
+    public static final String PAKETSHOP_REPO_ATTACH_NOT_OWNED_REPO = "PAKETSHOP_REPO_ATTACH_NOT_OWNED_REPO";
+    public static final String PAKETSHOP_REPO_ATTACH_OWNED_REPO = "PAKETSHOP_REPO_ATTACH_OWNED_REPO";
+    public static final String PAKETSHOP_REPO_DETACH = "PAKETSHOP_REPO_DETACH";
 
     @HasUserOrSpecialRole
     @GetMapping("/{jobId}/hierarchy")
@@ -282,6 +293,24 @@ public class JobController {
             itemsPerPage = 10;
         }
         return jobService.findAllJobsByRole(page, itemsPerPage, sortBy, sortDesc, null, null, null, null, null, null, null, null, null, null, null, null, null, kubernetesNamespaceId, null, null, null, null);
+    }
+
+    @HasUserOrSpecialRole
+    @GetMapping("/repository/{repositoryId}")
+    public Page<? extends JobListBasic> getJobsByRepositoryId(
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "itemsPerPage", defaultValue = "10") int itemsPerPage,
+            @RequestParam(value = "sortBy", required = false) final String sortBy,
+            @RequestParam(value = "sortDesc", defaultValue = "false") final boolean sortDesc,
+            @PathVariable("repositoryId") final Long repositoryId
+    ) {
+        if (page < 1) {
+            page = 1;
+        }
+        if (itemsPerPage < 1 || itemsPerPage > 100) {
+            itemsPerPage = 10;
+        }
+        return jobService.findAllJobsByRole(page, itemsPerPage, sortBy, sortDesc, null, null, null, null, null, null, null, null, null, null, null, null, null, null, repositoryId, null, null, null, null);
     }
 
     @HasUserOrSpecialRole
@@ -2140,6 +2169,133 @@ public class JobController {
         }
     }
 
+
+    // ----
+    // PAKETSHOP JOBs
+    // ----
+
+    @PostMapping("/create/" + PAKETSHOP_REPO_CREATE)
+    public void paketshopRepoCreate(@RequestBody final Map<String, Object> awxExtraVars) {
+        final long appserviceId = requireLong(awxExtraVars.get("appserviceId"), "Appservice ID");
+        if (appserviceService.getAppservice(appserviceId) == null || !appserviceService.canUserEditAppservice(appserviceId)) {
+            logTriedToCreateJob(PAKETSHOP_REPO_CREATE, null);
+            throw new AccessDeniedException("You are not allowed to create a repository for this appservice.");
+        }
+
+        final String name = requireNewRepositoryName(awxExtraVars.get("name"));
+
+        final String upstreamUrl = optionalString(awxExtraVars.get("upstream-url"));
+        if (upstreamUrl != null && !upstreamUrl.matches("^https?://\\S+$")) {
+            throw new IllegalArgumentException("Upstream URL must be a valid http(s) URL.");
+        }
+        final Boolean upstreamAllPackages = awxExtraVars.get("upstream-all-packages") == null
+                ? null
+                : requireBoolean(awxExtraVars.get("upstream-all-packages"), "Upstream all packages");
+        final String upstreamUser = optionalString(awxExtraVars.get("upstream-user"));
+        final String upstreamPassword = optionalString(awxExtraVars.get("upstream-password"));
+        final String gpgkeyLocation = optionalString(awxExtraVars.get("gpgkey-location"));
+        final boolean selfOnly = awxExtraVars.get("self_only") != null
+                && requireBoolean(awxExtraVars.get("self_only"), "Self only");
+
+        logCreatedJob(PAKETSHOP_REPO_CREATE, null);
+        jobService.paketshopRepoCreate(PAKETSHOP_REPO_CREATE, name, appserviceId, upstreamUrl, upstreamAllPackages,
+                upstreamUser, upstreamPassword, gpgkeyLocation, selfOnly);
+    }
+
+    @PostMapping("/create/" + PAKETSHOP_REPO_COPY)
+    public void paketshopRepoCopy(@RequestBody final Map<String, Object> awxExtraVars) {
+        final String name = requireNewRepositoryName(awxExtraVars.get("name"));
+        final Repository copyFrom = requireEditableRepository(awxExtraVars.get("copy-from"), PAKETSHOP_REPO_COPY);
+
+        logCreatedJob(PAKETSHOP_REPO_COPY, null);
+        jobService.paketshopRepoCopy(PAKETSHOP_REPO_COPY, name, copyFrom);
+    }
+
+    @PostMapping("/create/" + PAKETSHOP_REPO_DELETE)
+    public void paketshopRepoDelete(@RequestBody final Map<String, Object> awxExtraVars) {
+        final Repository repository = requireEditableRepository(awxExtraVars.get("name"), PAKETSHOP_REPO_DELETE);
+
+        logCreatedJob(PAKETSHOP_REPO_DELETE, null);
+        jobService.paketshopRepoDelete(PAKETSHOP_REPO_DELETE, repository);
+    }
+
+    @PostMapping("/create/" + PAKETSHOP_REPO_ATTACH_OWNED_REPO)
+    public void paketshopRepoAttachOwnedRepo(@RequestBody final Map<String, Object> awxExtraVars) {
+        paketshopRepoAttach(PAKETSHOP_REPO_ATTACH_OWNED_REPO, awxExtraVars, true);
+    }
+
+    @PostMapping("/create/" + PAKETSHOP_REPO_ATTACH_NOT_OWNED_REPO)
+    public void paketshopRepoAttachNotOwnedRepo(@RequestBody final Map<String, Object> awxExtraVars) {
+        paketshopRepoAttach(PAKETSHOP_REPO_ATTACH_NOT_OWNED_REPO, awxExtraVars, false);
+    }
+
+    private void paketshopRepoAttach(final String identifier, final Map<String, Object> awxExtraVars, final boolean ownedRepo) {
+        final Repository repository = requireUnlockedRepository(awxExtraVars.get("name"));
+        final boolean canEditRepository = repositoryService.canUserEditRepository(repository.getId());
+        if (ownedRepo && !canEditRepository) {
+            logTriedToCreateJob(identifier, null);
+            throw new AccessDeniedException("You are not allowed to edit this repository. Use " + PAKETSHOP_REPO_ATTACH_NOT_OWNED_REPO + " instead.");
+        }
+        if (!ownedRepo && canEditRepository) {
+            throw new IllegalArgumentException("You are allowed to edit this repository. Use " + PAKETSHOP_REPO_ATTACH_OWNED_REPO + " instead.");
+        }
+        if (!ownedRepo && repository.getLockStatus() == RepositoryLockStatus.SELF_ONLY) {
+            logTriedToCreateJob(identifier, null);
+            throw new AccessDeniedException("Repository " + repository.getName() + " can only be attached by its owners.");
+        }
+        final boolean enabled = requireBoolean(awxExtraVars.get("enabled"), "Enabled");
+        final boolean gpgcheck = requireBoolean(awxExtraVars.get("gpgcheck"), "GPG check");
+        final List<String> systems = requireEditableServerFqdns(awxExtraVars.get("control_paketshop_repos_systems"), "Systems", identifier);
+
+        logCreatedJob(identifier, null);
+        jobService.paketshopRepoAttach(identifier, repository, enabled, gpgcheck, systems);
+    }
+
+    @PostMapping("/create/" + PAKETSHOP_REPO_DETACH)
+    public void paketshopRepoDetach(@RequestBody final Map<String, Object> awxExtraVars) {
+        final Repository repository = requireEditableRepository(awxExtraVars.get("name"), PAKETSHOP_REPO_DETACH);
+        final List<String> systems = requireEditableServerFqdns(awxExtraVars.get("control_paketshop_repos_systems"), "Systems", PAKETSHOP_REPO_DETACH);
+
+        logCreatedJob(PAKETSHOP_REPO_DETACH, null);
+        jobService.paketshopRepoDetach(PAKETSHOP_REPO_DETACH, repository, systems);
+    }
+
+    private String requireNewRepositoryName(final Object nameObj) {
+        final String name = requireNonBlankString(nameObj, "Repository name").trim();
+        if (!name.matches("^[A-Za-z0-9._/!-]+$")) {
+            throw new IllegalArgumentException("Repository name contains invalid characters.");
+        }
+        if (!name.endsWith("-test") && !name.endsWith("-prod")) {
+            throw new IllegalArgumentException("Repository name must end with \"-test\" or \"-prod\".");
+        }
+        if (repositoryService.existsByName(name)) {
+            throw new IllegalArgumentException("Repository " + name + " already exists.");
+        }
+        return name;
+    }
+
+    private Repository requireEditableRepository(final Object nameObj, final String jobIdentifier) {
+        final Repository repository = requireUnlockedRepository(nameObj);
+        if (!repositoryService.canUserEditRepository(repository.getId())) {
+            logTriedToCreateJob(jobIdentifier, null);
+            throw new AccessDeniedException("You are not allowed to create a job for this repository.");
+        }
+        return repository;
+    }
+
+    private Repository requireUnlockedRepository(final Object nameObj) {
+        final String name = requireNonBlankString(nameObj, "Repository name").trim();
+        final Repository repository = repositoryService.findByNameWithAppservices(name)
+                .orElseThrow(() -> new IllegalArgumentException("Repository " + name + " does not exist."));
+        if (repository.isLocked()) {
+            throw new IllegalArgumentException("Repository " + name + " is locked.");
+        }
+        if (repository.getAppservices() == null || repository.getAppservices().size() != 1) {
+            throw new AccessDeniedException("Repository " + name + " must be assigned to exactly one Application Service.");
+        }
+        return repository;
+    }
+
     // -----------------------------------------------------------------------------------------------------------------
     // Helper Methods
     // -----------------------------------------------------------------------------------------------------------------
@@ -2319,5 +2475,68 @@ public class JobController {
             throw new MissingFormatArgumentException(fieldName + " must be provided.");
         }
         return value.toString();
+    }
+
+    private String optionalString(final Object value) {
+        return value == null || value.toString().isBlank() ? null : value.toString().trim();
+    }
+
+    private long requireLong(final Object value, final String fieldName) {
+        final String str = requireNonBlankString(value, fieldName);
+        try {
+            return Long.parseLong(str);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException(fieldName + " is invalid.");
+        }
+    }
+
+    private boolean requireBoolean(final Object value, final String fieldName) {
+        if (value instanceof Boolean bool) {
+            return bool;
+        }
+        if (value != null && ("true".equalsIgnoreCase(value.toString()) || "false".equalsIgnoreCase(value.toString()))) {
+            return Boolean.parseBoolean(value.toString());
+        }
+        throw new IllegalArgumentException(fieldName + " must be true or false.");
+    }
+
+    /**
+     * Resolves a list of FQDNs to servers. Every FQDN must belong to an existing server that the
+     * current user can edit and that is assigned to exactly one Application Service.
+     *
+     * @return List of FQDNs
+     */
+    private List<String> requireEditableServerFqdns(final Object fqdnsObj, final String fieldLabel, final String jobIdentifier) {
+        final List<?> rawFqdns = requireList(fqdnsObj, fieldLabel);
+        if (rawFqdns.isEmpty()) {
+            throw new IllegalArgumentException("At least one server is required.");
+        }
+        final Set<String> fqdns = new LinkedHashSet<>();
+        for (Object fqdnObj : rawFqdns) {
+            if (!(fqdnObj instanceof String fqdn) || fqdn.isBlank()) {
+                throw new IllegalArgumentException(fieldLabel + " must be provided as a list of FQDNs.");
+            }
+            fqdns.add(fqdn.trim());
+        }
+        final List<Server> servers = serverService.findByFqdnIn(new ArrayList<>(fqdns));
+        final Set<String> foundFqdns = new HashSet<>();
+        for (Server server : servers) {
+            if (!serverService.canUserEditServer(server.getId())) {
+                logTriedToCreateJob(jobIdentifier, server.getId());
+                throw new AccessDeniedException("You are not allowed to create a job for server " + server.getFqdn()
+                        + " (server is locked, in maintenance mode or not editable by you).");
+            }
+            if (appserviceService.getAppservicesByServerId(server.getId()).size() != 1) {
+                logTriedToCreateJob(jobIdentifier, server.getId());
+                throw new AccessDeniedException("Server " + server.getFqdn() + " must be assigned to exactly one Application Service.");
+            }
+            foundFqdns.add(server.getFqdn().toUpperCase(Locale.ROOT));
+        }
+        for (String fqdn : fqdns) {
+            if (!foundFqdns.contains(fqdn.toUpperCase(Locale.ROOT))) {
+                throw new IllegalArgumentException("No server found for FQDN: " + fqdn);
+            }
+        }
+        return servers.stream().map(Server::getFqdn).distinct().toList();
     }
 }

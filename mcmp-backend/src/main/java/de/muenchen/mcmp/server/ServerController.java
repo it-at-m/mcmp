@@ -56,6 +56,16 @@ public class ServerController {
         return serverService.findFullServersByAppserviceId(appserviceId);
     }
 
+    @GetMapping("/repo-targets")
+    public List<ServerFqdnDTO> findRepoTargetServers(@RequestParam(name = "search", required = false) final String search) {
+        return serverService.findRepoTargetServers(search);
+    }
+
+    @GetMapping("/repo-targets/attached")
+    public List<ServerFqdnDTO> findRepoTargetServersByRepositoryIds(@RequestParam(name = "repositoryIds") final List<Long> repositoryIds) {
+        return serverService.findRepoTargetServersByRepositoryIds(repositoryIds);
+    }
+
     @HasSpecialRole
     @GetMapping("/autocomplete")
     public List<ServerAutocompleteDTO> getServersForAutocomplete(@RequestParam(required = false) String query) {

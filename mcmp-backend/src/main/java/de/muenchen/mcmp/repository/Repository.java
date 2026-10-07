@@ -7,7 +7,6 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
-import org.hibernate.annotations.ColumnDefault;
 
 import java.time.OffsetDateTime;
 import java.util.LinkedHashSet;
@@ -36,8 +35,13 @@ public class Repository extends AbstractEntity {
     @Column(name = "snow_last_discovered")
     private OffsetDateTime snowLastDiscovered;
 
-    @Column(name = "locked", nullable = false)
-    private boolean locked = true;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "lock_status", nullable = false)
+    private RepositoryLockStatus lockStatus = RepositoryLockStatus.LOCKED;
+
+    public boolean isLocked() {
+        return lockStatus == RepositoryLockStatus.LOCKED;
+    }
 
     @Column(name = "repository_url")
     private String repositoryUrl;

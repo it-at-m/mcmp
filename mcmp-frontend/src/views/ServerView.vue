@@ -387,6 +387,7 @@
                     <server-details-repos
                       :repos="repos"
                       :loading="loadingRepos"
+                      :server="selectedServerItem"
                     />
                   </v-tabs-window-item>
 

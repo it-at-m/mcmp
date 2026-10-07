@@ -1,6 +1,7 @@
 package de.muenchen.mcmp.job;
 
 import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import de.muenchen.mcmp.action.Action;
 import de.muenchen.mcmp.action.ActionRepository;
@@ -13,6 +14,7 @@ import de.muenchen.mcmp.loadbalancer.LbVirtualServerPoolRef;
 import de.muenchen.mcmp.loadbalancer.LbVirtualServerRepository;
 import de.muenchen.mcmp.ontap.OntapVolume;
 import de.muenchen.mcmp.ontap.OntapVolumeRepository;
+import de.muenchen.mcmp.repository.Repository;
 import de.muenchen.mcmp.server.Server;
 import de.muenchen.mcmp.storage.UnifiedStorageItemDto;
 import de.muenchen.mcmp.user.User;
@@ -20,6 +22,7 @@ import de.muenchen.mcmp.user.UserRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -28,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -509,5 +513,109 @@ public class JobServiceTest {
         jobService.storageModifyCifs(cifsItem, 100, 20);
 
         verify(jobRepository, times(1)).save(any(Job.class));
+    }
+
+    private JobService paketshopJobService(final JobRepository jobRepository, final String actionIdentifier,
+                                           final AppserviceRepository appserviceRepository) {
+        ActionRepository actionRepository = mock(ActionRepository.class);
+        UserRepository userRepository = mock(UserRepository.class);
+        ActionToJobMapper actionToJobMapper = mock(ActionToJobMapper.class);
+
+        Action action = new Action();
+        action.setIdentifier(actionIdentifier);
+        action.setEnabled(true);
+        AwxConfig awxConfig = new AwxConfig();
+        awxConfig.setEnabled(true);
+        action.setAwxConfig(awxConfig);
+        when(actionRepository.findByIdentifier(actionIdentifier)).thenReturn(action);
+
+        User user = new User();
+        user.setUsername("tester");
+        when(userRepository.findByUsername("tester")).thenReturn(user);
+
+        SecurityContextHolder.getContext().setAuthentication(
+                new TestingAuthenticationToken("tester", null, Collections.emptyList()));
+
+        return new JobService(
+                jobRepository, actionRepository, userRepository, null, appserviceRepository,
+                null, null, null, null, null, null, null, actionToJobMapper
+        );
+    }
+
+    private Repository paketshopRepository(final Appservice... appservices) {
+        Repository repository = new Repository();
+        repository.setId(4004L);
+        repository.setName("my-repo-test");
+        repository.setAppservices(new LinkedHashSet<>(Arrays.asList(appservices)));
+        return repository;
+    }
+
+    @Test
+    public void testPaketshopRepoCreate_buildsGroupFromAppserviceNumberAndOmitsUnsetUpstreamParams() {
+        JobRepository jobRepository = mock(JobRepository.class);
+        AppserviceRepository appserviceRepository = mock(AppserviceRepository.class);
+        JobService jobService = paketshopJobService(jobRepository, "PAKETSHOP_REPO_CREATE", appserviceRepository);
+
+        Appservice appservice = new Appservice();
+        appservice.setId(2002L);
+        appservice.setNumber("SNSVC0001");
+        when(appserviceRepository.findById(2002L)).thenReturn(Optional.of(appservice));
+
+        jobService.paketshopRepoCreate("PAKETSHOP_REPO_CREATE", "my-repo-test", 2002L,
+                null, null, null, null, "https://mirror.example.org/key.gpg", true);
+
+        ArgumentCaptor<Job> jobCaptor = ArgumentCaptor.forClass(Job.class);
+        verify(jobRepository).save(jobCaptor.capture());
+        JsonNode vars = new ObjectMapper().readTree(jobCaptor.getValue().getAwxExtraVars());
+
+        assertEquals("my-repo-test", vars.get("name").asString());
+        assertEquals("lhm-cm-SNSVC0001-admin", vars.get("group").asString());
+        assertTrue(vars.get("self_only").asBoolean());
+        assertEquals("https://mirror.example.org/key.gpg", vars.get("gpgkey-location").asString());
+        assertFalse(vars.has("upstream-url"), "unset optional params must not be sent to AWX");
+        assertFalse(vars.has("upstream-password"), "unset optional params must not be sent to AWX");
+        assertSame(appservice, jobCaptor.getValue().getAppService());
+        assertNull(jobCaptor.getValue().getRepository(), "the repository does not exist yet, so the job cannot be linked to it");
+    }
+
+    @Test
+    public void testPaketshopRepoAttach_linksRepositoryAndItsAppserviceToPersistedJob() {
+        JobRepository jobRepository = mock(JobRepository.class);
+        JobService jobService = paketshopJobService(jobRepository, "PAKETSHOP_REPO_ATTACH_NOT_OWNED_REPO", null);
+
+        Appservice appservice = new Appservice();
+        appservice.setId(2002L);
+        Repository repository = paketshopRepository(appservice);
+
+        jobService.paketshopRepoAttach("PAKETSHOP_REPO_ATTACH_NOT_OWNED_REPO", repository, true, false,
+                List.of("a.srv.muenchen.de", "b.srv.muenchen.de"));
+
+        ArgumentCaptor<Job> jobCaptor = ArgumentCaptor.forClass(Job.class);
+        verify(jobRepository).save(jobCaptor.capture());
+        JsonNode vars = new ObjectMapper().readTree(jobCaptor.getValue().getAwxExtraVars());
+
+        assertEquals("my-repo-test", vars.get("name").asString());
+        assertTrue(vars.get("enabled").asBoolean());
+        assertFalse(vars.get("gpgcheck").asBoolean());
+        assertEquals(2, vars.get("control_paketshop_repos_systems").size());
+        assertEquals("PAKETSHOP_REPO_ATTACH_NOT_OWNED_REPO", jobCaptor.getValue().getActionIdentifier());
+        assertSame(repository, jobCaptor.getValue().getRepository());
+        assertSame(appservice, jobCaptor.getValue().getAppService());
+    }
+
+    @Test
+    public void testPaketshopRepoDelete_repositoryWithoutExactlyOneAppservice_throws() {
+        JobRepository jobRepository = mock(JobRepository.class);
+        JobService jobService = paketshopJobService(jobRepository, "PAKETSHOP_REPO_DELETE", null);
+
+        Appservice first = new Appservice();
+        first.setId(2002L);
+        Appservice second = new Appservice();
+        second.setId(2003L);
+        Repository repository = paketshopRepository(first, second);
+
+        assertThrows(AccessDeniedException.class,
+                () -> jobService.paketshopRepoDelete("PAKETSHOP_REPO_DELETE", repository));
+        verify(jobRepository, never()).save(any(Job.class));
     }
 }

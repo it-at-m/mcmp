@@ -11,7 +11,7 @@
     <template #toolbar-actions>
       <div class="action-buttons">
         <openshift-namespace-order
-          v-if="props.selectedAppservice"
+          v-if="isTestEnv && props.selectedAppservice"
           :key="props.selectedAppservice.id"
           :appservice="props.selectedAppservice"
           @order-done="loadNamespaces(props.selectedAppservice)"
@@ -79,12 +79,14 @@ import CommonCard from "@/components/common/CommonCard.vue";
 import CountBadge from "@/components/common/CountBadge.vue";
 import OpenshiftNamespaceOrder from "@/components/Openshift/OpenshiftNamespaceOrder.vue";
 import { useFormatter } from "@/composables/formatter.ts";
+import { useTestEnv } from "@/composables/useTestEnv";
 
 const props = defineProps<{
   selectedAppservice: Appservice | null;
 }>();
 
 const formatter = useFormatter();
+const { isTestEnv } = useTestEnv();
 
 const namespaces = ref<OpenshiftNamespaceRef[]>([]);
 const loading = ref(false);

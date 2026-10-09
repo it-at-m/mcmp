@@ -72,7 +72,8 @@
           </v-list>
         </v-menu>
       </v-list-item>
-      <v-list-item>
+      <!-- Openshift orders are only available in test environments for now -->
+      <v-list-item v-if="isTestEnv">
         <v-menu
           v-model="isOpenshiftOpen"
           location="right"

@@ -29,7 +29,7 @@ import almalinuxIcon from "@/assets/almalinux.png";
 import centosIcon from "@/assets/centos.ico";
 import debianIcon from "@/assets/debian.svg";
 import linuxIcon from "@/assets/linux.svg";
-import otherIcon from "@/assets/other.svg";
+import unknownIcon from "@/assets/unknown.svg";
 
 const windowsIcon =
   "https://monitoring.muenchen.de/lhmmon/check_mk/themes/facelift/images/icon_windows_msi.svg";
@@ -47,8 +47,8 @@ const props = defineProps<{
 
 const handleImageError = (e: Event) => {
   const target = e.target as HTMLImageElement;
-  if (target.src !== otherIcon) {
-    target.src = otherIcon;
+  if (target.src !== unknownIcon) {
+    target.src = unknownIcon;
   }
 };
 
@@ -72,7 +72,7 @@ const match = computed(() => {
   if (!props.osFullName) return undefined;
   return osMap.find((m) => m.match.test(props.osFullName));
 });
-const icon = computed(() => match.value?.icon || otherIcon);
+const icon = computed(() => match.value?.icon || unknownIcon );
 const sizeClass = computed(() => {
   if (props.osFullName?.includes("Windows")) return "os-icon-x-small";
   if (props.size === "small") return "os-icon-small";

@@ -1,21 +1,17 @@
 <template>
-  <v-tooltip
-    :text="props.osFullName || ''"
-    :disabled="!props.osFullName"
-  >
+  <v-tooltip :text="tooltipText">
     <template #activator="{ props: tooltipProps }">
       <v-sheet
-        width="30"
-        height="30"
-        class="os-icon"
+          width="30"
+          height="30"
+          class="os-icon"
       >
         <img
-          v-if="icon"
-          :src="icon"
-          :class="['os-icon', sizeClass]"
-          :alt="`Betriebssystem: ${props.osFullName || ''}`"
-          v-bind="tooltipProps"
-          @error="handleImageError"
+            :src="icon"
+            :class="['os-icon', sizeClass]"
+            :alt="`Betriebssystem: ${tooltipText}`"
+            v-bind="tooltipProps"
+            @error="handleImageError"
         />
       </v-sheet>
     </template>
@@ -23,7 +19,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref, watch } from "vue";
 
 import almalinuxIcon from "@/assets/almalinux.png";
 import centosIcon from "@/assets/centos.ico";
@@ -32,24 +28,34 @@ import linuxIcon from "@/assets/linux.svg";
 import unknownIcon from "@/assets/unknown.svg";
 
 const windowsIcon =
-  "https://monitoring.muenchen.de/lhmmon/check_mk/themes/facelift/images/icon_windows_msi.svg";
+    "https://monitoring.muenchen.de/lhmmon/check_mk/themes/facelift/images/icon_windows_msi.svg";
 const rhelIcon =
-  "https://monitoring.muenchen.de/lhmmon/check_mk/themes/facelift/images/icon_linux_rpm.svg";
+    "https://monitoring.muenchen.de/lhmmon/check_mk/themes/facelift/images/icon_linux_rpm.svg";
 const ubuntuIcon =
-  "https://monitoring.muenchen.de/lhmmon/check_mk/themes/facelift/images/icon_linux_deb.svg";
+    "https://monitoring.muenchen.de/lhmmon/check_mk/themes/facelift/images/icon_linux_deb.svg";
 const vmwareIcon =
-  "https://monitoring.muenchen.de/lhmmon/check_mk/themes/facelift/images/icon_vsphere.svg";
+    "https://monitoring.muenchen.de/lhmmon/check_mk/themes/facelift/images/icon_vsphere.svg";
 
 const props = defineProps<{
   osFullName: string;
   size?: "small" | "normal";
 }>();
 
+const hasLoadError = ref(false);
+
+watch(
+    () => props.osFullName,
+    () => {
+      hasLoadError.value = false;
+    }
+);
+
 const handleImageError = (e: Event) => {
   const target = e.target as HTMLImageElement;
   if (target.src !== unknownIcon) {
     target.src = unknownIcon;
   }
+  hasLoadError.value = true;
 };
 
 const osMap = [
@@ -72,7 +78,18 @@ const match = computed(() => {
   if (!props.osFullName) return undefined;
   return osMap.find((m) => m.match.test(props.osFullName));
 });
-const icon = computed(() => match.value?.icon || unknownIcon );
+
+const isUnknown = computed(() => !match.value || hasLoadError.value);
+
+const icon = computed(() => (isUnknown.value ? unknownIcon : match.value?.icon));
+
+const tooltipText = computed(() => {
+  if (isUnknown.value) {
+    return "Betriebssystem nicht erkannt";
+  }
+  return props.osFullName;
+});
+
 const sizeClass = computed(() => {
   if (props.osFullName?.includes("Windows")) return "os-icon-x-small";
   if (props.size === "small") return "os-icon-small";

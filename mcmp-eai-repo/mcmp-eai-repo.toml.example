@@ -35,6 +35,7 @@ ApiEndpoint       = 'https://mcmp2.example.org/clients/eai-backend-service/repo/
 [[REPO]]
 Enabled              = false
 RepoUrl              = "https://repo1.example.com"
+StatusPath           = ".repostatus/locked.json"  # Lock status file relative to RepoUrl (optional, this is the default)
 
 [[REPO]]
 Enabled              = false

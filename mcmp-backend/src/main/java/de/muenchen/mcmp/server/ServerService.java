@@ -353,6 +353,48 @@ public class ServerService {
         return serverRepository.findServerByVcenterShortCodeAndUuidOptional(vcenterShortCode, uuid);
     }
 
+    /**
+     * Servers the current user can attach a repository to (see {@link ServerRepository#REPO_TARGET_SERVER_CONDITION}).
+     */
+    public List<ServerFqdnDTO> findRepoTargetServers(final String search) {
+        final UserRoles userRoles = AuthUtils.getCurrentUserRoles();
+        return repository.findRepoTargetServers(
+                search == null ? null : search.trim(),
+                userRoles.getUsername(),
+                userRoles.hasAdminRole(),
+                userRoles.hasLinuxRole(),
+                userRoles.hasWindowsRole(),
+                userRoles.hasOracleRole(),
+                userRoles.hasNonOracleRole(),
+                appConfigCacheService.isMaintenanceMode()
+        ).stream().map(ServerService::toServerFqdnDTO).toList();
+    }
+
+    /**
+     * Servers that have at least one of the given repositories attached and that the current user can
+     * detach repositories from (see {@link ServerRepository#REPO_TARGET_SERVER_CONDITION}).
+     */
+    public List<ServerFqdnDTO> findRepoTargetServersByRepositoryIds(final List<Long> repositoryIds) {
+        if (repositoryIds == null || repositoryIds.isEmpty()) {
+            return List.of();
+        }
+        final UserRoles userRoles = AuthUtils.getCurrentUserRoles();
+        return repository.findRepoTargetServersByRepositoryIds(
+                repositoryIds,
+                userRoles.getUsername(),
+                userRoles.hasAdminRole(),
+                userRoles.hasLinuxRole(),
+                userRoles.hasWindowsRole(),
+                userRoles.hasOracleRole(),
+                userRoles.hasNonOracleRole(),
+                appConfigCacheService.isMaintenanceMode()
+        ).stream().map(ServerService::toServerFqdnDTO).toList();
+    }
+
+    private static ServerFqdnDTO toServerFqdnDTO(final ServerFqdnProjection projection) {
+        return new ServerFqdnDTO(projection.getId(), projection.getName(), projection.getFqdn());
+    }
+
     public List<ServerAutocompleteDTO> searchServersForAutocomplete(final String query) {
         if (query == null || query.trim().isEmpty()) {
             return List.of();

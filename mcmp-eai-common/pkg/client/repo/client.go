@@ -3,6 +3,7 @@ package repo
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -55,6 +56,32 @@ func (c *Client) ListRepositories(ctx context.Context) ([]RepositoryInfo, error)
 	return c.parseListing(body), nil
 }
 
+// GetRepoStatus fetches the status file (Config.StatusPath) below the repo url. A missing file (404) means that
+// no repository is LOCKED or SELF_ONLY. Any other error is returned, so that callers don't unlock repositories by accident.
+func (c *Client) GetRepoStatus(ctx context.Context) (*RepoStatus, error) {
+	url := c.baseURL + c.config.statusPath()
+	body, statusCode, err := c.client.Get(ctx, url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch repo status: %w", err)
+	}
+
+	if statusCode == http.StatusNotFound {
+		c.logger.Warn("Repo status file not found, treating all repositories as OPEN", "url", url)
+		return &RepoStatus{}, nil
+	}
+
+	if statusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code from repo status: %d", statusCode)
+	}
+
+	var status RepoStatus
+	if err := json.Unmarshal(body, &status); err != nil {
+		return nil, fmt.Errorf("failed to parse repo status: %w", err)
+	}
+
+	return &status, nil
+}
+
 // parseListing extracts directory entries from the Apache-style HTML body.
 func (c *Client) parseListing(htmlBody []byte) []RepositoryInfo {
 	var repos []RepositoryInfo
@@ -93,7 +120,8 @@ func (c *Client) parseListing(htmlBody []byte) []RepositoryInfo {
 			// 1. Must be a directory (ends with /).
 			// 2. Must not be a query string used for sorting (starts with ?).
 			// 3. Must not be an absolute path or the parent directory link (..).
-			if strings.HasSuffix(linkPart, "/") && !strings.HasPrefix(linkPart, "?") && !strings.HasPrefix(linkPart, "/") && linkPart != "../" {
+			// 4. Must not be a hidden directory (e.g. .repostatus/), these are no repositories.
+			if strings.HasSuffix(linkPart, "/") && !strings.HasPrefix(linkPart, "?") && !strings.HasPrefix(linkPart, "/") && !strings.HasPrefix(linkPart, ".") {
 				name := strings.TrimSuffix(linkPart, "/")
 				repos = append(repos, RepositoryInfo{
 					Name: name,

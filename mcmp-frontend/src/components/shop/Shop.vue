@@ -72,7 +72,8 @@
           </v-list>
         </v-menu>
       </v-list-item>
-      <v-list-item>
+      <!-- Openshift orders are only available in test environments for now -->
+      <v-list-item v-if="isTestEnv">
         <v-menu
           v-model="isOpenshiftOpen"
           location="right"
@@ -92,6 +93,34 @@
           <v-list>
             <v-list-item>
               <openshift-namespace-order />
+            </v-list-item>
+          </v-list>
+        </v-menu>
+      </v-list-item>
+      <!-- Repo actions are only available in test environments for now -->
+      <v-list-item v-if="isTestEnv">
+        <v-menu
+          v-model="isRepoOpen"
+          location="right"
+          eager
+        >
+          <template #activator="{ props }">
+            <v-btn
+              v-bind="props"
+              flat
+            >
+              Repository
+              <v-icon end>{{
+                isRepoOpen ? mdiChevronUp : mdiChevronDown
+              }}</v-icon>
+            </v-btn>
+          </template>
+          <v-list>
+            <v-list-item>
+              <repo-create-dialog />
+            </v-list-item>
+            <v-list-item>
+              <repo-copy-dialog />
             </v-list-item>
           </v-list>
         </v-menu>
@@ -161,8 +190,11 @@ import { provide, ref } from "vue";
 import InstallDialog from "@/components/install/InstallDialog.vue";
 import LoadbalancerOrder from "@/components/Loadbalancer/LoadbalancerOrder.vue";
 import OpenshiftNamespaceOrder from "@/components/Openshift/OpenshiftNamespaceOrder.vue";
+import RepoCopyDialog from "@/components/Paketshop/RepoCopyDialog.vue";
+import RepoCreateDialog from "@/components/Paketshop/RepoCreateDialog.vue";
 import AnsibleUser from "@/components/shop/AnsibleUser.vue";
 import SnowTicketsOld from "@/components/shop/SnowTicketsOld.vue";
+import { useTestEnv } from "@/composables/useTestEnv";
 
 defineProps<{
   railMode?: boolean;
@@ -173,12 +205,15 @@ const isOpen = ref(false);
 const isAnwendOpen = ref(false);
 const isLoadbalancerOpen = ref(false);
 const isOpenshiftOpen = ref(false);
+const isRepoOpen = ref(false);
+const { isTestEnv } = useTestEnv();
 
 function closeShopMenus() {
   isOpen.value = false;
   isAnwendOpen.value = false;
   isLoadbalancerOpen.value = false;
   isOpenshiftOpen.value = false;
+  isRepoOpen.value = false;
 }
 provide("closeAncestorMenus", closeShopMenus);
 

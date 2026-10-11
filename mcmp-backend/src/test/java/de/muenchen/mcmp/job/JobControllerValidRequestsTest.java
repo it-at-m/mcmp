@@ -2,6 +2,7 @@ package de.muenchen.mcmp.job;
 
 import de.muenchen.mcmp.appservice.Appservice;
 import de.muenchen.mcmp.appservice.AppserviceDTO;
+import de.muenchen.mcmp.appservice.AppserviceNameAndSysId;
 import de.muenchen.mcmp.appservice.AppserviceService;
 import de.muenchen.mcmp.cloud.Cloud;
 import de.muenchen.mcmp.errorlog.ErrorLogService;
@@ -10,6 +11,9 @@ import de.muenchen.mcmp.loadbalancer.UnifiedLoadbalancer;
 import de.muenchen.mcmp.loadbalancer.UnifiedLoadbalancerPoolDTO;
 import de.muenchen.mcmp.mountPoint.MountPointService;
 import de.muenchen.mcmp.network.NetworkService;
+import de.muenchen.mcmp.repository.Repository;
+import de.muenchen.mcmp.repository.RepositoryLockStatus;
+import de.muenchen.mcmp.repository.RepositoryService;
 import de.muenchen.mcmp.ontap.OntapCifsShareAclListDto;
 import de.muenchen.mcmp.ontap.OntapExportPolicyListDto;
 import de.muenchen.mcmp.ontap.OntapExportPolicyRuleListDto;
@@ -35,11 +39,13 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -82,6 +88,8 @@ class JobControllerValidRequestsTest {
     private UserService userService;
     @MockitoBean
     private LoadbalancerService loadbalancerService;
+    @MockitoBean
+    private RepositoryService repositoryService;
     @MockitoBean
     private ErrorLogService errorLogService;
 
@@ -423,5 +431,77 @@ class JobControllerValidRequestsTest {
         when(unifiedStorageService.canUserEditStorage(anyString(), eq(StorageType.CIFS))).thenReturn(true);
         perform("STORAGE_CHANGE_CIFS_PERMISSIONS",
                 "{\"uuid\":\"aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee\",\"ad\":\"DOMAIN\\\\group1\",\"permission\":\"read\"}");
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------
+    // Paketshop jobs
+    // -----------------------------------------------------------------------------------------------------------------
+
+    private static final long REPO_ID = 4004L;
+
+    private void allowPaketshopRepository(final boolean canEdit) {
+        final Repository repository = new Repository();
+        repository.setId(REPO_ID);
+        repository.setName("my-repo-test");
+        repository.setLockStatus(RepositoryLockStatus.OPEN);
+        final Appservice appservice = new Appservice();
+        appservice.setId(APPSERVICE_ID);
+        repository.setAppservices(new LinkedHashSet<>(Set.of(appservice)));
+        when(repositoryService.findByNameWithAppservices("my-repo-test")).thenReturn(Optional.of(repository));
+        when(repositoryService.canUserEditRepository(REPO_ID)).thenReturn(canEdit);
+    }
+
+    private void allowPaketshopServer() {
+        final Server server = new Server();
+        server.setId(SERVER_ID);
+        server.setFqdn("test.srv.muenchen.de");
+        when(serverService.findByFqdnIn(anyList())).thenReturn(List.of(server));
+        when(serverService.canUserEditServer(SERVER_ID)).thenReturn(true);
+        when(appserviceService.getAppservicesByServerId(SERVER_ID)).thenReturn(List.of(mock(AppserviceNameAndSysId.class)));
+    }
+
+    @Test
+    void paketshopRepoCreate_validPayload_succeeds() throws Exception {
+        final Appservice appservice = new Appservice();
+        appservice.setId(APPSERVICE_ID);
+        when(appserviceService.getAppservice(APPSERVICE_ID)).thenReturn(appservice);
+        when(appserviceService.canUserEditAppservice(APPSERVICE_ID)).thenReturn(true);
+        perform("PAKETSHOP_REPO_CREATE", "{\"appserviceId\":2002,\"name\":\"my-repo-test\"}");
+    }
+
+    @Test
+    void paketshopRepoCopy_validPayload_succeeds() throws Exception {
+        allowPaketshopRepository(true);
+        perform("PAKETSHOP_REPO_COPY", "{\"name\":\"my-copy-prod\",\"copy-from\":\"my-repo-test\"}");
+    }
+
+    @Test
+    void paketshopRepoDelete_validPayload_succeeds() throws Exception {
+        allowPaketshopRepository(true);
+        perform("PAKETSHOP_REPO_DELETE", "{\"name\":\"my-repo-test\"}");
+    }
+
+    @Test
+    void paketshopRepoAttachOwnedRepo_validPayload_succeeds() throws Exception {
+        allowPaketshopRepository(true);
+        allowPaketshopServer();
+        perform("PAKETSHOP_REPO_ATTACH_OWNED_REPO",
+                "{\"name\":\"my-repo-test\",\"enabled\":true,\"gpgcheck\":true,\"control_paketshop_repos_systems\":[\"test.srv.muenchen.de\"]}");
+    }
+
+    @Test
+    void paketshopRepoAttachNotOwnedRepo_validPayload_succeeds() throws Exception {
+        allowPaketshopRepository(false);
+        allowPaketshopServer();
+        perform("PAKETSHOP_REPO_ATTACH_NOT_OWNED_REPO",
+                "{\"name\":\"my-repo-test\",\"enabled\":true,\"gpgcheck\":true,\"control_paketshop_repos_systems\":[\"test.srv.muenchen.de\"]}");
+    }
+
+    @Test
+    void paketshopRepoDetach_validPayload_succeeds() throws Exception {
+        allowPaketshopRepository(true);
+        allowPaketshopServer();
+        perform("PAKETSHOP_REPO_DETACH",
+                "{\"name\":\"my-repo-test\",\"control_paketshop_repos_systems\":[\"test.srv.muenchen.de\"]}");
     }
 }

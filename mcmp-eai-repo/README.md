@@ -20,9 +20,10 @@ The application parses Apache-style directory listings, extracts repository info
 1. **Configuration Loading**: Reads TOML files for logging, MCMP endpoints, and repository sources.
 2. **Client Initialization**: Sets up HTTP clients for repository servers and OAuth2-enabled clients for MCMP.
 3. **Concurrent Processing**: Launches parallel workers for each enabled repository source.
-4. **HTML Parsing**: Fetches the directory listing and extracts links pointing to sub-directories (repositories).
-5. **Metadata Injection**: Injects version, commit ID, and execution statistics into the data model.
-6. **Persistence & Transmission**: Saves results locally as `repo_<identifier>.json` and concurrently sends them to all configured MCMP instances.
+4. **HTML Parsing**: Fetches the directory listing and extracts links pointing to sub-directories (repositories). Hidden directories (e.g. `.repostatus/`) are skipped.
+5. **Lock Status**: Fetches `<RepoUrl>/<StatusPath>` (default `.repostatus/locked.json`) and sets the `status` of every repository (see [Lock Status](#lock-status)). If the file can't be read (other than 404), the run is aborted so that no repository is unlocked by accident.
+6. **Metadata Injection**: Injects version, commit ID, and execution statistics into the data model.
+7. **Persistence & Transmission**: Saves results locally as `repo_<identifier>.json` and concurrently sends them to all configured MCMP instances.
 
 ## Documentation
 
@@ -42,6 +43,7 @@ Configuration is managed via a TOML file (default: `mcmp-eai-repo.toml`).
 - **[[REPO]]**: A list of repository servers to scan.
   - `Enabled`: Flag to activate/deactivate the source.
   - `RepoUrl`: The base URL of the repository server.
+  - `StatusPath` (optional): Path of the lock status file relative to `RepoUrl`. Default: `.repostatus/locked.json`.
 
 ### Execution
 
@@ -90,15 +92,35 @@ The exported JSON body follows this schema:
   "repositories": [
     {
       "name": "rhel-9-appstream",
-      "url": "https://repo.example.com/rhel-9-appstream/"
+      "url": "https://repo.example.com/rhel-9-appstream/",
+      "status": "OPEN"
     },
     {
       "name": "rhel-9-baseos",
-      "url": "https://repo.example.com/rhel-9-baseos/"
+      "url": "https://repo.example.com/rhel-9-baseos/",
+      "status": "SELF_ONLY"
     }
   ]
 }
 ```
+
+### Lock Status
+The lock status of the repositories is read from `<RepoUrl>/<StatusPath>` (default `.repostatus/locked.json`):
+
+```json
+{
+  "LOCKED": ["repo-that-is-locked"],
+  "SELF_ONLY": ["rhel-9-baseos"]
+}
+```
+
+| Status      | Meaning                                                                                  |
+|-------------|------------------------------------------------------------------------------------------|
+| `LOCKED`    | The repository can't be changed or attached in MCMP.                                     |
+| `SELF_ONLY` | The repository can only be attached by its owners (change group of its appservice).      |
+| `OPEN`      | No restrictions. Repositories that aren't listed in the file are `OPEN`.                 |
+
+If a repository is listed under both keys, `LOCKED` wins. A missing file (404) means all repositories are `OPEN`.
 
 ## License
 

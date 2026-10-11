@@ -28,6 +28,7 @@ import de.muenchen.mcmp.network.NetworkGroup;
 import de.muenchen.mcmp.network.NetworkGroupRepository;
 import de.muenchen.mcmp.ontap.OntapVolume;
 import de.muenchen.mcmp.ontap.OntapVolumeRepository;
+import de.muenchen.mcmp.repository.Repository;
 import de.muenchen.mcmp.security.AuthUtils;
 import de.muenchen.mcmp.security.UserRoles;
 import de.muenchen.mcmp.server.Server;
@@ -144,6 +145,10 @@ public class JobService {
     }
 
     public Page<? extends JobListBasic> findAllJobsByRole(final int page, final int itemsPerPage, final String sortBy, final boolean sortDesc, final Long jobId, final Long awxJobId, final Instant createdFrom, final Instant createdTo, final Instant changeStartFrom, final Instant changeStartTo, final Long userId, final Long serverId, final Long appserviceId, final Long lbVirtualServerId, final Long ontapVolumeId, final Long ontapQtreeId, final Long storagegridBucketId, final Long kubernetesNamespaceId, final List<String> actionIdentifier, final String statusIdentifier, final String awxVariables, final String searchText) {
+        return findAllJobsByRole(page, itemsPerPage, sortBy, sortDesc, jobId, awxJobId, createdFrom, createdTo, changeStartFrom, changeStartTo, userId, serverId, appserviceId, lbVirtualServerId, ontapVolumeId, ontapQtreeId, storagegridBucketId, kubernetesNamespaceId, null, actionIdentifier, statusIdentifier, awxVariables, searchText);
+    }
+
+    public Page<? extends JobListBasic> findAllJobsByRole(final int page, final int itemsPerPage, final String sortBy, final boolean sortDesc, final Long jobId, final Long awxJobId, final Instant createdFrom, final Instant createdTo, final Instant changeStartFrom, final Instant changeStartTo, final Long userId, final Long serverId, final Long appserviceId, final Long lbVirtualServerId, final Long ontapVolumeId, final Long ontapQtreeId, final Long storagegridBucketId, final Long kubernetesNamespaceId, final Long repositoryId, final List<String> actionIdentifier, final String statusIdentifier, final String awxVariables, final String searchText) {
         final Sort sort;
         if (sortBy != null && !sortBy.isBlank()) {
             String actualSortBy = SORT_MAPPINGS.getOrDefault(sortBy, sortBy);
@@ -158,9 +163,9 @@ public class JobService {
         final List<String> actionIdentifierParam = hasActionIdentifier ? actionIdentifier : List.of("");
 
         if (AuthUtils.hasSpecialRole()) {
-            return jobRepository.findAllJobsComplete(pageable, jobId, awxJobId, createdFrom, createdTo, changeStartFrom, changeStartTo, userId, serverId, appserviceId, lbVirtualServerId, ontapVolumeId, ontapQtreeId, storagegridBucketId, kubernetesNamespaceId, hasActionIdentifier, actionIdentifierParam, statusIdentifier, awxVariables, searchText);
+            return jobRepository.findAllJobsComplete(pageable, jobId, awxJobId, createdFrom, createdTo, changeStartFrom, changeStartTo, userId, serverId, appserviceId, lbVirtualServerId, ontapVolumeId, ontapQtreeId, storagegridBucketId, kubernetesNamespaceId, repositoryId, hasActionIdentifier, actionIdentifierParam, statusIdentifier, awxVariables, searchText);
         }
-        return jobRepository.findAllJobsBasic(pageable, userId, serverId, appserviceId, lbVirtualServerId, ontapVolumeId, ontapQtreeId, storagegridBucketId, kubernetesNamespaceId, searchText);
+        return jobRepository.findAllJobsBasic(pageable, userId, serverId, appserviceId, lbVirtualServerId, ontapVolumeId, ontapQtreeId, storagegridBucketId, kubernetesNamespaceId, repositoryId, searchText);
     }
 
     public Job createJob(final String actionIdentifier, Server server, Map<String, Object> awxExtraVars, Map<String, Object> guiVars){
@@ -1123,6 +1128,81 @@ public class JobService {
     }
 
     // -----------------------------------------------------------------------------------------------------------------
+    // Paketshop JOBs
+    // -----------------------------------------------------------------------------------------------------------------
+    public void paketshopRepoCreate(final String identifier, final String name, final Long appserviceId,
+                                    final String upstreamUrl, final Boolean upstreamAllPackages,
+                                    final String upstreamUser, final String upstreamPassword,
+                                    final String gpgkeyLocation, final boolean selfOnly) {
+        final Appservice appservice = getAppserviceOrThrow(appserviceId);
+
+        final Map<String, Object> params = new HashMap<>();
+        params.put("name", name);
+        params.put("group", "lhm-cm-" + appservice.getNumber() + "-admin");
+        params.put("self_only", selfOnly);
+        putIfNotNull(params, "upstream-url", upstreamUrl);
+        putIfNotNull(params, "upstream-all-packages", upstreamAllPackages);
+        putIfNotNull(params, "upstream-user", upstreamUser);
+        putIfNotNull(params, "upstream-password", upstreamPassword);
+        putIfNotNull(params, "gpgkey-location", gpgkeyLocation);
+
+        createJob(identifier, null, appservice, params, new HashMap<>(), job -> job.setHostname(name));
+    }
+
+    public void paketshopRepoCopy(final String identifier, final String name, final Repository copyFrom) {
+        final Map<String, Object> params = new HashMap<>();
+        params.put("name", name);
+        params.put("copy-from", copyFrom.getName());
+
+        createJob(identifier, null, getSingleAppserviceOrThrow(copyFrom), params, new HashMap<>(), job -> {
+            job.setHostname(name);
+            job.setRepository(copyFrom);
+        });
+    }
+
+    public void paketshopRepoDelete(final String identifier, final Repository repository) {
+        final Map<String, Object> params = new HashMap<>();
+        params.put("name", repository.getName());
+
+        createJob(identifier, null, getSingleAppserviceOrThrow(repository), params, new HashMap<>(), job -> {
+            job.setHostname(repository.getName());
+            job.setRepository(repository);
+        });
+    }
+
+    public void paketshopRepoAttach(final String identifier, final Repository repository, final boolean enabled,
+                                    final boolean gpgcheck, final List<String> systems) {
+        final Map<String, Object> params = new HashMap<>();
+        params.put("name", repository.getName());
+        params.put("enabled", enabled);
+        params.put("gpgcheck", gpgcheck);
+        params.put("control_paketshop_repos_systems", systems);
+
+        createJob(identifier, null, getSingleAppserviceOrThrow(repository), params, new HashMap<>(), job -> {
+            job.setHostname(repository.getName());
+            job.setRepository(repository);
+        });
+    }
+
+    public void paketshopRepoDetach(final String identifier, final Repository repository, final List<String> systems) {
+        final Map<String, Object> params = new HashMap<>();
+        params.put("name", repository.getName());
+        params.put("control_paketshop_repos_systems", systems);
+
+        createJob(identifier, null, getSingleAppserviceOrThrow(repository), params, new HashMap<>(), job -> {
+            job.setHostname(repository.getName());
+            job.setRepository(repository);
+        });
+    }
+
+    private Appservice getSingleAppserviceOrThrow(final Repository repository) {
+        if (repository.getAppservices() == null || repository.getAppservices().size() != 1) {
+            throw new AccessDeniedException("Repository must be assigned to exactly one Application Service.");
+        }
+        return repository.getAppservices().iterator().next();
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------
     // GREEN-IT JOBs
     // -----------------------------------------------------------------------------------------------------------------
     public Long createGreenItRightsizingJob(final GreenItRightsizing greenItRightsizing) {
@@ -1467,6 +1547,12 @@ public class JobService {
         return appserviceRepository.findById(applicationServiceId)
                 .orElseThrow(() -> new NoSuchElementException(
                         "Application Service not found with id " + applicationServiceId));
+    }
+
+    private static void putIfNotNull(final Map<String, Object> params, final String key, final Object value) {
+        if (value != null) {
+            params.put(key, value);
+        }
     }
 
     private NetworkGroup getNetworkGroupOrThrow(Long networkGroupId){

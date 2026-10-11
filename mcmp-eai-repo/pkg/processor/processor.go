@@ -46,6 +46,16 @@ func (p *Processor) Fetch(ctx context.Context) (*RepoExport, error) {
 		repos = []repo.RepositoryInfo{}
 	}
 
+	// Abort on errors, otherwise the backend would set all repositories to OPEN
+	status, err := p.repoClient.GetRepoStatus(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get repository status: %w", err)
+	}
+
+	for i := range repos {
+		repos[i].Status = status.StatusFor(repos[i].Name)
+	}
+
 	return &RepoExport{
 		Repositories: repos,
 	}, nil

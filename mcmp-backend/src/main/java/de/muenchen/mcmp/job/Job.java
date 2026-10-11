@@ -85,6 +85,11 @@ public class Job extends AbstractEntity {
     @ToString.Exclude
     private KubernetesNamespace kubernetesNamespace;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "repository_id")
+    @ToString.Exclude
+    private de.muenchen.mcmp.repository.Repository repository;
+
     @Convert(converter = JobStatusConverter.class)
     @Column(name = "status", nullable = false)
     @ColumnTransformer(write = "?::job_status")

@@ -783,8 +783,8 @@ public class UnifiedStorageService {
         List<StorageGridBucket> buckets = storageGridBucketRepository.findByIdsWithAppservices(ids);
         for (StorageGridBucket bucket : buckets) {
             String appNames = "";
-            if (bucket.getStorageGridAccount() != null && bucket.getStorageGridAccount().getAppservices() != null) {
-                appNames = bucket.getStorageGridAccount().getAppservices().stream()
+            if (bucket.getAppservices() != null) {
+                appNames = bucket.getAppservices().stream()
                         .map(Appservice::getName)
                         .sorted()
                         .collect(java.util.stream.Collectors.joining(", "));

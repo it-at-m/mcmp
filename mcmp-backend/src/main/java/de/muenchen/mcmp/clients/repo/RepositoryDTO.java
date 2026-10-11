@@ -37,7 +37,9 @@ public record RepositoryDTO(
             @JsonProperty("name")
             String name,
             @JsonProperty("url")
-            String url
+            String url,
+            @JsonProperty("status")
+            String status
     ) {
     }
 }

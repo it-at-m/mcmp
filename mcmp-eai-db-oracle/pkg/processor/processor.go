@@ -249,16 +249,6 @@ func (p *Processor) FetchDatabaseMetrics(ctx context.Context) (*OracleExport, er
 		return nil, fmt.Errorf("failed to get oracle servers: %w", err)
 	}
 
-	filteredServers := make([]mcmp.OracleServer, 0, len(servers))
-	for _, s := range servers {
-		if strings.HasPrefix(s.FQDN, "bdbtestmcmpdbc004") {
-			filteredServers = append(filteredServers, s)
-		} else {
-			p.logger.DebugPrintf("Skipping server %s (currently not enabled for JDBC connections)", s.FQDN)
-		}
-	}
-	servers = filteredServers
-
 	p.logger.DebugPrintf("Starting database analysis for %d servers with %d workers", len(servers), p.config.WorkerCount)
 
 	jobs := make(chan mcmp.OracleServer, len(servers))

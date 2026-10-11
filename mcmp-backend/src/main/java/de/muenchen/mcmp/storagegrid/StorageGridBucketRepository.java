@@ -18,7 +18,7 @@ public interface StorageGridBucketRepository extends JpaRepository<StorageGridBu
             "WHERE (:search IS NULL OR LOWER(b.name) LIKE :search) " +
             "AND (" +
             "   :isAdmin = TRUE OR :isReadonly = TRUE OR :isStorage = TRUE OR :isOperator = TRUE OR " +
-            "   EXISTS (SELECT 1 FROM b.storageGridAccount.appservices a JOIN a.changeGroup g JOIN g.users u WHERE u.username = :username)" +
+            "   EXISTS (SELECT 1 FROM b.appservices a JOIN a.changeGroup g JOIN g.users u WHERE u.username = :username)" +
             ")")
     long count(@Param("search") String search,
                @Param("username") String username,
@@ -32,7 +32,7 @@ public interface StorageGridBucketRepository extends JpaRepository<StorageGridBu
             "WHERE b.id = :id " +
             "AND (" +
             "   :isAdmin = TRUE OR :isReadonly = TRUE OR :isStorage = TRUE OR :isOperator = TRUE OR " +
-            "   EXISTS (SELECT 1 FROM b.storageGridAccount.appservices a JOIN a.changeGroup g JOIN g.users u WHERE u.username = :username)" +
+            "   EXISTS (SELECT 1 FROM b.appservices ap JOIN ap.changeGroup g JOIN g.users u WHERE u.username = :username)" +
             ")")
     Optional<StorageGridBucket> findByIdWithPermissions(@Param("id") Long id,
                                                         @Param("username") String username,
@@ -46,7 +46,7 @@ public interface StorageGridBucketRepository extends JpaRepository<StorageGridBu
             "AND (:search IS NULL OR LOWER(b.name) LIKE :search) " +
             "AND (" +
             "   :isAdmin = TRUE OR :isReadonly = TRUE OR :isStorage = TRUE OR :isOperator = TRUE OR " +
-            "   EXISTS (SELECT 1 FROM b.storageGridAccount.appservices a JOIN a.changeGroup g JOIN g.users u WHERE u.username = :username)" +
+            "   EXISTS (SELECT 1 FROM b.appservices a JOIN a.changeGroup g JOIN g.users u WHERE u.username = :username)" +
             ")")
     List<Object[]> findBucketListItems(@Param("search") String search,
                                        @Param("username") String username,
@@ -55,20 +55,17 @@ public interface StorageGridBucketRepository extends JpaRepository<StorageGridBu
                                        @Param("isStorage") boolean isStorage,
                                        @Param("isOperator") boolean isOperator);
 
-    @Query("SELECT b FROM StorageGridBucket b " +
-            "LEFT JOIN FETCH b.storageGridAccount acc " +
-            "LEFT JOIN FETCH acc.appservices a " +
+    @Query("SELECT DISTINCT b FROM StorageGridBucket b " +
+            "LEFT JOIN FETCH b.appservices a " +
             "WHERE b.id IN :ids")
     List<StorageGridBucket> findByIdsWithAppservices(@Param("ids") List<Long> ids);
 
     @Query("SELECT b.id, b.name, b.storageCategory FROM StorageGridBucket b " +
-            //"JOIN b.storageGridAccount.appservices ab " +
             "JOIN b.appservices ab " +
             "WHERE ab.id = :appserviceId " +
             "AND b.storageCategory IS NOT NULL " +
             "AND (" +
             "   :isAdmin = TRUE OR :isReadonly = TRUE OR :isStorage = TRUE OR :isOperator = TRUE OR " +
-            //"   EXISTS (SELECT 1 FROM b.storageGridAccount.appservices a JOIN a.changeGroup g JOIN g.users u WHERE u.username = :username)" +
             "   EXISTS (SELECT 1 FROM b.appservices a JOIN a.changeGroup g JOIN g.users u WHERE u.username = :username)" +
             ")")
     List<Object[]> findBucketListItemsByAppserviceId(@Param("appserviceId") Long appserviceId,
@@ -79,12 +76,11 @@ public interface StorageGridBucketRepository extends JpaRepository<StorageGridBu
                                                      @Param("isOperator") boolean isOperator);
 
     @Query("SELECT CASE WHEN EXISTS (" +
-            "SELECT 1 FROM StorageGridBucket b JOIN b.storageGridAccount acc " +
-            "WHERE b.id = :id AND SIZE(acc.appservices) = 1" +
+            "SELECT 1 FROM StorageGridBucket b " +
+            "WHERE b.id = :id AND SIZE(b.appservices) = 1" +
             ") AND (:isAdmin = TRUE OR :isStorage = TRUE OR EXISTS (" +
             "SELECT 1 FROM StorageGridBucket b " +
-            "JOIN b.storageGridAccount acc " +
-            "JOIN acc.appservices a " +
+            "JOIN b.appservices a " +
             "JOIN a.changeGroup g " +
             "JOIN g.users u " +
             "WHERE b.id = :id AND u.username = :username" +
@@ -92,11 +88,11 @@ public interface StorageGridBucketRepository extends JpaRepository<StorageGridBu
     Boolean canUserEditBucket(@Param("id") Long id, @Param("username") String username,
                               @Param("isAdmin") boolean isAdmin, @Param("isStorage") boolean isStorage);
 
-    @Query("SELECT b.id FROM StorageGridBucket b JOIN b.storageGridAccount acc " +
+    @Query("SELECT b.id FROM StorageGridBucket b " +
             "WHERE b.id IN :ids " +
-            "AND SIZE(acc.appservices) = 1 " +
+            "AND SIZE(b.appservices) = 1 " +
             "AND (:isAdmin = TRUE OR :isStorage = TRUE OR EXISTS (" +
-            "   SELECT 1 FROM acc.appservices a JOIN a.changeGroup g JOIN g.users u WHERE u.username = :username" +
+            "   SELECT 1 FROM b.appservices a JOIN a.changeGroup g JOIN g.users u WHERE u.username = :username" +
             "))")
     List<Long> findEditableBucketIds(@Param("ids") List<Long> ids, @Param("username") String username,
                                      @Param("isAdmin") boolean isAdmin, @Param("isStorage") boolean isStorage);

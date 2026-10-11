@@ -8,6 +8,7 @@ import de.muenchen.mcmp.errorlog.ErrorLogService;
 import de.muenchen.mcmp.loadbalancer.LoadbalancerService;
 import de.muenchen.mcmp.mountPoint.MountPointService;
 import de.muenchen.mcmp.network.NetworkService;
+import de.muenchen.mcmp.repository.RepositoryService;
 import de.muenchen.mcmp.security.RequestBodyCachingFilter;
 import de.muenchen.mcmp.security.RequestResponseLoggingFilter;
 import de.muenchen.mcmp.server.ServerService;
@@ -71,6 +72,8 @@ class JobControllerReadEndpointsTest {
     private UserService userService;
     @MockitoBean
     private LoadbalancerService loadbalancerService;
+    @MockitoBean
+    private RepositoryService repositoryService;
     @MockitoBean
     private ErrorLogService errorLogService;
 

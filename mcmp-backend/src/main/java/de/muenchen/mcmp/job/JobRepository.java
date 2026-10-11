@@ -225,6 +225,7 @@ public interface JobRepository extends JpaRepository<Job, Long> {
     AND (CAST(:ontapQtreeId AS bigint) IS NULL OR j.ontap_qtree_id = :ontapQtreeId)
     AND (CAST(:storagegridBucketId AS bigint) IS NULL OR j.storagegrid_bucket_id = :storagegridBucketId)
     AND (CAST(:kubernetesNamespaceId AS bigint) IS NULL OR j.kubernetes_namespace_id = :kubernetesNamespaceId)
+    AND (CAST(:repositoryId AS bigint) IS NULL OR j.repository_id = :repositoryId)
     AND (CAST(:hasActionIdentifier AS boolean) = false OR j.action_identifier IN (:actionIdentifier))
     AND (CAST(:statusIdentifier AS text) IS NULL OR CAST(j.status AS text) = :statusIdentifier)
     AND (CAST(:awxVariables AS text) IS NULL OR j.awx_variables ILIKE CONCAT('%', :awxVariables, '%'))
@@ -250,6 +251,7 @@ public interface JobRepository extends JpaRepository<Job, Long> {
     AND (CAST(:ontapQtreeId AS bigint) IS NULL OR j.ontap_qtree_id = :ontapQtreeId)
     AND (CAST(:storagegridBucketId AS bigint) IS NULL OR j.storagegrid_bucket_id = :storagegridBucketId)
     AND (CAST(:kubernetesNamespaceId AS bigint) IS NULL OR j.kubernetes_namespace_id = :kubernetesNamespaceId)
+    AND (CAST(:repositoryId AS bigint) IS NULL OR j.repository_id = :repositoryId)
     AND (CAST(:hasActionIdentifier AS boolean) = false OR j.action_identifier IN (:actionIdentifier))
     AND (CAST(:statusIdentifier AS text) IS NULL OR CAST(j.status AS text) = :statusIdentifier)
     AND (CAST(:awxVariables AS text) IS NULL OR j.awx_variables ILIKE CONCAT('%', :awxVariables, '%'))
@@ -271,6 +273,7 @@ public interface JobRepository extends JpaRepository<Job, Long> {
                                               @Param("ontapQtreeId") Long ontapQtreeId,
                                               @Param("storagegridBucketId") Long storagegridBucketId,
                                               @Param("kubernetesNamespaceId") Long kubernetesNamespaceId,
+                                              @Param("repositoryId") Long repositoryId,
                                               @Param("hasActionIdentifier") boolean hasActionIdentifier,
                                               @Param("actionIdentifier") List<String> actionIdentifier,
                                               @Param("statusIdentifier") String statusIdentifier,
@@ -343,6 +346,7 @@ public interface JobRepository extends JpaRepository<Job, Long> {
     AND (CAST(:ontapQtreeId AS bigint) IS NULL OR j.ontap_qtree_id = :ontapQtreeId)
     AND (CAST(:storagegridBucketId AS bigint) IS NULL OR j.storagegrid_bucket_id = :storagegridBucketId)
     AND (CAST(:kubernetesNamespaceId AS bigint) IS NULL OR j.kubernetes_namespace_id = :kubernetesNamespaceId)
+    AND (CAST(:repositoryId AS bigint) IS NULL OR j.repository_id = :repositoryId)
     AND (CAST(:searchText AS text) IS NULL OR j.title ILIKE CONCAT('%', :searchText, '%')
         OR j.description ILIKE CONCAT('%', :searchText, '%') OR j.hostname ILIKE CONCAT('%', :searchText, '%'))
     """,
@@ -357,6 +361,7 @@ public interface JobRepository extends JpaRepository<Job, Long> {
     AND (CAST(:ontapQtreeId AS bigint) IS NULL OR j.ontap_qtree_id = :ontapQtreeId)
     AND (CAST(:storagegridBucketId AS bigint) IS NULL OR j.storagegrid_bucket_id = :storagegridBucketId)
     AND (CAST(:kubernetesNamespaceId AS bigint) IS NULL OR j.kubernetes_namespace_id = :kubernetesNamespaceId)
+    AND (CAST(:repositoryId AS bigint) IS NULL OR j.repository_id = :repositoryId)
     AND (CAST(:searchText AS text) IS NULL OR j.title ILIKE CONCAT('%', :searchText, '%')
         OR j.description ILIKE CONCAT('%', :searchText, '%') OR j.hostname ILIKE CONCAT('%', :searchText, '%'))
     """, nativeQuery = true)
@@ -369,6 +374,7 @@ public interface JobRepository extends JpaRepository<Job, Long> {
                                         @Param("ontapQtreeId") Long ontapQtreeId,
                                         @Param("storagegridBucketId") Long storagegridBucketId,
                                         @Param("kubernetesNamespaceId") Long kubernetesNamespaceId,
+                                        @Param("repositoryId") Long repositoryId,
                                         @Param("searchText") String searchText);
 
     @Query(value = "SELECT DISTINCT j.action_identifier FROM cmp.job j ORDER BY j.action_identifier ASC", nativeQuery = true)

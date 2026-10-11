@@ -123,6 +123,9 @@
                 <appservice-details-openshift
                   :selected-appservice="selectedAppservice"
                 />
+                <appservice-details-repos
+                  :selected-appservice="selectedAppservice"
+                />
               </v-tabs-window-item>
 
               <v-tabs-window-item value="History">
@@ -174,6 +177,7 @@ import AppServiceDetailHistory from "@/components/Appservice/AppServiceDetailHis
 import AppserviceDetailsAllgemein from "@/components/Appservice/AppserviceDetailsAllgemein.vue";
 import AppserviceDetailsLoadbalancer from "@/components/Appservice/AppserviceDetailsLoadbalancer.vue";
 import AppserviceDetailsOpenshift from "@/components/Appservice/AppserviceDetailsOpenshift.vue";
+import AppserviceDetailsRepos from "@/components/Appservice/AppserviceDetailsRepos.vue";
 import AppserviceDetailsServer from "@/components/Appservice/AppserviceDetailsServer.vue";
 import AppserviceDetailsStorage from "@/components/Appservice/AppserviceDetailsStorage.vue";
 import AppserviceList from "@/components/Appservice/AppserviceList.vue";

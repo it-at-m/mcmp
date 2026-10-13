@@ -1,8 +1,11 @@
 package processor
 
+import "github.com/it-at-m/mcmp/mcmp-eai-common/pkg/app"
+
 type (
 	ForemanData struct {
-		Hosts []Host `json:"hosts"`
+		app.EaiMetadata `json:"metadata"`
+		Hosts           []Host `json:"hosts"`
 	}
 
 	Host struct {
@@ -45,6 +48,7 @@ type (
 		MariaDBVersion            *string         `json:"maria_db_version,omitempty"`
 		OracleDBVersion           *string         `json:"oracle_db_version,omitempty"`
 		OracleSID                 *string         `json:"oracle_sid,omitempty"`
+		OracleSIDs                []string        `json:"oracle_sids,omitempty"`
 		Mountpoints               []Mountpoint    `json:"mountpoints,omitempty"`
 		Partitions                []Partition     `json:"partitions,omitempty"`
 		LogicalVolumes            []LogicalVolume `json:"logical_volumes,omitempty"`
@@ -107,3 +111,11 @@ type (
 		UUID          string `json:"uuid,omitempty"`
 	}
 )
+
+func (f *ForemanData) SetEaiMetadata(meta app.EaiMetadata) {
+	f.EaiMetadata = meta
+}
+
+func (f *ForemanData) GetEaiMetadata() app.EaiMetadata {
+	return f.EaiMetadata
+}

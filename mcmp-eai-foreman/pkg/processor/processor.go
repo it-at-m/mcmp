@@ -470,6 +470,7 @@ func (sp *ServiceProcessor) transformForemanHostToMCMP(foremanHost *foreman.Host
 		TetrationAgentIsInstalled: sp.extractBooleanValueFromFacts(foremanHost.Facts, "tetration_agent_is_installed"),
 		OracleDBVersion:           sp.extractStringValueFromFacts(foremanHost.Facts, "lhm_ora::DB_VERSION"),
 		OracleSID:                 sp.extractStringValueFromFacts(foremanHost.Facts, "lhm_ora::ORACLE_SID"),
+		OracleSIDs:                sp.extractStringArrayValueFromFacts(foremanHost.Facts, "lhm_ora_sid_list", ","),
 		ServerInfosOwnerMail:      sp.extractStringValueFromFacts(foremanHost.Facts, "server_infos_owner_mail"),
 		ServerInfosTicketnr:       sp.extractStringValueFromFacts(foremanHost.Facts, "server_infos_ticketnr"),
 		Source:                    hostNamePtr,
@@ -491,6 +492,7 @@ func (sp *ServiceProcessor) transformForemanHostToMCMP(foremanHost *foreman.Host
 		sp.extractBooleanValueFromFacts(foremanHost.Facts, "lhm_managed_mariadb"),
 		sp.extractBooleanValueFromFacts(foremanHost.Facts, "lhm_managed_mysql"),
 		sp.extractBooleanValueFromFacts(foremanHost.Facts, "lhm_managed_mongodb"),
+		sp.extractBooleanValueFromFacts(foremanHost.Facts, "lhm_managed_oracledb"),
 	)
 
 	// Process patchnight scheduling information
@@ -677,7 +679,7 @@ func (sp *ServiceProcessor) debugPrintf(format string, args ...interface{}) {
 //
 // The function sets the corresponding boolean fields in the Host struct.
 // For unknown schemas, Linux = true is set as default.
-func (sp *ServiceProcessor) determineDatabaseAndOSType(host *Host, factLhmManagedPostgresql bool, factLhmManagedMariaDB bool, factLhmManagedMySQLDB bool, factLhmManagedMongoDB bool) {
+func (sp *ServiceProcessor) determineDatabaseAndOSType(host *Host, factLhmManagedPostgresql bool, factLhmManagedMariaDB bool, factLhmManagedMySQLDB bool, factLhmManagedMongoDB bool, factLhmManagedOracleDB bool) {
 	if host == nil || host.Name == "" {
 		return
 	}
@@ -709,6 +711,10 @@ func (sp *ServiceProcessor) determineDatabaseAndOSType(host *Host, factLhmManage
 	if factLhmManagedMongoDB {
 		host.MongoDB = true
 		sp.debugPrintf("Fact lhm_managed_mongodb == true -> Set MongoDB=true for host %s", hostname)
+	}
+	if factLhmManagedOracleDB {
+		host.OracleDB = true
+		sp.debugPrintf("Fact lhm_managed_oracledb == true -> Set OracleDB=true for host %s", hostname)
 	}
 
 	// Search for naming schema pattern from the end
@@ -883,6 +889,72 @@ func (sp *ServiceProcessor) extractStringValueFromFacts(facts map[string]interfa
 	}
 
 	return nil
+}
+
+// extractStringArrayValueFromFacts extracts a string value from the Facts map by key,
+// splits it by the given separator, trims whitespace from every element and returns
+// the remaining values as a slice of strings.
+//
+// The method behaves like extractStringValueFromFacts regarding lookup and type
+// checking, but returns a slice instead of a single string:
+// - Missing facts map, missing key, non-string value or empty string -> nil
+// - The value is split by the separator (default: ",")
+// - Every element is trimmed via strings.TrimSpace
+// - Elements that are empty after trimming are skipped
+//
+// Parameters:
+//   - facts: Map of fact names to fact values from Foreman host
+//   - key: The fact name to extract
+//   - separator: Optional separator; if omitted or empty, "," is used
+//
+// Returns:
+//   - []string: Slice with the trimmed values, nil if the fact is missing or invalid
+//
+// Example usage:
+//
+//	facts := map[string]interface{}{
+//	    "lhm_ora_sid_list": "SID1, SID2 ,  ,SID3",
+//	}
+//	sids := sp.extractStringArrayValueFromFacts(facts, "lhm_ora_sid_list")
+//	// Returns []string{"SID1", "SID2", "SID3"}
+//
+//	sids = sp.extractStringArrayValueFromFacts(facts, "lhm_ora_sid_list", ";")
+//	// Returns []string{"SID1, SID2 ,  ,SID3"}
+func (sp *ServiceProcessor) extractStringArrayValueFromFacts(facts map[string]interface{}, key string, separator ...string) []string {
+	if facts == nil {
+		return nil
+	}
+
+	value, exists := facts[key]
+	if !exists {
+		return nil
+	}
+
+	str, ok := value.(string)
+	if !ok || str == "" {
+		return nil
+	}
+
+	sep := ","
+	if len(separator) > 0 && separator[0] != "" {
+		sep = separator[0]
+	}
+
+	parts := strings.Split(str, sep)
+	values := make([]string, 0, len(parts))
+	for _, part := range parts {
+		trimmed := strings.TrimSpace(part)
+		if trimmed == "" {
+			continue
+		}
+		values = append(values, trimmed)
+	}
+
+	if len(values) == 0 {
+		return nil
+	}
+
+	return values
 }
 
 // extractRepositoriesFromFacts extracts the repositories list from Foreman facts.

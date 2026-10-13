@@ -5,14 +5,14 @@
         <h3>Betriebssystem</h3>
       </v-col>
       <v-col
-        v-if="props.selectedServer.powerState === 'poweredOn'"
-        cols="3"
+          v-if="props.selectedServer.powerState === 'poweredOn'"
+          cols="3"
       >
         <h3>Letzter Reboot</h3>
       </v-col>
       <v-col
-        v-if="props.selectedServer.powerState === 'poweredOff'"
-        cols="3"
+          v-if="props.selectedServer.powerState === 'poweredOff'"
+          cols="3"
       >
         <h3>Abschaltgrund</h3>
       </v-col>
@@ -24,78 +24,78 @@
           Anwendungsservice{{
             props.selectedServer.appservices &&
             props.selectedServer.appservices.length > 1
-              ? "s"
-              : ""
+                ? "s"
+                : ""
           }}<info-tooltip>
-            <div class="pa-1">
-              <strong>MCMP Anwendungsservice-Ansicht</strong>
-              <p class="text-caption mt-2 mb-1">
-                Öffnet die Detailseite des Anwendungsservice direkt hier in der
-                MCMP.
-              </p>
-            </div>
-          </info-tooltip>
+          <div class="pa-1">
+            <strong>MCMP Anwendungsservice-Ansicht</strong>
+            <p class="text-caption mt-2 mb-1">
+              Öffnet die Detailseite des Anwendungsservice direkt hier in der
+              MCMP.
+            </p>
+          </div>
+        </info-tooltip>
         </h3>
       </v-col>
     </v-row>
     <v-row>
       <v-col
-        cols="3"
-        class="pt-0"
+          cols="3"
+          class="pt-0"
       >
         <p>
           {{ formatter.ifEmptyReturnDash(props.selectedServer.os) }}
         </p>
       </v-col>
       <v-col
-        v-if="props.selectedServer.powerState === 'poweredOn'"
-        cols="3"
-        class="pt-0"
+          v-if="props.selectedServer.powerState === 'poweredOn'"
+          cols="3"
+          class="pt-0"
       >
         <p>
           {{
             formatter.ifEmptyReturnDash(
-              formatter.formatToGermanLocalTime(props.selectedServer.bootTime)
+                formatter.formatToGermanLocalTime(props.selectedServer.bootTime)
             )
           }}
         </p>
       </v-col>
       <v-col
-        v-if="props.selectedServer.powerState === 'poweredOff'"
-        cols="3"
-        class="pt-0"
+          v-if="props.selectedServer.powerState === 'poweredOff'"
+          cols="3"
+          class="pt-0"
       >
         <p>
           {{
             formatter.ifEmptyReturnDash(
-              props.selectedServer.serverCustomAttributes?.["A_turned_off_note"]
+                props.selectedServer.serverCustomAttributes?.["A_turned_off_note"]
             )
           }}
         </p>
       </v-col>
       <v-col
-        cols="3"
-        class="pt-0"
+          cols="3"
+          class="pt-0"
       >
         <p>
           {{ formatter.ifEmptyReturnDash(props.selectedServer.fqdn) }}
         </p>
       </v-col>
       <v-col
-        cols="3"
-        class="pt-0 links"
+          cols="3"
+          class="pt-0 links"
       >
         <div
-          v-if="
+            v-if="
             props.selectedServer.appservices &&
             props.selectedServer.appservices.length > 1
           "
         >
           <ul style="padding-left: 0; list-style-position: inside">
             <li
-              v-for="appservice in props.selectedServer.appservices"
-              :key="appservice.id"
-              class="mb-1"
+                v-for="appservice in props.selectedServer.appservices"
+                :key="appservice.id"
+                class="mb-1"
             >
               <router-link :to="`/appservice/${appservice.id}`">
                 {{ appservice.name }}
@@ -104,7 +104,7 @@
           </ul>
         </div>
         <div
-          v-else-if="
+            v-else-if="
             props.selectedServer.appservices &&
             props.selectedServer.appservices.length === 1
           "
@@ -116,21 +116,56 @@
         <p v-else>-</p>
       </v-col>
     </v-row>
+
+    <v-row
+        v-if="showApplications"
+        class="mt-1"
+    >
+      <v-col cols="3">
+        <h3>Applikationen</h3>
+      </v-col>
+    </v-row>
+
+    <v-row v-if="showApplications">
+      <v-col
+          cols="12"
+          md="6"
+          lg="3"
+          class="pt-0"
+      >
+        <div
+            v-if="installedApplications.length > 0"
+            class="d-flex flex-wrap ga-1"
+        >
+          <v-chip
+              v-for="app in installedApplications"
+              :key="app"
+              size="small"
+              variant="tonal"
+              color="primary"
+          >
+            {{ app }}
+          </v-chip>
+        </div>
+        <p v-else>-</p>
+      </v-col>
+    </v-row>
   </common-card>
+
   <common-card
-    title="Ressourcen"
-    top-margin="0"
+      title="Ressourcen"
+      top-margin="0"
   >
     <template #toolbar-actions>
       <edit-resources
-        v-if="
+          v-if="
           selectedServer.canEdit &&
           (selectedServer.cloud?.cloudType == 'VMWARE' ||
             selectedServer.cloud?.cloudType == 'PROXMOX')
         "
-        :server="props.selectedServer"
-        :rightsize="false"
-        @save="
+          :server="props.selectedServer"
+          :rightsize="false"
+          @save="
           (cpus, ram, scheduleTime, schedulePatchnight) =>
             change_cpu_ram(cpus, ram, scheduleTime, schedulePatchnight)
         "
@@ -140,13 +175,13 @@
       <v-col cols="3">
         <h3>
           <v-tooltip
-            v-if="
+              v-if="
               !selectedServer.numCpuRecommended ||
               selectedServer.numCpuRecommended == 0 ||
               isCpuInCooldown
             "
-            location="bottom"
-            :text="
+              location="bottom"
+              :text="
               isCpuInCooldown &&
               selectedServer.numCpuRecommended &&
               selectedServer.numCpuRecommended != 0
@@ -156,40 +191,40 @@
           >
             <template #activator="{ props: statusProps }">
               <v-icon
-                v-bind="statusProps"
-                :icon="
+                  v-bind="statusProps"
+                  :icon="
                   isCpuInCooldown &&
                   selectedServer.numCpuRecommended &&
                   selectedServer.numCpuRecommended != 0
                     ? mdiPauseCircle
                     : mdiHelpCircle
                 "
-                color="grey"
-                size="small"
+                  color="grey"
+                  size="small"
               />
             </template>
           </v-tooltip>
           <v-icon
-            v-else-if="
+              v-else-if="
               selectedServer.numCpuRecommended === selectedServer.numCpu
             "
-            :icon="mdiCheckCircle"
-            color="_green"
-            size="small"
+              :icon="mdiCheckCircle"
+              color="_green"
+              size="small"
           />
           <v-tooltip
-            v-else-if="
+              v-else-if="
               selectedServer.numCpuRecommended != selectedServer.numCpu
             "
-            location="bottom"
-            :text="'Empfehlung: ' + selectedServer.numCpuRecommended + ' CPUs'"
+              location="bottom"
+              :text="'Empfehlung: ' + selectedServer.numCpuRecommended + ' CPUs'"
           >
             <template #activator="{ props: statusProps }">
               <v-icon
-                v-bind="statusProps"
-                :icon="mdiAlertCircle"
-                color="orange"
-                size="small"
+                  v-bind="statusProps"
+                  :icon="mdiAlertCircle"
+                  color="orange"
+                  size="small"
               />
             </template>
           </v-tooltip>
@@ -200,13 +235,13 @@
       <v-col cols="3">
         <h3>
           <v-tooltip
-            v-if="
+              v-if="
               !selectedServer.memoryMbRecommended ||
               selectedServer.memoryMbRecommended == 0 ||
               isMemoryInCooldown
             "
-            location="bottom"
-            :text="
+              location="bottom"
+              :text="
               isMemoryInCooldown &&
               selectedServer.memoryMbRecommended &&
               selectedServer.memoryMbRecommended != 0
@@ -216,33 +251,33 @@
           >
             <template #activator="{ props: statusProps }">
               <v-icon
-                v-bind="statusProps"
-                :icon="
+                  v-bind="statusProps"
+                  :icon="
                   isMemoryInCooldown &&
                   selectedServer.memoryMbRecommended &&
                   selectedServer.memoryMbRecommended != 0
                     ? mdiPauseCircle
                     : mdiHelpCircle
                 "
-                color="grey"
-                size="small"
+                  color="grey"
+                  size="small"
               />
             </template>
           </v-tooltip>
           <v-icon
-            v-else-if="
+              v-else-if="
               selectedServer.memoryMbRecommended === selectedServer.memoryMb
             "
-            :icon="mdiCheckCircle"
-            color="_green"
-            size="small"
+              :icon="mdiCheckCircle"
+              color="_green"
+              size="small"
           />
           <v-tooltip
-            v-else-if="
+              v-else-if="
               selectedServer.memoryMbRecommended != selectedServer.memoryMb
             "
-            location="bottom"
-            :text="
+              location="bottom"
+              :text="
               'Empfehlung: ' +
               formatter.formatMBtoGB(selectedServer.memoryMbRecommended) +
               ' GB'
@@ -250,10 +285,10 @@
           >
             <template #activator="{ props: statusProps }">
               <v-icon
-                v-bind="statusProps"
-                :icon="mdiAlertCircle"
-                color="orange"
-                size="small"
+                  v-bind="statusProps"
+                  :icon="mdiAlertCircle"
+                  color="orange"
+                  size="small"
               />
             </template>
           </v-tooltip>
@@ -261,49 +296,49 @@
         </h3>
       </v-col>
       <v-col
-        v-if="
+          v-if="
           props.selectedServer.serverType === 'VM_VMWARE' ||
           props.selectedServer.serverType === 'VM_PROXMOX'
         "
-        cols="3"
+          cols="3"
       >
         <h3>Festplattengröße</h3>
       </v-col>
     </v-row>
     <v-row>
       <v-col
-        cols="3"
-        class="pt-0"
+          cols="3"
+          class="pt-0"
       >
         <linear-progress-with-colors
-          v-if="props.selectedServer.cpuUtil != null"
-          :value="props.selectedServer.cpuUtil ?? 0"
-          :show-percentage="true"
-          :title="`CPU Auslastung bei ${props.selectedServer.cpuUtil ?? 0}%`"
-          :tooltip-text="'Quelle: Checkmk, Abfrageintervall: 1x pro Minute'"
+            v-if="props.selectedServer.cpuUtil != null"
+            :value="props.selectedServer.cpuUtil ?? 0"
+            :show-percentage="true"
+            :title="`CPU Auslastung bei ${props.selectedServer.cpuUtil ?? 0}%`"
+            :tooltip-text="'Quelle: Checkmk, Abfrageintervall: 1x pro Minute'"
         />
         <p v-else>Checkmk CPU-Metriken nicht verfügbar</p>
       </v-col>
       <v-col
-        cols="3"
-        class="pt-0"
+          cols="3"
+          class="pt-0"
       >
         <linear-progress-with-colors
-          v-if="props.selectedServer.memUsedPercent != null"
-          :value="props.selectedServer.memUsedPercent ?? 0"
-          :show-percentage="true"
-          :title="`Arbeitsspeicher Auslastung bei ${props.selectedServer.memUsedPercent ?? 0}%`"
-          :tooltip-text="'Quelle: Checkmk, Abfrageintervall: 1x pro Minute'"
+            v-if="props.selectedServer.memUsedPercent != null"
+            :value="props.selectedServer.memUsedPercent ?? 0"
+            :show-percentage="true"
+            :title="`Arbeitsspeicher Auslastung bei ${props.selectedServer.memUsedPercent ?? 0}%`"
+            :tooltip-text="'Quelle: Checkmk, Abfrageintervall: 1x pro Minute'"
         />
         <p v-else>Checkmk RAM-Metriken nicht verfügbar</p>
       </v-col>
       <v-col
-        v-if="
+          v-if="
           props.selectedServer.serverType === 'VM_VMWARE' ||
           props.selectedServer.serverType === 'VM_PROXMOX'
         "
-        cols="3"
-        class="pt-0"
+          cols="3"
+          class="pt-0"
       >
         <p>
           {{
@@ -316,11 +351,11 @@
     </v-row>
     <v-row>
       <v-col
-        cols="3"
-        class="pt-0"
+          cols="3"
+          class="pt-0"
       >
         <p
-          v-if="
+            v-if="
             props.selectedServer.serverType === 'VM_VMWARE' ||
             props.selectedServer.serverType === 'VM_PROXMOX'
           "
@@ -328,7 +363,7 @@
           {{ props.selectedServer.numCpu }} CPUs
         </p>
         <p
-          v-else-if="
+            v-else-if="
             ['CISCO_RACK_UNIT', 'CISCO_BLADE', 'VM_OLVM'].includes(
               props.selectedServer.serverType
             )
@@ -341,11 +376,11 @@
         </p>
       </v-col>
       <v-col
-        cols="3"
-        class="pt-0"
+          cols="3"
+          class="pt-0"
       >
         <p
-          v-if="
+            v-if="
             props.selectedServer.serverType === 'VM_VMWARE' ||
             props.selectedServer.serverType === 'VM_PROXMOX'
           "
@@ -353,7 +388,7 @@
           {{ formatter.formatMBtoGB(props.selectedServer.memoryMb) }} GB
         </p>
         <p
-          v-else-if="
+            v-else-if="
             ['CISCO_RACK_UNIT', 'CISCO_BLADE'].includes(
               props.selectedServer.serverType
             )
@@ -361,7 +396,7 @@
         >
           {{ formatter.formatMBtoGB(props.selectedServer.memoryMb) }} GB
           <span
-            v-if="
+              v-if="
               props.selectedServer.memoryMbAvailable !==
               props.selectedServer.memoryMb
             "
@@ -378,24 +413,24 @@
     </v-row>
     <v-row>
       <v-col
-        v-if="
+          v-if="
           !isCpuInCooldown &&
           props.selectedServer.numCpuRecommended &&
           props.selectedServer.numCpuRecommended != 0 &&
           selectedServer.numCpuRecommended != selectedServer.numCpu
         "
-        cols="3"
-        class="pt-0 d-flex align-center"
+          cols="3"
+          class="pt-0 d-flex align-center"
       >
         <edit-resources
-          v-if="
+            v-if="
             selectedServer.canEdit &&
             (selectedServer.cloud?.cloudType == 'VMWARE' ||
               selectedServer.cloud?.cloudType == 'PROXMOX')
           "
-          :server="props.selectedServer"
-          :rightsize="true"
-          @save="
+            :server="props.selectedServer"
+            :rightsize="true"
+            @save="
             (cpus, ram, scheduleTime, schedulePatchnight) =>
               change_cpu_ram(cpus, ram, scheduleTime, schedulePatchnight)
           "
@@ -404,29 +439,29 @@
         {{ props.selectedServer.numCpuRecommended }} CPUs
       </v-col>
       <v-col
-        v-else
-        cols="3"
-        class="pt-0"
+          v-else
+          cols="3"
+          class="pt-0"
       ></v-col>
       <v-col
-        v-if="
+          v-if="
           !isMemoryInCooldown &&
           selectedServer.memoryMbRecommended &&
           selectedServer.memoryMbRecommended != 0 &&
           selectedServer.memoryMbRecommended != selectedServer.memoryMb
         "
-        cols="3"
-        class="pt-0 d-flex align-center"
+          cols="3"
+          class="pt-0 d-flex align-center"
       >
         <edit-resources
-          v-if="
+            v-if="
             selectedServer.canEdit &&
             (selectedServer.cloud?.cloudType == 'VMWARE' ||
               selectedServer.cloud?.cloudType == 'PROXMOX')
           "
-          :server="props.selectedServer"
-          :rightsize="true"
-          @save="
+            :server="props.selectedServer"
+            :rightsize="true"
+            @save="
             (cpus, ram, scheduleTime, schedulePatchnight) =>
               change_cpu_ram(cpus, ram, scheduleTime, schedulePatchnight)
           "
@@ -437,92 +472,93 @@
       </v-col>
     </v-row>
   </common-card>
+
   <common-card
-    title="CMDB"
-    top-margin="0"
+      title="CMDB"
+      top-margin="0"
   >
     <v-row>
       <v-col
-        v-if="
+          v-if="
           selectedServer.cloud?.cloudType == 'VMWARE' ||
           selectedServer.cloud?.cloudType == 'PROXMOX'
         "
-        cols="3"
+          cols="3"
       >
         <h3>
           VM Instanz<info-tooltip>
-            <div class="pa-1">
-              <strong>Virtuelle Infrastruktur</strong>
-              <p class="text-caption mt-2 mb-1">
-                Dieses Objekt repräsentiert die "Hülle" der virtuellen Maschine.
-              </p>
-              <ul
+          <div class="pa-1">
+            <strong>Virtuelle Infrastruktur</strong>
+            <p class="text-caption mt-2 mb-1">
+              Dieses Objekt repräsentiert die "Hülle" der virtuellen Maschine.
+            </p>
+            <ul
                 class="mt-2 text-body-2"
                 style="padding-left: 1.2rem"
-              >
-                <li>
-                  <strong>Ressourcen:</strong> Definition von vCPU, RAM und
-                  Festplatten-Limitierung.
-                </li>
-                <li>
-                  <strong>Hosting:</strong> Verknüpfung zum physischen ESXi-Host
-                  und Datastore.
-                </li>
-                <li>
-                  <strong>Management:</strong> Basis für Hardware-Änderungen
-                  (Resize) und Snapshots.
-                </li>
-              </ul>
-            </div>
-          </info-tooltip>
+            >
+              <li>
+                <strong>Ressourcen:</strong> Definition von vCPU, RAM und
+                Festplatten-Limitierung.
+              </li>
+              <li>
+                <strong>Hosting:</strong> Verknüpfung zum physischen ESXi-Host
+                und Datastore.
+              </li>
+              <li>
+                <strong>Management:</strong> Basis für Hardware-Änderungen
+                (Resize) und Snapshots.
+              </li>
+            </ul>
+          </div>
+        </info-tooltip>
         </h3>
       </v-col>
       <v-col cols="3">
         <h3>
           Server Instanz<info-tooltip>
-            <div class="pa-1">
-              <strong>Betriebssystem & Laufzeit (OS-Sicht)</strong>
-              <p class="text-caption mt-2 mb-1">
-                Dieses Objekt repräsentiert das installierte System "innerhalb"
-                der VM.
-              </p>
-              <ul
+          <div class="pa-1">
+            <strong>Betriebssystem & Laufzeit (OS-Sicht)</strong>
+            <p class="text-caption mt-2 mb-1">
+              Dieses Objekt repräsentiert das installierte System "innerhalb"
+              der VM.
+            </p>
+            <ul
                 class="mt-2 text-body-2"
                 style="padding-left: 1.2rem"
-              >
-                <li>
-                  <strong>Identität:</strong> FQDN, Betriebssystem-Version
-                  (Kernel/Patchlevel).
-                </li>
-                <li>
-                  <strong>Inhalt:</strong> Installierte Software, aktive
-                  Prozesse und gemountete Dateisysteme.
-                </li>
-                <li>
-                  <strong>Betrieb:</strong> Bezugspunkt für Monitoring-Alarme
-                  und das Patch-Management.
-                </li>
-              </ul>
-            </div>
-          </info-tooltip>
+            >
+              <li>
+                <strong>Identität:</strong> FQDN, Betriebssystem-Version
+                (Kernel/Patchlevel).
+              </li>
+              <li>
+                <strong>Inhalt:</strong> Installierte Software, aktive
+                Prozesse und gemountete Dateisysteme.
+              </li>
+              <li>
+                <strong>Betrieb:</strong> Bezugspunkt für Monitoring-Alarme
+                und das Patch-Management.
+              </li>
+            </ul>
+          </div>
+        </info-tooltip>
         </h3>
       </v-col>
     </v-row>
     <v-row>
       <v-col
-        v-if="
+          v-if="
           selectedServer.cloud?.cloudType == 'VMWARE' ||
           selectedServer.cloud?.cloudType == 'PROXMOX'
         "
-        cols="3"
-        class="pt-0 links"
+          cols="3"
+          class="pt-0 links"
       >
         <p v-if="props.selectedServer.snowInstanceSysId">
           <a
-            :href="`https://it-services.muenchen.de/now/sgw/record/${props.selectedServer.snowInstanceSysClass}/${props.selectedServer.snowInstanceSysId}/`"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="VM Instanz in ServiceNow öffnen"
+              :href="`https://it-services.muenchen.de/now/sgw/record/${props.selectedServer.snowInstanceSysClass}/${props.selectedServer.snowInstanceSysId}/`"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="VM Instanz in ServiceNow öffnen"
           >
             {{ props.selectedServer.snowInstanceName }}
           </a>
@@ -530,15 +566,15 @@
         <p v-else>-</p>
       </v-col>
       <v-col
-        cols="3"
-        class="pt-0 links"
+          cols="3"
+          class="pt-0 links"
       >
         <p v-if="props.selectedServer.snowServerSysId">
           <a
-            :href="`https://it-services.muenchen.de/now/sgw/record/${props.selectedServer.snowServerSysClass}/${props.selectedServer.snowServerSysId}/`"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Server Instanz in ServiceNow öffnen"
+              :href="`https://it-services.muenchen.de/now/sgw/record/${props.selectedServer.snowServerSysClass}/${props.selectedServer.snowServerSysId}/`"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Server Instanz in ServiceNow öffnen"
           >
             {{ props.selectedServer.snowServerName }}
           </a>
@@ -587,29 +623,87 @@ const emit = defineEmits<{
 }>();
 
 const firstAppservice = computed(
-  () => props.selectedServer.appservices?.[0] ?? null
+    () => props.selectedServer.appservices?.[0] ?? null
 );
+
+// Hilfsfunktion zur flexiblen Boolean-Prüfung (true, "true", 1)
+function isTrue(val: unknown): boolean {
+  return val === true || val === "true" || val === 1;
+}
+
+// Prüft, ob der Server gemanagt ist UND die Linux-Rolle besitzt
+const showApplications = computed(() => {
+  const server = props.selectedServer as Record<string, any>;
+  const isManaged = isTrue(server?.managed);
+  const isLinux = isTrue(server?.roleLinux) || isTrue(server?.role_linux);
+
+  return isManaged && isLinux;
+});
+
+// Liest die Server-Flags aus und gibt die aktiven Applikationsnamen zurück
+const installedApplications = computed<string[]>(() => {
+  const apps: string[] = [];
+  const server = props.selectedServer as Record<string, any>;
+
+  // Apache (managedMiddlewareHttpd oder Fallbacks)
+  if (
+      isTrue(server?.managedMiddlewareHttpd) ||
+      isTrue(server?.managed_middleware_httpd) ||
+      isTrue(server?.httpd)
+  ) {
+    apps.push("Apache");
+  }
+
+  // Tomcat (managedMiddlewareTomcat oder Fallbacks)
+  if (
+      isTrue(server?.managedMiddlewareTomcat) ||
+      isTrue(server?.managed_middleware_tomcat) ||
+      isTrue(server?.tomcat)
+  ) {
+    apps.push("Tomcat");
+  }
+
+  // Java (managedMiddlewareJava oder Fallbacks)
+  if (
+      isTrue(server?.managedMiddlewareJava) ||
+      isTrue(server?.managed_middleware_java) ||
+      isTrue(server?.java)
+  ) {
+    apps.push("Java");
+  }
+
+  // PHP (managedMiddlewarePhp oder Fallbacks)
+  if (
+      isTrue(server?.managedMiddlewarePhp) ||
+      isTrue(server?.managed_middleware_php) ||
+      isTrue(server?.php)
+  ) {
+    apps.push("PHP");
+  }
+
+  return apps;
+});
 
 function getPrices() {
   priceService.getPrices(loading).then((response) => {
     prices.value = response;
     CPU_PRICE_PER_CORE.value =
-      prices.value.find((price) => price.name === "CPU_PRICE_PER_CORE")
-        ?.pricePerUnit || 0;
+        prices.value.find((price) => price.name === "CPU_PRICE_PER_CORE")
+            ?.pricePerUnit || 0;
     MEMORY_PRICE_PER_MB.value =
-      prices.value.find((price) => price.name === "MEMORY_PRICE_PER_MB")
-        ?.pricePerUnit || 0;
+        prices.value.find((price) => price.name === "MEMORY_PRICE_PER_MB")
+            ?.pricePerUnit || 0;
     DISK_PRICE_PER_GB.value =
-      prices.value.find((price) => price.name === "DISK_PRICE_PER_GB")
-        ?.pricePerUnit || 0;
+        prices.value.find((price) => price.name === "DISK_PRICE_PER_GB")
+            ?.pricePerUnit || 0;
     if (
-      !CPU_PRICE_PER_CORE.value ||
-      !MEMORY_PRICE_PER_MB.value ||
-      !DISK_PRICE_PER_GB.value
+        !CPU_PRICE_PER_CORE.value ||
+        !MEMORY_PRICE_PER_MB.value ||
+        !DISK_PRICE_PER_GB.value
     ) {
       useSnackbarStore().showMessage({
         message:
-          "Preise für CPU, Arbeitsspeicher oder Festplattenspeicher nicht gefunden. Bitte kontaktiere einen Admin.",
+            "Preise für CPU, Arbeitsspeicher oder Festplattenspeicher nicht gefunden. Bitte kontaktiere einen Admin.",
         level: STATUS_INDICATORS.ERROR,
       });
     }
@@ -623,10 +717,10 @@ onMounted(() => {
 const formatter = useFormatter();
 
 function change_cpu_ram(
-  cpus: number,
-  ram: number,
-  scheduleTime: string | null,
-  schedulePatchnight: boolean
+    cpus: number,
+    ram: number,
+    scheduleTime: string | null,
+    schedulePatchnight: boolean
 ) {
   let actionSuffix = "CHANGE_CPU_RAM";
 
@@ -635,8 +729,8 @@ function change_cpu_ram(
   }
 
   const cloudPrefix = props.selectedServer.cloud?.cloudType
-    ? `${props.selectedServer.cloud.cloudType}_`
-    : "";
+      ? `${props.selectedServer.cloud.cloudType}_`
+      : "";
   const actionName = `${cloudPrefix}${actionSuffix}`;
 
   jobService.startJob(loading, actionName, props.selectedServer.id, {
@@ -687,5 +781,3 @@ const memoryCooldownUntil = computed(() => {
   return endsAt.toLocaleDateString("de-DE");
 });
 </script>
-
-<!--suppress CssUnresolvedCustomProperty -->

@@ -66,7 +66,7 @@ public interface ServerMapper {
             return null;
         }
         return appservices.stream()
-                .map(appservice -> appservice.getName()) // Annahme: Appservice hat getName() Methode
+                .map(appservice -> appservice.getName())
                 .collect(Collectors.joining(", "));
     }
 
@@ -251,6 +251,10 @@ public interface ServerMapper {
                 .cpuAllocationLimit(dto.cpuAllocationLimit())
                 .cpuAllocationOverheadLimit(dto.cpuAllocationOverheadLimit())
                 .cpuAllocationReservation(dto.cpuAllocationReservation())
+                .managedMiddlewareHttpd(dto.managedMiddlewareHttpd())
+                .managedMiddlewareJava(dto.managedMiddlewareJava())
+                .managedMiddlewarePhp(dto.managedMiddlewarePhp())
+                .managedMiddlewareTomcat(dto.managedMiddlewareTomcat())
                 .virtualAppliance(dto.virtualAppliance())
                 .build();
     }
@@ -259,9 +263,9 @@ public interface ServerMapper {
     default EnvironmentType stringToEnvironmentType(String env) {
         if (env == null) return null;
         try {
-            return EnvironmentType.valueOf(env.toUpperCase());  // Annahme: Strings sind in Großbuchstaben
+            return EnvironmentType.valueOf(env.toUpperCase());
         } catch (IllegalArgumentException e) {
-            return null;  // Oder Standardwert
+            return null;
         }
     }
 
@@ -277,5 +281,4 @@ public interface ServerMapper {
             throw new RuntimeException("Failed to parse server_custom_attributes JSON", e);
         }
     }
-
 }

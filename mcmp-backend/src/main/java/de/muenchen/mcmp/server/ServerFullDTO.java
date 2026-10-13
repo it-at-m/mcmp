@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 @Builder
-public record  ServerFullDTO(
+public record ServerFullDTO(
         Long id,
         Cloud cloud,
         String uuid,
@@ -160,5 +160,9 @@ public record  ServerFullDTO(
         Long cpuAllocationLimit,
         Long cpuAllocationOverheadLimit,
         Long cpuAllocationReservation,
+        Boolean managedMiddlewareHttpd,
+        Boolean managedMiddlewareJava,
+        Boolean managedMiddlewarePhp,
+        Boolean managedMiddlewareTomcat,
         Boolean virtualAppliance
 ) {}

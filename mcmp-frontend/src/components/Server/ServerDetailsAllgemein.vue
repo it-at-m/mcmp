@@ -122,7 +122,7 @@
         class="mt-1"
     >
       <v-col cols="3">
-        <h3>Applikationen</h3>
+        <h3>Dienste/Middleware</h3>
       </v-col>
     </v-row>
 

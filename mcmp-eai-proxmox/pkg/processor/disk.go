@@ -2,10 +2,11 @@ package processor
 
 import (
 	"fmt"
-	"mcmp-eai-proxmox/pkg/clients/proxmox"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"mcmp-eai-proxmox/pkg/clients/proxmox"
 )
 
 // A Disk object to save to the MCMP database.

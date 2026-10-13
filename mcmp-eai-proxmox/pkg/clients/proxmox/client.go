@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"mcmp-eai-proxmox/pkg/config"
 	"net/http"
 	"net/url"
+
+	"mcmp-eai-proxmox/pkg/config"
 
 	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/logging"
 )

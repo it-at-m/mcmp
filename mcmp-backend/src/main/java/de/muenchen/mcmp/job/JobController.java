@@ -998,14 +998,12 @@ public class JobController {
             throw new AccessDeniedException("This partition is not editable and cannot be changed.");
         }
 
-        // --- ANPASSUNG DTO: freeSpaceInBytes() statt freeBytes() verwenden ---
-        long minFreeBytes = 5L * 1024 * 1024 * 1024; // 5 GB in Bytes
+        long minFreeBytes = 2L * 1024 * 1024 * 1024; // 2 GB in Bytes
         if (existingPartition.freeSpaceInBytes() == null || existingPartition.freeSpaceInBytes() < minFreeBytes) {
             log.warn("Not enough free space on partition {} for serverId: {}. User: {}", partition, serverId, AuthUtils.getUsername());
-            throw new IllegalArgumentException("There must be at least 5 GB of free space on the partition to initiate a change.");
+            throw new IllegalArgumentException("There must be at least 2 GB of free space on the partition to initiate a change.");
         }
 
-        // --- ANPASSUNG: <= statt < prüfen, damit auch die gleiche Größe abgelehnt wird ---
         long currentCapacityGb = existingPartition.capacityInBytes() / (1024 * 1024 * 1024);
         if (newSize <= currentCapacityGb) {
             log.warn("Invalid size provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);

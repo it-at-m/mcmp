@@ -2,16 +2,16 @@
   <v-tooltip :text="tooltipText">
     <template #activator="{ props: tooltipProps }">
       <v-sheet
-          width="30"
-          height="30"
-          class="os-icon"
+        width="30"
+        height="30"
+        class="os-icon"
       >
         <img
-            :src="icon"
-            :class="['os-icon', sizeClass]"
-            :alt="`Betriebssystem: ${tooltipText}`"
-            v-bind="tooltipProps"
-            @error="handleImageError"
+          :src="icon"
+          :class="['os-icon', sizeClass]"
+          :alt="`Betriebssystem: ${tooltipText}`"
+          v-bind="tooltipProps"
+          @error="handleImageError"
         />
       </v-sheet>
     </template>
@@ -28,13 +28,13 @@ import linuxIcon from "@/assets/linux.svg";
 import unknownIcon from "@/assets/unknown.svg";
 
 const windowsIcon =
-    "https://monitoring.muenchen.de/lhmmon/check_mk/themes/facelift/images/icon_windows_msi.svg";
+  "https://monitoring.muenchen.de/lhmmon/check_mk/themes/facelift/images/icon_windows_msi.svg";
 const rhelIcon =
-    "https://monitoring.muenchen.de/lhmmon/check_mk/themes/facelift/images/icon_linux_rpm.svg";
+  "https://monitoring.muenchen.de/lhmmon/check_mk/themes/facelift/images/icon_linux_rpm.svg";
 const ubuntuIcon =
-    "https://monitoring.muenchen.de/lhmmon/check_mk/themes/facelift/images/icon_linux_deb.svg";
+  "https://monitoring.muenchen.de/lhmmon/check_mk/themes/facelift/images/icon_linux_deb.svg";
 const vmwareIcon =
-    "https://monitoring.muenchen.de/lhmmon/check_mk/themes/facelift/images/icon_vsphere.svg";
+  "https://monitoring.muenchen.de/lhmmon/check_mk/themes/facelift/images/icon_vsphere.svg";
 
 const props = defineProps<{
   osFullName: string;
@@ -44,10 +44,10 @@ const props = defineProps<{
 const hasLoadError = ref(false);
 
 watch(
-    () => props.osFullName,
-    () => {
-      hasLoadError.value = false;
-    }
+  () => props.osFullName,
+  () => {
+    hasLoadError.value = false;
+  }
 );
 
 const handleImageError = (e: Event) => {
@@ -81,7 +81,9 @@ const match = computed(() => {
 
 const isUnknown = computed(() => !match.value || hasLoadError.value);
 
-const icon = computed(() => (isUnknown.value ? unknownIcon : match.value?.icon));
+const icon = computed(() =>
+  isUnknown.value ? unknownIcon : match.value?.icon
+);
 
 const tooltipText = computed(() => {
   if (isUnknown.value) {

@@ -57,8 +57,9 @@ public class ServerController {
     }
 
     @GetMapping("/repo-targets")
-    public List<ServerFqdnDTO> findRepoTargetServers(@RequestParam(name = "search", required = false) final String search) {
-        return serverService.findRepoTargetServers(search);
+    public List<ServerFqdnDTO> findRepoTargetServers(@RequestParam(name = "search", required = false) final String search,
+                                                     @RequestParam(name = "repositoryIds", required = false) final List<Long> repositoryIds) {
+        return serverService.findRepoTargetServers(search, repositoryIds);
     }
 
     @GetMapping("/repo-targets/attached")

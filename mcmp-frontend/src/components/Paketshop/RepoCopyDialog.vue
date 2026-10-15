@@ -56,7 +56,7 @@
         variant="outlined"
         rounded
         clearable
-        :rules="newRepoNameRules"
+        :rules="copyNameRules"
       />
     </v-form>
   </common-dialog>
@@ -90,6 +90,14 @@ const loading = ref(false);
 const isValid = ref(false);
 const source = ref<Repository | null>(null);
 const name = ref("");
+
+const copyNameRules = computed(() => [
+  ...newRepoNameRules,
+  (value: string | null | undefined) =>
+    !source.value ||
+    value?.trim() !== source.value.name ||
+    "Der Name muss sich vom Quell-Repository unterscheiden.",
+]);
 
 // the backend only allows copying unlocked repositories the user can edit
 const copyableSourceOptions = computed(() =>

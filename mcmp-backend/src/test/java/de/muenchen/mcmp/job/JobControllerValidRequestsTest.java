@@ -457,7 +457,12 @@ class JobControllerValidRequestsTest {
         server.setFqdn("test.srv.muenchen.de");
         when(serverService.findByFqdnIn(anyList())).thenReturn(List.of(server));
         when(serverService.canUserEditServer(SERVER_ID)).thenReturn(true);
-        when(appserviceService.getAppservicesByServerId(SERVER_ID)).thenReturn(List.of(mock(AppserviceNameAndSysId.class)));
+        final AppserviceNameAndSysId projection = mock(AppserviceNameAndSysId.class);
+        when(projection.getId()).thenReturn(APPSERVICE_ID);
+        when(appserviceService.getAppservicesByServerId(SERVER_ID)).thenReturn(List.of(projection));
+        final Appservice appservice = new Appservice();
+        appservice.setId(APPSERVICE_ID);
+        when(appserviceService.getAppservice(APPSERVICE_ID)).thenReturn(appservice);
     }
 
     @Test

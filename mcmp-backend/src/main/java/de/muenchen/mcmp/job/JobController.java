@@ -11,6 +11,7 @@ import de.muenchen.mcmp.loadbalancer.UnifiedLoadbalancerPoolDTO;
 import de.muenchen.mcmp.mountPoint.MountPointDTO;
 import de.muenchen.mcmp.mountPoint.MountPointService;
 import de.muenchen.mcmp.network.NetworkService;
+import de.muenchen.mcmp.repository.PaketshopEnvironmentRule;
 import de.muenchen.mcmp.repository.Repository;
 import de.muenchen.mcmp.repository.RepositoryLockStatus;
 import de.muenchen.mcmp.repository.RepositoryService;
@@ -2244,6 +2245,7 @@ public class JobController {
         final boolean enabled = requireBoolean(awxExtraVars.get("enabled"), "Enabled");
         final boolean gpgcheck = requireBoolean(awxExtraVars.get("gpgcheck"), "GPG check");
         final List<String> systems = requireEditableServerFqdns(awxExtraVars.get("control_paketshop_repos_systems"), "Systems", identifier);
+        requireCompatibleEnvironments(repository, systems, identifier);
 
         logCreatedJob(identifier, null);
         jobService.paketshopRepoAttach(identifier, repository, enabled, gpgcheck, systems);
@@ -2256,6 +2258,22 @@ public class JobController {
 
         logCreatedJob(PAKETSHOP_REPO_DETACH, null);
         jobService.paketshopRepoDetach(PAKETSHOP_REPO_DETACH, repository, systems);
+    }
+
+    /**
+     * See {@link PaketshopEnvironmentRule}.
+     */
+    private void requireCompatibleEnvironments(final Repository repository, final List<String> fqdns, final String jobIdentifier) {
+        final EnvironmentType repoEnvironment = repository.getAppservices().iterator().next().getEnvironment();
+        for (Server server : serverService.findByFqdnIn(fqdns)) {
+            final Long serverAppserviceId = appserviceService.getAppservicesByServerId(server.getId()).getFirst().getId();
+            final EnvironmentType serverEnvironment = appserviceService.getAppservice(serverAppserviceId).getEnvironment();
+            if (!PaketshopEnvironmentRule.isCompatible(serverEnvironment, repoEnvironment)) {
+                logTriedToCreateJob(jobIdentifier, server.getId());
+                throw new IllegalArgumentException("Server " + server.getFqdn() + " (environment " + serverEnvironment
+                        + ") cannot be attached to repository " + repository.getName() + " (environment " + repoEnvironment + ").");
+            }
+        }
     }
 
     private String requireNewRepositoryName(final Object nameObj) {

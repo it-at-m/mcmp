@@ -26,8 +26,9 @@ public class RepositoryController {
                                                       @RequestParam(name = "sortOrder") final String sortOrder,
                                                       @RequestParam(name = "search", required = false) final String search,
                                                       @RequestParam(name = "favorites", required = false, defaultValue = "false") final boolean favorites,
-                                                      @RequestParam(name = "editableOnly", required = false, defaultValue = "false") final boolean editableOnly) {
-        return repositoryService.getVisibleRepositories(offset, limit, sortBy, sortOrder, search, favorites, editableOnly);
+                                                      @RequestParam(name = "editableOnly", required = false, defaultValue = "false") final boolean editableOnly,
+                                                      @RequestParam(name = "targetServerId", required = false) final Long targetServerId) {
+        return repositoryService.getVisibleRepositories(offset, limit, sortBy, sortOrder, search, favorites, editableOnly, targetServerId);
     }
 
     @GetMapping("/appservice/{appserviceId}")

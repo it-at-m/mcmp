@@ -55,7 +55,7 @@ import { useTestEnv } from "@/composables/useTestEnv";
 const props = defineProps<{
   repos: Repository[];
   loading: boolean;
-  server?: { name: string; fqdn: string; canEdit: boolean } | null;
+  server?: { id: number; name: string; fqdn: string; canEdit: boolean } | null;
 }>();
 
 const emit = defineEmits<(e: "changed") => void>();

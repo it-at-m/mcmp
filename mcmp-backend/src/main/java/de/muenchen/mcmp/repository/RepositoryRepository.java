@@ -14,6 +14,20 @@ import java.util.Optional;
 
 public interface RepositoryRepository extends JpaRepository<Repository, Long> {
 
+    /**
+     * Excludes repositories with production (P) or test (C/K) Application Services, see {@link PaketshopEnvironmentRule}.
+     */
+    String ENVIRONMENT_FILTER = """
+        NOT EXISTS (
+            SELECT 1
+            FROM cmp.repository_has_appservices ra_env
+            JOIN cmp.appservice a_env ON ra_env.appservice_id = a_env.id
+            WHERE ra_env.repository_id = r.id
+              AND ((:excludeProduction AND a_env.environment = 'P')
+                OR (:excludeTest AND a_env.environment IN ('C', 'K')))
+        )
+        """;
+
     String CAN_EDIT_EXPRESSION = """
         (
             (SELECT COUNT(*) FROM cmp.repository_has_appservices rce WHERE rce.repository_id = r.id) = 1
@@ -199,6 +213,8 @@ public interface RepositoryRepository extends JpaRepository<Repository, Long> {
     AND (:editableOnly = FALSE OR (""" + CAN_EDIT_EXPRESSION + """
     )
     )
+    AND (""" + ENVIRONMENT_FILTER + """
+    )
     ORDER BY
         CASE WHEN EXISTS (
             SELECT 1 FROM cmp.user_favorite_repository ufa
@@ -236,6 +252,8 @@ public interface RepositoryRepository extends JpaRepository<Repository, Long> {
         AND (:editableOnly = FALSE OR (""" + CAN_EDIT_EXPRESSION + """
         )
         )
+        AND (""" + ENVIRONMENT_FILTER + """
+        )
     """, nativeQuery = true)
     Page<RepositoryListProjection> findVisibleRepositories(@Param("username") String username,
                                                 @Param("isAdmin") boolean isAdmin,
@@ -246,6 +264,8 @@ public interface RepositoryRepository extends JpaRepository<Repository, Long> {
                                                 @Param("search") String search,
                                                 @Param("favorites") boolean favorites,
                                                 @Param("editableOnly") boolean editableOnly,
+                                                @Param("excludeProduction") boolean excludeProduction,
+                                                @Param("excludeTest") boolean excludeTest,
                                                 @Param("sortOrder") String sortOrder,
                                                 Pageable pageable);
 

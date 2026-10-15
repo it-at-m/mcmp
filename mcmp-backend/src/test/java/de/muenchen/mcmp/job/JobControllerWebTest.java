@@ -74,6 +74,7 @@ class JobControllerWebTest {
 
     private static final long SERVER_ID = 1001L; // This ID is an example. All services are mock objects. No test uses a real database.
     private static final long APPSERVICE_ID = 2002L;
+    private static final long SERVER_APPSERVICE_ID = 2102L;
     private static final long NETWORK_GROUP_ID = 3003L;
 
     @Autowired
@@ -576,6 +577,11 @@ class JobControllerWebTest {
     }
 
     private void stubPaketshopRepository(final RepositoryLockStatus lockStatus, final int appserviceCount, final boolean canEdit) {
+        stubPaketshopRepository(lockStatus, appserviceCount, canEdit, EnvironmentType.K);
+    }
+
+    private void stubPaketshopRepository(final RepositoryLockStatus lockStatus, final int appserviceCount, final boolean canEdit,
+                                         final EnvironmentType environment) {
         final Repository repository = new Repository();
         repository.setId(REPO_ID);
         repository.setName("my-repo-test");
@@ -584,6 +590,7 @@ class JobControllerWebTest {
         for (int i = 0; i < appserviceCount; i++) {
             final Appservice appservice = new Appservice();
             appservice.setId(APPSERVICE_ID + i);
+            appservice.setEnvironment(environment);
             appservices.add(appservice);
         }
         repository.setAppservices(appservices);
@@ -592,6 +599,10 @@ class JobControllerWebTest {
     }
 
     private void stubPaketshopServer(final boolean canEdit, final int appserviceCount) {
+        stubPaketshopServer(canEdit, appserviceCount, EnvironmentType.K);
+    }
+
+    private void stubPaketshopServer(final boolean canEdit, final int appserviceCount, final EnvironmentType environment) {
         final Server server = new Server();
         server.setId(SERVER_ID);
         server.setFqdn("test.srv.muenchen.de");
@@ -599,9 +610,15 @@ class JobControllerWebTest {
         when(serverService.canUserEditServer(SERVER_ID)).thenReturn(canEdit);
         final List<AppserviceNameAndSysId> appservices = new ArrayList<>();
         for (int i = 0; i < appserviceCount; i++) {
-            appservices.add(mock(AppserviceNameAndSysId.class));
+            final AppserviceNameAndSysId projection = mock(AppserviceNameAndSysId.class);
+            when(projection.getId()).thenReturn(SERVER_APPSERVICE_ID);
+            appservices.add(projection);
         }
         when(appserviceService.getAppservicesByServerId(SERVER_ID)).thenReturn(appservices);
+        final Appservice serverAppservice = new Appservice();
+        serverAppservice.setId(SERVER_APPSERVICE_ID);
+        serverAppservice.setEnvironment(environment);
+        when(appserviceService.getAppservice(SERVER_APPSERVICE_ID)).thenReturn(serverAppservice);
     }
 
     @Test
@@ -806,6 +823,42 @@ class JobControllerWebTest {
         performPaketshop("PAKETSHOP_REPO_ATTACH_OWNED_REPO", PAKETSHOP_ATTACH_PAYLOAD, status().isForbidden());
 
         verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void paketshopRepoAttach_productionServerOnTestRepository_isRejected() throws Exception {
+        stubPaketshopRepository(RepositoryLockStatus.OPEN, 1, true, EnvironmentType.K);
+        stubPaketshopServer(true, 1, EnvironmentType.P);
+
+        performPaketshop("PAKETSHOP_REPO_ATTACH_OWNED_REPO", PAKETSHOP_ATTACH_PAYLOAD, status().isBadRequest());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void paketshopRepoAttach_testServerOnProductionRepository_isRejected() throws Exception {
+        stubPaketshopRepository(RepositoryLockStatus.OPEN, 1, true, EnvironmentType.P);
+        stubPaketshopServer(true, 1, EnvironmentType.C);
+
+        performPaketshop("PAKETSHOP_REPO_ATTACH_OWNED_REPO", PAKETSHOP_ATTACH_PAYLOAD, status().isBadRequest());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void paketshopRepoAttach_productionServerOnProductionRepository_isAllowed() throws Exception {
+        stubPaketshopRepository(RepositoryLockStatus.OPEN, 1, true, EnvironmentType.P);
+        stubPaketshopServer(true, 1, EnvironmentType.P);
+
+        performPaketshop("PAKETSHOP_REPO_ATTACH_OWNED_REPO", PAKETSHOP_ATTACH_PAYLOAD, status().isOk());
+    }
+
+    @Test
+    void paketshopRepoAttach_kServerOnCRepository_isAllowed() throws Exception {
+        stubPaketshopRepository(RepositoryLockStatus.OPEN, 1, true, EnvironmentType.C);
+        stubPaketshopServer(true, 1, EnvironmentType.K);
+
+        performPaketshop("PAKETSHOP_REPO_ATTACH_OWNED_REPO", PAKETSHOP_ATTACH_PAYLOAD, status().isOk());
     }
 
     @Test

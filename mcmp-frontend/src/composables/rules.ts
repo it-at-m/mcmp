@@ -327,6 +327,14 @@ export function useRules() {
     return toValidateDate < toCompareDate || message;
   }
 
+  function isNotSameTextRule(
+    toCompareText: string,
+    toValidateText: string,
+    message = "Error"
+  ) {
+    return toCompareText === toCompareText;
+  }
+
   return {
     minLengthRule,
     maxLengthRule,
@@ -341,5 +349,6 @@ export function useRules() {
     isNotAfterTime,
     rangeRule,
     integerRule,
+    isNotSameTextRule,
   };
 }

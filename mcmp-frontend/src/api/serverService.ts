@@ -100,13 +100,19 @@ export default {
   /** Servers the current user can attach a repository to. */
   getRepoTargetServers(
     loading: Ref<boolean>,
-    search: string | null
+    search: string | null,
+    repositoryIds: number[] = []
   ): Promise<ServerFqdn[]> {
-    const params = search?.trim()
-      ? `?search=${encodeURIComponent(search.trim())}`
-      : "";
+    const params = new URLSearchParams();
+    if (search?.trim()) {
+      params.append("search", search.trim());
+    }
+    repositoryIds.forEach((id) =>
+      params.append("repositoryIds", id.toString())
+    );
+    const query = params.toString() ? `?${params.toString()}` : "";
     return apiFetch(
-      `${getApiBase()}${SERVER_BASE}/repo-targets${params}`,
+      `${getApiBase()}${SERVER_BASE}/repo-targets${query}`,
       {},
       loading
     );

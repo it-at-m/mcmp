@@ -567,13 +567,14 @@ public class JobServiceTest {
         ArgumentCaptor<Job> jobCaptor = ArgumentCaptor.forClass(Job.class);
         verify(jobRepository).save(jobCaptor.capture());
         JsonNode vars = new ObjectMapper().readTree(jobCaptor.getValue().getAwxExtraVars());
+        JsonNode repo = vars.get("control_paketshop_repos_repo");
 
-        assertEquals("my-repo-test", vars.get("name").asString());
-        assertEquals("lhm-cm-SNSVC0001-admin", vars.get("group").asString());
-        assertTrue(vars.get("self_only").asBoolean());
-        assertEquals("https://mirror.example.org/key.gpg", vars.get("gpgkey-location").asString());
-        assertFalse(vars.has("upstream-url"), "unset optional params must not be sent to AWX");
-        assertFalse(vars.has("upstream-password"), "unset optional params must not be sent to AWX");
+        assertEquals("my-repo-test", repo.get("name").asString());
+        assertEquals("lhm-cm-SNSVC0001-admin", repo.get("group").asString());
+        assertTrue(repo.get("self_only").asBoolean());
+        assertEquals("https://mirror.example.org/key.gpg", repo.get("gpgkey-location").asString());
+        assertFalse(repo.has("upstream-url"), "unset optional params must not be sent to AWX");
+        assertFalse(repo.has("upstream-password"), "unset optional params must not be sent to AWX");
         assertSame(appservice, jobCaptor.getValue().getAppService());
         assertNull(jobCaptor.getValue().getRepository(), "the repository does not exist yet, so the job cannot be linked to it");
     }
@@ -593,10 +594,11 @@ public class JobServiceTest {
         ArgumentCaptor<Job> jobCaptor = ArgumentCaptor.forClass(Job.class);
         verify(jobRepository).save(jobCaptor.capture());
         JsonNode vars = new ObjectMapper().readTree(jobCaptor.getValue().getAwxExtraVars());
+        JsonNode repo = vars.get("control_paketshop_repos_repo");
 
-        assertEquals("my-repo-test", vars.get("name").asString());
-        assertTrue(vars.get("enabled").asBoolean());
-        assertFalse(vars.get("gpgcheck").asBoolean());
+        assertEquals("my-repo-test", repo.get("name").asString());
+        assertTrue(repo.get("enabled").asBoolean());
+        assertFalse(repo.get("gpgcheck").asBoolean());
         assertEquals(2, vars.get("control_paketshop_repos_systems").size());
         assertEquals("PAKETSHOP_REPO_ATTACH_NOT_OWNED_REPO", jobCaptor.getValue().getActionIdentifier());
         assertSame(repository, jobCaptor.getValue().getRepository());

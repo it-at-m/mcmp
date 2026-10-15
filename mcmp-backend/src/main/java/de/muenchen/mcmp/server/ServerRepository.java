@@ -722,10 +722,20 @@ ORDER BY s.name ASC
           AND (:search IS NULL OR :search = '' OR s.name ILIKE CONCAT('%', :search, '%') OR s.fqdn ILIKE CONCAT('%', :search, '%'))
           AND (""" + REPO_TARGET_SERVER_CONDITION + """
         )
+          AND NOT EXISTS (
+              SELECT 1
+              FROM cmp.server_assignment sa_env
+              JOIN cmp.appservice a_env ON sa_env.appservice_id = a_env.id
+              WHERE sa_env.server_id = s.id
+                AND ((:excludeProduction AND a_env.environment = 'P')
+                  OR (:excludeTest AND a_env.environment IN ('C', 'K')))
+          )
         ORDER BY LOWER(s.name)
         LIMIT 50
         """, nativeQuery = true)
     List<ServerFqdnProjection> findRepoTargetServers(@Param("search") String search,
+                                                     @Param("excludeProduction") boolean excludeProduction,
+                                                     @Param("excludeTest") boolean excludeTest,
                                                      @Param("username") String username,
                                                      @Param("isAdmin") boolean isAdmin,
                                                      @Param("hasLinuxRole") boolean hasLinuxRole,

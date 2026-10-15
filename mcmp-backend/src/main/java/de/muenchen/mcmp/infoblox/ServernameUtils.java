@@ -30,7 +30,7 @@ public final class ServernameUtils {
     private static final Pattern VALID_APPLICATION_WITHOUT_PREFIX_PATTERN = Pattern.compile("^[a-z][a-z0-9]{2,11}$");
     private static final Set<String> VALID_SERVER_TYPES = Set.of("da", "db", "dm", "dp", "ds", "dy", "lx", "wi");
     private static final DecimalFormat CUSTOM_NUMBER_FORMAT = new DecimalFormat("000");
-    private static final Set<String> VALID_DOMAINS = Set.of("srv.muenchen.de", "testlhm.muenchen.de");
+    private static final Set<String> VALID_DOMAINS = Set.of("srv.muenchen.de", "testlhm.de");
     private static final int DEFAULT_CUSTOM_NUMBER = 1;
 
     // Error messages

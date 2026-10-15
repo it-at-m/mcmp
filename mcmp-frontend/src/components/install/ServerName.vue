@@ -78,7 +78,11 @@ const props = defineProps<{
 
 const changeNumbers = ref(false);
 const useClusterPrefix = ref(false); // neue Checkbox
-const domains = ["srv.muenchen.de"];
+const domains = computed(() =>
+  OperatingSystem.Windows.includes(props.instlServerDetails.osVersion ?? "")
+    ? ["srv.muenchen.de", "testlhm.de"]
+    : ["srv.muenchen.de"]
+);
 const form = ref<HTMLFormElement>();
 const loading = ref(false);
 const debounceTimer = ref<number | null>(null);
@@ -214,6 +218,10 @@ watch(
   ([appservice, osType, osVersion, categoryTypeInst, category]) => {
     props.instlServerDetails.serverName!.prefix = "";
     useClusterPrefix.value = false;
+    // reset domain if it is not available for the selected OS
+    if (!domains.value.includes(props.instlServerDetails.serverName!.domain)) {
+      props.instlServerDetails.serverName!.domain = "srv.muenchen.de";
+    }
     if (appservice && osType && osVersion && categoryTypeInst && category) {
       generateServerName();
     } else if (

@@ -272,7 +272,6 @@
               v-if="item.managed"
               :icon="mdiCheckCircle"
               color="btn_green"
-
           />
         </template>
         <template #item.os="{ item }">
@@ -285,21 +284,6 @@
             <span class="text-caption">
               {{ item.os }}
             </span>
-          </div>
-        </template>
-        <template #item.appserviceNames="{ item }">
-          <div class="app-services-cell">
-            <template v-if="item.appserviceNames">
-              <ul class="pl-4">
-                <li
-                    v-for="(service, index) in item.appserviceNames.split('|')"
-                    :key="index"
-                >
-                  {{ service.trim() }}
-                </li>
-              </ul>
-            </template>
-            <span v-else>-</span>
           </div>
         </template>
         <template #item.memoryMb="{ item }">
@@ -416,14 +400,12 @@ const localeCompare = (a: unknown, b: unknown) =>
 const numericCompare = (a: unknown, b: unknown) =>
     Number(a ?? 0) - Number(b ?? 0);
 
-// NEU: managed Header nach powerState eingefügt
 const headers: DataTableHeader[] = [
   { title: "Typ", key: "serverKind", sort: localeCompare, width: 60 },
   { title: "Servername", key: "name", sort: localeCompare },
   { title: "Status", key: "powerState", sort: localeCompare },
   { title: "Verwaltet", key: "managed" },
   { title: "Betriebssystem", key: "os", sort: localeCompare },
-  { title: "Anwendungsservice", key: "appserviceNames", sortable: false },
   { title: "CPUs", key: "numCpu", sort: numericCompare },
   { title: "RAM", key: "memoryMb", sort: numericCompare },
   {
@@ -787,9 +769,5 @@ const rootAdminTooltip = computed(() => {
   display: flex;
   gap: 8px;
   align-items: center;
-}
-
-.app-services-cell {
-  max-width: 200px;
 }
 </style>

@@ -449,7 +449,7 @@ func (sp *ServiceProcessor) transformForemanHostToMCMP(foremanHost *foreman.Host
 	mcmpHost := Host{
 		ID:                        foremanHost.ID,
 		Name:                      foremanHost.Name,
-		Fqdn:                      sp.extractStringValueFromFacts(foremanHost.Facts, "fqdn"),
+		Hostname:                  sp.extractStringValueFromFacts(foremanHost.Facts, "network::hostname"),
 		DisplayName:               &foremanHost.DisplayName,
 		IP:                        foremanHost.IP,
 		Mac:                       &foremanHost.Mac,
@@ -461,29 +461,17 @@ func (sp *ServiceProcessor) transformForemanHostToMCMP(foremanHost *foreman.Host
 		CreatedAt:                 &foremanHost.CreatedAt,
 		InitiatedAt:               foremanHost.InitiatedAt,
 		InstalledAt:               foremanHost.InstalledAt,
-		InstanceUUID:              &foremanHost.UUID,
-		Serialnumber:              sp.extractStringValueFromFacts(foremanHost.Facts, "serialnumber"),
+		UUID:                      &foremanHost.UUID,
+		DMIProductSerialNumber:    sp.extractStringValueFromFacts(foremanHost.Facts, "dmi::product::serial_number"),
+		DMIProductUUID:            sp.extractStringValueFromFacts(foremanHost.Facts, "dmi::product::uuid"),
 		ComputeResourceName:       &foremanHost.ComputeResourceName,
 		Interfaces:                interfaces,
 		LhmPnExitcode:             sp.extractStringValueFromFacts(foremanHost.Facts, "lhm_pn_exitcode"),
 		LhmPnExitstring:           sp.extractStringValueFromFacts(foremanHost.Facts, "lhm_pn_exitstring"),
 		TetrationAgentIsInstalled: sp.extractBooleanValueFromFacts(foremanHost.Facts, "tetration_agent_is_installed"),
-		OracleDBVersion:           sp.extractStringValueFromFacts(foremanHost.Facts, "lhm_ora::DB_VERSION"),
-		OracleSID:                 sp.extractStringValueFromFacts(foremanHost.Facts, "lhm_ora::ORACLE_SID"),
-		OracleSIDs:                sp.extractStringArrayValueFromFacts(foremanHost.Facts, "lhm_ora_sid_list", ","),
 		ServerInfosOwnerMail:      sp.extractStringValueFromFacts(foremanHost.Facts, "server_infos_owner_mail"),
 		ServerInfosTicketnr:       sp.extractStringValueFromFacts(foremanHost.Facts, "server_infos_ticketnr"),
 		Source:                    hostNamePtr,
-	}
-
-	// Proxmox VMs don't have a useful UUID or serial number, so fall
-	// back to the DMI UUID from host facts instead. This can be mapped
-	// to the SMBIOS-UUID reported by Proxmox.
-	if mcmpHost.Serialnumber == nil {
-		if dmiUUID := sp.extractStringValueFromFacts(foremanHost.Facts, "dmi::system::uuid"); dmiUUID != nil {
-			lowerCase := strings.ToLower(*dmiUUID)
-			mcmpHost.Serialnumber = &lowerCase
-		}
 	}
 
 	// Apply advanced processing for database and OS type determination
@@ -504,6 +492,11 @@ func (sp *ServiceProcessor) transformForemanHostToMCMP(foremanHost *foreman.Host
 	}
 	if mcmpHost.MariaDB {
 		mcmpHost.MariaDBVersion = sp.extractStringValueFromFacts(foremanHost.Facts, "mysql_version")
+	}
+	if mcmpHost.OracleDB {
+		mcmpHost.OracleDBVersion = sp.extractStringValueFromFacts(foremanHost.Facts, "lhm_ora::DB_VERSION")
+		mcmpHost.OracleSID = sp.extractStringValueFromFacts(foremanHost.Facts, "lhm_ora::ORACLE_SID")
+		mcmpHost.OracleSIDs = sp.extractStringArrayValueFromFacts(foremanHost.Facts, "lhm_ora_sid_list", ",")
 	}
 
 	// Extract filesystem mountpoint information
@@ -676,6 +669,7 @@ func (sp *ServiceProcessor) debugPrintf(format string, args ...interface{}) {
 //   - factLhmManagedMariaDB: Foreman fact for MariaDB management
 //   - factLhmManagedMySQLDB: Foreman fact for MySQL management
 //   - factLhmManagedMongoDB: Foreman fact for MongoDB management
+//   - factLhmManagedOracleDB: Foreman fact for OracleDB management
 //
 // The function sets the corresponding boolean fields in the Host struct.
 // For unknown schemas, Linux = true is set as default.

@@ -133,22 +133,25 @@
             @save="onBatchOrderCompleteDone"
           />
           <action-button
-            color="btn_red"
-            :icon="mdiDelete"
-            :tooltip="deleteTooltip"
-            :is-batch-operation="true"
-            :selected-server-ids="selectedServers"
-            :selected-servers="serversForBatch"
-            :parent-all-selected-servers-eligible="
+              color="btn_red"
+              :icon="mdiDelete"
+              :tooltip="deleteTooltip"
+              :is-batch-operation="true"
+              :selected-server-ids="selectedServers"
+              :selected-servers="serversForBatch"
+              :parent-all-selected-servers-eligible="
               allSelectedServersEligibleToDelete
             "
-            job-to-call="LINUX_DELETE_SERVER"
-            show-confirm-dialog
-            confirm-dialog-title="Server abbauen"
-            confirm-dialog-text="Wollen Sie die ausgewählten Server wirklich abbauen?"
-            use-extra-sure-dialog
-            extra-sure-checkbox-text="Ich bin mir sicher, dass ich die ausgewählten Server abbauen möchte."
-            @change="onBatchOrderCompleteDone"
+
+              :job-resolver="(server) => server.roleLinux ? 'LINUX_DELETE_SERVER' : 'WINDOWS_DELETE_SERVER'"
+
+              show-confirm-dialog
+              confirm-dialog-title="Server abbauen"
+              confirm-dialog-text="Wollen Sie die ausgewählten Server wirklich abbauen?"
+              confirm-dialog-hint="Hinweis: Shares/Netzlaufwerke welche mit dem Abbau dieser Server verwaist sind werden automatisch mit abgebaut."
+              use-extra-sure-dialog
+              extra-sure-checkbox-text="Ich bin mir sicher."
+              @change="onBatchOrderCompleteDone"
           />
           <install-dialog
             :key="props.selectedAppservice.id"

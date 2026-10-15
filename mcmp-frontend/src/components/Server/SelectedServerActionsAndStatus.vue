@@ -134,9 +134,9 @@
         job-to-call="LINUX_DELETE_SERVER"
         show-confirm-dialog
         confirm-dialog-title="Server abbauen"
-        confirm-dialog-text="Wollen Sie diesen Server wirklich abbauen?"
+        confirm-dialog-hint="Hinweis: Shares/Netzlaufwerke welche mit dem Abbau dieses Servers verwaist sind werden automatisch mit abgebaut."
         use-extra-sure-dialog
-        extra-sure-checkbox-text="Ich bin mir sicher, dass ich diesen Server abbauen möchte."
+        extra-sure-checkbox-text="Ich bin mir sicher."
       />
 
       <action-button
@@ -154,9 +154,9 @@
         job-to-call="WINDOWS_DELETE_SERVER"
         show-confirm-dialog
         confirm-dialog-title="Server abbauen"
-        confirm-dialog-text="Wollen Sie diesen Server wirklich löschen?"
+        confirm-dialog-hint="Hinweis: Shares/Netzlaufwerke welche mit dem Abbau dieses Servers verwaist sind werden automatisch mit abgebaut."
         use-extra-sure-dialog
-        extra-sure-checkbox-text="Ich bin mir sicher, dass ich diesen Server abbauen möchte."
+        extra-sure-checkbox-text="Ich bin mir sicher."
       />
     </template>
 

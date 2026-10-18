@@ -1,15 +1,18 @@
 package processor
 
+import "github.com/it-at-m/mcmp/mcmp-eai-common/pkg/app"
+
 type (
 	ForemanData struct {
-		Hosts []Host `json:"hosts"`
+		app.EaiMetadata `json:"metadata"`
+		Hosts           []Host `json:"hosts"`
 	}
 
 	Host struct {
 		ID                        int             `json:"id,omitempty"`
 		Source                    *string         `json:"source,omitempty"`
 		Name                      string          `json:"name,omitempty"`
-		Fqdn                      *string         `json:"fqdn,omitempty"`
+		Hostname                  *string         `json:"hostname,omitempty"`
 		DisplayName               *string         `json:"display_name,omitempty"`
 		IP                        *string         `json:"ip,omitempty"`
 		Mac                       *string         `json:"mac,omitempty"`
@@ -21,8 +24,9 @@ type (
 		CreatedAt                 *string         `json:"created_at,omitempty"`
 		InitiatedAt               *string         `json:"initiated_at,omitempty"`
 		InstalledAt               *string         `json:"installed_at,omitempty"`
-		Serialnumber              *string         `json:"serialnumber,omitempty"`
-		InstanceUUID              *string         `json:"instance_uuid,omitempty"`
+		DMIProductUUID            *string         `json:"dmi_product_uuid,omitempty"`
+		DMIProductSerialNumber    *string         `json:"dmi_product_serial_number,omitempty"`
+		UUID                      *string         `json:"uuid,omitempty"`
 		ComputeResourceName       *string         `json:"compute_resource_name,omitempty"`
 		Interfaces                []Interface     `json:"interfaces,omitempty"`
 		LhmPnExitcode             *string         `json:"lhm_pn_exitcode,omitempty"`
@@ -45,6 +49,7 @@ type (
 		MariaDBVersion            *string         `json:"maria_db_version,omitempty"`
 		OracleDBVersion           *string         `json:"oracle_db_version,omitempty"`
 		OracleSID                 *string         `json:"oracle_sid,omitempty"`
+		OracleSIDs                []string        `json:"oracle_sids,omitempty"`
 		Mountpoints               []Mountpoint    `json:"mountpoints,omitempty"`
 		Partitions                []Partition     `json:"partitions,omitempty"`
 		LogicalVolumes            []LogicalVolume `json:"logical_volumes,omitempty"`
@@ -107,3 +112,11 @@ type (
 		UUID          string `json:"uuid,omitempty"`
 	}
 )
+
+func (f *ForemanData) SetEaiMetadata(meta app.EaiMetadata) {
+	f.EaiMetadata = meta
+}
+
+func (f *ForemanData) GetEaiMetadata() app.EaiMetadata {
+	return f.EaiMetadata
+}

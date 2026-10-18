@@ -1,36 +1,37 @@
 <template>
   <v-tooltip
-    :text="tooltip"
-    location="bottom"
-    :aria-label="tooltip"
+      :text="tooltip"
+      location="bottom"
+      :aria-label="tooltip"
   >
     <template #activator="{ props: tooltipProps }">
       <span
-        v-bind="tooltipProps"
-        class="tooltip-activator"
-        style="display: inline-flex"
+          v-bind="tooltipProps"
+          class="tooltip-activator"
+          style="display: inline-flex"
       >
         <v-btn
-          :disabled="computedDisabled || loading"
-          :color="color"
-          :loading="loading"
-          class="material-action-btn"
-          variant="flat"
-          :href="link"
-          target="_blank"
-          icon
-          size="small"
-          :alt="tooltip"
-          :aria-label="tooltip"
-          v-on="server || props.isBatchOperation ? { click: onBtnClick } : {}"
+            :disabled="computedDisabled || loading"
+            :color="color"
+            :loading="loading"
+            class="material-action-btn"
+            variant="flat"
+            :href="link"
+            target="_blank"
+            icon
+            size="small"
+            :alt="tooltip"
+            :aria-label="tooltip"
+            v-on="server || props.isBatchOperation ? { click: onBtnClick } : {}"
         >
           <v-icon
-            :size="tooltip == 'KVM Konsole öffnen' ? 'large' : 'x-large'"
-            role="img"
-            :style="
+              :size="tooltip == 'KVM Konsole öffnen' ? 'large' : 'x-large'"
+              role="img"
+              :style="
               tooltip == 'Server neustarten' ? 'transform: rotate(45deg);' : ''
             "
-            >{{ icon }}
+          >
+            {{ icon }}
           </v-icon>
         </v-btn>
       </span>
@@ -38,63 +39,63 @@
   </v-tooltip>
 
   <common-dialog
-    :model-value="dialog"
-    :title="confirmDialogTitle"
-    :icon="icon"
-    max-width="600"
-    show-actions
-    :submit-activated="validated"
-    :show-change-warning="true"
-    :check-for-enabled-actions="action"
-    @dialog-confirm="onDialogConfirm"
-    @dialog-cancel="onDialogCancel"
+      :model-value="dialog"
+      :title="confirmDialogTitle"
+      :icon="icon"
+      max-width="600"
+      show-actions
+      :submit-activated="validated"
+      :show-change-warning="true"
+      :check-for-enabled-actions="action"
+      @dialog-confirm="onDialogConfirm"
+      @dialog-cancel="onDialogCancel"
   >
     <common-alert
-      v-if="
+        v-if="
         server || (props.isBatchOperation && props.selectedServerIds?.length)
       "
-      color="accent"
+        color="accent"
     >
       <div
-        v-if="server"
-        class="confirm-entity-label"
+          v-if="server"
+          class="confirm-entity-label"
       >
         Ausgewählter Server:
       </div>
       <div
-        v-if="server"
-        class="confirm-entity-name"
+          v-if="server"
+          class="confirm-entity-name"
       >
         {{ server.name }}
       </div>
 
       <div
-        v-else-if="props.isBatchOperation"
-        class="confirm-entity-label"
+          v-else-if="props.isBatchOperation"
+          class="confirm-entity-label"
       >
         Ausgewählte Server:
       </div>
       <div
-        v-else-if="props.isBatchOperation"
-        class="confirm-entity-name"
+          v-else-if="props.isBatchOperation"
+          class="confirm-entity-name"
       >
         {{ props.selectedServerIds?.length }} Server
       </div>
 
       <div
-        v-if="
+          v-if="
           props.isBatchOperation &&
           props.selectedServers &&
           props.selectedServers.length
         "
-        class="mt-2"
+          class="mt-2"
       >
         <ul class="pl-4">
           <li
-            v-for="s in props.selectedServers.filter((x) =>
+              v-for="s in props.selectedServers.filter((x) =>
               props.selectedServerIds?.includes(x.id)
             )"
-            :key="s.id"
+              :key="s.id"
           >
             {{ s.name }}
           </li>
@@ -107,15 +108,15 @@
     <br />
     <v-form ref="form">
       <v-checkbox
-        v-model="schedule"
-        label="Durchführungszeitpunkt anpassen"
-        @change="changeToSchedule"
+          v-model="schedule"
+          label="Durchführungszeitpunkt anpassen"
+          @change="changeToSchedule"
       />
       <common-time-picker
-        v-if="schedule"
-        v-model:raw-date-in="rawDate"
-        lable-text="Durchführungs"
-        :time-rules="[
+          v-if="schedule"
+          v-model:raw-date-in="rawDate"
+          lable-text="Durchführungs"
+          :time-rules="[
           validationRules.notEmptyRule('Endzeitpunkt darf nicht leer sein.'),
           validationRules.isNotPastTime(
             new Date(),
@@ -126,22 +127,24 @@
       />
     </v-form>
     <a
-      v-if="confirmDialogLink"
-      :href="confirmDialogLink"
-      target="_blank"
-      >hier</a
+        v-if="confirmDialogLink"
+        :href="confirmDialogLink"
+        target="_blank"
     >
+      hier
+    </a>
   </common-dialog>
 
   <dialog-extra-sure
-    v-if="props.useExtraSureDialog && extraSureDialog"
-    v-model="extraSureDialog"
-    :title="confirmDialogTitle || 'Bestätigen sie die Aktion'"
-    :text="confirmDialogText || 'Wollen sie die Aktion ausführen?'"
-    :checkbox-text="extraSureCheckboxText || 'Ich bin mir sicher'"
-    :icon="icon"
-    @do="onExtraSureDialogConfirm"
-    @cancel="onDialogCancel"
+      v-if="props.useExtraSureDialog && extraSureDialog"
+      v-model="extraSureDialog"
+      :title="confirmDialogTitle || 'Bestätigen sie die Aktion'"
+      :text="confirmDialogText || 'Wollen sie die Aktion ausführen?'"
+      :hint="confirmDialogHint"
+      :checkbox-text="extraSureCheckboxText || 'Ich bin mir sicher.'"
+      :icon="icon"
+      @do="onExtraSureDialogConfirm"
+      @cancel="onDialogCancel"
   />
 </template>
 
@@ -164,10 +167,13 @@ const props = defineProps<{
   link?: string;
   server?: Server;
   jobToCall?: string;
+  // NEU: Optionale Funktion, um den Jobnamen dynamisch pro Server zu ermitteln
+  jobResolver?: (server: Server) => string;
   showConfirmDialog?: boolean;
   confirmDialogTitle?: string;
   confirmDialogText?: string;
   confirmDialogLink?: string;
+  confirmDialogHint?: string;
   useExtraSureDialog?: boolean;
   extraSureCheckboxText?: string;
   // batch support
@@ -192,18 +198,30 @@ const validated = ref(true);
 const rawDate = ref<Date>(new Date());
 const validationRules = useRules();
 
+// NEU: Hilfsfunktion, die entweder den jobResolver nutzt oder auf jobToCall zurückfällt
+function resolveJob(server?: Server): string | undefined {
+  if (!server) return props.jobToCall;
+  return props.jobResolver ? props.jobResolver(server) : props.jobToCall;
+}
+
 const action = computed(() => {
-  if (!props.jobToCall?.includes("DELETE")) {
-    if (props.isBatchOperation) {
-      return [
-        ...new Set(
-          props.selectedServers?.map((server) => server.cloud.cloudType)
-        ),
-      ].map((type) => `${type}_${props.jobToCall}`);
-    }
-    return [props.server?.cloud.cloudType + "_" + props.jobToCall];
+  if (props.isBatchOperation) {
+    const servers = props.selectedServers || [];
+    const requiredActions = servers.map((server) => {
+      const job = resolveJob(server);
+      if (!job?.includes("DELETE")) {
+        return `${server.cloud.cloudType}_${job}`;
+      }
+      return job;
+    });
+    // Nur einzigartige Werte zurückgeben und leere Strings herausfiltern
+    return [...new Set(requiredActions)].filter(Boolean) as string[];
   } else {
-    return [props.jobToCall];
+    const job = resolveJob(props.server);
+    if (!job?.includes("DELETE")) {
+      return [`${props.server?.cloud.cloudType}_${job}`];
+    }
+    return [job];
   }
 });
 
@@ -259,42 +277,48 @@ function makeJobCall() {
     }
 
     loading.value = true;
-    const promises = servers.map((server) =>
-      jobService.startJob(
-        loading,
-        props.jobToCall,
-        server.id,
-        schedule.value ? { scheduleTime: rawDate.value.toISOString() } : {}
-      )
-    );
+    const promises = servers.map((server) => {
+      // NEU: Jobnamen dynamisch pro Server auflösen
+      const job = resolveJob(server);
+      if (!job) return Promise.resolve(); // Fallback für fehlerhafte Konfiguration
+
+      return jobService.startJob(
+          loading,
+          job,
+          server.id,
+          schedule.value ? { scheduleTime: rawDate.value.toISOString() } : {}
+      );
+    });
 
     Promise.all(promises)
-      .then(() => emit("change"))
-      .catch((err) => console.error("Batch job error", err))
-      .finally(() => {
-        loading.value = false;
-        validated.value = true;
-        schedule.value = false;
-        rawDate.value = new Date();
-      });
+        .then(() => emit("change"))
+        .catch((err) => console.error("Batch job error", err))
+        .finally(() => {
+          loading.value = false;
+          validated.value = true;
+          schedule.value = false;
+          rawDate.value = new Date();
+        });
 
     return;
   }
 
-  if (!props.jobToCall) {
+  // Einzelner Server
+  const singleJob = resolveJob(props.server);
+  if (!singleJob) {
     return;
   }
 
   jobService
-    .startJob(
-      loading,
-      props.jobToCall,
-      props.server!.id,
-      schedule.value ? { scheduleTime: rawDate.value.toISOString() } : {}
-    )
-    .then(() => {
-      emit("change");
-    });
+      .startJob(
+          loading,
+          singleJob,
+          props.server!.id,
+          schedule.value ? { scheduleTime: rawDate.value.toISOString() } : {}
+      )
+      .then(() => {
+        emit("change");
+      });
   validated.value = true;
   schedule.value = false;
   rawDate.value = new Date();
@@ -303,12 +327,10 @@ function makeJobCall() {
 // computed disabled: respect parent batch eligibility only when used as batch operation
 const computedDisabled = computed(() => {
   if (props.isBatchOperation) {
-    // if parent explicitly flagged selection as not eligible, disable
     if (!props.parentAllSelectedServersEligible) return true;
     const ids = props.selectedServerIds ?? [];
     return ids.length === 0;
   }
-  // single-server usage: use explicit disabled prop only
   return props.disabled ?? false;
 });
 

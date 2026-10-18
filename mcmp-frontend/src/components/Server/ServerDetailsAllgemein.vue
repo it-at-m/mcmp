@@ -1,5 +1,6 @@
 <template>
   <common-card title="Informationen">
+    <!-- Zeile 1: Überschriften -->
     <v-row>
       <v-col cols="3">
         <h3>Betriebssystem</h3>
@@ -38,6 +39,8 @@
         </h3>
       </v-col>
     </v-row>
+
+    <!-- Zeile 1: Werte -->
     <v-row>
       <v-col
         cols="3"
@@ -116,7 +119,37 @@
         <p v-else>-</p>
       </v-col>
     </v-row>
+    <v-row
+      v-if="installedServices.length > 0"
+      class="mt-1"
+    >
+      <v-col cols="3">
+        <h3>Dienste</h3>
+      </v-col>
+    </v-row>
+    <v-row v-if="installedServices.length > 0">
+      <v-col
+        cols="12"
+        md="8"
+        lg="6"
+        class="pt-0"
+      >
+        <div class="d-flex flex-wrap ga-1">
+          <v-chip
+            v-for="service in installedServices"
+            :key="service"
+            size="small"
+            variant="flat"
+            color="grey-lighten-3"
+            class="text-grey-darken-3"
+          >
+            {{ service }}
+          </v-chip>
+        </div>
+      </v-col>
+    </v-row>
   </common-card>
+
   <common-card
     title="Ressourcen"
     top-margin="0"
@@ -437,6 +470,7 @@
       </v-col>
     </v-row>
   </common-card>
+
   <common-card
     title="CMDB"
     top-margin="0"
@@ -590,6 +624,85 @@ const firstAppservice = computed(
   () => props.selectedServer.appservices?.[0] ?? null
 );
 
+// Hilfsfunktion zur flexiblen Boolean-Prüfung (true, "true", 1)
+function isTrue(val: unknown): boolean {
+  return val === true || val === "true" || val === 1;
+}
+
+// Liest Middleware und Datenbanken aus (flache String-Liste aller aktiven Komponenten)
+const installedServices = computed<string[]>(() => {
+  const services: string[] = [];
+  const server = props.selectedServer as Record<string, any>;
+
+  // --- Middleware ---
+  if (
+    isTrue(server?.managedMiddlewareHttpd) ||
+    isTrue(server?.managed_middleware_httpd) ||
+    isTrue(server?.httpd)
+  ) {
+    services.push("Apache");
+  }
+
+  if (
+    isTrue(server?.managedMiddlewareTomcat) ||
+    isTrue(server?.managed_middleware_tomcat) ||
+    isTrue(server?.tomcat)
+  ) {
+    services.push("Tomcat");
+  }
+
+  if (
+    isTrue(server?.managedMiddlewareJava) ||
+    isTrue(server?.managed_middleware_java) ||
+    isTrue(server?.java)
+  ) {
+    services.push("Java");
+  }
+
+  if (
+    isTrue(server?.managedMiddlewarePhp) ||
+    isTrue(server?.managed_middleware_php) ||
+    isTrue(server?.php)
+  ) {
+    services.push("PHP");
+  }
+
+  // --- Datenbanken ---
+  if (isTrue(server?.dbOracle) || isTrue(server?.db_oracle)) {
+    services.push("Oracle");
+  }
+
+  if (isTrue(server?.dbHana) || isTrue(server?.db_hana)) {
+    services.push("SAP HANA");
+  }
+
+  if (isTrue(server?.dbMariadb) || isTrue(server?.db_mariadb)) {
+    services.push("MariaDB");
+  }
+
+  if (isTrue(server?.dbMysql) || isTrue(server?.db_mysql)) {
+    services.push("MySQL");
+  }
+
+  if (isTrue(server?.dbMssql) || isTrue(server?.db_mssql)) {
+    services.push("MS SQL");
+  }
+
+  if (isTrue(server?.dbPostgres) || isTrue(server?.db_postgres)) {
+    services.push("PostgreSQL");
+  }
+
+  if (isTrue(server?.dbMongodb) || isTrue(server?.db_mongodb)) {
+    services.push("MongoDB");
+  }
+
+  if (isTrue(server?.dbAdabas) || isTrue(server?.db_adabas)) {
+    services.push("Adabas");
+  }
+
+  return services;
+});
+
 function getPrices() {
   priceService.getPrices(loading).then((response) => {
     prices.value = response;
@@ -687,5 +800,3 @@ const memoryCooldownUntil = computed(() => {
   return endsAt.toLocaleDateString("de-DE");
 });
 </script>
-
-<!--suppress CssUnresolvedCustomProperty -->

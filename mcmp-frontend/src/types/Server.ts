@@ -152,6 +152,10 @@ export default class Server {
     public memUsedPercent: number,
     public memoryAllocationExpandableReservation: boolean,
     public cpuAllocationExpandableReservation: boolean,
+    public managedMiddlewareHttpd: boolean,
+    public managedMiddlewareJava: boolean,
+    public managedMiddlewarePhp: boolean,
+    public managedMiddlewareTomcat: boolean,
     public virtualAppliance: boolean
   ) {}
 }

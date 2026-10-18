@@ -1,10 +1,10 @@
 module github.com/it-at-m/mcmp/mcmp-eai-awx
 
-go 1.27.1
+go 1.27.2
 
 require (
-	github.com/euerla/goawx v0.0.0-20260428183549-bdffcc4c68b8
-	github.com/it-at-m/mcmp/mcmp-eai-common v0.0.0-20260914053819-f53cfaccd752
+	github.com/euerla/goawx v0.0.0-20260929194032-9e9c4b8f8991
+	github.com/it-at-m/mcmp/mcmp-eai-common v0.0.0-20261011180204-7e92135b5f9f
 )
 
 require (
@@ -19,7 +19,7 @@ require (
 	github.com/subosito/gotenv v1.6.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/oauth2 v0.37.0 // indirect
-	golang.org/x/sys v0.48.0 // indirect
-	golang.org/x/text v0.42.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
+	golang.org/x/text v0.43.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )

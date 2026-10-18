@@ -11,6 +11,7 @@ import de.muenchen.mcmp.loadbalancer.UnifiedLoadbalancerPoolDTO;
 import de.muenchen.mcmp.mountPoint.MountPointDTO;
 import de.muenchen.mcmp.mountPoint.MountPointService;
 import de.muenchen.mcmp.network.NetworkService;
+import de.muenchen.mcmp.repository.PaketshopEnvironmentRule;
 import de.muenchen.mcmp.repository.Repository;
 import de.muenchen.mcmp.repository.RepositoryLockStatus;
 import de.muenchen.mcmp.repository.RepositoryService;
@@ -998,14 +999,12 @@ public class JobController {
             throw new AccessDeniedException("This partition is not editable and cannot be changed.");
         }
 
-        // --- ANPASSUNG DTO: freeSpaceInBytes() statt freeBytes() verwenden ---
-        long minFreeBytes = 5L * 1024 * 1024 * 1024; // 5 GB in Bytes
+        long minFreeBytes = 2L * 1024 * 1024 * 1024; // 2 GB in Bytes
         if (existingPartition.freeSpaceInBytes() == null || existingPartition.freeSpaceInBytes() < minFreeBytes) {
             log.warn("Not enough free space on partition {} for serverId: {}. User: {}", partition, serverId, AuthUtils.getUsername());
-            throw new IllegalArgumentException("There must be at least 5 GB of free space on the partition to initiate a change.");
+            throw new IllegalArgumentException("There must be at least 2 GB of free space on the partition to initiate a change.");
         }
 
-        // --- ANPASSUNG: <= statt < prüfen, damit auch die gleiche Größe abgelehnt wird ---
         long currentCapacityGb = existingPartition.capacityInBytes() / (1024 * 1024 * 1024);
         if (newSize <= currentCapacityGb) {
             log.warn("Invalid size provided by user: {} for serverId: {}", AuthUtils.getUsername(), serverId);
@@ -2246,6 +2245,7 @@ public class JobController {
         final boolean enabled = requireBoolean(awxExtraVars.get("enabled"), "Enabled");
         final boolean gpgcheck = requireBoolean(awxExtraVars.get("gpgcheck"), "GPG check");
         final List<String> systems = requireEditableServerFqdns(awxExtraVars.get("control_paketshop_repos_systems"), "Systems", identifier);
+        requireCompatibleEnvironments(repository, systems, identifier);
 
         logCreatedJob(identifier, null);
         jobService.paketshopRepoAttach(identifier, repository, enabled, gpgcheck, systems);
@@ -2258,6 +2258,22 @@ public class JobController {
 
         logCreatedJob(PAKETSHOP_REPO_DETACH, null);
         jobService.paketshopRepoDetach(PAKETSHOP_REPO_DETACH, repository, systems);
+    }
+
+    /**
+     * See {@link PaketshopEnvironmentRule}.
+     */
+    private void requireCompatibleEnvironments(final Repository repository, final List<String> fqdns, final String jobIdentifier) {
+        final EnvironmentType repoEnvironment = repository.getAppservices().iterator().next().getEnvironment();
+        for (Server server : serverService.findByFqdnIn(fqdns)) {
+            final Long serverAppserviceId = appserviceService.getAppservicesByServerId(server.getId()).getFirst().getId();
+            final EnvironmentType serverEnvironment = appserviceService.getAppservice(serverAppserviceId).getEnvironment();
+            if (!PaketshopEnvironmentRule.isCompatible(serverEnvironment, repoEnvironment)) {
+                logTriedToCreateJob(jobIdentifier, server.getId());
+                throw new IllegalArgumentException("Server " + server.getFqdn() + " (environment " + serverEnvironment
+                        + ") cannot be attached to repository " + repository.getName() + " (environment " + repoEnvironment + ").");
+            }
+        }
     }
 
     private String requireNewRepositoryName(final Object nameObj) {

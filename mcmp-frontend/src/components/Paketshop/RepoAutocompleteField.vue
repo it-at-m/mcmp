@@ -43,6 +43,8 @@ const props = withDefaults(
     excludeLocked?: boolean;
     /** Only repositories the user can edit (exactly one appservice and member of its change group). */
     editableOnly?: boolean;
+    /** Only repositories that may be attached to this server (P/C/K environment rule). */
+    targetServerId?: number;
   }>(),
   {
     label: "Repository*",
@@ -68,7 +70,8 @@ async function load(search: string) {
     "asc",
     search || undefined,
     false,
-    props.editableOnly
+    props.editableOnly,
+    props.targetServerId
   );
   items.value = props.excludeLocked
     ? res.content.filter((r) => r.lockStatus !== "LOCKED")

@@ -89,7 +89,7 @@ func (result *VMConfig) UnmarshalJSON(b []byte) error {
 		if data, ok := Get[string](values, name); ok {
 			_, attrs := ParseCommaSeparatedMap(data)
 			var model string
-			var macAddress = attrs["macaddr"] // documented, but not used?
+			macAddress := attrs["macaddr"] // documented, but not used?
 			for _, mod := range []string{"e1000", "e1000e", "virtio", "rtl8139", "vmxnet3"} {
 				if mac, ok := attrs[mod]; ok {
 					model = mod

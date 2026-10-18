@@ -179,27 +179,27 @@
   >
     <v-col cols="12">
       <v-alert
-        border
-        variant="tonal"
-        rounded="lg"
-        type="info"
+          border
+          variant="tonal"
+          rounded="lg"
+          type="info"
       >
-        <a style="color: rgb(var(--v-theme-text))">
+        <div class="text-medium-emphasis">
           Verbindungen von Servern, welche nicht durch die Basisfreigaben (<a
             href="https://wilma.muenchen.de/workspaces/netze-firewalls-nw-basisdienste-ibs341/apps/wiki/faqs/list/view/57d6a8cb-69d4-493e-8bd4-09317c09470f"
             target="_blank"
             rel="noopener noreferrer"
-            >Tabelle</a
-          >) abgedeckt sind müssen zusätzlich beantragt (<a
+            class="text-info text-decoration-underline"
+        >Tabelle</a
+        >) abgedeckt sind müssen zusätzlich beantragt werden (<a
             href="https://it-services.muenchen.de/sp?id=sc_cat_item&sys_id=85fcd2951b8dad94948e657f7b4bcbb9&table=sc_cat_item&searchTerm=freischaltung"
             target="_blank"
             rel="noopener noreferrer"
-            >Portfreischaltung</a
-          >) werden. <br />
-          Die nachfolgenden Auswahl konfiguriert nur die Zugriffsberechtigung
-          innerhalb der Datenbank und ist auf Sever beschränkt, welche dem
-          selben Anwendungsservice angehören.
-        </a>
+            class="text-info text-decoration-underline"
+        >Portfreischaltung</a
+        >) . <br />
+          Die nachfolgende Auswahl konfiguriert nur die Zugriffsberechtigung auf dem Datenbanksystem.
+        </div>
       </v-alert>
     </v-col>
   </v-row>

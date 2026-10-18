@@ -1,12 +1,16 @@
 package de.muenchen.mcmp.server;
 
+import de.muenchen.mcmp.appservice.Appservice;
 import de.muenchen.mcmp.appservice.AppserviceService;
 import de.muenchen.mcmp.common.OffsetBasedPageRequest;
 import de.muenchen.mcmp.config.app.AppConfigCacheService;
 import de.muenchen.mcmp.job.ActiveGreenItJob;
 import de.muenchen.mcmp.job.JobRepository;
+import de.muenchen.mcmp.repository.PaketshopEnvironmentRule;
+import de.muenchen.mcmp.repository.RepositoryRepository;
 import de.muenchen.mcmp.security.AuthUtils;
 import de.muenchen.mcmp.security.UserRoles;
+import de.muenchen.mcmp.types.EnvironmentType;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +36,7 @@ public class ServerService {
     private final ServerRepository serverRepository;
     private final JobRepository jobRepository;
     private final AppConfigCacheService appConfigCacheService;
+    private final RepositoryRepository repositoryRepository;
 
     public Page<ServerListDTO> getVisibleServers(final int offset, final int limit,
                                                  final String sortBy, final String sortOrder, final String search,
@@ -356,10 +361,20 @@ public class ServerService {
     /**
      * Servers the current user can attach a repository to (see {@link ServerRepository#REPO_TARGET_SERVER_CONDITION}).
      */
-    public List<ServerFqdnDTO> findRepoTargetServers(final String search) {
+    @Transactional(readOnly = true)
+    public List<ServerFqdnDTO> findRepoTargetServers(final String search, final List<Long> repositoryIds) {
         final UserRoles userRoles = AuthUtils.getCurrentUserRoles();
+        // only servers that may be attached to all given repositories, see PaketshopEnvironmentRule
+        final List<EnvironmentType> repositoryEnvironments = repositoryIds == null || repositoryIds.isEmpty()
+                ? List.of()
+                : repositoryRepository.findAllById(repositoryIds).stream()
+                        .flatMap(r -> r.getAppservices().stream())
+                        .map(Appservice::getEnvironment)
+                        .toList();
         return repository.findRepoTargetServers(
                 search == null ? null : search.trim(),
+                PaketshopEnvironmentRule.excludesProduction(repositoryEnvironments),
+                PaketshopEnvironmentRule.excludesTest(repositoryEnvironments),
                 userRoles.getUsername(),
                 userRoles.hasAdminRole(),
                 userRoles.hasLinuxRole(),

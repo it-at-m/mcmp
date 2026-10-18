@@ -780,7 +780,7 @@ public class JobService {
                 applicationServiceId, (Integer) fqdnBuildingBlocks.get("customNumber"), fqdnBuildingBlocks.get("domain").toString(), null);
 
         final String adDomain = Objects.equals(fqdnBuildingBlocks.get("domain").toString(), "srv.muenchen.de") ?
-                "muenchen.de" : Objects.equals(fqdnBuildingBlocks.get("domain").toString(), "testlhm.muenchen.de") ? "testlhm.de" : "NOTVALID";
+                "muenchen.de" : Objects.equals(fqdnBuildingBlocks.get("domain").toString(), "testlhm.de") ? "testlhm.de" : "NOTVALID";
 
         DbType targetDbType = null;
 
@@ -1130,29 +1130,37 @@ public class JobService {
     // -----------------------------------------------------------------------------------------------------------------
     // Paketshop JOBs
     // -----------------------------------------------------------------------------------------------------------------
+    private static final String PAKETSHOP_REPO_VAR = "control_paketshop_repos_repo";
+
     public void paketshopRepoCreate(final String identifier, final String name, final Long appserviceId,
                                     final String upstreamUrl, final Boolean upstreamAllPackages,
                                     final String upstreamUser, final String upstreamPassword,
                                     final String gpgkeyLocation, final boolean selfOnly) {
         final Appservice appservice = getAppserviceOrThrow(appserviceId);
 
+        final Map<String, Object> repo = new HashMap<>();
+        repo.put("name", name);
+        repo.put("group", "lhm-cm-" + appservice.getNumber() + "-admin");
+        repo.put("self_only", selfOnly);
+        putIfNotNull(repo, "upstream-url", upstreamUrl);
+        putIfNotNull(repo, "upstream-all-packages", upstreamAllPackages);
+        putIfNotNull(repo, "upstream-user", upstreamUser);
+        putIfNotNull(repo, "upstream-password", upstreamPassword);
+        putIfNotNull(repo, "gpgkey-location", gpgkeyLocation);
+
         final Map<String, Object> params = new HashMap<>();
-        params.put("name", name);
-        params.put("group", "lhm-cm-" + appservice.getNumber() + "-admin");
-        params.put("self_only", selfOnly);
-        putIfNotNull(params, "upstream-url", upstreamUrl);
-        putIfNotNull(params, "upstream-all-packages", upstreamAllPackages);
-        putIfNotNull(params, "upstream-user", upstreamUser);
-        putIfNotNull(params, "upstream-password", upstreamPassword);
-        putIfNotNull(params, "gpgkey-location", gpgkeyLocation);
+        params.put(PAKETSHOP_REPO_VAR, repo);
 
         createJob(identifier, null, appservice, params, new HashMap<>(), job -> job.setHostname(name));
     }
 
     public void paketshopRepoCopy(final String identifier, final String name, final Repository copyFrom) {
+        final Map<String, Object> repo = new HashMap<>();
+        repo.put("name", name);
+        repo.put("copy-from", copyFrom.getName());
+
         final Map<String, Object> params = new HashMap<>();
-        params.put("name", name);
-        params.put("copy-from", copyFrom.getName());
+        params.put(PAKETSHOP_REPO_VAR, repo);
 
         createJob(identifier, null, getSingleAppserviceOrThrow(copyFrom), params, new HashMap<>(), job -> {
             job.setHostname(name);
@@ -1162,7 +1170,7 @@ public class JobService {
 
     public void paketshopRepoDelete(final String identifier, final Repository repository) {
         final Map<String, Object> params = new HashMap<>();
-        params.put("name", repository.getName());
+        params.put(PAKETSHOP_REPO_VAR, Map.of("name", repository.getName()));
 
         createJob(identifier, null, getSingleAppserviceOrThrow(repository), params, new HashMap<>(), job -> {
             job.setHostname(repository.getName());
@@ -1172,10 +1180,13 @@ public class JobService {
 
     public void paketshopRepoAttach(final String identifier, final Repository repository, final boolean enabled,
                                     final boolean gpgcheck, final List<String> systems) {
+        final Map<String, Object> repo = new HashMap<>();
+        repo.put("name", repository.getName());
+        repo.put("enabled", enabled);
+        repo.put("gpgcheck", gpgcheck);
+
         final Map<String, Object> params = new HashMap<>();
-        params.put("name", repository.getName());
-        params.put("enabled", enabled);
-        params.put("gpgcheck", gpgcheck);
+        params.put(PAKETSHOP_REPO_VAR, repo);
         params.put("control_paketshop_repos_systems", systems);
 
         createJob(identifier, null, getSingleAppserviceOrThrow(repository), params, new HashMap<>(), job -> {
@@ -1186,7 +1197,7 @@ public class JobService {
 
     public void paketshopRepoDetach(final String identifier, final Repository repository, final List<String> systems) {
         final Map<String, Object> params = new HashMap<>();
-        params.put("name", repository.getName());
+        params.put(PAKETSHOP_REPO_VAR, Map.of("name", repository.getName()));
         params.put("control_paketshop_repos_systems", systems);
 
         createJob(identifier, null, getSingleAppserviceOrThrow(repository), params, new HashMap<>(), job -> {

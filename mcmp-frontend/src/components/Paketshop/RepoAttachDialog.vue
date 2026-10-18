@@ -59,6 +59,7 @@
       <repo-autocomplete-field
         v-else
         v-model="selectedRepo"
+        :target-server-id="props.server?.id"
       />
 
       <common-alert
@@ -124,7 +125,7 @@ import type Repository from "@/types/Repository";
 import type { ServerFqdn } from "@/types/ServerFqdn";
 
 import { mdiLinkPlus } from "@mdi/js";
-import { computed, inject, ref } from "vue";
+import { computed, inject, ref, watch } from "vue";
 
 import jobService from "@/api/jobService";
 import repositoryService from "@/api/repositoryService";
@@ -135,6 +136,7 @@ import RepoAutocompleteField from "@/components/Paketshop/RepoAutocompleteField.
 import { repoAttachDisabledReason } from "@/composables/repoLockStatus";
 
 interface ServerOption {
+  id: number;
   name: string;
   fqdn: string;
 }
@@ -170,10 +172,12 @@ const serverItems = computed(() => [
   ),
 ]);
 
+// only servers whose environment fits the repositories (P only with P, C/K only with C/K)
 async function loadServers(search: string) {
   searchResults.value = await serverService.getRepoTargetServers(
     loadingServers,
-    search
+    search,
+    reposToAttach.value.map((r) => r.id)
   );
 }
 
@@ -193,6 +197,14 @@ const title = computed(() =>
 const reposToAttach = computed<Repository[]>(() => {
   if (props.repositories) return props.repositories;
   return selectedRepo.value ? [selectedRepo.value] : [];
+});
+
+// the searchable servers depend on the repository, previously selected servers may not fit anymore
+watch(selectedRepo, (repo) => {
+  // open() resets the repository to null and loads the servers itself
+  if (props.server || !dialog.value || !repo) return;
+  selectedServers.value = [];
+  void loadServers("");
 });
 
 const fqdnsToAttach = computed<string[]>(() =>

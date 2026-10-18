@@ -1,13 +1,12 @@
 module github.com/it-at-m/mcmp/mcmp-eai-scheduler
 
-go 1.27.1
+go 1.27.2
 
 require (
-	github.com/euerla/goawx v0.0.0-20260428183549-bdffcc4c68b8
+	github.com/euerla/goawx v0.0.0-20260929194032-9e9c4b8f8991
 	github.com/google/uuid v1.6.0
-	github.com/it-at-m/mcmp/mcmp-eai-common v0.0.0-20260914053819-f53cfaccd752
+	github.com/it-at-m/mcmp/mcmp-eai-common v0.0.0-20261011180204-7e92135b5f9f
 	github.com/stretchr/testify v1.11.1
-	golang.org/x/oauth2 v0.37.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
 
@@ -18,7 +17,7 @@ require (
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/pgx/v5 v5.11.0 // indirect
-	github.com/jackc/puddle/v2 v2.2.2 // indirect
+	github.com/jackc/puddle/v2 v2.2.3 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.4.3 // indirect
@@ -31,9 +30,10 @@ require (
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
-	golang.org/x/sync v0.23.0 // indirect
-	golang.org/x/sys v0.48.0 // indirect
-	golang.org/x/text v0.42.0 // indirect
+	golang.org/x/oauth2 v0.37.0 // indirect
+	golang.org/x/sync v0.24.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
+	golang.org/x/text v0.43.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gorm.io/driver/postgres v1.6.3 // indirect
 	gorm.io/gorm v1.31.2 // indirect

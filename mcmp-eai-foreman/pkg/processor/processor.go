@@ -449,7 +449,7 @@ func (sp *ServiceProcessor) transformForemanHostToMCMP(foremanHost *foreman.Host
 	mcmpHost := Host{
 		ID:                        foremanHost.ID,
 		Name:                      foremanHost.Name,
-		Fqdn:                      sp.extractStringValueFromFacts(foremanHost.Facts, "fqdn"),
+		Hostname:                  sp.extractStringValueFromFacts(foremanHost.Facts, "network::hostname"),
 		DisplayName:               &foremanHost.DisplayName,
 		IP:                        foremanHost.IP,
 		Mac:                       &foremanHost.Mac,
@@ -461,28 +461,17 @@ func (sp *ServiceProcessor) transformForemanHostToMCMP(foremanHost *foreman.Host
 		CreatedAt:                 &foremanHost.CreatedAt,
 		InitiatedAt:               foremanHost.InitiatedAt,
 		InstalledAt:               foremanHost.InstalledAt,
-		InstanceUUID:              &foremanHost.UUID,
-		Serialnumber:              sp.extractStringValueFromFacts(foremanHost.Facts, "serialnumber"),
+		UUID:                      &foremanHost.UUID,
+		DMIProductSerialNumber:    sp.extractStringValueFromFacts(foremanHost.Facts, "dmi::product::serial_number"),
+		DMIProductUUID:            sp.extractStringValueFromFacts(foremanHost.Facts, "dmi::product::uuid"),
 		ComputeResourceName:       &foremanHost.ComputeResourceName,
 		Interfaces:                interfaces,
 		LhmPnExitcode:             sp.extractStringValueFromFacts(foremanHost.Facts, "lhm_pn_exitcode"),
 		LhmPnExitstring:           sp.extractStringValueFromFacts(foremanHost.Facts, "lhm_pn_exitstring"),
 		TetrationAgentIsInstalled: sp.extractBooleanValueFromFacts(foremanHost.Facts, "tetration_agent_is_installed"),
-		OracleDBVersion:           sp.extractStringValueFromFacts(foremanHost.Facts, "lhm_ora::DB_VERSION"),
-		OracleSID:                 sp.extractStringValueFromFacts(foremanHost.Facts, "lhm_ora::ORACLE_SID"),
 		ServerInfosOwnerMail:      sp.extractStringValueFromFacts(foremanHost.Facts, "server_infos_owner_mail"),
 		ServerInfosTicketnr:       sp.extractStringValueFromFacts(foremanHost.Facts, "server_infos_ticketnr"),
 		Source:                    hostNamePtr,
-	}
-
-	// Proxmox VMs don't have a useful UUID or serial number, so fall
-	// back to the DMI UUID from host facts instead. This can be mapped
-	// to the SMBIOS-UUID reported by Proxmox.
-	if mcmpHost.Serialnumber == nil {
-		if dmiUUID := sp.extractStringValueFromFacts(foremanHost.Facts, "dmi::system::uuid"); dmiUUID != nil {
-			lowerCase := strings.ToLower(*dmiUUID)
-			mcmpHost.Serialnumber = &lowerCase
-		}
 	}
 
 	// Apply advanced processing for database and OS type determination
@@ -491,6 +480,7 @@ func (sp *ServiceProcessor) transformForemanHostToMCMP(foremanHost *foreman.Host
 		sp.extractBooleanValueFromFacts(foremanHost.Facts, "lhm_managed_mariadb"),
 		sp.extractBooleanValueFromFacts(foremanHost.Facts, "lhm_managed_mysql"),
 		sp.extractBooleanValueFromFacts(foremanHost.Facts, "lhm_managed_mongodb"),
+		sp.extractBooleanValueFromFacts(foremanHost.Facts, "lhm_managed_oracledb"),
 	)
 
 	// Process patchnight scheduling information
@@ -502,6 +492,11 @@ func (sp *ServiceProcessor) transformForemanHostToMCMP(foremanHost *foreman.Host
 	}
 	if mcmpHost.MariaDB {
 		mcmpHost.MariaDBVersion = sp.extractStringValueFromFacts(foremanHost.Facts, "mysql_version")
+	}
+	if mcmpHost.OracleDB {
+		mcmpHost.OracleDBVersion = sp.extractStringValueFromFacts(foremanHost.Facts, "lhm_ora::DB_VERSION")
+		mcmpHost.OracleSID = sp.extractStringValueFromFacts(foremanHost.Facts, "lhm_ora::ORACLE_SID")
+		mcmpHost.OracleSIDs = sp.extractStringArrayValueFromFacts(foremanHost.Facts, "lhm_ora_sid_list", ",")
 	}
 
 	// Extract filesystem mountpoint information
@@ -674,10 +669,11 @@ func (sp *ServiceProcessor) debugPrintf(format string, args ...interface{}) {
 //   - factLhmManagedMariaDB: Foreman fact for MariaDB management
 //   - factLhmManagedMySQLDB: Foreman fact for MySQL management
 //   - factLhmManagedMongoDB: Foreman fact for MongoDB management
+//   - factLhmManagedOracleDB: Foreman fact for OracleDB management
 //
 // The function sets the corresponding boolean fields in the Host struct.
 // For unknown schemas, Linux = true is set as default.
-func (sp *ServiceProcessor) determineDatabaseAndOSType(host *Host, factLhmManagedPostgresql bool, factLhmManagedMariaDB bool, factLhmManagedMySQLDB bool, factLhmManagedMongoDB bool) {
+func (sp *ServiceProcessor) determineDatabaseAndOSType(host *Host, factLhmManagedPostgresql bool, factLhmManagedMariaDB bool, factLhmManagedMySQLDB bool, factLhmManagedMongoDB bool, factLhmManagedOracleDB bool) {
 	if host == nil || host.Name == "" {
 		return
 	}
@@ -709,6 +705,10 @@ func (sp *ServiceProcessor) determineDatabaseAndOSType(host *Host, factLhmManage
 	if factLhmManagedMongoDB {
 		host.MongoDB = true
 		sp.debugPrintf("Fact lhm_managed_mongodb == true -> Set MongoDB=true for host %s", hostname)
+	}
+	if factLhmManagedOracleDB {
+		host.OracleDB = true
+		sp.debugPrintf("Fact lhm_managed_oracledb == true -> Set OracleDB=true for host %s", hostname)
 	}
 
 	// Search for naming schema pattern from the end
@@ -883,6 +883,72 @@ func (sp *ServiceProcessor) extractStringValueFromFacts(facts map[string]interfa
 	}
 
 	return nil
+}
+
+// extractStringArrayValueFromFacts extracts a string value from the Facts map by key,
+// splits it by the given separator, trims whitespace from every element and returns
+// the remaining values as a slice of strings.
+//
+// The method behaves like extractStringValueFromFacts regarding lookup and type
+// checking, but returns a slice instead of a single string:
+// - Missing facts map, missing key, non-string value or empty string -> nil
+// - The value is split by the separator (default: ",")
+// - Every element is trimmed via strings.TrimSpace
+// - Elements that are empty after trimming are skipped
+//
+// Parameters:
+//   - facts: Map of fact names to fact values from Foreman host
+//   - key: The fact name to extract
+//   - separator: Optional separator; if omitted or empty, "," is used
+//
+// Returns:
+//   - []string: Slice with the trimmed values, nil if the fact is missing or invalid
+//
+// Example usage:
+//
+//	facts := map[string]interface{}{
+//	    "lhm_ora_sid_list": "SID1, SID2 ,  ,SID3",
+//	}
+//	sids := sp.extractStringArrayValueFromFacts(facts, "lhm_ora_sid_list")
+//	// Returns []string{"SID1", "SID2", "SID3"}
+//
+//	sids = sp.extractStringArrayValueFromFacts(facts, "lhm_ora_sid_list", ";")
+//	// Returns []string{"SID1, SID2 ,  ,SID3"}
+func (sp *ServiceProcessor) extractStringArrayValueFromFacts(facts map[string]interface{}, key string, separator ...string) []string {
+	if facts == nil {
+		return nil
+	}
+
+	value, exists := facts[key]
+	if !exists {
+		return nil
+	}
+
+	str, ok := value.(string)
+	if !ok || str == "" {
+		return nil
+	}
+
+	sep := ","
+	if len(separator) > 0 && separator[0] != "" {
+		sep = separator[0]
+	}
+
+	parts := strings.Split(str, sep)
+	values := make([]string, 0, len(parts))
+	for _, part := range parts {
+		trimmed := strings.TrimSpace(part)
+		if trimmed == "" {
+			continue
+		}
+		values = append(values, trimmed)
+	}
+
+	if len(values) == 0 {
+		return nil
+	}
+
+	return values
 }
 
 // extractRepositoriesFromFacts extracts the repositories list from Foreman facts.

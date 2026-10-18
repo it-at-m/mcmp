@@ -53,7 +53,9 @@ export default {
     sortOrder: string,
     search?: string,
     favorites = false,
-    editableOnly = false
+    editableOnly = false,
+    /** Only repositories that may be attached to this server (P/C/K environment rule). */
+    targetServerId?: number
   ): Promise<Page<Repository>> {
     const params = new URLSearchParams({
       offset: offset.toString(),
@@ -65,6 +67,9 @@ export default {
     });
     if (search?.trim()) {
       params.append("search", search.trim());
+    }
+    if (targetServerId !== undefined) {
+      params.append("targetServerId", targetServerId.toString());
     }
     return apiFetch(
       `${getApiBase()}${REPOSITORY_BASE}?${params.toString()}`,

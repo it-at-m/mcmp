@@ -11,6 +11,9 @@
   >
     <strong>{{ text }}</strong>
     <v-spacer />
+    <common-alert v-if="hint" color="info" class="my-3">
+      {{ hint }}
+    </common-alert>
     <v-form
       ref="form"
       @submit.prevent="onDo"
@@ -27,14 +30,15 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
-
 import CommonDialog from "@/components/common/CommonDialog.vue";
+import CommonAlert from "@/components/common/CommonAlert.vue";
 
 const props = defineProps<{
   title: string;
   text: string;
   checkboxText: string;
   icon: string;
+  hint?: string;
 }>();
 
 const emits = defineEmits<{

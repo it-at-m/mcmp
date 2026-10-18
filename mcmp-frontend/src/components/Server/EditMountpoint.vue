@@ -78,14 +78,16 @@
             !isLinux &&
             !newMountpoint &&
             mountPoint != null &&
-            formatter.calculateBtoGB(mountPoint.freeSpaceInBytes) < 5
+            formatter.calculateBtoGB(mountPoint.freeSpaceInBytes) < 2
           "
           cols="12"
         >
           <common-alert type="warning">
             <h4>
-              Für eine Speichererweiterung müssen min. 5 GB freier Speicherplatz
-              verfügbar sein.
+              Für eine Speichererweiterung müssen min. 2 GB freier Speicherplatz
+              verfügbar sein. <br />
+              Falls der Speicher nicht freigegeben werden kann, dann melden sie
+              sich direkt bei IBS49.
             </h4>
           </common-alert>
         </v-col>
@@ -220,8 +222,8 @@
                 isLinux ||
                 newMountpoint ||
                 (mountPoint != null &&
-                  formatter.calculateBtoGB(mountPoint.freeSpaceInBytes) >= 5) ||
-                'Für eine Speichererweiterung müssen min. 5 GB freier Speicherplatz verfügbar sein',
+                  formatter.calculateBtoGB(mountPoint.freeSpaceInBytes) >= 2) ||
+                'Für eine Speichererweiterung müssen min. 2 GB freier Speicherplatz verfügbar sein',
             ]"
           />
         </v-col>

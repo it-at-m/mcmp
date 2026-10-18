@@ -1,10 +1,12 @@
 package de.muenchen.mcmp.repository;
 
+import de.muenchen.mcmp.appservice.Appservice;
 import de.muenchen.mcmp.common.OffsetBasedPageRequest;
 import de.muenchen.mcmp.security.AuthUtils;
 import de.muenchen.mcmp.security.UserRoles;
 import de.muenchen.mcmp.server.ServerFqdnDTO;
 import de.muenchen.mcmp.server.ServerRepository;
+import de.muenchen.mcmp.types.EnvironmentType;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -30,9 +32,20 @@ public class RepositoryService {
         return repositoryMapper.toDTOs(repositoryRepository.findAllByServersIdOrderByNameAscIgnoreCase(serverId));
     }
 
-    public Page<RepositoryDTO> getVisibleRepositories(int offset, int limit, String sortBy, String sortOrder, String search, boolean favorites, boolean editableOnly) {
+    /**
+     * @param targetServerId if set, only repositories that may be attached to this server (see {@link PaketshopEnvironmentRule})
+     */
+    @Transactional(readOnly = true)
+    public Page<RepositoryDTO> getVisibleRepositories(int offset, int limit, String sortBy, String sortOrder, String search, boolean favorites,
+                                                      boolean editableOnly, Long targetServerId) {
         final Pageable pageable = (limit == -1) ? Pageable.unpaged() : new OffsetBasedPageRequest(offset, limit);
         final UserRoles userRoles = AuthUtils.getCurrentUserRoles();
+        final List<EnvironmentType> serverEnvironments = targetServerId == null
+                ? List.of()
+                : serverRepository.findById(targetServerId).stream()
+                        .flatMap(s -> s.getAppservices().stream())
+                        .map(Appservice::getEnvironment)
+                        .toList();
         String cleanedSearch = null;
         if (search != null) {
             cleanedSearch = search.trim()
@@ -50,6 +63,8 @@ public class RepositoryService {
                 cleanedSearch,
                 favorites,
                 editableOnly,
+                PaketshopEnvironmentRule.excludesProduction(serverEnvironments),
+                PaketshopEnvironmentRule.excludesTest(serverEnvironments),
                 sortOrder,
                 pageable
         );

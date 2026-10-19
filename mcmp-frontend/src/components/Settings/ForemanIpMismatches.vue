@@ -76,7 +76,7 @@
           <span class="font-weight-bold">
             <a
               v-if="getForemanHost(item)"
-              :href="`https://${item.foreman_fqdn}/new-hosts/${item.foreman_host_name}`"
+              :href="`https://${item.foreman_fqdn}/new/hosts/${item.foreman_host_name}`"
               target="_blank"
               rel="noopener noreferrer"
             >

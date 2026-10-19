@@ -28,7 +28,7 @@
       <template #item.name="{ item }">
         <div class="wrapping-cell">
           <a
-            :href="`https://${item.foreman}/new-hosts/${item.name}`"
+            :href="`https://${item.foreman}/new/hosts/${item.name}`"
             target="_blank"
             rel="noopener noreferrer"
           >

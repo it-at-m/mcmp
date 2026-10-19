@@ -1,6 +1,7 @@
 package de.muenchen.mcmp.clients.foreman;
 
 import de.muenchen.mcmp.common.AbstractEntity;
+import de.muenchen.mcmp.foreman.ForemanHost;
 import de.muenchen.mcmp.mountPoint.MountPoint;
 import de.muenchen.mcmp.mountPoint.MountPointRepository;
 import de.muenchen.mcmp.ontap.*;
@@ -39,27 +40,44 @@ public class ForemanImportService {
     private final OntapVolumeRepository ontapVolumeRepository;
     private final OntapVolumeServerMountRepository ontapVolumeServerMountRepository;
     private final RepositoryRepository repositoryRepository;
+    private final ForemanSyncService foremanSyncService;
+
+    /**
+     * Synchronizes the raw Foreman data (config_foreman, foreman_host, foreman_interface) for
+     * all imported hosts in a single bulk transaction and removes hosts that are no longer
+     * part of the import.
+     *
+     * @param hosts the Foreman hosts from the import
+     * @return a map keyed by {@link ForemanSyncService#hostKey(String, Long)} pointing to the
+     *         synchronized {@link ForemanHost}
+     */
+    public Map<String, ForemanHost> syncAllForemanData(final List<HostDTO> hosts) {
+        return foremanSyncService.syncAllForemanData(hosts);
+    }
 
     /**
      * Processes a single host in its own transaction.
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void processHostInNewTransaction(HostDTO hostDTO,
-                                            Set<Long> processedServerIDs,
-                                            List<ServerMatcher<HostDTO>> matchingStrategies,
-                                            Map<String, Long> repositoryIdByName) {
+    public void processHostInNewTransaction(final HostDTO hostDTO,
+                                            final Map<String, ForemanHost> foremanHostsByKey,
+                                            final Set<Long> processedServerIDs,
+                                            final List<ServerMatcher<HostDTO>> matchingStrategies,
+                                            final Map<String, Long> repositoryIdByName) {
         if (hostDTO == null) {
             return;
         }
+
+        final ForemanHost foremanHost = resolveForemanHost(hostDTO, foremanHostsByKey);
 
         Server server = matchHost(hostDTO, matchingStrategies);
 
         if (server != null) {
             log.debug("Matched host {} to server ID {}", hostDTO.name(), server.getId());
 
-            if (isUpdateNeeded(server, hostDTO)) {
+            if (isUpdateNeeded(server, hostDTO, foremanHost)) {
                 log.debug("Server {} needs update", server.getName());
-                server = saveServerWithRetry(server, hostDTO);
+                server = saveServerWithRetry(server, hostDTO, foremanHost);
                 if (server == null) {
                     log.error("Failed to save server after all retry attempts for host {}", hostDTO.name());
                     return;
@@ -81,6 +99,24 @@ public class ForemanImportService {
         } else {
             log.warn("Foreman Host {} from {} with ID {} could not be matched to any server", hostDTO.name(), hostDTO.source(), hostDTO.id());
         }
+    }
+
+    /**
+     * Resolves the managed {@link ForemanHost} for the given import host within the current
+     * transaction, based on the map produced by {@link ForemanSyncService#syncAllForemanData(List)}.
+     *
+     * @return the managed foreman host or {@code null} if none could be determined
+     */
+    private ForemanHost resolveForemanHost(final HostDTO hostDTO, final Map<String, ForemanHost> foremanHostsByKey) {
+        if (hostDTO.id() == null || foremanHostsByKey == null) {
+            return null;
+        }
+        final ForemanHost synced = foremanHostsByKey.get(
+                ForemanSyncService.hostKey(hostDTO.source(), hostDTO.id().longValue()));
+        if (synced == null || synced.getId() == null) {
+            return null;
+        }
+        return entityManager.find(ForemanHost.class, synced.getId());
     }
 
     /**
@@ -558,9 +594,9 @@ public class ForemanImportService {
      * @param hostDTO the Foreman host data
      * @return true if update is needed, false otherwise
      */
-    private boolean isUpdateNeeded(final Server server, final HostDTO hostDTO) {
+    private boolean isUpdateNeeded(final Server server, final HostDTO hostDTO, final ForemanHost foremanHost) {
         final Long expectedForemanId = hostDTO.id() != null ? Long.valueOf(hostDTO.id()) : null;
-        final String expectedFqdn = hostDTO.fqdn() != null ? hostDTO.fqdn() : hostDTO.name();
+        final String expectedHostname = hostDTO.hostname() != null ? hostDTO.hostname() : hostDTO.name();
         final String expectedPatchnightGroup = hostDTO.patchnightGroup() != null
                 ? hostDTO.patchnightGroup().toUpperCase()
                 : null;
@@ -575,11 +611,15 @@ public class ForemanImportService {
         final boolean expectedPhp = managedList.contains("lhm_managed_middleware_php");
         final boolean expectedTomcat = managedList.contains("lhm_managed_middleware_tomcat");
 
+        if (!Objects.equals(server.getForemanId(), foremanHost.getId())) {
+            return true;
+        }
+
         // Check basic fields
         if (!Objects.equals(server.getManaged(), true) ||
             !Objects.equals(server.getForemanSource(), hostDTO.source()) ||
             !Objects.equals(server.getForemanId(), expectedForemanId) ||
-            !Objects.equals(server.getFqdn(), expectedFqdn) ||
+            !Objects.equals(server.getFqdn(), expectedHostname) ||
             !Objects.equals(server.getTetrationAgentInstalled(), expectedTetrationAgent) ||
             !Objects.equals(server.getManagedMiddlewareFilebeat(), expectedFilebeat) ||
             !Objects.equals(server.getManagedMiddlewareHttpd(), expectedHttpd) ||
@@ -605,6 +645,13 @@ public class ForemanImportService {
         }
         if (hostDTO.serverInfosOwnerMail() != null && !hostDTO.serverInfosOwnerMail().isBlank()
             && !Objects.equals(server.getServerInfosOwnerMail(), hostDTO.serverInfosOwnerMail())) {
+            return true;
+        }
+
+        // Check Oracle SIDs (order-insensitive via normalization/sorting)
+        if (!java.util.Arrays.equals(
+                normalizeOracleSids(server.getOracleSids()),
+                normalizeOracleSids(hostDTO.oracleSids()))) {
             return true;
         }
 
@@ -634,7 +681,7 @@ public class ForemanImportService {
      * @param hostDTO the Foreman host data to apply
      * @return the saved server, or null if all retries failed
      */
-    private Server saveServerWithRetry(final Server server, final HostDTO hostDTO) {
+    private Server saveServerWithRetry(final Server server, final HostDTO hostDTO, final ForemanHost foremanHost) {
         for (int attempt = 1; attempt <= SAVE_RETRY_ATTEMPTS; attempt++) {
             try {
                 if (attempt > 1) {
@@ -644,7 +691,7 @@ public class ForemanImportService {
                 final Server freshServer = serverRepository.findById(server.getId())
                         .orElseThrow(() -> new IllegalStateException("Server not found: " + server.getId()));
 
-                updateServerFromHost(freshServer, hostDTO);
+                updateServerFromHost(freshServer, hostDTO, foremanHost);
 
                 final Server savedServer = serverRepository.save(freshServer);
 
@@ -677,13 +724,13 @@ public class ForemanImportService {
      * @param server  the server to update
      * @param hostDTO the Foreman host data
      */
-    private void updateServerFromHost(final Server server, final HostDTO hostDTO) {
+    private void updateServerFromHost(final Server server, final HostDTO hostDTO, final ForemanHost foremanHost) {
         if (hostDTO.id() == null) {
             log.warn("Cannot update server {}: Foreman host ID is null", server.getName());
             return;
         }
 
-        final String newFqdn = hostDTO.fqdn() != null ? hostDTO.fqdn() : hostDTO.name();
+        final String newHostname = hostDTO.hostname() != null ? hostDTO.hostname() : hostDTO.name();
         final String newPatchnightGroup = hostDTO.patchnightGroup() != null
                 ? hostDTO.patchnightGroup().toUpperCase()
                 : null;
@@ -694,7 +741,7 @@ public class ForemanImportService {
         server.setManaged(true);
         server.setForemanSource(hostDTO.source());
         server.setForemanId(hostDTO.id() != null ? hostDTO.id().longValue() : null);
-        server.setFqdn(newFqdn);
+        server.setFqdn(newHostname);
         if (hostDTO.linux()) {
             server.setPatchnightTime(hostDTO.patchnightStartTime());
             server.setPatchnightGroup(newPatchnightGroup);
@@ -727,11 +774,16 @@ public class ForemanImportService {
         server.setDbMongodb(hostDTO.mongoDb());
         server.setDbAdabas(hostDTO.adabasDb());
 
+        // Oracle SIDs (normalized/sorted so the order from Foreman doesn't cause needless updates)
+        server.setOracleSids(normalizeOracleSids(hostDTO.oracleSids()));
+
         // Role flags
         server.setRoleWindows(hostDTO.windows());
         server.setRoleLinux(hostDTO.linux());
         server.setRoleOracle(hostDTO.oracleDb());
         server.setRoleNonOracle(calculateNonOracleRole(hostDTO));
+
+        server.setForemanHost(foremanHost);
 
         if (hostDTO.linux()) {
             server.setOperatingsystem(hostDTO.operatingsystemName());
@@ -1221,5 +1273,26 @@ public class ForemanImportService {
         }
 
         log.info("Reset complete: {} succeeded, {} skipped (no changes needed), {} failed", successCount, skipCount, failCount);
+    }
+
+    /**
+     * Normalizes Oracle SIDs from Foreman to enable an order-insensitive comparison
+     * and to store a stable (sorted) value.
+     * Blank/null entries are removed and duplicates are dropped.
+     *
+     * @param oracleSids the raw Oracle SIDs from the Foreman host
+     * @return a sorted, deduplicated array (never {@code null}, empty if no values)
+     */
+    private String[] normalizeOracleSids(final String[] oracleSids) {
+        if (oracleSids == null || oracleSids.length == 0) {
+            return new String[0];
+        }
+        return java.util.Arrays.stream(oracleSids)
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(sid -> !sid.isEmpty())
+                .distinct()
+                .sorted()
+                .toArray(String[]::new);
     }
 }

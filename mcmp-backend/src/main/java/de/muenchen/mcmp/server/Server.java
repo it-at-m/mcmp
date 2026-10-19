@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import de.muenchen.mcmp.appservice.Appservice;
 import de.muenchen.mcmp.cloud.Cloud;
 import de.muenchen.mcmp.common.AbstractEntity;
+import de.muenchen.mcmp.foreman.ForemanHost;
 import de.muenchen.mcmp.repository.Repository;
 import de.muenchen.mcmp.types.EnvironmentType;
 import de.muenchen.mcmp.types.ServerKind;
@@ -19,7 +20,9 @@ import org.hibernate.annotations.*;
 import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 @Getter
@@ -519,4 +522,14 @@ public class Server extends AbstractEntity {
     @Column(name = "virtual_appliance", nullable = false)
     private Boolean virtualAppliance = false;
 
+    @OneToOne(fetch = FetchType.LAZY)
+    @OnDelete(action = OnDeleteAction.SET_NULL)
+    @JoinColumn(name = "foreman_host_id")
+    private ForemanHost foremanHost;
+
+    @NotNull
+    @ColumnDefault("'{}'")
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Column(name = "oracle_sids", columnDefinition = "text[]", nullable = false)
+    private String[] oracleSids = new String[0];
 }

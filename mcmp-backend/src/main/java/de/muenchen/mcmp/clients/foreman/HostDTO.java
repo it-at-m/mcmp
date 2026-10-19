@@ -9,7 +9,7 @@ public record HostDTO(
         Integer id,
         String source,
         String name,
-        String fqdn,
+        String hostname,
         @JsonProperty("display_name")
         String displayName,
         String ip,
@@ -30,9 +30,12 @@ public record HostDTO(
         String initiatedAt,
         @JsonProperty("installed_at")
         String installedAt,
-        String serialnumber,
-        @JsonProperty("instance_uuid")
-        String instanceUuid,
+        @JsonProperty("dmi_product_uuid")
+        String dmiProductUUID,
+        @JsonProperty("dmi_product_serial_number")
+        String dmiProductSerialNumber,
+        @JsonProperty("uuid")
+        String uuid,
         @JsonProperty("compute_resource_name")
         String computeResourceName,
         List<InterfaceDTO> interfaces,
@@ -74,6 +77,8 @@ public record HostDTO(
         String oracleDbVersion,
         @JsonProperty("oracle_sid")
         String oracleSid,
+        @JsonProperty("oracle_sids")
+        String[] oracleSids,
         @JsonProperty("mountpoints")
         List<MountpointDTO> mountpoints,
         @JsonProperty("partitions")

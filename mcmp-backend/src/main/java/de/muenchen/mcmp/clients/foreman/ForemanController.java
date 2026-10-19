@@ -1,5 +1,6 @@
 package de.muenchen.mcmp.clients.foreman;
 
+import de.muenchen.mcmp.foreman.ForemanHost;
 import de.muenchen.mcmp.server.matching.ServerMatcher;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
@@ -77,11 +78,18 @@ public class ForemanController implements DisposableBean {
 
                 final Set<Long> processedServerIDs = new HashSet<>();
 
-                // 2) Process each host
+                // 2) Synchronize the raw Foreman data (config_foreman, foreman_host,
+                //    foreman_interface) in one bulk transaction. Hosts that are no longer
+                //    part of the import are removed here.
+                final Map<String, ForemanHost> foremanHostsByKey =
+                        foremanImportService.syncAllForemanData(foremanDataDTO.hosts());
+
+                // 3) Process each host
                 for (final HostDTO hostDTO : foremanDataDTO.hosts()) {
                     try {
                         foremanImportService.processHostInNewTransaction(
                                 hostDTO,
+                                foremanHostsByKey,
                                 processedServerIDs,
                                 strategies,
                                 repositoryIdByName
@@ -93,7 +101,7 @@ public class ForemanController implements DisposableBean {
                     }
                 }
 
-                // 3) Reset servers not in import
+                // 4) Reset servers not in import
                 foremanImportService.resetUnprocessedServers(processedServerIDs);
 
                 log.info("Successfully processed Foreman data");
@@ -112,10 +120,11 @@ public class ForemanController implements DisposableBean {
                         host -> host.id() != null ? host.id() : null,
                         HostDTO::source
                 ),
-                cache.createInstanceUuidMatcher(HostDTO::instanceUuid),
-                cache.createUuidMatcher(HostDTO::serialnumber),
+                cache.createInstanceUuidMatcher(HostDTO::uuid),
+                cache.createSerialNumberMatcher(HostDTO::dmiProductSerialNumber),
+                cache.createUuidMatcher(HostDTO::dmiProductUUID),
+                cache.createInstanceUuidMatcher(HostDTO::dmiProductUUID),
                 cache.createMacAddressMatcher(HostDTO::mac)
-                //,cache.createIpAddressMatcher(HostDTO::ip)
         );
         log.debug("Initialized {} Foreman matching strategies", strategies.size());
         return strategies;

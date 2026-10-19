@@ -58,25 +58,37 @@
               </template>
             </v-tab>
 
-            <v-tab
+            <v-menu
               v-if="isAdmin || isOtherRole"
-              value="Patchnight"
+              location="bottom start"
+              offset="4"
             >
-              Patchnight Status
-              <template #prepend>
-                <v-icon size="x-large">{{ mdiCogOutline }}</v-icon>
+              <template #activator="{ props: menuProps }">
+                <v-tab
+                  v-bind="menuProps"
+                  value="Monitoring"
+                >
+                  Monitoring
+                  <template #prepend>
+                    <v-icon size="x-large">{{ mdiMonitorDashboard }}</v-icon>
+                  </template>
+                  <template #append>
+                    <v-icon size="small">{{ mdiChevronDown }}</v-icon>
+                  </template>
+                </v-tab>
               </template>
-            </v-tab>
 
-            <v-tab
-              v-if="isAdmin"
-              value="JobStatistics"
-            >
-              Job Statistics
-              <template #prepend>
-                <v-icon size="x-large">{{ mdiChartBar }}</v-icon>
-              </template>
-            </v-tab>
+              <v-list density="compact">
+                <v-list-item
+                  v-for="item in monitoringItems"
+                  :key="item.value"
+                  :prepend-icon="item.icon"
+                  :title="item.title"
+                  :active="monitoringTab === item.value"
+                  @click="monitoringTab = item.value"
+                />
+              </v-list>
+            </v-menu>
 
             <v-tab
               v-if="isAdmin || isOtherRole"
@@ -95,16 +107,6 @@
               Status & Health
               <template #prepend>
                 <v-icon size="x-large">{{ mdiHeartPulse }}</v-icon>
-              </template>
-            </v-tab>
-
-            <v-tab
-              v-if="isAdmin"
-              value="ErrorLog"
-            >
-              Error Logs
-              <template #prepend>
-                <v-icon size="x-large">{{ mdiAlertCircleOutline }}</v-icon>
               </template>
             </v-tab>
           </v-tabs>
@@ -133,7 +135,7 @@
           </v-tabs-window-item>
 
           <v-tabs-window-item
-            v-if="isAdmin"
+            v-if="false"
             value="Price"
           >
             <prices />
@@ -148,16 +150,23 @@
 
           <v-tabs-window-item
             v-if="isAdmin || isOtherRole"
-            value="Patchnight"
+            value="Monitoring"
           >
-            <patchnight-status />
-          </v-tabs-window-item>
+            <patchnight-status v-if="monitoringTab === 'Patchnight'" />
 
-          <v-tabs-window-item
-            v-if="isAdmin"
-            value="JobStatistics"
-          >
-            <job-statistics />
+            <unmapped-foreman-hosts
+              v-if="isAdmin && monitoringTab === 'UnmappedForemanHosts'"
+            />
+
+            <foreman-ip-mismatches
+              v-if="isAdmin && monitoringTab === 'ForemanIpMismatches'"
+            />
+
+            <job-statistics
+              v-if="isAdmin && monitoringTab === 'JobStatistics'"
+            />
+
+            <error-log v-if="isAdmin && monitoringTab === 'ErrorLog'" />
           </v-tabs-window-item>
 
           <v-tabs-window-item
@@ -173,13 +182,6 @@
           >
             <app-config />
           </v-tabs-window-item>
-
-          <v-tabs-window-item
-            v-if="isAdmin"
-            value="ErrorLog"
-          >
-            <error-log />
-          </v-tabs-window-item>
         </v-tabs-window>
       </v-col>
     </v-row>
@@ -191,13 +193,17 @@ import {
   mdiAccountCog,
   mdiAlertCircleOutline,
   mdiChartBar,
+  mdiChevronDown,
   mdiCogOutline,
   mdiCurrencyEur,
   mdiHeartPulse,
   mdiHistory,
+  mdiMonitorDashboard,
   mdiNetwork,
   mdiPuzzle,
   mdiRocketLaunch,
+  mdiServerOff,
+  mdiSwapHorizontal,
 } from "@mdi/js";
 import { computed, nextTick, onMounted, provide, ref, watch } from "vue";
 import { useRouter } from "vue-router";
@@ -207,16 +213,19 @@ import AdminHistory from "@/components/Settings/AdminHistory.vue";
 import adminUsers from "@/components/Settings/adminUsers.vue";
 import AppConfig from "@/components/Settings/appConfig.vue";
 import ErrorLog from "@/components/Settings/ErrorLog.vue";
+import ForemanIpMismatches from "@/components/Settings/ForemanIpMismatches.vue";
 import IntegrationSettings from "@/components/Settings/IntegrationSettings.vue";
 import JobStatistics from "@/components/Settings/JobStatistics.vue";
 import NetworkGroup from "@/components/Settings/NetworkGroup.vue";
 import PatchnightStatus from "@/components/Settings/PatchnightStatus.vue";
 import Prices from "@/components/Settings/Prices.vue";
+import UnmappedForemanHosts from "@/components/Settings/UnmappedForemanHosts.vue";
 import { useUserStore } from "@/stores/user";
 
 const userStore = useUserStore();
 const router = useRouter();
 const tab = ref("History");
+const monitoringTab = ref("Patchnight");
 const historyKey = ref(0);
 
 const hasOpenDialog = ref(false);
@@ -246,6 +255,41 @@ const isOtherRole = computed(() => {
     auths.includes("ROLE_SECURITY")
   );
 });
+
+const monitoringItems = computed(() =>
+  [
+    {
+      value: "Patchnight",
+      title: "Patchnight Status",
+      icon: mdiCogOutline,
+      adminOnly: false,
+    },
+    {
+      value: "UnmappedForemanHosts",
+      title: "Foreman-Hosts",
+      icon: mdiServerOff,
+      adminOnly: true,
+    },
+    {
+      value: "ForemanIpMismatches",
+      title: "IP-Abweichungen",
+      icon: mdiSwapHorizontal,
+      adminOnly: true,
+    },
+    {
+      value: "JobStatistics",
+      title: "Job Statistics",
+      icon: mdiChartBar,
+      adminOnly: true,
+    },
+    {
+      value: "ErrorLog",
+      title: "Error Logs",
+      icon: mdiAlertCircleOutline,
+      adminOnly: true,
+    },
+  ].filter((item) => !item.adminOnly || isAdmin.value)
+);
 
 onMounted(() => {
   redirectIfUnauthorized();

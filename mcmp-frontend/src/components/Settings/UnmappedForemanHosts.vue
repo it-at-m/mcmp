@@ -1,7 +1,19 @@
 <template>
   <common-card title="Nicht zugeordnete Foreman-Hosts">
     <template #append-title>
-      <count-badge :count="items.length" />
+      <div class="d-flex align-center ga-2">
+        <count-badge :count="items.length" />
+        <v-btn
+          size="small"
+          variant="tonal"
+          color="green-darken-2"
+          :prepend-icon="mdiMicrosoftExcel"
+          :disabled="items.length === 0"
+          @click="exportCsv"
+        >
+          CSV Export
+        </v-btn>
+      </div>
     </template>
 
     <v-data-table
@@ -62,13 +74,16 @@
 
 <script setup lang="ts">
 import type UnmappedForemanHost from "@/types/UnmappedForemanHost";
+import type { CsvColumn, CsvValue } from "@/util/csv";
 import type { DataTableHeader } from "vuetify/framework";
 
+import { mdiMicrosoftExcel } from "@mdi/js";
 import { onMounted, ref } from "vue";
 
 import reportService from "@/api/reportService";
 import CommonCard from "@/components/common/CommonCard.vue";
 import CountBadge from "@/components/common/CountBadge.vue";
+import { buildCsv, downloadCsv } from "@/util/csv";
 
 const loading = ref(false);
 const items = ref<UnmappedForemanHost[]>([]);
@@ -126,6 +141,22 @@ const headers = ref<DataTableHeader[]>([
   },
 ]);
 
+// Explicitly typed columns for the CSV export. Keeping them in sync with
+// the table headers avoids optional `key`/`title` handling and casts.
+const csvColumns: CsvColumn<UnmappedForemanHost>[] = [
+  { header: "Foreman", value: (item) => item.foreman },
+  { header: "Name", value: (item) => item.name },
+  { header: "Betriebssystem", value: (item) => item.operatingsystem },
+  { header: "Foreman-ID", value: (item) => item.foreman_id },
+  { header: "UUID", value: (item) => item.uuid },
+  {
+    header: "DMI Product SerialNumber",
+    value: (item) => item.dmi_product_serial_number,
+  },
+  { header: "DMI Product UUID", value: (item) => item.dmi_product_uuid },
+  { header: "MAC", value: (item) => item.mac },
+];
+
 function getUnmappedForemanHosts() {
   reportService
     .getUnmappedForemanHosts(loading)
@@ -146,6 +177,17 @@ function getHostname(fqdn: string): string {
   }
   const firstDot = fqdn.indexOf(".");
   return firstDot === -1 ? fqdn : fqdn.substring(0, firstDot);
+}
+
+function exportCsv() {
+  if (items.value.length === 0) {
+    return;
+  }
+
+  const date = new Date().toISOString().slice(0, 10);
+  const filename = `nicht-zugeordnete-foreman-hosts_${date}.csv`;
+
+  downloadCsv(filename, buildCsv(items.value, csvColumns));
 }
 
 onMounted(() => {

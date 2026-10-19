@@ -9,7 +9,8 @@
           color="green-darken-2"
           :prepend-icon="mdiMicrosoftExcel"
           :disabled="items.length === 0"
-          @click="exportCsv"
+          @click.stop="exportCsv"
+          @mousedown.stop
         >
           CSV Export
         </v-btn>

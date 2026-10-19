@@ -1,7 +1,20 @@
 <template>
   <common-card title="Foreman IP-Abweichungen">
     <template #append-title>
-      <count-badge :count="items.length" />
+      <div class="d-flex align-center ga-2">
+        <count-badge :count="items.length" />
+        <v-btn
+          size="small"
+          variant="tonal"
+          color="green-darken-2"
+          :prepend-icon="mdiMicrosoftExcel"
+          :disabled="filteredItems.length === 0"
+          @click.stop="exportCsv"
+          @mousedown.stop
+        >
+          CSV Export
+        </v-btn>
+      </div>
     </template>
 
     <div class="d-flex align-center flex-wrap ga-2 mb-3">
@@ -179,9 +192,11 @@
 
 <script setup lang="ts">
 import type ForemanIpMismatchServer from "@/types/ForemanIpMismatchServer";
+import type { CsvColumn } from "@/util/csv";
 import type { DataTableHeader } from "vuetify/framework";
 
 import {
+  mdiMicrosoftExcel,
   mdiPauseCircle,
   mdiPlayCircle,
   mdiPower,
@@ -193,6 +208,7 @@ import { useTheme } from "vuetify";
 import reportService from "@/api/reportService";
 import CommonCard from "@/components/common/CommonCard.vue";
 import CountBadge from "@/components/common/CountBadge.vue";
+import { buildCsv, downloadCsv } from "@/util/csv";
 
 const theme = useTheme();
 const statusChipVariant = computed<"flat" | "tonal">(() =>
@@ -233,6 +249,47 @@ const headers = ref<DataTableHeader[]>([
     sortable: false,
   },
 ]);
+
+interface CsvRow {
+  server_name: string;
+  foreman_host_name: string;
+  power_state: string;
+  server_if: string;
+  server_ip: string;
+  server_network: string;
+  foreman_if: string;
+  foreman_ip: string;
+  foreman_network: string;
+  status: string;
+}
+
+type CsvIpDetail = Omit<
+  CsvRow,
+  "server_name" | "foreman_host_name" | "power_state"
+>;
+
+const emptyIpDetail: CsvIpDetail = {
+  server_if: "",
+  server_ip: "",
+  server_network: "",
+  foreman_if: "",
+  foreman_ip: "",
+  foreman_network: "",
+  status: "",
+};
+
+const csvColumns: CsvColumn<CsvRow>[] = [
+  { header: "Server", value: (item) => item.server_name },
+  { header: "Foreman-Host", value: (item) => item.foreman_host_name },
+  { header: "Power-Status", value: (item) => item.power_state },
+  { header: "MCMP Interface", value: (item) => item.server_if },
+  { header: "MCMP IP", value: (item) => item.server_ip },
+  { header: "MCMP Netzwerk", value: (item) => item.server_network },
+  { header: "Foreman Interface", value: (item) => item.foreman_if },
+  { header: "Foreman IP", value: (item) => item.foreman_ip },
+  { header: "Foreman Netzwerk", value: (item) => item.foreman_network },
+  { header: "Status", value: (item) => item.status },
+];
 
 const powerStateCounts = computed<Record<PowerStateKey, number>>(() => {
   const counts: Record<PowerStateKey, number> = {
@@ -405,6 +462,49 @@ function statusColor(status: string): string {
     default:
       return "secondary";
   }
+}
+
+function buildCsvRows(): CsvRow[] {
+  const rows: CsvRow[] = [];
+
+  for (const server of filteredItems.value) {
+    const base = {
+      server_name: server.server_name,
+      foreman_host_name: server.foreman_host_name,
+      power_state: powerStateText(server.power_state),
+    };
+
+    const details: CsvIpDetail[] =
+      server.ips.length === 0
+        ? [emptyIpDetail]
+        : server.ips.map((ip) => ({
+            server_if: ip.server_if ?? "",
+            server_ip: ip.server_ip ?? "",
+            server_network: ip.server_network ?? "",
+            foreman_if: ip.foreman_if ?? "",
+            foreman_ip: ip.foreman_ip ?? "",
+            foreman_network: ip.foreman_network ?? "",
+            status: ip.status,
+          }));
+
+    for (const detail of details) {
+      rows.push({ ...base, ...detail });
+    }
+  }
+
+  return rows;
+}
+
+function exportCsv() {
+  const rows = buildCsvRows();
+  if (rows.length === 0) {
+    return;
+  }
+
+  const date = new Date().toISOString().slice(0, 10);
+  const filename = `foreman-ip-abweichungen_${date}.csv`;
+
+  downloadCsv(filename, buildCsv(rows, csvColumns));
 }
 
 onMounted(() => {

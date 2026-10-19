@@ -155,11 +155,16 @@
             <patchnight-status v-if="monitoringTab === 'Patchnight'" />
 
             <unmapped-foreman-hosts
-              v-if="isAdmin && monitoringTab === 'UnmappedForemanHosts'"
+              v-if="
+                canViewForemanReports &&
+                monitoringTab === 'UnmappedForemanHosts'
+              "
             />
 
             <foreman-ip-mismatches
-              v-if="isAdmin && monitoringTab === 'ForemanIpMismatches'"
+              v-if="
+                canViewForemanReports && monitoringTab === 'ForemanIpMismatches'
+              "
             />
 
             <job-statistics
@@ -256,39 +261,48 @@ const isOtherRole = computed(() => {
   );
 });
 
+const canViewForemanReports = computed(() => {
+  const auths = userStore.getUser?.authorities || [];
+  return (
+    auths.includes("ROLE_ADMIN") ||
+    auths.includes("ROLE_WINDOWS") ||
+    auths.includes("ROLE_LINUX")
+  );
+});
+
 const monitoringItems = computed(() =>
   [
     {
       value: "Patchnight",
       title: "Patchnight Status",
       icon: mdiCogOutline,
-      adminOnly: false,
+      visible: true,
     },
     {
       value: "UnmappedForemanHosts",
-      title: "Foreman-Hosts",
+      title: "Unmapped Foreman-Hosts",
       icon: mdiServerOff,
-      adminOnly: true,
+      visible: canViewForemanReports.value,
     },
     {
       value: "ForemanIpMismatches",
-      title: "IP-Abweichungen",
+      title: "Foreman IP-Abweichungen",
       icon: mdiSwapHorizontal,
-      adminOnly: true,
+      visible: canViewForemanReports.value,
     },
     {
       value: "JobStatistics",
       title: "Job Statistics",
       icon: mdiChartBar,
-      adminOnly: true,
+      visible: isAdmin.value,
     },
     {
       value: "ErrorLog",
       title: "Error Logs",
       icon: mdiAlertCircleOutline,
-      adminOnly: true,
+      visible: isAdmin.value,
     },
-  ].filter((item) => !item.adminOnly || isAdmin.value)
+  ].filter((item) => item.visible)
 );
 
 onMounted(() => {

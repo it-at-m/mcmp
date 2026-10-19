@@ -6,11 +6,11 @@
         <v-number-input
           v-model="instlServerDetails.cpu"
           :min="instlServerDetails.category?.label == 'PostgreSQL' ? 4 : 2"
-          :max="72"
+          :max="8"
           :hint="
             'Erlaubte Werte ' +
             (instlServerDetails.category?.label == 'PostgreSQL' ? 4 : 2) +
-            ' bis 72'
+            ' bis 8'
           "
           persistent-hint
           control-variant="split"
@@ -23,11 +23,11 @@
         <v-number-input
           v-model="instlServerDetails.memory"
           :min="instlServerDetails.category?.label == 'OracleDB' ? 6 : 4"
-          :max="100"
+          :max="64"
           :hint="
             'Erlaubte Werte ' +
             (instlServerDetails.category?.label == 'OracleDB' ? 6 : 4) +
-            ' bis 100'
+            ' bis 64'
           "
           persistent-hint
           control-variant="split"

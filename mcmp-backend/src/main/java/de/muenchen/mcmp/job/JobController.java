@@ -884,9 +884,9 @@ public class JobController {
 
         int ram = Integer.parseInt(ramObj.toString());
         int cpu = Integer.parseInt(cpuObj.toString());
-        if (cpu < 1 || cpu > 72 || ram < 2 || ram > 100) {
+        if (cpu < 1 || cpu > 8 || ram < 2 || ram > 64) {
             log.warn("Invalid CPU or RAM provided by user: {} for new RHEL10 Server Install", AuthUtils.getUsername());
-            throw new IllegalArgumentException("CPU must be between 1 and 72, RAM must be between 2 and 100 GB.");
+            throw new IllegalArgumentException("CPU must be between 1 and 8, RAM must be between 2 and 64 GB.");
         }
 
         long applicationServiceId = Integer.parseInt(applicationServiceIdObj.toString());
@@ -1099,9 +1099,9 @@ public class JobController {
 
         int ram = Integer.parseInt(ramObj.toString());
         int cpu = Integer.parseInt(cpuObj.toString());
-        if (cpu < 1 || cpu > 72 || ram < 2 || ram > 100) {
+        if (cpu < 1 || cpu > 8 || ram < 2 || ram > 64) {
             log.warn("Invalid CPU or RAM provided by user: {} for new Windows Server Install", AuthUtils.getUsername());
-            throw new IllegalArgumentException("CPU must be between 1 and 72, RAM must be between 2 and 100 GB.");
+            throw new IllegalArgumentException("CPU must be between 1 and 8, RAM must be between 2 and 64 GB.");
         }
 
         String osVersion = osVersionObj.toString();
@@ -1184,9 +1184,9 @@ public class JobController {
 
         int ram = Integer.parseInt(ramObj.toString());
         int cpu = Integer.parseInt(cpuObj.toString());
-        if (cpu < 1 || cpu > 72 || ram < 2 || ram > 100) {
+        if (cpu < 1 || cpu > 8 || ram < 2 || ram > 64) {
             log.warn("Invalid CPU or RAM provided by user: {} for new Windows Server Install", AuthUtils.getUsername());
-            throw new IllegalArgumentException("CPU must be between 1 and 72, RAM must be between 2 and 100 GB.");
+            throw new IllegalArgumentException("CPU must be between 1 and 8, RAM must be between 2 and 64 GB.");
         }
 
         String osVersion = osVersionObj.toString();

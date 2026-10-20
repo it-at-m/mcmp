@@ -579,32 +579,18 @@ public class JobService {
         createJob(linux_mountpoint_change_identifier, server, params, new HashMap<>());
     }
 
-    public void linuxRhelServer(final Map<?, ?> fqdnBuildingBlocks, final String categoryType, final Map<?, ?> serverTypeMap, final int ram, final int cpu, final Long networkGroupId, final Long applicationServiceId, final Map<String, Map<?, ?>> dbParams, String nonPostgresReason, final boolean middlewareUser, final String linux_rhel_server_identifier) {
+    public void linuxRhelServer(final Map<?, ?> fqdnBuildingBlocks, final String categoryType, final Map<?, ?> serverTypeMap, final Set<LinuxServerApplication> applications, final int ram, final int cpu, final Long networkGroupId, final Long applicationServiceId, final Map<String, Map<?, ?>> dbParams, String nonPostgresReason, final boolean middlewareUser, final String linux_rhel_server_identifier) {
         Appservice appservice = getAppserviceOrThrow(applicationServiceId);
         Map<String, Object> params = new HashMap<>();
         boolean nonOss = false;
 
-        // checks for what serverType to install
-        final Map<String, List<String>> serverTypeNameToAwxInstallParamName = Map.of(
-                "Apache", List.of("webserver_install"),
-                "Apache/PHP", List.of("webserver_install", "php_install"),
-                "Java", List.of("java_install"),
-                "Apache/Tomcat", List.of("webserver_install", "tomcat_install", "java_install")
-        );
-        if (categoryType.equals("App") || categoryType.equals("Mixed")) {
-            String labelToCheck = serverTypeMap.get("label").toString();
-            if (categoryType.equals("Mixed")) {
-                labelToCheck = labelToCheck.split("\\+")[0].trim();
-            }
-            for (String param : serverTypeNameToAwxInstallParamName.get(labelToCheck)) {
-                params.put(param, true);
-            }
+        for (LinuxServerApplication application : applications) {
+            params.put(application.getAwxInstallParam(), true);
         }
-
 
         // calculate FQDN
         String serverType;
-        if (!categoryType.equals("Standard") && !serverTypeMap.get("kenner").toString().isEmpty()) {
+        if (serverTypeMap != null && !serverTypeMap.get("kenner").toString().isEmpty()) {
             serverType = serverTypeMap.get("kenner").toString();
         } else {
             serverType = "lx";

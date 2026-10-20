@@ -179,10 +179,10 @@
   >
     <v-col cols="12">
       <v-alert
-          border
-          variant="tonal"
-          rounded="lg"
-          type="info"
+        border
+        variant="tonal"
+        rounded="lg"
+        type="info"
       >
         <div class="text-medium-emphasis">
           Verbindungen von Servern, welche nicht durch die Basisfreigaben (<a
@@ -190,15 +190,16 @@
             target="_blank"
             rel="noopener noreferrer"
             class="text-info text-decoration-underline"
-        >Tabelle</a
-        >) abgedeckt sind müssen zusätzlich beantragt werden (<a
+            >Tabelle</a
+          >) abgedeckt sind müssen zusätzlich beantragt werden (<a
             href="https://it-services.muenchen.de/sp?id=sc_cat_item&sys_id=85fcd2951b8dad94948e657f7b4bcbb9&table=sc_cat_item&searchTerm=freischaltung"
             target="_blank"
             rel="noopener noreferrer"
             class="text-info text-decoration-underline"
-        >Portfreischaltung</a
-        >) . <br />
-          Die nachfolgende Auswahl konfiguriert nur die Zugriffsberechtigung auf dem Datenbanksystem.
+            >Portfreischaltung</a
+          >) . <br />
+          Die nachfolgende Auswahl konfiguriert nur die Zugriffsberechtigung auf
+          dem Datenbanksystem.
         </div>
       </v-alert>
     </v-col>

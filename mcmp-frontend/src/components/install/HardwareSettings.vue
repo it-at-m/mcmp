@@ -168,9 +168,10 @@ watch(
   () => [
     props.instlServerDetails.category,
     props.instlServerDetails.appservice,
+    props.instlServerDetails.applications.length,
   ],
-  ([category, applicationServiceClass]) => {
-    if (category && applicationServiceClass) {
+  ([category, applicationServiceClass, applicationCount]) => {
+    if ((category || applicationCount) && applicationServiceClass) {
       getNetworkGroups();
       props.instlServerDetails.networkGroup = null;
     }

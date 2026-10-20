@@ -46,6 +46,7 @@
         instlServerDetails.osVersion = null;
         instlServerDetails.categoryType = null;
         instlServerDetails.category = null;
+        instlServerDetails.applications = [];
       "
     >
       <v-radio
@@ -67,6 +68,7 @@
       @change="
         instlServerDetails.categoryType = null;
         instlServerDetails.category = null;
+        instlServerDetails.applications = [];
       "
     >
       <v-radio
@@ -85,7 +87,10 @@
       v-model="instlServerDetails.categoryType"
       aria-label="Server Typ auswählen"
       inline
-      @change="instlServerDetails.category = null"
+      @change="
+        instlServerDetails.category = null;
+        instlServerDetails.applications = [];
+      "
     >
       <template
         v-for="type in Object.values(categoryType)"
@@ -103,7 +108,25 @@
       >Anwendung/Datenbank*</strong
     >
     <v-select
-      v-if="serverCategoryOptions.length > 0"
+      v-if="
+        serverCategoryOptions.length > 0 &&
+        instlServerDetails.categoryType == categoryType.App
+      "
+      v-model="selectedApplications"
+      :items="serverCategoryOptions"
+      item-title="label"
+      return-object
+      multiple
+      chips
+      closable-chips
+      rounded
+      variant="outlined"
+      class="mt-2 mb-2"
+      hint="PHP benötigt Apache, Tomcat benötigt Apache und Java"
+      persistent-hint
+    />
+    <v-select
+      v-else-if="serverCategoryOptions.length > 0"
       v-model="instlServerDetails.category"
       :items="serverCategoryOptions"
       item-title="label"
@@ -255,6 +278,7 @@
 
 <script setup lang="ts">
 import type AppserviceList from "@/types/AppserviceList.ts";
+import type { ServerCategoryType } from "@/types/ServerTypes";
 
 import { computed, onMounted, ref, watch } from "vue";
 
@@ -352,6 +376,36 @@ const serverCategoryOptions = computed(() => {
     return serverTypeMixes.filter((mix) => mix.osVersion.includes(osVersion));
   }
   return [];
+});
+
+const selectedApplications = computed({
+  get: () => props.instlServerDetails.applications,
+  set(newSelection: ServerCategoryType[]) {
+    const options = serverCategoryOptions.value as ServerCategoryType[];
+    const previous = props.instlServerDetails.applications.map((a) => a.label);
+    const labels = new Set(newSelection.map((a) => a.label));
+    newSelection
+      .filter((app) => !previous.includes(app.label))
+      .forEach((app) => app.requires?.forEach((req) => labels.add(req)));
+
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const app of options) {
+        if (
+          labels.has(app.label) &&
+          app.requires?.some((req) => !labels.has(req))
+        ) {
+          labels.delete(app.label);
+          changed = true;
+        }
+      }
+    }
+
+    props.instlServerDetails.applications = options.filter((app) =>
+      labels.has(app.label)
+    );
+  },
 });
 
 const categoryTypeLabels: Record<string, string> = {

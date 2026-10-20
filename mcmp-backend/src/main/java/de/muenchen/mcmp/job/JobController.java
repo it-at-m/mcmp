@@ -828,7 +828,7 @@ public class JobController {
 
 
         logCreatedJob(LINUX_RHEL10_SERVER, serverId);
-        jobService.linuxRhelServer(linuxRecord.fqdnBuildingBlocks(), linuxRecord.categoryType(), linuxRecord.serverTypeMap(), linuxRecord.ram(), linuxRecord.cpu(), linuxRecord.networkGroupId(), linuxRecord.applicationServiceId(), linuxRecord.dbParams(), linuxRecord.nonPostgresReason(), middlewareUser, LINUX_RHEL10_SERVER);
+        jobService.linuxRhelServer(linuxRecord.fqdnBuildingBlocks(), linuxRecord.categoryType(), linuxRecord.serverTypeMap(), linuxRecord.applications(), linuxRecord.ram(), linuxRecord.cpu(), linuxRecord.networkGroupId(), linuxRecord.applicationServiceId(), linuxRecord.dbParams(), linuxRecord.nonPostgresReason(), middlewareUser, LINUX_RHEL10_SERVER);
     }
 
     @PostMapping("/create/" + LINUX_RHEL9_SERVER)
@@ -845,7 +845,7 @@ public class JobController {
         checkServerInstallCanUserEditAppservice(linuxRecord.applicationServiceId());
 
         logCreatedJob(LINUX_RHEL9_SERVER, serverId);
-        jobService.linuxRhelServer(linuxRecord.fqdnBuildingBlocks(), linuxRecord.categoryType(), linuxRecord.serverTypeMap(), linuxRecord.ram(), linuxRecord.cpu(), linuxRecord.networkGroupId(), linuxRecord.applicationServiceId(), linuxRecord.dbParams(), linuxRecord.nonPostgresReason(), false, LINUX_RHEL9_SERVER);
+        jobService.linuxRhelServer(linuxRecord.fqdnBuildingBlocks(), linuxRecord.categoryType(), linuxRecord.serverTypeMap(), linuxRecord.applications(), linuxRecord.ram(), linuxRecord.cpu(), linuxRecord.networkGroupId(), linuxRecord.applicationServiceId(), linuxRecord.dbParams(), linuxRecord.nonPostgresReason(), false, LINUX_RHEL9_SERVER);
     }
 
     private linuxRecord getAndCheckLinuxRhelVars(Map<String, Object> awxExtraVars) {
@@ -853,6 +853,7 @@ public class JobController {
         Object fqdnObj = awxExtraVars.get("fqdn");
         Object categoryTypeObj = awxExtraVars.get("categoryType");
         Object serverTypeObj = awxExtraVars.get("serverType");
+        Object applicationsObj = awxExtraVars.get("applications");
         Object ramObj = awxExtraVars.get("ram");
         Object cpuObj = awxExtraVars.get("cpu");
         Object networkGroupIdObj = awxExtraVars.get("network_group_id");
@@ -895,8 +896,12 @@ public class JobController {
         }
 
         Map<?, ?> serverTypeMap = null;
-        if (!categoryType.equals("Standard")) {
+        if (!categoryType.equals("Standard") && !categoryType.equals("App")) {
             serverTypeMap = requireMap(serverTypeObj, "Server type");
+        }
+        Set<LinuxServerApplication> applications = Set.of();
+        if (categoryType.equals("App") || categoryType.equals("Mixed")) {
+            applications = LinuxServerApplication.parseSelection(requireList(applicationsObj, "Applications"));
         }
         String nonPostgresReason = null;
         if (categoryType.equals("DB") || categoryType.equals("Mixed")) {
@@ -915,10 +920,10 @@ public class JobController {
         if (!networkService.isAllowedNetworkGroupForAppservice(networkGroupId, applicationServiceId, categoryType.equals("DB"))) {
             throw new AccessDeniedException("You are not allowed to order a server for this combination of application service and network group.");
         }
-        return new linuxRecord(fqdnBuildingBlocks, dbParams, categoryType, ram, cpu, applicationServiceId, serverTypeMap, nonPostgresReason, networkGroupId);
+        return new linuxRecord(fqdnBuildingBlocks, dbParams, categoryType, ram, cpu, applicationServiceId, serverTypeMap, applications, nonPostgresReason, networkGroupId);
     }
 
-    private record linuxRecord(Map<?,?> fqdnBuildingBlocks, Map<String, Map<?,?>> dbParams, String categoryType, int ram, int cpu, long applicationServiceId, Map<?,?> serverTypeMap, String nonPostgresReason, long networkGroupId) {
+    private record linuxRecord(Map<?,?> fqdnBuildingBlocks, Map<String, Map<?,?>> dbParams, String categoryType, int ram, int cpu, long applicationServiceId, Map<?,?> serverTypeMap, Set<LinuxServerApplication> applications, String nonPostgresReason, long networkGroupId) {
     }
 
     // -----------------------------------------------------------------------------------------------------------------

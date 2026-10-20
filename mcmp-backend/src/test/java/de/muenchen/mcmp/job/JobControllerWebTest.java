@@ -28,6 +28,8 @@ import de.muenchen.mcmp.storage.UnifiedStorageService;
 import de.muenchen.mcmp.types.EnvironmentType;
 import de.muenchen.mcmp.user.UserService;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -147,8 +149,41 @@ class JobControllerWebTest {
                                  "non_postgres_reason":"","middleware_user":false}""".formatted(VALID_RHEL10_FQDN)))
                 .andExpect(status().isOk());
 
-        verify(jobService).linuxRhelServer(any(), eq("Standard"), any(), eq(2), eq(1), eq(NETWORK_GROUP_ID),
+        verify(jobService).linuxRhelServer(any(), eq("Standard"), any(), eq(Set.of()), eq(2), eq(1), eq(NETWORK_GROUP_ID),
                 eq(APPSERVICE_ID), any(), any(), eq(false), eq("LINUX_RHEL10_SERVER"));
+    }
+
+    @Test
+    void rhel10Server_appWithMultipleApplications_succeeds() throws Exception {
+        stubRhel10AppserviceAndNetworkChecksPass();
+
+        mockMvc.perform(post("/job/create/LINUX_RHEL10_SERVER").param("serverId", "-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"fqdn":%s,"categoryType":"App","serverType":null,"applications":["Apache","Java","Tomcat"],
+                                 "ram":2,"cpu":1,"network_group_id":3003,"application_service_id":2002,"db_params":null,
+                                 "non_postgres_reason":"","middleware_user":false}""".formatted(VALID_RHEL10_FQDN)))
+                .andExpect(status().isOk());
+
+        verify(jobService).linuxRhelServer(any(), eq("App"), any(),
+                eq(Set.of(LinuxServerApplication.APACHE, LinuxServerApplication.JAVA, LinuxServerApplication.TOMCAT)),
+                eq(2), eq(1), eq(NETWORK_GROUP_ID), eq(APPSERVICE_ID), any(), any(), eq(false), eq("LINUX_RHEL10_SERVER"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"[]", "[\"PHP\"]", "[\"Apache\",\"Tomcat\"]", "[\"Bogus\"]", "\"Apache\""})
+    void rhel10Server_appWithInvalidApplications_isRejected(final String applications) throws Exception {
+        stubRhel10AppserviceAndNetworkChecksPass();
+
+        mockMvc.perform(post("/job/create/LINUX_RHEL10_SERVER").param("serverId", "-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"fqdn":%s,"categoryType":"App","serverType":null,"applications":%s,
+                                 "ram":2,"cpu":1,"network_group_id":3003,"application_service_id":2002,"db_params":null,
+                                 "non_postgres_reason":"","middleware_user":false}""".formatted(VALID_RHEL10_FQDN, applications)))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(jobService);
     }
 
     @Test

@@ -32,7 +32,10 @@
       </v-row>
       <v-row>
         <v-col><strong>Server Kategorie:</strong></v-col>
-        <v-col>{{ instlServerDetails.category?.label }}</v-col>
+        <v-col v-if="instlServerDetails.categoryType == categoryType.App">{{
+          instlServerDetails.applications.map((app) => app.label).join(", ")
+        }}</v-col>
+        <v-col v-else>{{ instlServerDetails.category?.label }}</v-col>
       </v-row>
       <v-row
         v-if="
@@ -177,6 +180,9 @@ watch(
   (isChecked) => {
     if (isChecked) {
       const copy = JSON.parse(JSON.stringify(props.instlServerDetails));
+      const selectedApplications = props.instlServerDetails
+        .selectedApplications()
+        .map((app) => app.label);
 
       delete copy.disk;
       delete copy.dbParams["mssql"];
@@ -198,22 +204,18 @@ watch(
         Object.assign(copy, copy.dbParams?.mariaPostgresMysqlOracle);
         delete copy.dbParams;
       }
-      if (copy.categoryType == categoryType.App) {
-        if (copy.category.label == "Apache") {
-          Object.assign(copy, { webserver_install: true });
-        } else if (copy.category.label == "Apache/PHP") {
-          Object.assign(copy, { webserver_install: true, php_install: true });
-        } else if (copy.category.label == "Java") {
-          Object.assign(copy, { java_install: true });
-        } else if (copy.category.label == "Apache/Tomcat") {
-          Object.assign(copy, {
-            webserver_install: true,
-            tomcat_install: true,
-            java_install: true,
-          });
-        }
+      const applicationInstallParams: Record<string, string> = {
+        Apache: "webserver_install",
+        PHP: "php_install",
+        Java: "java_install",
+        Tomcat: "tomcat_install",
+      };
+      for (const label of selectedApplications) {
+        const installParam = applicationInstallParams[label];
+        if (installParam) copy[installParam] = true;
       }
       delete copy.category;
+      delete copy.applications;
 
       Object.assign(copy, { networkgroup: copy.networkGroup.name });
       delete copy.networkGroup;

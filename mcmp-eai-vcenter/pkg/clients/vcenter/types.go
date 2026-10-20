@@ -59,4 +59,12 @@ type (
 		CategoryName string
 		Description  string
 	}
+
+	// vimError wraps an error of the vCenter API with the operation that failed.
+	// Error() renders vSphere faults (e.g. NoPermission) readable, Unwrap() keeps
+	// the original error for errors.Is / errors.As.
+	vimError struct {
+		operation string
+		err       error
+	}
 )

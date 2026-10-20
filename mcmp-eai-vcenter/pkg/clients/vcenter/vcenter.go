@@ -2,16 +2,20 @@ package vcenter
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"log"
 	"math"
 	"net/url"
 	"runtime/debug"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/logging"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/performance"
+	"github.com/vmware/govmomi/property"
 	"github.com/vmware/govmomi/session/cache"
 	"github.com/vmware/govmomi/vapi/rest"
 	"github.com/vmware/govmomi/vapi/tags"
@@ -408,7 +412,10 @@ func getQuantile(sortedValues []int64, quantile float64) float64 {
 	return lowerVal + weight*(upperVal-lowerVal)
 }
 
-func (c *Client) ReadVcenterData() (map[int32]string, []mo.VirtualMachine, []mo.HostSystem, []mo.ComputeResource, []mo.DistributedVirtualPortgroup, error) {
+// ReadVcenterData retrieves vCenter inventory data including custom field definitions, virtual machines, hosts, clusters, and distributed virtual portgroups.
+// Virtual machines whose references appear in migratedVMs are excluded from the returned VM list.
+// It returns the custom field ID-to-name mapping and the retrieved inventory objects, or an error on failure.
+func (c *Client) ReadVcenterData(migratedVMs map[string]struct{}) (map[int32]string, []mo.VirtualMachine, []mo.HostSystem, []mo.ComputeResource, []mo.DistributedVirtualPortgroup, error) {
 	// Custom Fields Definitionen laden (ID -> Name Mapping)
 	customFields := make(map[int32]string)
 	cfm, err := object.GetCustomFieldsManager(c.client)
@@ -428,54 +435,60 @@ func (c *Client) ReadVcenterData() (map[int32]string, []mo.VirtualMachine, []mo.
 
 	v1, err := m.CreateContainerView(c.context, c.client.ServiceContent.RootFolder, []string{"VirtualMachine"}, true)
 	if err != nil {
-		fmt.Printf("m.CreateContainerView VirtualMachine / Error : %v\n", err)
-		return nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, wrapVimError("create ContainerView for VirtualMachine", err)
 	}
 	defer safeDestroyView(c.context, v1)
-	var vms []mo.VirtualMachine
-	err = v1.Retrieve(c.context, []string{"VirtualMachine"}, []string{"guest", "config", "runtime", "summary", "snapshot", "layoutEx", "overallStatus", "configStatus"}, &vms)
+	vms, err := c.retrieveVMs(v1, []string{"guest", "config", "runtime", "summary", "snapshot", "layoutEx", "overallStatus", "configStatus"})
+
 	if err != nil {
-		fmt.Printf("m.Retrieve VirtualMachine / Error : %s\n", formatVimError(err))
-		return nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, wrapVimError("retrieve VirtualMachine", err)
+	}
+
+	// Remove VMs tagged with "Migrated" from the list
+	if len(migratedVMs) > 0 {
+		filteredVMs := make([]mo.VirtualMachine, 0, len(vms))
+		for _, vm := range vms {
+			if _, migrated := migratedVMs[vm.Reference().Value]; migrated {
+				c.DebugPrintf("VM %s (%s) is ignored because it has the 'Migrated' tag.\n", vm.Summary.Config.Name, vm.Reference().Value)
+				continue
+			}
+			filteredVMs = append(filteredVMs, vm)
+		}
+		c.DebugPrintf("%d migrated VM(s) filtered out of the VM list.\n", len(vms)-len(filteredVMs))
+		vms = filteredVMs
 	}
 
 	v2, err := m.CreateContainerView(c.context, c.client.ServiceContent.RootFolder, []string{"HostSystem"}, true)
 	if err != nil {
-		fmt.Printf("m.CreateContainerView HostSystem / Error : %v\n", err)
-		return nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, wrapVimError("create ContainerView for HostSystem", err)
 	}
 	defer safeDestroyView(c.context, v2)
 	var hosts []mo.HostSystem
 	err = v2.Retrieve(c.context, []string{"HostSystem"}, []string{"name", "vm"}, &hosts)
 	if err != nil {
-		fmt.Printf("m.Retrieve HostSystem / Error : %s\n", formatVimError(err))
-		return nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, wrapVimError("retrieve HostSystem", err)
 	}
 
 	v3, err := m.CreateContainerView(c.context, c.client.ServiceContent.RootFolder, []string{"ClusterComputeResource"}, true)
 	if err != nil {
-		fmt.Printf("m.CreateContainerView ClusterComputeResource / Error : %v\n", err)
-		return nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, wrapVimError("create ContainerView for ClusterComputeResource", err)
 	}
 	defer safeDestroyView(c.context, v3)
 	var cluster []mo.ComputeResource
 	err = v3.Retrieve(c.context, []string{"ClusterComputeResource"}, []string{"name", "host"}, &cluster)
 	if err != nil {
-		fmt.Printf("m.Retrieve ClusterComputeResource / Error : %s\n", formatVimError(err))
-		return nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, wrapVimError("retrieve ClusterComputeResource", err)
 	}
 
 	v4, err := m.CreateContainerView(c.context, c.client.ServiceContent.RootFolder, []string{"DistributedVirtualPortgroup"}, true)
 	if err != nil {
-		fmt.Printf("m.CreateContainerView DistributedVirtualPortgroup / Error : %v\n", err)
-		return nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, wrapVimError("create ContainerView for DistributedVirtualPortgroup", err)
 	}
 	defer safeDestroyView(c.context, v4)
 	var dvp []mo.DistributedVirtualPortgroup
 	err = v4.Retrieve(c.context, []string{"DistributedVirtualPortgroup"}, []string{"name", "key", "config"}, &dvp)
 	if err != nil {
-		fmt.Printf("m.Retrieve DistributedVirtualPortgroup / Error : %s\n", formatVimError(err))
-		return nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, wrapVimError("retrieve DistributedVirtualPortgroup", err)
 	}
 
 	return customFields, vms, hosts, cluster, dvp, nil
@@ -663,6 +676,12 @@ func (c *Client) GetVMIDsByTag(tagName string) (map[string]struct{}, error) {
 	// Direct lookup by tag name (1 API call instead of fetching all tags individually)
 	tag, err := manager.GetTag(c.context, tagName)
 	if err != nil {
+		// A tag that does not exist in vCenter is not an error for the caller:
+		// it simply means that no VM is tagged with it.
+		if isHTTPNotFound(err) {
+			c.DebugPrintf("Tag %q does not exist in vCenter; no VMs are tagged with it.", tagName)
+			return make(map[string]struct{}), nil
+		}
 		return nil, fmt.Errorf("failed to get tag %q: %w", tagName, err)
 	}
 	if tag == nil {
@@ -685,9 +704,15 @@ func (c *Client) GetVMIDsByTag(tagName string) (map[string]struct{}, error) {
 	return vmIDSet, nil
 }
 
-// GetVirtualApplianceVMIDs is a convenience wrapper for retrieving all VM IDs with the "Virtual Appliance" tag.
+// GetVirtualApplianceVMIDs returns a set of VM MoRef IDs tagged "Virtual Appliance", or an error if the lookup fails.
 func (c *Client) GetVirtualApplianceVMIDs() (map[string]struct{}, error) {
 	return c.GetVMIDsByTag("Virtual Appliance")
+}
+
+// GetMigratedVMIDs returns the set of VM MoRef IDs that have the "Migrated" tag attached.
+// It returns an error if the tag lookup fails.
+func (c *Client) GetMigratedVMIDs() (map[string]struct{}, error) {
+	return c.GetVMIDsByTag("Migrated")
 }
 
 func safeDestroyView(ctx context.Context, v *view.ContainerView) {
@@ -695,6 +720,88 @@ func safeDestroyView(ctx context.Context, v *view.ContainerView) {
 		// Loggen oder anderweitiges Behandeln des Fehlers
 		fmt.Printf("Fehler beim Zerstören der View: %v\n", err)
 	}
+}
+
+// isNoPermission reports whether err indicates a vSphere NoPermission fault, including wrapped faults or fault text.
+func isNoPermission(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	// govmomi wraps Vim faults in a wrapper; neither *types.NoPermission nor
+	// *soap.Fault implements error. Therefore walk the error chain and check
+	// every level via soap.IsVimFault.
+	for e := err; e != nil; e = errors.Unwrap(e) {
+		if soap.IsVimFault(e) {
+			if _, ok := soap.ToVimFault(e).(*types.NoPermission); ok {
+				return true
+			}
+		}
+	}
+
+	// Fallback for errors that only carry the fault as text.
+	return strings.Contains(err.Error(), "NoPermission")
+}
+
+// retrieveVMs retrieves virtual machines from the container view v using the requested properties.
+// It performs a bulk retrieval and falls back to individual requests when access is denied.
+// Virtual machines without read permission are skipped during fallback; other retrieval errors are returned.
+// The retrieved virtual machines and any fatal error are returned.
+func (c *Client) retrieveVMs(v *view.ContainerView, props []string) ([]mo.VirtualMachine, error) {
+	pc := property.DefaultCollector(c.client)
+
+	var cv mo.ContainerView
+	if err := pc.RetrieveOne(c.context, v.Reference(), []string{"view"}, &cv); err != nil {
+		return nil, fmt.Errorf("ContainerView-Refs konnten nicht gelesen werden: %w", err)
+	}
+	refs := cv.View
+	if len(refs) == 0 {
+		return []mo.VirtualMachine{}, nil
+	}
+
+	var vms []mo.VirtualMachine
+	err := pc.Retrieve(c.context, refs, props, &vms)
+	if err == nil {
+		return vms, nil
+	}
+	if !isNoPermission(err) {
+		return nil, err
+	}
+
+	// Fallback
+	log.Printf("Sammel-Retrieve fehlgeschlagen (%s) - wechsle auf Einzelabfragen.", formatVimError(err))
+
+	skipped := 0
+	vms = make([]mo.VirtualMachine, 0, len(refs))
+	for _, ref := range refs {
+		var vm mo.VirtualMachine
+		if err := pc.RetrieveOne(c.context, ref, props, &vm); err != nil {
+			if isNoPermission(err) {
+				skipped++
+				log.Printf("VM %s wird übersprungen (keine Berechtigung): %s", ref.Value, formatVimError(err))
+				continue
+			}
+			return nil, err
+		}
+		vms = append(vms, vm)
+	}
+	log.Printf("%d VM(s) ohne Leserechte übersprungen.", skipped)
+	return vms, nil
+}
+
+func (e *vimError) Error() string {
+	return fmt.Sprintf("%s: %s", e.operation, formatVimError(e.err))
+}
+
+func (e *vimError) Unwrap() error {
+	return e.err
+}
+
+func wrapVimError(operation string, err error) error {
+	if err == nil {
+		return nil
+	}
+	return &vimError{operation: operation, err: err}
 }
 
 func formatVimError(err error) string {
@@ -717,4 +824,14 @@ func formatVimError(err error) string {
 	}
 
 	return err.Error()
+}
+
+// isHTTPNotFound reports whether err is a "404 Not Found" response of the vCenter REST API.
+// The govmomi vapi client does not return a typed error for non-200 responses; it only embeds
+// the HTTP status line into the error message (e.g. "GET https://...: 404 Not Found").
+func isHTTPNotFound(err error) bool {
+	if err == nil {
+		return false
+	}
+	return strings.Contains(err.Error(), "404")
 }

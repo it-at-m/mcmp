@@ -769,7 +769,7 @@ func bot() {
 				}
 				customFieldMap, serverGUI, vms, hosts, cluster, portgroups, virtualApplianceVMs, err := loadCloudData(vcenter.Fqdn, vcenter.Username, password)
 				if err != nil {
-					log.Printf("vCenter %s : loadCloudData Error: %v\n", vcenter.Fqdn, err)
+					log.Printf("vCenter %s / loadCloudData / Error message: %v", vcenter.Fqdn, err)
 					return
 				}
 				cloud, err := fetchAndStoreCloud(postgres, serverGUI, vcenter.Fqdn)
@@ -834,20 +834,24 @@ func debugPrintf(format string, a ...interface{}) {
 }
 
 // loadCloudData fetches and returns data from vCenter, including custom fields, VMs, hosts, clusters, portgroups, and server GUI.
-// Returns an error if the connection, login, data retrieval, or logout process fails.
+// Returns an error that is already wrapped with the name of the failing step (e.g. "ReadVcenterData: ...").
+// Callers must log the error exactly once; loadCloudData itself does not log it.
 func loadCloudData(fqdn string, username string, password string) (map[int32]string, string, []mo.VirtualMachine, []mo.HostSystem, []mo.ComputeResource, []mo.DistributedVirtualPortgroup, map[string]struct{}, error) {
 	// Read data from vCenter
 	debugPrintf("Environment: %s\n", fqdn)
 	c, err := vcenter.New(fqdn, username, password)
 	if err != nil {
-		log.Printf("vCenter: %s / Method: New / Error message: %s\n", fqdn, err)
-		return nil, "", nil, nil, nil, nil, nil, err
+		return nil, "", nil, nil, nil, nil, nil, fmt.Errorf("New: %w", err)
 	}
 	err = c.Login()
 	if err != nil {
-		log.Printf("vCenter: %s / Method: Login / Error message: %s\n", fqdn, err)
-		return nil, "", nil, nil, nil, nil, nil, err
+		return nil, "", nil, nil, nil, nil, nil, fmt.Errorf("Login: %w", err)
 	}
+	defer func() {
+		if logoutErr := c.Logout(); logoutErr != nil {
+			log.Printf("vCenter %s / Logout / Warning: %v", fqdn, logoutErr)
+		}
+	}()
 
 	tagsStartTime := time.Now()
 	virtualApplianceVMs, err := c.GetVirtualApplianceVMIDs()
@@ -860,16 +864,25 @@ func loadCloudData(fqdn string, username string, password string) (map[int32]str
 		log.Printf("[%s] GetVirtualApplianceVMIDs completed in %s (%.2f s) - %d VMs found", fqdn, tagsDuration, tagsDuration.Seconds(), len(virtualApplianceVMs))
 	}
 
-	serverGUI := c.ReadServerGUI()
-	customFieldMap, vms, hosts, clusters, portgroups, err := c.ReadVcenterData()
+	tagsStartTime = time.Now()
+	migratedVMs, err := c.GetMigratedVMIDs()
+	tagsDuration = time.Since(tagsStartTime)
+
 	if err != nil {
-		log.Printf("vCenter: %s / Method: ReadVcenterData / Error message: %s\n", fqdn, err)
-		return nil, "", nil, nil, nil, nil, nil, err
+		log.Printf("[%s] GetMigratedVMIDs failed after %s (%.2f s) - Error: %v\n", fqdn, tagsDuration, tagsDuration.Seconds(), err)
+		migratedVMs = nil
+	} else {
+		log.Printf("[%s] GetMigratedVMIDs completed in %s (%.2f s) - %d VMs found", fqdn, tagsDuration, tagsDuration.Seconds(), len(migratedVMs))
 	}
-	err = c.Logout()
+
+	for vmID := range migratedVMs {
+		c.DebugPrintf("[%s] Migrated VM ID: %s\n", fqdn, vmID)
+	}
+
+	serverGUI := c.ReadServerGUI()
+	customFieldMap, vms, hosts, clusters, portgroups, err := c.ReadVcenterData(migratedVMs)
 	if err != nil {
-		log.Printf("vCenter: %s / Method: Logout / Error message: %s\n", fqdn, err)
-		return nil, "", nil, nil, nil, nil, nil, err
+		return nil, "", nil, nil, nil, nil, nil, fmt.Errorf("ReadVcenterData: %w", err)
 	}
 	return customFieldMap, serverGUI, vms, hosts, clusters, portgroups, virtualApplianceVMs, nil
 }
@@ -1014,8 +1027,7 @@ func getVLAN(config types.DVPortgroupConfigInfo) string {
 
 // updateIPs updates or inserts IP records based on the provided VirtualMachine list and returns a map of IP addresses to Ip structs.
 func updateIPs(db *gorm.DB, vmList []mo.VirtualMachine) map[string]Ip {
-	var allIpAddresses []string
-	ipRecordMap := make(map[string]Ip)
+	ipSet := make(map[string]struct{})
 	for _, vm := range vmList {
 		if vm.Config == nil || vm.Config.Template {
 			continue
@@ -1024,46 +1036,68 @@ func updateIPs(db *gorm.DB, vmList []mo.VirtualMachine) map[string]Ip {
 			for _, netInfo := range vm.Guest.Net {
 				if netInfo.IpAddress != nil {
 					for _, ip := range netInfo.IpAddress {
-						if netInfo.IpAddress != nil {
-							if ip != "" && ip != "127.0.0.1" && ip != "::1" {
-								ip = strings.ToLower(strings.TrimSpace(ip))
-								allIpAddresses = append(allIpAddresses, ip)
-							}
+						if ip != "" && ip != "127.0.0.1" && ip != "::1" {
+							ip = strings.ToLower(strings.TrimSpace(ip))
+							ipSet[ip] = struct{}{}
 						}
 					}
 				}
 			}
 		}
 	}
-	if len(allIpAddresses) > 0 {
-		var existingIps []Ip
-		db.Find(&existingIps)
-		for _, ip := range existingIps {
-			ipRecordMap[ip.Ip] = ip
-		}
-		var newIps []Ip
-		for _, ip := range allIpAddresses {
-			if _, exists := ipRecordMap[ip]; !exists {
-				ipType := determineIpType(ip)
-				newIp := Ip{
-					Ip:     ip,
-					IpType: ipType,
-				}
-				newIps = append(newIps, newIp)
-				ipRecordMap[ip] = newIp
-			}
-		}
-		if len(newIps) > 0 {
-			if err := db.CreateInBatches(&newIps, 100).Error; err != nil {
-				log.Printf("Error creating IP records in batch: %v", err)
-				return ipRecordMap
-			}
-			for i := range newIps {
-				ipRecordMap[newIps[i].Ip] = newIps[i]
-			}
-		}
 
+	ipRecordMap := make(map[string]Ip, len(ipSet))
+	if len(ipSet) == 0 {
+		return ipRecordMap
 	}
+
+	allUniqueIPs := make([]string, 0, len(ipSet))
+	for ip := range ipSet {
+		allUniqueIPs = append(allUniqueIPs, ip)
+	}
+
+	// Nur die IPs aus der DB laden, die tatsächlich in den VMs vorkommen (in Chunks à 2000)
+	const chunkSize = 2000
+	for i := 0; i < len(allUniqueIPs); i += chunkSize {
+		end := i + chunkSize
+		if end > len(allUniqueIPs) {
+			end = len(allUniqueIPs)
+		}
+		chunk := allUniqueIPs[i:end]
+
+		var foundIps []Ip
+		if err := db.Select("id", "ip", "ip_type").Where("ip IN ?", chunk).Find(&foundIps).Error; err != nil {
+			log.Printf("Error querying existing IPs: %v", err)
+			continue
+		}
+		for _, found := range foundIps {
+			ipRecordMap[found.Ip] = found
+		}
+	}
+
+	// Nur die noch nicht existierenden IPs neu einfügen
+	var newIps []Ip
+	for _, ip := range allUniqueIPs {
+		if _, exists := ipRecordMap[ip]; !exists {
+			ipType := determineIpType(ip)
+			newIp := Ip{
+				Ip:     ip,
+				IpType: ipType,
+			}
+			newIps = append(newIps, newIp)
+		}
+	}
+
+	if len(newIps) > 0 {
+		if err := db.CreateInBatches(&newIps, 100).Error; err != nil {
+			log.Printf("Error creating IP records in batch: %v", err)
+			return ipRecordMap
+		}
+		for i := range newIps {
+			ipRecordMap[newIps[i].Ip] = newIps[i]
+		}
+	}
+
 	return ipRecordMap
 }
 

@@ -13,7 +13,7 @@
         class="left-panel"
         :style="{ width: leftPanelWidth + 'px' }"
       >
-        <database-list />
+        <database-list @update:selected="onDatabaseSelected" />
       </div>
 
       <!-- Split Handle -->
@@ -81,7 +81,9 @@
               <v-col>
                 <v-tabs-window v-model="tab">
                   <v-tabs-window-item value="Allgemeines">
-                    <database-details-general />
+                    <database-details-general
+                      :database-detail="selectedDatabase"
+                    />
                   </v-tabs-window-item>
                   <v-tabs-window-item value="History" />
                 </v-tabs-window>
@@ -95,11 +97,14 @@
 </template>
 
 <script setup lang="ts">
-import { mdiHistory, mdiHome } from "@mdi/js";
+import type { DatabaseDetail, DatabaseListItem } from "@/types/Database";
+
+import { mdiAlert, mdiHistory, mdiHome } from "@mdi/js";
 import { onUnmounted, ref } from "vue";
 
 import CollapseAllCardsButton from "@/components/common/CollapseAllCardsButton.vue";
 import DatabaseDetailsGeneral from "@/components/Database/DatabaseDetailsGeneral.vue";
+import { getDatabaseDetail } from "@/components/Database/databaseDummyData";
 import DatabaseList from "@/components/Database/DatabaseList.vue";
 import { useCollapsibleCards } from "@/composables/useCollapsibleCards";
 import { useScrollRestoration } from "@/composables/useScrollRestoration";
@@ -107,6 +112,12 @@ import { useTabQuerySync } from "@/composables/useTabQuerySync";
 import { useTestEnv } from "@/composables/useTestEnv";
 
 const { isTestEnv } = useTestEnv();
+
+const selectedDatabase = ref<DatabaseDetail | null>(null);
+
+function onDatabaseSelected(item: DatabaseListItem | null) {
+  selectedDatabase.value = item ? getDatabaseDetail(item.id) : null;
+}
 
 const leftPanelWidth = ref(400);
 const isResizing = ref(false);

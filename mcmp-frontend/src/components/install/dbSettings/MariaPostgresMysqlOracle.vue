@@ -129,7 +129,6 @@
           'postgis_topology',
           'postgis_raster',
           'postgis_sfcgal',
-          'postgis_tiger_geocoder',
         ]"
         multiple
         chips

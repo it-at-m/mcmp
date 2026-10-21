@@ -295,8 +295,9 @@ const newVolumeGroup = ref("data");
 
 const isLinux = computed(
   () =>
-    props.selectedServer.guestConfigFullName?.toLowerCase().includes("linux") ??
-    false
+      props.selectedServer.guestConfigId == 'l26' || // proxmox
+      props.selectedServer.guestConfigFullName?.toLowerCase().includes("linux") || // vmware
+      false
 );
 
 // Dialog-Status überwachen

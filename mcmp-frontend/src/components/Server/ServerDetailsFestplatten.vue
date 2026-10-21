@@ -28,7 +28,7 @@
           selectedServer.guestToolsFullName?.includes('Linux 10') &&
           selectedServer.managed &&
           selectedServer.canEdit &&
-          selectedServer.cloud?.cloudType == 'VMWARE'
+          (selectedServer.cloud?.cloudType == 'VMWARE' || selectedServer.cloud?.cloudType == 'PROXMOX')
         "
         :mount-points="[]"
         :selected-server="props.selectedServer"
@@ -40,7 +40,7 @@
         v-if="
           selectedServer.managed &&
           selectedServer.canEdit &&
-          selectedServer.cloud?.cloudType == 'VMWARE'
+          (selectedServer.cloud?.cloudType == 'VMWARE' || selectedServer.cloud?.cloudType == 'PROXMOX')
         "
         :mount-points="props.mountPoints"
         :selected-server="props.selectedServer"

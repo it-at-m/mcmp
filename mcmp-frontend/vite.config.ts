@@ -3,7 +3,6 @@ import { fileURLToPath, URL } from "node:url";
 
 import VueI18nPlugin from "@intlify/unplugin-vue-i18n/vite";
 import vue from "@vitejs/plugin-vue";
-import UnpluginFonts from "unplugin-fonts/vite";
 import { defineConfig } from "vite";
 import vuetify, { transformAssetUrls } from "vite-plugin-vuetify";
 import VueRouter from "vue-router/vite";
@@ -42,21 +41,6 @@ export default defineConfig(({ mode }) => {
         },
       }),
       vuetify(),
-      UnpluginFonts({
-        inlineFontFace: true,
-        fontsource: {
-          families: [
-            {
-              name: "Roboto",
-              weights: [100, 300, 400, 500, 700, 900],
-              subset: "latin",
-              fallback: {
-                category: "sans-serif",
-              },
-            },
-          ],
-        },
-      }),
       VueI18nPlugin({
         include: resolve(
           dirname(fileURLToPath(import.meta.url)),

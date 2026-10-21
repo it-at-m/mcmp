@@ -1,7 +1,7 @@
 <template>
   <common-card title="Informationen" />
   <common-card title="Irgendwas" />
-  <common-card title="Anderes" />
+  <common-card title="CMDB" />
 </template>
 
 <script setup lang="ts">

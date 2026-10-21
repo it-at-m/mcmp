@@ -51,7 +51,7 @@ public class JobServiceTest {
     public void testMergeJsonStrings() throws JacksonException {
         ObjectMapper objectMapper = new ObjectMapper();
         JobService jobService = new JobService(
-                null, null, null, null, null, null, null, null, null, null, null, null, null
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null
         );
 
         // Erstes JSON-Objekt (awxExtraVars)
@@ -90,7 +90,7 @@ public class JobServiceTest {
     @Test
     public void testChechmkDowntimeEndtimeDateConversion() {
         JobService jobService = new JobService(
-                null, null, null, null, null, null, null, null, null, null, null, null, null
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null
         );
 
         // Testfall 1: Gültiges Datum
@@ -140,7 +140,7 @@ public class JobServiceTest {
 
         JobService jobService = new JobService(
                 jobRepository, actionRepository, userRepository, null, appserviceRepository,
-                null, null, null, null, null, null, null, actionToJobMapper
+                null, null, null, null, null, null, null, actionToJobMapper, null
         );
 
         Appservice appservice = new Appservice();
@@ -218,7 +218,7 @@ public class JobServiceTest {
 
         JobService jobService = new JobService(
                 jobRepository, actionRepository, userRepository, null, null,
-                null, null, null, null, null, null, null, actionToJobMapper
+                null, null, null, null, null, null, null, actionToJobMapper, null
         );
 
         Server server = new Server();
@@ -264,7 +264,7 @@ public class JobServiceTest {
 
         JobService jobService = new JobService(
                 jobRepository, actionRepository, userRepository, null, null,
-                null, lbVirtualServerRepository, null, null, null, null, null, actionToJobMapper
+                null, lbVirtualServerRepository, null, null, null, null, null, actionToJobMapper, null
         );
 
         when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -318,7 +318,7 @@ public class JobServiceTest {
 
         JobService jobService = new JobService(
                 jobRepository, actionRepository, userRepository, null, null,
-                null, lbVirtualServerRepository, null, null, null, null, null, actionToJobMapper
+                null, lbVirtualServerRepository, null, null, null, null, null, actionToJobMapper, null
         );
 
         when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -379,7 +379,7 @@ public class JobServiceTest {
 
         JobService jobService = new JobService(
                 jobRepository, actionRepository, userRepository, null, null,
-                null, null, ontapVolumeRepository, null, null, null, null, actionToJobMapper
+                null, null, ontapVolumeRepository, null, null, null, null, actionToJobMapper, null
         );
 
         when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -436,7 +436,7 @@ public class JobServiceTest {
 
         JobService jobService = new JobService(
                 jobRepository, actionRepository, userRepository, null, null,
-                null, null, ontapVolumeRepository, null, null, null, null, actionToJobMapper
+                null, null, ontapVolumeRepository, null, null, null, null, actionToJobMapper, null
         );
 
         UUID volumeUuid = UUID.randomUUID();
@@ -481,7 +481,7 @@ public class JobServiceTest {
 
         JobService jobService = new JobService(
                 jobRepository, actionRepository, userRepository, null, null,
-                null, null, ontapVolumeRepository, null, null, null, null, actionToJobMapper
+                null, null, ontapVolumeRepository, null, null, null, null, actionToJobMapper, null
         );
 
         when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -538,7 +538,7 @@ public class JobServiceTest {
 
         return new JobService(
                 jobRepository, actionRepository, userRepository, null, appserviceRepository,
-                null, null, null, null, null, null, null, actionToJobMapper
+                null, null, null, null, null, null, null, actionToJobMapper, null
         );
     }
 

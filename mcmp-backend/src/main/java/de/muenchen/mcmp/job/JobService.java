@@ -19,6 +19,8 @@ import de.muenchen.mcmp.greenit.shutdown.GreenItShutdownRepository;
 import de.muenchen.mcmp.infoblox.InfobloxService;
 import de.muenchen.mcmp.job.incident.JobIncidentSummary;
 import de.muenchen.mcmp.job.node.JobNodeHierarchy;
+import de.muenchen.mcmp.kubernetes.KubernetesNamespace;
+import de.muenchen.mcmp.kubernetes.KubernetesNamespaceRepository;
 import de.muenchen.mcmp.loadbalancer.LbPool;
 import de.muenchen.mcmp.loadbalancer.LbPoolMember;
 import de.muenchen.mcmp.loadbalancer.LbVirtualServer;
@@ -109,6 +111,8 @@ public class JobService {
     private final InfobloxService infobloxService;
 
     private final ActionToJobMapper actionToJobMapper;
+
+    private final KubernetesNamespaceRepository kubernetesNamespaceRepository;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -1111,6 +1115,23 @@ public class JobService {
         params.put("cap_quayorga", awxExtraVars.get("quayOrga"));
 
         createJob(openshift_namespace_order_identifier, null, appservice, params, new HashMap<>(), job -> job.setHostname((String) params.get("cap_project")));
+    }
+
+    public void openshiftNamespaceDelete(final Long kubernetesNamespaceId, final String identifier) {
+        final KubernetesNamespace namespace = kubernetesNamespaceRepository.findByIdWithDetails(kubernetesNamespaceId)
+                .orElseThrow(() -> new NoSuchElementException("Openshift Namespace not found: " + kubernetesNamespaceId));
+
+        final Appservice appservice = requireSingleAppservice(namespace.getAppservices(),
+                "Openshift Namespace can only be deleted for namespaces assigned to exactly one application service.");
+
+        final Map<String, Object> params = new HashMap<>();
+        params.put("application_service_environment", appservice.getEnvironment().name());
+        params.put("cap_project", namespace.getName());
+
+        createJob(identifier, null, appservice, params, new HashMap<>(), job -> {
+            job.setHostname(namespace.getName());
+            job.setKubernetesNamespace(namespace);
+        });
     }
 
     // -----------------------------------------------------------------------------------------------------------------

@@ -4,6 +4,7 @@ import de.muenchen.mcmp.appservice.Appservice;
 import de.muenchen.mcmp.appservice.AppserviceService;
 import de.muenchen.mcmp.job.incident.JobIncidentSummary;
 import de.muenchen.mcmp.job.node.JobNodeHierarchy;
+import de.muenchen.mcmp.kubernetes.KubernetesNamespaceService;
 import de.muenchen.mcmp.loadbalancer.LoadbalancerService;
 import de.muenchen.mcmp.loadbalancer.UnifiedLoadbalancer;
 import de.muenchen.mcmp.loadbalancer.UnifiedLoadbalancerMemberDTO;
@@ -61,6 +62,7 @@ public class JobController {
     private final UserService userService;
     private final LoadbalancerService loadbalancerService;
     private final RepositoryService repositoryService;
+    private final KubernetesNamespaceService kubernetesNamespaceService;
 
     public static final String START_SERVER = "START_SERVER";
     public static final String STOP_SERVER = "STOP_SERVER";
@@ -117,6 +119,7 @@ public class JobController {
     public static final String VM_RESOURCE_UPGRADE = "VM_RESOURCE_UPGRADE";
 
     public static final String OPENSHIFT_NAMESPACE_ORDER = "OPENSHIFT_NAMESPACE_ORDER";
+    public static final String OPENSHIFT_NAMESPACE_DELETE = "OPENSHIFT_NAMESPACE_DELETE";
 
     public static final String PAKETSHOP_REPO_CREATE = "PAKETSHOP_REPO_CREATE";
     public static final String PAKETSHOP_REPO_COPY = "PAKETSHOP_REPO_COPY";
@@ -2161,6 +2164,29 @@ public class JobController {
 
         logCreatedJob(OPENSHIFT_NAMESPACE_ORDER, serverId);
         jobService.openshiftNamespaceOrder(awxExtraVars, OPENSHIFT_NAMESPACE_ORDER);
+    }
+
+    @PostMapping("/create/" + OPENSHIFT_NAMESPACE_DELETE)
+    public void openshiftNamespaceDelete(@RequestParam(name = "serverId") final Long serverId,
+                                         @RequestBody final Map<String, Object> awxExtraVars) {
+        Object kubernetesNamespaceIdObj = awxExtraVars.get("kubernetes_namespace_id");
+        if (kubernetesNamespaceIdObj == null) {
+            throw new MissingFormatArgumentException("Openshift Namespace ID must be provided.");
+        }
+        final long kubernetesNamespaceId;
+        try {
+            kubernetesNamespaceId = Long.parseLong(kubernetesNamespaceIdObj.toString());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Openshift Namespace ID is invalid.");
+        }
+
+        if (!kubernetesNamespaceService.canUserEditNamespace(kubernetesNamespaceId)) {
+            logTriedToCreateJob(OPENSHIFT_NAMESPACE_DELETE, serverId);
+            throw new AccessDeniedException("You are not allowed to delete this Openshift Namespace.");
+        }
+
+        logCreatedJob(OPENSHIFT_NAMESPACE_DELETE, serverId);
+        jobService.openshiftNamespaceDelete(kubernetesNamespaceId, OPENSHIFT_NAMESPACE_DELETE);
     }
 
     private void validateMemoryLimit(final String memoryLimit) {

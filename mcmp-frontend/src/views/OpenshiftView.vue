@@ -47,6 +47,17 @@
               :current-icon="mdiKubernetes"
               :current-label="selectedDetail.name"
             >
+              <template
+                v-if="
+                  isTestEnv &&
+                  selectedDetail.canEdit &&
+                  selectedDetail.appservices?.length === 1
+                "
+                #actions
+              >
+                <openshift-namespace-delete-btn :namespace="selectedDetail" />
+              </template>
+
               <template #statusChips>
                 <appservice-assignment-status-chips
                   :can-edit="selectedDetail.canEdit"
@@ -148,12 +159,16 @@ import openshiftService from "@/api/openshiftService";
 import AppserviceAssignmentStatusChips from "@/components/common/AppserviceAssignmentStatusChips.vue";
 import CollapseAllCardsButton from "@/components/common/CollapseAllCardsButton.vue";
 import DetailPageHeader from "@/components/common/DetailPageHeader.vue";
+import OpenshiftNamespaceDeleteBtn from "@/components/Openshift/OpenshiftNamespaceDeleteBtn.vue";
 import OpenshiftNamespaceDetailsGeneral from "@/components/Openshift/OpenshiftNamespaceDetailsGeneral.vue";
 import OpenshiftNamespaceDetailsHistory from "@/components/Openshift/OpenshiftNamespaceDetailsHistory.vue";
 import OpenshiftNamespaceList from "@/components/Openshift/OpenshiftNamespaceList.vue";
 import { useCollapsibleCards } from "@/composables/useCollapsibleCards";
 import { useScrollRestoration } from "@/composables/useScrollRestoration";
 import { useTabQuerySync } from "@/composables/useTabQuerySync";
+import { useTestEnv } from "@/composables/useTestEnv";
+
+const { isTestEnv } = useTestEnv();
 
 const leftPanelWidth = ref(400);
 const isResizing = ref(false);

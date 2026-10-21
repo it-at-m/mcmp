@@ -8,6 +8,7 @@ import de.muenchen.mcmp.config.app.MaintenanceModeConfiguration;
 import de.muenchen.mcmp.config.app.MaintenanceModeInterceptor;
 import de.muenchen.mcmp.configuration.nfcconverter.NfcRequestFilter;
 import de.muenchen.mcmp.errorlog.ErrorLogService;
+import de.muenchen.mcmp.kubernetes.KubernetesNamespaceService;
 import de.muenchen.mcmp.loadbalancer.LoadbalancerService;
 import de.muenchen.mcmp.loadbalancer.UnifiedLoadbalancer;
 import de.muenchen.mcmp.loadbalancer.UnifiedLoadbalancerMemberDTO;
@@ -102,6 +103,8 @@ class JobControllerWebTest {
     private LoadbalancerService loadbalancerService;
     @MockitoBean
     private RepositoryService repositoryService;
+    @MockitoBean
+    private KubernetesNamespaceService kubernetesNamespaceService;
     @MockitoBean
     private ErrorLogService errorLogService;
 
@@ -1229,6 +1232,18 @@ class JobControllerWebTest {
         mockMvc.perform(post("/job/create/LOADBALANCER_F5_DELETE").param("serverId", "-1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"lb_virtual_server_id\":123}"))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void openshiftNamespaceDelete_userCannotEditNamespace_isForbidden() throws Exception {
+        when(kubernetesNamespaceService.canUserEditNamespace(anyLong())).thenReturn(false);
+
+        mockMvc.perform(post("/job/create/OPENSHIFT_NAMESPACE_DELETE").param("serverId", "-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kubernetes_namespace_id\":123}"))
                 .andExpect(status().isForbidden());
 
         verifyNoInteractions(jobService);

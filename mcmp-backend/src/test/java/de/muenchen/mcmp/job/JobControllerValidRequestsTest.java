@@ -6,6 +6,7 @@ import de.muenchen.mcmp.appservice.AppserviceNameAndSysId;
 import de.muenchen.mcmp.appservice.AppserviceService;
 import de.muenchen.mcmp.cloud.Cloud;
 import de.muenchen.mcmp.errorlog.ErrorLogService;
+import de.muenchen.mcmp.kubernetes.KubernetesNamespaceService;
 import de.muenchen.mcmp.loadbalancer.LoadbalancerService;
 import de.muenchen.mcmp.loadbalancer.UnifiedLoadbalancer;
 import de.muenchen.mcmp.loadbalancer.UnifiedLoadbalancerPoolDTO;
@@ -90,6 +91,8 @@ class JobControllerValidRequestsTest {
     private LoadbalancerService loadbalancerService;
     @MockitoBean
     private RepositoryService repositoryService;
+    @MockitoBean
+    private KubernetesNamespaceService kubernetesNamespaceService;
     @MockitoBean
     private ErrorLogService errorLogService;
 
@@ -345,6 +348,12 @@ class JobControllerValidRequestsTest {
         when(loadbalancerService.getLoadbalancerById(anyLong())).thenReturn(
                 UnifiedLoadbalancer.builder().wafEnabled(false).build());
         perform("LOADBALANCER_F5_DELETE", "{\"lb_virtual_server_id\":123}");
+    }
+
+    @Test
+    void openshiftNamespaceDelete_validPayload_succeeds() throws Exception {
+        when(kubernetesNamespaceService.canUserEditNamespace(anyLong())).thenReturn(true);
+        perform("OPENSHIFT_NAMESPACE_DELETE", "{\"kubernetes_namespace_id\":123}");
     }
 
     // -----------------------------------------------------------------------------------------------------------------

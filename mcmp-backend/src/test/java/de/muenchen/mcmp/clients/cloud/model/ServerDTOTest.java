@@ -5,7 +5,6 @@ import de.muenchen.mcmp.types.ServerKind;
 import de.muenchen.mcmp.types.ServerType;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.json.JsonMapper;
-import tools.jackson.databind.exc.ValueInstantiationException;
 
 import java.util.*;
 
@@ -49,11 +48,6 @@ public class ServerDTOTest {
         assertEquals("poweredOn", server.powerState());
         assertEquals(1024, server.memoryMB());
         assertEquals(1, server.numCPU());
-    }
-
-    @Test
-    void testRejectsMissingUUID() {
-        assertThrows(ValueInstantiationException.class, () -> MAPPER.readValue("{}", ServerDTO.class));
     }
 
     // Keep this test in sync with database nullability constraints

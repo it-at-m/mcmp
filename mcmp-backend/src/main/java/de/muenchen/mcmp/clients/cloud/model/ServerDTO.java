@@ -96,9 +96,6 @@ public record ServerDTO(
         @JsonProperty("snapshots") Optional<List<SnapshotDTO>> snapshots
 ) {
     public ServerDTO {
-        if (uuid == null)
-            throw new NullPointerException("a server UUIDs is required.");
-
         if (name == null || name.isBlank()) {
             name = uuid;
         } else {

@@ -11,12 +11,14 @@ import java.util.Objects;
 public record CloudDTO(
         @JsonProperty("cloud") String cloud,
         @JsonProperty("cloud_type") String cloudType,
-        @JsonProperty("servers") List<ServerDTO> servers
+        @JsonProperty("servers") List<ServerDTO> servers,
+        @JsonProperty("port_groups") List<PortGroupDTO> portGroups
 ) {
     public CloudDTO {
         Objects.requireNonNull(cloud);
         Objects.requireNonNull(cloudType);
-        servers = Objects.requireNonNullElseGet(servers, Collections::emptyList);
+        if (servers == null) servers = Collections.emptyList();
+        if (portGroups == null) portGroups = Collections.emptyList();
     }
 
     /**

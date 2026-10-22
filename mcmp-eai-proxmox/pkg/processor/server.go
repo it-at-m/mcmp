@@ -112,10 +112,10 @@ func (p *Processor) ProcessServer(ctx context.Context, res *proxmox.Resource) (*
 	server.BootTime = &bootTime
 
 	server.Disks = p.processDisks(cfg)
-    server.VDisks = uint64(len(server.Disks))
-    for _, disk := range server.Disks {
-      server.VDisksCapacityInBytes += disk.CapacityInBytes
-    }
+	server.VDisks = uint64(len(server.Disks))
+	for _, disk := range server.Disks {
+		server.VDisksCapacityInBytes += disk.CapacityInBytes
+	}
 
 	server.Nics = p.processNics(cfg)
 

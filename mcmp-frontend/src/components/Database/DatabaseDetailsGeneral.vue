@@ -688,8 +688,6 @@
 </template>
 
 <script setup lang="ts">
-
-
 import type {
   DatabaseDetail,
   DatabaseDetailField,
@@ -876,13 +874,13 @@ const generalFields = computed<DatabaseDetailField[]>(() => {
     toField("Archive-Log-Modus", database.archiveLogMode),
     jdbcUrl.value
       ? {
-        label: "JDBC-URL",
-        value: jdbcUrl.value,
-        fullWidth: true,
-        monospace: true,
-        copyable: true,
-        hint: "Abgeleitet aus Host, Port und Servicename – enthält bewusst keine Zugangsdaten.",
-      }
+          label: "JDBC-URL",
+          value: jdbcUrl.value,
+          fullWidth: true,
+          monospace: true,
+          copyable: true,
+          hint: "Abgeleitet aus Host, Port und Servicename – enthält bewusst keine Zugangsdaten.",
+        }
       : null,
   ]);
 });

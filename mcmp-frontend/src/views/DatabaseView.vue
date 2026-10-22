@@ -54,6 +54,16 @@
                     </template>
                   </v-tab>
                   <v-tab
+                    value="Backups"
+                    rounded="lg"
+                    class="d-flex justify-center align-center"
+                  >
+                    Backups
+                    <template #prepend>
+                      <v-icon size="x-large">{{ mdiBackupRestore }}</v-icon>
+                    </template>
+                  </v-tab>
+                  <v-tab
                     value="History"
                     rounded="lg"
                     class="d-flex justify-center align-center"
@@ -85,6 +95,7 @@
                       :database-detail="selectedDatabase"
                     />
                   </v-tabs-window-item>
+                  <v-tabs-window-item value="Backups" />
                   <v-tabs-window-item value="History" />
                 </v-tabs-window>
               </v-col>
@@ -99,7 +110,7 @@
 <script setup lang="ts">
 import type { DatabaseDetail, DatabaseListItem } from "@/types/Database";
 
-import { mdiAlert, mdiHistory, mdiHome } from "@mdi/js";
+import { mdiBackupRestore, mdiHistory, mdiHome } from "@mdi/js";
 import { onUnmounted, ref } from "vue";
 
 import CollapseAllCardsButton from "@/components/common/CollapseAllCardsButton.vue";

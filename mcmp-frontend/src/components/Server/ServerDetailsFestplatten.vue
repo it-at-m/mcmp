@@ -1,6 +1,6 @@
 <template>
   <common-card
-    v-show="selectedServer.cloud?.cloudType == 'VMWARE'"
+    v-show="selectedServer.cloud?.cloudType == 'VMWARE' || selectedServer.cloud?.cloudType == 'PROXMOX'"
     title="Virtuelle Festplatten"
   >
     <v-data-table

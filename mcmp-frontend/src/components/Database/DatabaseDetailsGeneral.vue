@@ -688,6 +688,8 @@
 </template>
 
 <script setup lang="ts">
+
+
 import type {
   DatabaseDetail,
   DatabaseDetailField,
@@ -698,6 +700,7 @@ import { computed } from "vue";
 
 import CommonCard from "@/components/common/CommonCard.vue";
 import DatabaseDetailFields from "@/components/Database/DatabaseDetailFields.vue";
+import { buildJdbcUrl } from "@/util/jdbcUrl";
 
 const props = withDefaults(
   defineProps<{
@@ -749,7 +752,9 @@ const parameters = computed(() => detail.value?.parameters ?? []);
 const backupHistory = computed(() => detail.value?.backupHistory ?? []);
 const schedulerJobs = computed(() => detail.value?.schedulerJobs ?? []);
 const replicationNodes = computed(() => replication.value?.nodes ?? []);
-
+const jdbcUrl = computed(() =>
+  detail.value ? buildJdbcUrl(detail.value) : null
+);
 function toField(
   label: string,
   value: string | number | null | undefined
@@ -869,6 +874,16 @@ const generalFields = computed<DatabaseDetailField[]>(() => {
     toField("Startzeit (Uptime-Basis)", database.startupTime),
     toField("Port", database.port),
     toField("Archive-Log-Modus", database.archiveLogMode),
+    jdbcUrl.value
+      ? {
+        label: "JDBC-URL",
+        value: jdbcUrl.value,
+        fullWidth: true,
+        monospace: true,
+        copyable: true,
+        hint: "Abgeleitet aus Host, Port und Servicename – enthält bewusst keine Zugangsdaten.",
+      }
+      : null,
   ]);
 });
 

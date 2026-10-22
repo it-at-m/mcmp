@@ -38,6 +38,14 @@ export interface DatabaseLoginPrivilege {
 export interface DatabaseDetailField {
   label: string;
   value: string;
+  /** Volle Zeilenbreite statt 1/4-Spalte – z. B. für lange Connection-Strings */
+  fullWidth?: boolean;
+  /** Wert in Monospace-/Code-Optik darstellen */
+  monospace?: boolean;
+  /** Kopier-Button neben dem Wert anzeigen */
+  copyable?: boolean;
+  /** Kleine Erläuterung unter dem Wert */
+  hint?: string;
 }
 
 export interface DatabaseDetail {

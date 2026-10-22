@@ -78,6 +78,10 @@ func (p *Processor) ProcessServer(ctx context.Context, res *proxmox.Resource) (*
 	// since proxmox does not assign UUIDs to server objects, we use
 	// the SMBIOS/DMI UUID instead
 	server.UUID = cfg.SMBIOS1.UUID
+    if server.UUID == "" {
+        return nil, fmt.Errorf("server %s (%s) is missing a UUID", res.Name, res.VMID)
+    }
+
 	server.VMID = strconv.FormatUint(res.VMID, 10)
 	server.Name = res.Name
 	server.NumCpu = uint32(res.MaxCPU)

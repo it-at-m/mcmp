@@ -830,7 +830,7 @@ class JobControllerWebTest {
         performPaketshop("PAKETSHOP_REPO_ATTACH_OWNED_REPO", PAKETSHOP_ATTACH_PAYLOAD, status().isOk());
 
         verify(jobService).paketshopRepoAttach(eq("PAKETSHOP_REPO_ATTACH_OWNED_REPO"), any(), eq(true), eq(false),
-                eq(List.of("test.srv.muenchen.de")));
+                argThat(servers -> servers.size() == 1 && servers.getFirst().getId() == SERVER_ID));
     }
 
     @Test

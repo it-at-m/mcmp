@@ -5,6 +5,7 @@ import de.muenchen.mcmp.appservice.Appservice;
 import de.muenchen.mcmp.awxConfig.AwxConfig;
 import de.muenchen.mcmp.common.AbstractEntity;
 import de.muenchen.mcmp.converter.*;
+import de.muenchen.mcmp.kubernetes.KubernetesCluster;
 import de.muenchen.mcmp.kubernetes.KubernetesNamespace;
 import de.muenchen.mcmp.loadbalancer.LbVirtualServer;
 import de.muenchen.mcmp.ontap.OntapQtree;
@@ -84,6 +85,11 @@ public class Job extends AbstractEntity {
     @JoinColumn(name = "kubernetes_namespace_id")
     @ToString.Exclude
     private KubernetesNamespace kubernetesNamespace;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "kubernetes_cluster_id")
+    @ToString.Exclude
+    private KubernetesCluster kubernetesCluster;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "repository_id")

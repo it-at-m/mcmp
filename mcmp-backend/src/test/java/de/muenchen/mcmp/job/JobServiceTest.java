@@ -8,6 +8,9 @@ import de.muenchen.mcmp.action.ActionRepository;
 import de.muenchen.mcmp.appservice.Appservice;
 import de.muenchen.mcmp.appservice.AppserviceRepository;
 import de.muenchen.mcmp.awxConfig.AwxConfig;
+import de.muenchen.mcmp.exception.BusinessValidationException;
+import de.muenchen.mcmp.kubernetes.KubernetesCluster;
+import de.muenchen.mcmp.kubernetes.KubernetesClusterRepository;
 import de.muenchen.mcmp.loadbalancer.LbPool;
 import de.muenchen.mcmp.loadbalancer.LbVirtualServer;
 import de.muenchen.mcmp.loadbalancer.LbVirtualServerPoolRef;
@@ -17,6 +20,7 @@ import de.muenchen.mcmp.ontap.OntapVolumeRepository;
 import de.muenchen.mcmp.repository.Repository;
 import de.muenchen.mcmp.server.Server;
 import de.muenchen.mcmp.storage.UnifiedStorageItemDto;
+import de.muenchen.mcmp.types.EnvironmentType;
 import de.muenchen.mcmp.user.User;
 import de.muenchen.mcmp.user.UserRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -51,7 +55,7 @@ public class JobServiceTest {
     public void testMergeJsonStrings() throws JacksonException {
         ObjectMapper objectMapper = new ObjectMapper();
         JobService jobService = new JobService(
-                null, null, null, null, null, null, null, null, null, null, null, null, null, null
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
         );
 
         // Erstes JSON-Objekt (awxExtraVars)
@@ -90,7 +94,7 @@ public class JobServiceTest {
     @Test
     public void testChechmkDowntimeEndtimeDateConversion() {
         JobService jobService = new JobService(
-                null, null, null, null, null, null, null, null, null, null, null, null, null, null
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
         );
 
         // Testfall 1: Gültiges Datum
@@ -140,7 +144,7 @@ public class JobServiceTest {
 
         JobService jobService = new JobService(
                 jobRepository, actionRepository, userRepository, null, appserviceRepository,
-                null, null, null, null, null, null, null, actionToJobMapper, null
+                null, null, null, null, null, null, null, actionToJobMapper, null, null
         );
 
         Appservice appservice = new Appservice();
@@ -218,7 +222,7 @@ public class JobServiceTest {
 
         JobService jobService = new JobService(
                 jobRepository, actionRepository, userRepository, null, null,
-                null, null, null, null, null, null, null, actionToJobMapper, null
+                null, null, null, null, null, null, null, actionToJobMapper, null, null
         );
 
         Server server = new Server();
@@ -264,7 +268,7 @@ public class JobServiceTest {
 
         JobService jobService = new JobService(
                 jobRepository, actionRepository, userRepository, null, null,
-                null, lbVirtualServerRepository, null, null, null, null, null, actionToJobMapper, null
+                null, lbVirtualServerRepository, null, null, null, null, null, actionToJobMapper, null, null
         );
 
         when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -309,6 +313,101 @@ public class JobServiceTest {
     }
 
     @Test
+    public void testOpenshiftNamespaceOrder_linksClusterOfAppserviceEnvironmentToPersistedJob() {
+        JobRepository jobRepository = mock(JobRepository.class);
+        ActionRepository actionRepository = mock(ActionRepository.class);
+        UserRepository userRepository = mock(UserRepository.class);
+        AppserviceRepository appserviceRepository = mock(AppserviceRepository.class);
+        KubernetesClusterRepository kubernetesClusterRepository = mock(KubernetesClusterRepository.class);
+        ActionToJobMapper actionToJobMapper = mock(ActionToJobMapper.class);
+
+        JobService jobService = new JobService(
+                jobRepository, actionRepository, userRepository, null, appserviceRepository,
+                null, null, null, null, null, null, null, actionToJobMapper, null, kubernetesClusterRepository
+        );
+
+        when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Appservice appservice = new Appservice();
+        appservice.setId(3005L);
+        appservice.setName("CAP-TEST");
+        appservice.setNumber("SNSVC0005");
+        appservice.setEnvironment(EnvironmentType.C);
+        when(appserviceRepository.findById(3005L)).thenReturn(Optional.of(appservice));
+
+        KubernetesCluster testCluster = new KubernetesCluster();
+        testCluster.setEnvironment(EnvironmentType.K);
+        KubernetesCluster prodCluster = new KubernetesCluster();
+        prodCluster.setEnvironment(EnvironmentType.P);
+        when(kubernetesClusterRepository.findAll()).thenReturn(List.of(prodCluster, testCluster));
+
+        Action action = new Action();
+        action.setIdentifier("OPENSHIFT_NAMESPACE_ORDER");
+        action.setEnabled(true);
+        AwxConfig awxConfig = new AwxConfig();
+        awxConfig.setEnabled(true);
+        action.setAwxConfig(awxConfig);
+        when(actionRepository.findByIdentifier("OPENSHIFT_NAMESPACE_ORDER")).thenReturn(action);
+
+        User user = new User();
+        user.setUsername("tester");
+        when(userRepository.findByUsername("tester")).thenReturn(user);
+
+        SecurityContextHolder.getContext().setAuthentication(
+                new TestingAuthenticationToken("tester", null, Collections.emptyList()));
+
+        // complete payload as validated by JobController, AWX params must not contain null values
+        Map<String, Object> awxExtraVars = new HashMap<>();
+        awxExtraVars.put("appserviceId", 3005L);
+        awxExtraVars.put("namespaceName", "cap-test-ns");
+        awxExtraVars.put("description", "");
+        awxExtraVars.put("nodeSelector", "worker");
+        awxExtraVars.put("ingress", "web2tier");
+        awxExtraVars.put("memoryLimit", "4Gi");
+        awxExtraVars.put("podLimit", 10);
+        awxExtraVars.put("pvLimit", 1);
+        awxExtraVars.put("logging", "no");
+        awxExtraVars.put("quayOrga", "");
+        jobService.openshiftNamespaceOrder(awxExtraVars, "OPENSHIFT_NAMESPACE_ORDER");
+
+        ArgumentCaptor<Job> jobCaptor = ArgumentCaptor.forClass(Job.class);
+        verify(jobRepository, times(1)).save(jobCaptor.capture());
+
+        assertSame(testCluster, jobCaptor.getValue().getKubernetesCluster(),
+                "namespaces of C appservices are ordered on the test cluster (environment K)");
+    }
+
+    @Test
+    public void testOpenshiftNamespaceOrder_noClusterForAppserviceEnvironment_throwsAndCreatesNoJob() {
+        JobRepository jobRepository = mock(JobRepository.class);
+        AppserviceRepository appserviceRepository = mock(AppserviceRepository.class);
+        KubernetesClusterRepository kubernetesClusterRepository = mock(KubernetesClusterRepository.class);
+
+        JobService jobService = new JobService(
+                jobRepository, null, null, null, appserviceRepository,
+                null, null, null, null, null, null, null, null, null, kubernetesClusterRepository
+        );
+
+        Appservice appservice = new Appservice();
+        appservice.setId(3006L);
+        appservice.setNumber("SNSVC0006");
+        appservice.setEnvironment(EnvironmentType.P);
+        when(appserviceRepository.findById(3006L)).thenReturn(Optional.of(appservice));
+
+        KubernetesCluster testCluster = new KubernetesCluster();
+        testCluster.setEnvironment(EnvironmentType.K);
+        when(kubernetesClusterRepository.findAll()).thenReturn(List.of(testCluster));
+
+        Map<String, Object> awxExtraVars = new HashMap<>();
+        awxExtraVars.put("appserviceId", 3006L);
+        awxExtraVars.put("namespaceName", "cap-prod-ns");
+
+        assertThrows(BusinessValidationException.class,
+                () -> jobService.openshiftNamespaceOrder(awxExtraVars, "OPENSHIFT_NAMESPACE_ORDER"));
+        verify(jobRepository, never()).save(any(Job.class));
+    }
+
+    @Test
     public void testLoadbalancerF5ChangePoolMembers_linksLbVirtualServerToPersistedJob() {
         JobRepository jobRepository = mock(JobRepository.class);
         ActionRepository actionRepository = mock(ActionRepository.class);
@@ -318,7 +417,7 @@ public class JobServiceTest {
 
         JobService jobService = new JobService(
                 jobRepository, actionRepository, userRepository, null, null,
-                null, lbVirtualServerRepository, null, null, null, null, null, actionToJobMapper, null
+                null, lbVirtualServerRepository, null, null, null, null, null, actionToJobMapper, null, null
         );
 
         when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -379,7 +478,7 @@ public class JobServiceTest {
 
         JobService jobService = new JobService(
                 jobRepository, actionRepository, userRepository, null, null,
-                null, null, ontapVolumeRepository, null, null, null, null, actionToJobMapper, null
+                null, null, ontapVolumeRepository, null, null, null, null, actionToJobMapper, null, null
         );
 
         when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -436,7 +535,7 @@ public class JobServiceTest {
 
         JobService jobService = new JobService(
                 jobRepository, actionRepository, userRepository, null, null,
-                null, null, ontapVolumeRepository, null, null, null, null, actionToJobMapper, null
+                null, null, ontapVolumeRepository, null, null, null, null, actionToJobMapper, null, null
         );
 
         UUID volumeUuid = UUID.randomUUID();
@@ -481,7 +580,7 @@ public class JobServiceTest {
 
         JobService jobService = new JobService(
                 jobRepository, actionRepository, userRepository, null, null,
-                null, null, ontapVolumeRepository, null, null, null, null, actionToJobMapper, null
+                null, null, ontapVolumeRepository, null, null, null, null, actionToJobMapper, null, null
         );
 
         when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -538,7 +637,7 @@ public class JobServiceTest {
 
         return new JobService(
                 jobRepository, actionRepository, userRepository, null, appserviceRepository,
-                null, null, null, null, null, null, null, actionToJobMapper, null
+                null, null, null, null, null, null, null, actionToJobMapper, null, null
         );
     }
 
@@ -580,29 +679,72 @@ public class JobServiceTest {
     }
 
     @Test
-    public void testPaketshopRepoAttach_linksRepositoryAndItsAppserviceToPersistedJob() {
+    public void testPaketshopRepoAttach_createsOneJobPerServerLinkedToServerRepositoryAndAppservice() {
         JobRepository jobRepository = mock(JobRepository.class);
         JobService jobService = paketshopJobService(jobRepository, "PAKETSHOP_REPO_ATTACH_NOT_OWNED_REPO", null);
 
         Appservice appservice = new Appservice();
         appservice.setId(2002L);
         Repository repository = paketshopRepository(appservice);
+        Server serverA = paketshopServer(1001L, "a.srv.muenchen.de");
+        Server serverB = paketshopServer(1002L, "b.srv.muenchen.de");
 
         jobService.paketshopRepoAttach("PAKETSHOP_REPO_ATTACH_NOT_OWNED_REPO", repository, true, false,
-                List.of("a.srv.muenchen.de", "b.srv.muenchen.de"));
+                List.of(serverA, serverB));
 
         ArgumentCaptor<Job> jobCaptor = ArgumentCaptor.forClass(Job.class);
-        verify(jobRepository).save(jobCaptor.capture());
-        JsonNode vars = new ObjectMapper().readTree(jobCaptor.getValue().getAwxExtraVars());
-        JsonNode repo = vars.get("control_paketshop_repos_repo");
+        verify(jobRepository, times(2)).save(jobCaptor.capture());
+        List<Job> jobs = jobCaptor.getAllValues();
 
-        assertEquals("my-repo-test", repo.get("name").asString());
-        assertTrue(repo.get("enabled").asBoolean());
-        assertFalse(repo.get("gpgcheck").asBoolean());
-        assertEquals(2, vars.get("control_paketshop_repos_systems").size());
-        assertEquals("PAKETSHOP_REPO_ATTACH_NOT_OWNED_REPO", jobCaptor.getValue().getActionIdentifier());
-        assertSame(repository, jobCaptor.getValue().getRepository());
-        assertSame(appservice, jobCaptor.getValue().getAppService());
+        assertSame(serverA, jobs.get(0).getServer());
+        assertSame(serverB, jobs.get(1).getServer());
+        for (Job job : jobs) {
+            JsonNode vars = new ObjectMapper().readTree(job.getAwxExtraVars());
+            JsonNode repo = vars.get("control_paketshop_repos_repo");
+
+            assertEquals("my-repo-test", repo.get("name").asString());
+            assertTrue(repo.get("enabled").asBoolean());
+            assertFalse(repo.get("gpgcheck").asBoolean());
+            assertEquals(1, vars.get("control_paketshop_repos_systems").size());
+            assertEquals(job.getServer().getFqdn(), vars.get("control_paketshop_repos_systems").get(0).asString());
+            assertEquals("PAKETSHOP_REPO_ATTACH_NOT_OWNED_REPO", job.getActionIdentifier());
+            assertSame(repository, job.getRepository());
+            assertSame(appservice, job.getAppService());
+        }
+    }
+
+    @Test
+    public void testPaketshopRepoDetach_createsOneJobPerServerLinkedToServer() {
+        JobRepository jobRepository = mock(JobRepository.class);
+        JobService jobService = paketshopJobService(jobRepository, "PAKETSHOP_REPO_DETACH", null);
+
+        Appservice appservice = new Appservice();
+        appservice.setId(2002L);
+        Repository repository = paketshopRepository(appservice);
+        Server serverA = paketshopServer(1001L, "a.srv.muenchen.de");
+        Server serverB = paketshopServer(1002L, "b.srv.muenchen.de");
+
+        jobService.paketshopRepoDetach("PAKETSHOP_REPO_DETACH", repository, List.of(serverA, serverB));
+
+        ArgumentCaptor<Job> jobCaptor = ArgumentCaptor.forClass(Job.class);
+        verify(jobRepository, times(2)).save(jobCaptor.capture());
+        List<Job> jobs = jobCaptor.getAllValues();
+
+        assertSame(serverA, jobs.get(0).getServer());
+        assertSame(serverB, jobs.get(1).getServer());
+        for (Job job : jobs) {
+            JsonNode systems = new ObjectMapper().readTree(job.getAwxExtraVars()).get("control_paketshop_repos_systems");
+            assertEquals(1, systems.size());
+            assertEquals(job.getServer().getFqdn(), systems.get(0).asString());
+            assertSame(repository, job.getRepository());
+        }
+    }
+
+    private Server paketshopServer(final long id, final String fqdn) {
+        Server server = new Server();
+        server.setId(id);
+        server.setFqdn(fqdn);
+        return server;
     }
 
     @Test

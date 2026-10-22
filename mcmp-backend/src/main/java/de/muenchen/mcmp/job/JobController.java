@@ -2275,28 +2275,28 @@ public class JobController {
         }
         final boolean enabled = requireBoolean(awxExtraVars.get("enabled"), "Enabled");
         final boolean gpgcheck = requireBoolean(awxExtraVars.get("gpgcheck"), "GPG check");
-        final List<String> systems = requireEditableServerFqdns(awxExtraVars.get("control_paketshop_repos_systems"), "Systems", identifier);
-        requireCompatibleEnvironments(repository, systems, identifier);
+        final List<Server> servers = requireEditableServers(awxExtraVars.get("control_paketshop_repos_systems"), "Systems", identifier);
+        requireCompatibleEnvironments(repository, servers, identifier);
 
-        logCreatedJob(identifier, null);
-        jobService.paketshopRepoAttach(identifier, repository, enabled, gpgcheck, systems);
+        servers.forEach(server -> logCreatedJob(identifier, server.getId()));
+        jobService.paketshopRepoAttach(identifier, repository, enabled, gpgcheck, servers);
     }
 
     @PostMapping("/create/" + PAKETSHOP_REPO_DETACH)
     public void paketshopRepoDetach(@RequestBody final Map<String, Object> awxExtraVars) {
         final Repository repository = requireEditableRepository(awxExtraVars.get("name"), PAKETSHOP_REPO_DETACH);
-        final List<String> systems = requireEditableServerFqdns(awxExtraVars.get("control_paketshop_repos_systems"), "Systems", PAKETSHOP_REPO_DETACH);
+        final List<Server> servers = requireEditableServers(awxExtraVars.get("control_paketshop_repos_systems"), "Systems", PAKETSHOP_REPO_DETACH);
 
-        logCreatedJob(PAKETSHOP_REPO_DETACH, null);
-        jobService.paketshopRepoDetach(PAKETSHOP_REPO_DETACH, repository, systems);
+        servers.forEach(server -> logCreatedJob(PAKETSHOP_REPO_DETACH, server.getId()));
+        jobService.paketshopRepoDetach(PAKETSHOP_REPO_DETACH, repository, servers);
     }
 
     /**
      * See {@link PaketshopEnvironmentRule}.
      */
-    private void requireCompatibleEnvironments(final Repository repository, final List<String> fqdns, final String jobIdentifier) {
+    private void requireCompatibleEnvironments(final Repository repository, final List<Server> servers, final String jobIdentifier) {
         final EnvironmentType repoEnvironment = repository.getAppservices().iterator().next().getEnvironment();
-        for (Server server : serverService.findByFqdnIn(fqdns)) {
+        for (Server server : servers) {
             final Long serverAppserviceId = appserviceService.getAppservicesByServerId(server.getId()).getFirst().getId();
             final EnvironmentType serverEnvironment = appserviceService.getAppservice(serverAppserviceId).getEnvironment();
             if (!PaketshopEnvironmentRule.isCompatible(serverEnvironment, repoEnvironment)) {
@@ -2551,9 +2551,9 @@ public class JobController {
      * Resolves a list of FQDNs to servers. Every FQDN must belong to an existing server that the
      * current user can edit and that is assigned to exactly one Application Service.
      *
-     * @return List of FQDNs
+     * @return List of distinct servers
      */
-    private List<String> requireEditableServerFqdns(final Object fqdnsObj, final String fieldLabel, final String jobIdentifier) {
+    private List<Server> requireEditableServers(final Object fqdnsObj, final String fieldLabel, final String jobIdentifier) {
         final List<?> rawFqdns = requireList(fqdnsObj, fieldLabel);
         if (rawFqdns.isEmpty()) {
             throw new IllegalArgumentException("At least one server is required.");
@@ -2567,6 +2567,7 @@ public class JobController {
         }
         final List<Server> servers = serverService.findByFqdnIn(new ArrayList<>(fqdns));
         final Set<String> foundFqdns = new HashSet<>();
+        final Map<Long, Server> distinctServers = new LinkedHashMap<>();
         for (Server server : servers) {
             if (!serverService.canUserEditServer(server.getId())) {
                 logTriedToCreateJob(jobIdentifier, server.getId());
@@ -2578,12 +2579,13 @@ public class JobController {
                 throw new AccessDeniedException("Server " + server.getFqdn() + " must be assigned to exactly one Application Service.");
             }
             foundFqdns.add(server.getFqdn().toUpperCase(Locale.ROOT));
+            distinctServers.putIfAbsent(server.getId(), server);
         }
         for (String fqdn : fqdns) {
             if (!foundFqdns.contains(fqdn.toUpperCase(Locale.ROOT))) {
                 throw new IllegalArgumentException("No server found for FQDN: " + fqdn);
             }
         }
-        return servers.stream().map(Server::getFqdn).distinct().toList();
+        return new ArrayList<>(distinctServers.values());
     }
 }

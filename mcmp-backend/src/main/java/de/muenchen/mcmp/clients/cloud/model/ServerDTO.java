@@ -85,6 +85,8 @@ public record ServerDTO(
         @JsonProperty("cpu_allocation_limit") Long cpuAllocationLimit,
         @JsonProperty("cpu_allocation_overhead_limit") Long cpuAllocationOverheadLimit,
         @JsonProperty("cpu_allocation_reservation") Long cpuAllocationReservation,
+        @JsonProperty("vdisks") Short vdisks,
+        @JsonProperty("vdisks_capacity_in_bytes") Long vdisksCapacityInBytes,
 
         // semantics for optional lists:
         //  (1) missing / `null` => ignored
@@ -201,7 +203,9 @@ public record ServerDTO(
                 || !Objects.equals(existing.getCpuAllocationExpandableReservation(), cpuAllocationExpandableReservation)
                 || !Objects.equals(existing.getCpuAllocationLimit(), cpuAllocationLimit)
                 || !Objects.equals(existing.getCpuAllocationOverheadLimit(), memoryAllocationOverheadLimit)
-                || !Objects.equals(existing.getCpuAllocationReservation(), cpuAllocationReservation);
+                || !Objects.equals(existing.getCpuAllocationReservation(), cpuAllocationReservation)
+                || !Objects.equals(existing.getVdisks(), vdisks)
+                || !Objects.equals(existing.getVdisksCapacityInBytes(), vdisksCapacityInBytes);
     }
 
     /**
@@ -296,6 +300,8 @@ public record ServerDTO(
         existing.setCpuAllocationLimit(cpuAllocationLimit);
         existing.setCpuAllocationOverheadLimit(cpuAllocationOverheadLimit);
         existing.setCpuAllocationReservation(cpuAllocationReservation);
+        existing.setVdisks(vdisks);
+        existing.setVdisksCapacityInBytes(vdisksCapacityInBytes);
     }
 
     /**

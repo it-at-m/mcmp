@@ -87,6 +87,19 @@
         <template #no-data>
           <div class="px-4 py-2">Keine Server verfügbar</div>
         </template>
+        <template #append>
+          <info-tooltip>
+            Es werden nur Server angezeigt, die:
+            <ul class="ml-4">
+              <li>das Repository angebunden haben</li>
+              <li>eingeschaltet sind</li>
+              <li>von MCMP verwaltete Linux-Server sind</li>
+              <li>nicht gesperrt sind</li>
+              <li>genau einem Anwendungsservice zugeordnet sind</li>
+              <li>von Ihnen bearbeitet werden dürfen</li>
+            </ul>
+          </info-tooltip>
+        </template>
       </v-autocomplete>
     </v-form>
   </common-dialog>
@@ -103,6 +116,7 @@ import jobService from "@/api/jobService";
 import serverService from "@/api/serverService";
 import CommonAlert from "@/components/common/CommonAlert.vue";
 import CommonDialog from "@/components/common/CommonDialog.vue";
+import InfoTooltip from "@/components/common/InfoTooltip.vue";
 
 interface ServerOption {
   name: string;

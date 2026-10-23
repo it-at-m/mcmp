@@ -2,6 +2,7 @@ package de.muenchen.mcmp.job;
 
 import de.muenchen.mcmp.appservice.Appservice;
 import de.muenchen.mcmp.appservice.AppserviceService;
+import de.muenchen.mcmp.exception.BusinessValidationException;
 import de.muenchen.mcmp.job.incident.JobIncidentSummary;
 import de.muenchen.mcmp.job.node.JobNodeHierarchy;
 import de.muenchen.mcmp.kubernetes.KubernetesNamespaceService;
@@ -2549,7 +2550,8 @@ public class JobController {
 
     /**
      * Resolves a list of FQDNs to servers. Every FQDN must belong to an existing server that the
-     * current user can edit and that is assigned to exactly one Application Service.
+     * current user can edit, that is assigned to exactly one Application Service and that is powered on.
+     * In sync with {@code ServerRepository.REPO_TARGET_SERVER_CONDITION}.
      *
      * @return List of distinct servers
      */
@@ -2577,6 +2579,10 @@ public class JobController {
             if (appserviceService.getAppservicesByServerId(server.getId()).size() != 1) {
                 logTriedToCreateJob(jobIdentifier, server.getId());
                 throw new AccessDeniedException("Server " + server.getFqdn() + " must be assigned to exactly one Application Service.");
+            }
+            if (!"poweredOn".equals(server.getPowerState())) {
+                logTriedToCreateJob(jobIdentifier, server.getId());
+                throw new BusinessValidationException("Server " + server.getFqdn() + " ist nicht eingeschaltet.");
             }
             foundFqdns.add(server.getFqdn().toUpperCase(Locale.ROOT));
             distinctServers.putIfAbsent(server.getId(), server);

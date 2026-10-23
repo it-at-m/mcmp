@@ -464,6 +464,7 @@ class JobControllerValidRequestsTest {
         final Server server = new Server();
         server.setId(SERVER_ID);
         server.setFqdn("test.srv.muenchen.de");
+        server.setPowerState("poweredOn");
         when(serverService.findByFqdnIn(anyList())).thenReturn(List.of(server));
         when(serverService.canUserEditServer(SERVER_ID)).thenReturn(true);
         final AppserviceNameAndSysId projection = mock(AppserviceNameAndSysId.class);

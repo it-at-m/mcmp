@@ -636,14 +636,15 @@ class JobControllerWebTest {
         when(repositoryService.canUserEditRepository(REPO_ID)).thenReturn(canEdit);
     }
 
-    private void stubPaketshopServer(final boolean canEdit, final int appserviceCount) {
-        stubPaketshopServer(canEdit, appserviceCount, EnvironmentType.K);
+    private Server stubPaketshopServer(final boolean canEdit, final int appserviceCount) {
+        return stubPaketshopServer(canEdit, appserviceCount, EnvironmentType.K);
     }
 
-    private void stubPaketshopServer(final boolean canEdit, final int appserviceCount, final EnvironmentType environment) {
+    private Server stubPaketshopServer(final boolean canEdit, final int appserviceCount, final EnvironmentType environment) {
         final Server server = new Server();
         server.setId(SERVER_ID);
         server.setFqdn("test.srv.muenchen.de");
+        server.setPowerState("poweredOn");
         when(serverService.findByFqdnIn(anyList())).thenReturn(List.of(server));
         when(serverService.canUserEditServer(SERVER_ID)).thenReturn(canEdit);
         final List<AppserviceNameAndSysId> appservices = new ArrayList<>();
@@ -657,6 +658,7 @@ class JobControllerWebTest {
         serverAppservice.setId(SERVER_APPSERVICE_ID);
         serverAppservice.setEnvironment(environment);
         when(appserviceService.getAppservice(SERVER_APPSERVICE_ID)).thenReturn(serverAppservice);
+        return server;
     }
 
     @Test
@@ -849,6 +851,28 @@ class JobControllerWebTest {
         stubPaketshopServer(false, 1);
 
         performPaketshop("PAKETSHOP_REPO_ATTACH_OWNED_REPO", PAKETSHOP_ATTACH_PAYLOAD, status().isForbidden());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void paketshopRepoAttach_poweredOffServer_isRejected() throws Exception {
+        stubPaketshopRepository(false, 1, true);
+        stubPaketshopServer(true, 1).setPowerState("poweredOff");
+
+        performPaketshop("PAKETSHOP_REPO_ATTACH_OWNED_REPO", PAKETSHOP_ATTACH_PAYLOAD, status().isBadRequest());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void paketshopRepoDetach_poweredOffServer_isRejected() throws Exception {
+        stubPaketshopRepository(false, 1, true);
+        stubPaketshopServer(true, 1).setPowerState("poweredOff");
+
+        performPaketshop("PAKETSHOP_REPO_DETACH",
+                "{\"name\":\"my-repo-test\",\"control_paketshop_repos_systems\":[\"test.srv.muenchen.de\"]}",
+                status().isBadRequest());
 
         verifyNoInteractions(jobService);
     }

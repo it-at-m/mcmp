@@ -96,6 +96,22 @@
         <template #no-data>
           <div class="px-4 py-2">Keine Server gefunden</div>
         </template>
+        <template #append>
+          <info-tooltip>
+            Es werden nur Server angezeigt, die:
+            <ul class="ml-4">
+              <li>eingeschaltet sind</li>
+              <li>von MCMP verwaltete Linux-Server sind</li>
+              <li>nicht gesperrt sind</li>
+              <li>genau einem Anwendungsservice zugeordnet sind</li>
+              <li>von Ihnen bearbeitet werden dürfen</li>
+              <li>
+                zur Umgebung des Repositories passen (P nur mit P, C/K nur mit
+                C/K)
+              </li>
+            </ul>
+          </info-tooltip>
+        </template>
       </v-autocomplete>
 
       <common-alert
@@ -132,6 +148,7 @@ import repositoryService from "@/api/repositoryService";
 import serverService from "@/api/serverService";
 import CommonAlert from "@/components/common/CommonAlert.vue";
 import CommonDialog from "@/components/common/CommonDialog.vue";
+import InfoTooltip from "@/components/common/InfoTooltip.vue";
 import RepoAutocompleteField from "@/components/Paketshop/RepoAutocompleteField.vue";
 import { repoAttachDisabledReason } from "@/composables/repoLockStatus";
 

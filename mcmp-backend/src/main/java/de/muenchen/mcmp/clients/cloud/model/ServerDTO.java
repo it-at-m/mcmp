@@ -97,6 +97,11 @@ public record ServerDTO(
         @JsonProperty("nics") Optional<List<NicDTO>> nics,
         @JsonProperty("snapshots") Optional<List<SnapshotDTO>> snapshots
 ) {
+    /**
+     * Normalize values and replace nulls with sensible defaults.
+     * This happens here at DTO creation (rather than at DB insert/update)
+     * so we can compare this DTO to existing Server entities.
+     */
     public ServerDTO {
         if (name == null || name.isBlank()) {
             name = uuid;
@@ -104,23 +109,49 @@ public record ServerDTO(
             name = name.trim();
         }
 
+        // normalize powerState to VMware conventions
         powerState = switch (powerState != null ? powerState : "") {
             case "poweredOn", "running", "on", "up" -> "poweredOn";
             case "poweredOff", "stopped", "off", "down" -> "poweredOff";
             default -> "unknown";
         };
 
-        /* remove various nulls */
-        if (serverKind == null) serverKind = ServerKind.UNKNOWN;
-        if (serverType == null) serverType = ServerType.UNKNOWN;
-        if (memoryMB == null) memoryMB = 0;
-        if (numCPU == null) numCPU = 0;
-        if (memoryHotAddEnabled == null) memoryHotAddEnabled = false;
-        if (cpuHotAddEnabled == null) cpuHotAddEnabled = false;
-        if (cpuHotRemoveEnabled == null) cpuHotRemoveEnabled = false;
-        if (overallStatus == null) overallStatus = ServerStatusType.gray;
-        if (configStatus == null) configStatus = ServerStatusType.gray;
+        // try to infer location from datastore naming convention
+        if (location == null && disks.isPresent() && !disks.get().isEmpty()) {
+            final var filename = disks.get().get(0).fileName();
+            if (filename != null) {
+                if (filename.contains("_a20_"))
+                    location = "A20";
+                if (filename.contains("_k30_"))
+                    location = "K30";
+                if (filename.contains("_f40_"))
+                    location = "F40";
+            }
+        }
 
+        if (serverKind == null)
+            serverKind = ServerKind.UNKNOWN;
+        if (serverType == null)
+            serverType = ServerType.UNKNOWN;
+
+        if (memoryMB == null)
+            memoryMB = 0;
+        if (numCPU == null)
+            numCPU = 0;
+
+        if (memoryHotAddEnabled == null)
+            memoryHotAddEnabled = false;
+        if (cpuHotAddEnabled == null)
+            cpuHotAddEnabled = false;
+        if (cpuHotRemoveEnabled == null)
+            cpuHotRemoveEnabled = false;
+
+        if (overallStatus == null)
+            overallStatus = ServerStatusType.gray;
+        if (configStatus == null)
+            configStatus = ServerStatusType.gray;
+
+        // remove nulls from collections
         disks.ifPresent(lst -> lst.removeIf(Objects::isNull));
         mountPoints.ifPresent(lst -> lst.removeIf(Objects::isNull));
         nics.ifPresent(lst -> lst.removeIf(Objects::isNull));

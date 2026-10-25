@@ -18,9 +18,10 @@ const CloudTypeProxmox = "PROXMOX"
 // than a cluster or datacenter. This avoids deleting VMs from other
 // nodes when an import fails.
 type Cloud struct {
-	Cloud     string    `json:"cloud,omitempty"`      // The Cloud's FQDN.
-	CloudType CloudType `json:"cloud_type,omitempty"` // CloudType, must be "PROXMOX"
-	Servers   []*Server `json:"servers,omitempty"`    // All Servers in this Cloud.
+	Cloud      string       `json:"cloud,omitempty"`       // The Cloud's FQDN.
+	CloudType  CloudType    `json:"cloud_type,omitempty"`  // CloudType, must be "PROXMOX"
+	Servers    []*Server    `json:"servers,omitempty"`     // All Servers in this Cloud.
+	PortGroups []*PortGroup `json:"port_groups,omitempty"` // All PortGroups in this Cloud.
 }
 
 // ProcessCloud aggregates data for the Processor's Cloud instance.
@@ -37,6 +38,13 @@ func (p *Processor) ProcessCloud(ctx context.Context) (*Cloud, error) {
 	resources, err := p.client.Resources(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get resources: %w", err)
+	}
+
+	vnets, err := p.client.VNets(ctx)
+	if err != nil {
+		// don't terminate, this might just be a missing API key
+		// permission and we may still be able to import servers
+		p.logger.Error("failed to get vnets", "err", err)
 	}
 
 	wg := &sync.WaitGroup{}
@@ -73,6 +81,8 @@ func (p *Processor) ProcessCloud(ctx context.Context) (*Cloud, error) {
 			err = errors.Join(err, e)
 		}
 	})
+
+	cloud.PortGroups = p.ProcessPortGroups(vnets)
 
 	wg.Wait()
 	close(srvChan)

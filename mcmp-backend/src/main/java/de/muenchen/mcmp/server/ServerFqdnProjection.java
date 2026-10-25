@@ -4,4 +4,5 @@ public interface ServerFqdnProjection {
     Long getId();
     String getName();
     String getFqdn();
+    String getPowerState();
 }

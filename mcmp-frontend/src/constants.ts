@@ -44,6 +44,7 @@ export const OPENSHIFT_NAMESPACE_BASE = `${API}/openshift/namespace`;
 export const TESTENV_BASE = `${API}/testenv`;
 export const APP_CONFIG_BASE = `${API}/app-config`;
 export const ERROR_LOG_BASE = `${API}/error-logs`;
+export const REPORT_BASE = `${API}/report`;
 
 export const AD2IMAGE_URL = import.meta.env.VITE_AD2IMAGE_URL;
 

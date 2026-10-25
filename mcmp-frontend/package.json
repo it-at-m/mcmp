@@ -35,7 +35,7 @@
     "@cyclonedx/cyclonedx-npm": "6.0.1",
     "@eslint/js": "10.0.1",
     "@intlify/eslint-plugin-vue-i18n": "4.5.1",
-    "@intlify/unplugin-vue-i18n": "11.2.5",
+    "@intlify/unplugin-vue-i18n": "^11.2.7",
     "@mdi/js": "7.4.47",
     "@muenchen/prettier-codeformat": "1.0.2",
     "@pinia/testing": "2.0.1",
@@ -51,14 +51,12 @@
     "jsdom": "29.1.1",
     "prettier": "3.9.8",
     "typescript": "5.9.3",
-    "unplugin-fonts": "2.0.0",
     "vite": "^8.3.0",
     "vite-plugin-vuetify": "2.1.3",
     "vitest": "4.1.11",
     "vue-tsc": "3.3.11"
   },
   "overrides": {
-    "@intlify/eslint-plugin-vue-i18n": "4.5.1",
     "esbuild": ">=0.21.0",
     "brace-expansion": ">=2.0.1",
     "minimatch": ">=9.0.0",

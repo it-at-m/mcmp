@@ -128,7 +128,7 @@ public class RepositoryService {
         }
         checkUserCanViewRepository(id);
         return serverRepository.findAllByRepositoryId(id).stream()
-                .map(s -> new ServerFqdnDTO(s.getId(), s.getName(), s.getFqdn()))
+                .map(s -> new ServerFqdnDTO(s.getId(), s.getName(), s.getFqdn(), s.getPowerState()))
                 .toList();
     }
 

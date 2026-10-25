@@ -8,6 +8,7 @@ import de.muenchen.mcmp.config.app.MaintenanceModeConfiguration;
 import de.muenchen.mcmp.config.app.MaintenanceModeInterceptor;
 import de.muenchen.mcmp.configuration.nfcconverter.NfcRequestFilter;
 import de.muenchen.mcmp.errorlog.ErrorLogService;
+import de.muenchen.mcmp.kubernetes.KubernetesNamespaceService;
 import de.muenchen.mcmp.loadbalancer.LoadbalancerService;
 import de.muenchen.mcmp.loadbalancer.UnifiedLoadbalancer;
 import de.muenchen.mcmp.loadbalancer.UnifiedLoadbalancerMemberDTO;
@@ -28,6 +29,8 @@ import de.muenchen.mcmp.storage.UnifiedStorageService;
 import de.muenchen.mcmp.types.EnvironmentType;
 import de.muenchen.mcmp.user.UserService;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -101,6 +104,8 @@ class JobControllerWebTest {
     @MockitoBean
     private RepositoryService repositoryService;
     @MockitoBean
+    private KubernetesNamespaceService kubernetesNamespaceService;
+    @MockitoBean
     private ErrorLogService errorLogService;
 
     @TestConfiguration
@@ -147,8 +152,41 @@ class JobControllerWebTest {
                                  "non_postgres_reason":"","middleware_user":false}""".formatted(VALID_RHEL10_FQDN)))
                 .andExpect(status().isOk());
 
-        verify(jobService).linuxRhelServer(any(), eq("Standard"), any(), eq(2), eq(1), eq(NETWORK_GROUP_ID),
+        verify(jobService).linuxRhelServer(any(), eq("Standard"), any(), eq(Set.of()), eq(2), eq(1), eq(NETWORK_GROUP_ID),
                 eq(APPSERVICE_ID), any(), any(), eq(false), eq("LINUX_RHEL10_SERVER"));
+    }
+
+    @Test
+    void rhel10Server_appWithMultipleApplications_succeeds() throws Exception {
+        stubRhel10AppserviceAndNetworkChecksPass();
+
+        mockMvc.perform(post("/job/create/LINUX_RHEL10_SERVER").param("serverId", "-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"fqdn":%s,"categoryType":"App","serverType":null,"applications":["Apache","Java","Tomcat"],
+                                 "ram":2,"cpu":1,"network_group_id":3003,"application_service_id":2002,"db_params":null,
+                                 "non_postgres_reason":"","middleware_user":false}""".formatted(VALID_RHEL10_FQDN)))
+                .andExpect(status().isOk());
+
+        verify(jobService).linuxRhelServer(any(), eq("App"), any(),
+                eq(Set.of(LinuxServerApplication.APACHE, LinuxServerApplication.JAVA, LinuxServerApplication.TOMCAT)),
+                eq(2), eq(1), eq(NETWORK_GROUP_ID), eq(APPSERVICE_ID), any(), any(), eq(false), eq("LINUX_RHEL10_SERVER"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"[]", "[\"PHP\"]", "[\"Apache\",\"Tomcat\"]", "[\"Bogus\"]", "\"Apache\""})
+    void rhel10Server_appWithInvalidApplications_isRejected(final String applications) throws Exception {
+        stubRhel10AppserviceAndNetworkChecksPass();
+
+        mockMvc.perform(post("/job/create/LINUX_RHEL10_SERVER").param("serverId", "-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"fqdn":%s,"categoryType":"App","serverType":null,"applications":%s,
+                                 "ram":2,"cpu":1,"network_group_id":3003,"application_service_id":2002,"db_params":null,
+                                 "non_postgres_reason":"","middleware_user":false}""".formatted(VALID_RHEL10_FQDN, applications)))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(jobService);
     }
 
     @Test
@@ -598,14 +636,15 @@ class JobControllerWebTest {
         when(repositoryService.canUserEditRepository(REPO_ID)).thenReturn(canEdit);
     }
 
-    private void stubPaketshopServer(final boolean canEdit, final int appserviceCount) {
-        stubPaketshopServer(canEdit, appserviceCount, EnvironmentType.K);
+    private Server stubPaketshopServer(final boolean canEdit, final int appserviceCount) {
+        return stubPaketshopServer(canEdit, appserviceCount, EnvironmentType.K);
     }
 
-    private void stubPaketshopServer(final boolean canEdit, final int appserviceCount, final EnvironmentType environment) {
+    private Server stubPaketshopServer(final boolean canEdit, final int appserviceCount, final EnvironmentType environment) {
         final Server server = new Server();
         server.setId(SERVER_ID);
         server.setFqdn("test.srv.muenchen.de");
+        server.setPowerState("poweredOn");
         when(serverService.findByFqdnIn(anyList())).thenReturn(List.of(server));
         when(serverService.canUserEditServer(SERVER_ID)).thenReturn(canEdit);
         final List<AppserviceNameAndSysId> appservices = new ArrayList<>();
@@ -619,6 +658,7 @@ class JobControllerWebTest {
         serverAppservice.setId(SERVER_APPSERVICE_ID);
         serverAppservice.setEnvironment(environment);
         when(appserviceService.getAppservice(SERVER_APPSERVICE_ID)).thenReturn(serverAppservice);
+        return server;
     }
 
     @Test
@@ -792,7 +832,7 @@ class JobControllerWebTest {
         performPaketshop("PAKETSHOP_REPO_ATTACH_OWNED_REPO", PAKETSHOP_ATTACH_PAYLOAD, status().isOk());
 
         verify(jobService).paketshopRepoAttach(eq("PAKETSHOP_REPO_ATTACH_OWNED_REPO"), any(), eq(true), eq(false),
-                eq(List.of("test.srv.muenchen.de")));
+                argThat(servers -> servers.size() == 1 && servers.getFirst().getId() == SERVER_ID));
     }
 
     @Test
@@ -811,6 +851,28 @@ class JobControllerWebTest {
         stubPaketshopServer(false, 1);
 
         performPaketshop("PAKETSHOP_REPO_ATTACH_OWNED_REPO", PAKETSHOP_ATTACH_PAYLOAD, status().isForbidden());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void paketshopRepoAttach_poweredOffServer_isRejected() throws Exception {
+        stubPaketshopRepository(false, 1, true);
+        stubPaketshopServer(true, 1).setPowerState("poweredOff");
+
+        performPaketshop("PAKETSHOP_REPO_ATTACH_OWNED_REPO", PAKETSHOP_ATTACH_PAYLOAD, status().isBadRequest());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void paketshopRepoDetach_poweredOffServer_isRejected() throws Exception {
+        stubPaketshopRepository(false, 1, true);
+        stubPaketshopServer(true, 1).setPowerState("poweredOff");
+
+        performPaketshop("PAKETSHOP_REPO_DETACH",
+                "{\"name\":\"my-repo-test\",\"control_paketshop_repos_systems\":[\"test.srv.muenchen.de\"]}",
+                status().isBadRequest());
 
         verifyNoInteractions(jobService);
     }
@@ -1194,6 +1256,18 @@ class JobControllerWebTest {
         mockMvc.perform(post("/job/create/LOADBALANCER_F5_DELETE").param("serverId", "-1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"lb_virtual_server_id\":123}"))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void openshiftNamespaceDelete_userCannotEditNamespace_isForbidden() throws Exception {
+        when(kubernetesNamespaceService.canUserEditNamespace(anyLong())).thenReturn(false);
+
+        mockMvc.perform(post("/job/create/OPENSHIFT_NAMESPACE_DELETE").param("serverId", "-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kubernetes_namespace_id\":123}"))
                 .andExpect(status().isForbidden());
 
         verifyNoInteractions(jobService);

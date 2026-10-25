@@ -44,6 +44,9 @@
           </router-link>
         </div>
       </template>
+      <template #item.powerState="{ item }">
+        <power-state-label :power-state="item.powerState" />
+      </template>
     </v-data-table>
   </common-card>
 </template>
@@ -52,11 +55,12 @@
 import type { RepositoryDetail } from "@/types/RepositoryDetail";
 import type { ServerFqdn } from "@/types/ServerFqdn";
 
-import { computed, ref, watch } from "vue";
+import { computed, onUnmounted, ref, watch } from "vue";
 
 import repositoryService from "@/api/repositoryService";
 import CommonCard from "@/components/common/CommonCard.vue";
 import CountBadge from "@/components/common/CountBadge.vue";
+import PowerStateLabel from "@/components/common/PowerStateLabel.vue";
 import RepoAttachDialog from "@/components/Paketshop/RepoAttachDialog.vue";
 import RepoDetachDialog from "@/components/Paketshop/RepoDetachDialog.vue";
 import { repoAttachDisabledReason } from "@/composables/repoLockStatus";
@@ -70,7 +74,10 @@ const { isTestEnv } = useTestEnv();
 const servers = ref<ServerFqdn[]>([]);
 const loading = ref(false);
 
-const headers = [{ title: "Servername", key: "name" }];
+const headers = [
+  { title: "Servername", key: "name" },
+  { title: "Status", key: "powerState" },
+];
 
 const lockedReason = computed(() =>
   props.repository.lockStatus === "LOCKED"
@@ -97,17 +104,36 @@ const detachDisabledReason = computed(() => {
   return "";
 });
 
+const LOADING_DELAY_MS = 300;
+const requestLoading = ref(false);
+let loadingTimeout: ReturnType<typeof setTimeout> | null = null;
+
 async function loadServers(repositoryId: number) {
-  servers.value = [];
-  const result = await repositoryService.getServersByRepositoryId(
-    loading,
-    repositoryId
-  );
-  // ignore stale responses if another repository was selected while loading
-  if (props.repository.id === repositoryId) {
-    servers.value = result;
+  if (loadingTimeout) clearTimeout(loadingTimeout);
+  loadingTimeout = setTimeout(() => {
+    servers.value = [];
+    loading.value = true;
+  }, LOADING_DELAY_MS);
+  try {
+    const result = await repositoryService.getServersByRepositoryId(
+      requestLoading,
+      repositoryId
+    );
+    if (props.repository.id === repositoryId) {
+      servers.value = result;
+    }
+  } finally {
+    if (props.repository.id === repositoryId) {
+      if (loadingTimeout) clearTimeout(loadingTimeout);
+      loadingTimeout = null;
+      loading.value = false;
+    }
   }
 }
+
+onUnmounted(() => {
+  if (loadingTimeout) clearTimeout(loadingTimeout);
+});
 
 watch(
   () => props.repository.id,

@@ -29,24 +29,26 @@ const (
 // A Server represents a single virtualized server accepted by the MCMP
 // backend's cloud import API.
 type Server struct {
-	ServerKind          ServerKind  `json:"server_kind,omitempty"`            // Must be "VIRTUAL"
-	ServerType          ServerType  `json:"server_type,omitempty"`            // Must be "VM_PROXMOX"
-	Name                string      `json:"name,omitempty"`                   // Name of the server on the hypervisor.
-	VMID                string      `json:"vm_id,omitempty"`                  // Sequential ID of the server on the hypervisor.
-	UUID                string      `json:"uuid,omitempty"`                   // Unique UUID for the server.
-	Cluster             string      `json:"cluster,omitempty"`                // Cluster the VM is hosted in.
-	Host                string      `json:"host,omitempty"`                   // Host/Node the VM is hosted on.
-	PowerState          PowerState  `json:"power_state,omitempty"`            // Must be "poweredOn" or "poweredOff"
-	MemoryMB            uint64      `json:"memory_mb,omitempty"`              // Available memory in MiB.
-	NumCpu              uint32      `json:"num_cpu,omitempty"`                // Number of CPUs.
-	NumCoresPerSocket   uint32      `json:"num_cores_per_socket,omitempty"`   // Cores per socket.
-	MemoryHotAddEnabled bool        `json:"memory_hot_add_enabled,omitempty"` // If memory hotplug is enabled.
-	CPUHotAddEnabled    bool        `json:"cpu_hot_add_enabled,omitempty"`    // If CPU hot-add is enabled.
-	BootTime            *time.Time  `json:"boot_time,omitempty"`              // Time of last boot.
-	GuestConfigID       string      `json:"guest_config_id,omitempty"`        // Identifier of the configured operating system.
-	Snapshots           []*Snapshot `json:"snapshots"`                        // Available Snapshots, excluding current.
-	Nics                []*Nic      `json:"nics"`                             // Attached NICs.
-	Disks               []*Disk     `json:"disks"`                            // Attached Disks.
+	ServerKind            ServerKind  `json:"server_kind,omitempty"`              // Must be "VIRTUAL"
+	ServerType            ServerType  `json:"server_type,omitempty"`              // Must be "VM_PROXMOX"
+	Name                  string      `json:"name,omitempty"`                     // Name of the server on the hypervisor.
+	VMID                  string      `json:"vm_id,omitempty"`                    // Sequential ID of the server on the hypervisor.
+	UUID                  string      `json:"uuid,omitempty"`                     // Unique UUID for the server.
+	Cluster               string      `json:"cluster,omitempty"`                  // Cluster the VM is hosted in.
+	Host                  string      `json:"host,omitempty"`                     // Host/Node the VM is hosted on.
+	PowerState            PowerState  `json:"power_state,omitempty"`              // Must be "poweredOn" or "poweredOff"
+	MemoryMB              uint64      `json:"memory_mb,omitempty"`                // Available memory in MiB.
+	NumCpu                uint32      `json:"num_cpu,omitempty"`                  // Number of CPUs.
+	NumCoresPerSocket     uint32      `json:"num_cores_per_socket,omitempty"`     // Cores per socket.
+	MemoryHotAddEnabled   bool        `json:"memory_hot_add_enabled,omitempty"`   // If memory hotplug is enabled.
+	CPUHotAddEnabled      bool        `json:"cpu_hot_add_enabled,omitempty"`      // If CPU hot-add is enabled.
+	BootTime              *time.Time  `json:"boot_time,omitempty"`                // Time of last boot.
+	GuestConfigID         string      `json:"guest_config_id,omitempty"`          // Identifier of the configured operating system.
+	Snapshots             []*Snapshot `json:"snapshots"`                          // Available Snapshots, excluding current.
+	Nics                  []*Nic      `json:"nics"`                               // Attached NICs.
+	Disks                 []*Disk     `json:"disks"`                              // Attached Disks.
+	VDisks                uint64      `json:"vdisks,omitempty"`                   // Number of attached virtual Disks.
+	VDisksCapacityInBytes uint64      `json:"vdisks_capacity_in_bytes,omitempty"` // Size of attached virtual Disks.
 }
 
 // ProcessServer processes a single server based on a proxmox.Resource
@@ -78,6 +80,10 @@ func (p *Processor) ProcessServer(ctx context.Context, res *proxmox.Resource) (*
 	// since proxmox does not assign UUIDs to server objects, we use
 	// the SMBIOS/DMI UUID instead
 	server.UUID = cfg.SMBIOS1.UUID
+	if server.UUID == "" {
+		return nil, fmt.Errorf("server %s (%s) is missing a UUID", res.Name, res.VMID)
+	}
+
 	server.VMID = strconv.FormatUint(res.VMID, 10)
 	server.Name = res.Name
 	server.NumCpu = uint32(res.MaxCPU)
@@ -106,6 +112,11 @@ func (p *Processor) ProcessServer(ctx context.Context, res *proxmox.Resource) (*
 	server.BootTime = &bootTime
 
 	server.Disks = p.processDisks(cfg)
+	server.VDisks = uint64(len(server.Disks))
+	for _, disk := range server.Disks {
+		server.VDisksCapacityInBytes += disk.CapacityInBytes
+	}
+
 	server.Nics = p.processNics(cfg)
 
 	snapshots, err := p.processSnapshots(ctx, server.Cluster, res.VMID)

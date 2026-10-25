@@ -7,6 +7,7 @@ import {
 
 import { useUserStore } from "@/stores/user";
 import AppserviceView from "@/views/AppserviceView.vue";
+import DatabaseView from "@/views/DatabaseView.vue";
 import HilfeView from "@/views/HilfeView.vue";
 import HistoryView from "@/views/HistoryView.vue";
 import LoadbalancerView from "@/views/LoadbalancerView.vue";
@@ -75,6 +76,11 @@ const manualRoutes = [
     path: "/openshift/:id",
     name: "OpenshiftDetail",
     component: OpenshiftView,
+  },
+  {
+    path: "/database",
+    name: "Database",
+    component: DatabaseView,
   },
   {
     path: "/repo",

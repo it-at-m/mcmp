@@ -47,8 +47,9 @@ public class CheckMkImportService {
         final Map<Long, Server> serversById = servers
                 .stream()
                 .collect(Collectors.toMap(Server::getId, Function.identity()));
-        final Map<Long, Map<String, MountPoint>> mounts = mountPointRepository
-                .findAll()
+
+        final List<MountPoint> mounts = mountPointRepository.findAll();
+        final Map<Long, Map<String, MountPoint>> mountsByServerIdAndPath = mounts
                 .stream()
                 .collect(Collectors.groupingBy(
                         MountPoint::getServerId,
@@ -71,6 +72,7 @@ public class CheckMkImportService {
 
         final List<ServerMetrics> metricsToSave = new ArrayList<>();
         final List<MountPoint> mountsToSave = new ArrayList<>();
+        final List<MountPoint> mountsProcessed = new ArrayList<>();
         final Set<String> missingHostnames = new TreeSet<>();
 
         for (final Map.Entry<String, CheckMkDTO.HostData> entry : checkMkDTO.hosts().entrySet()) {
@@ -98,35 +100,48 @@ public class CheckMkImportService {
 
             final var server = serversById.get(serverId);
             if (server.getServerType() == ServerType.VM_VMWARE)
-                continue;
+                continue; // ignore VMware servers as we get their mounts from the VMware tools
 
-            final var serverMounts = hostData
+            mountsToSave.addAll(hostData
                     .filesystemMetrics()
                     .stream()
                     .map(dto -> {
                         // Fix Windows paths with "erroneous" forward
                         // slashes to be consistent with VMware.
                         final var path = fixWindowsPath(dto.path());
+                        final var capacity = (long) (dto.sizeMiB() * 1024 * 1024);
+                        final var free = (long) (dto.freeMiB() * 1024 * 1024);
 
-                        var mount = mounts.getOrDefault(serverId, Map.of()).get(path);
-                        if (mount != null && !Objects.equals(mount.getSource(), "checkmk"))
-                            return null; // ignore mounts created by other importers
+                        var mount = mountsByServerIdAndPath.getOrDefault(serverId, Map.of()).get(path);
+                        if (mount != null) {
+                            if (!Objects.equals(mount.getSource(), "checkmk"))
+                                return null; // ignore mounts created by other importers
 
-                        if (mount == null) {
+                            mountsProcessed.add(mount);
+
+                            if (Objects.equals(mount.getCapacityInBytes(), capacity) && Objects.equals(mount.getFreeSpaceInBytes(), free))
+                                return null; // ignore mounts that haven't changed (server powered off?)
+                        } else {
                             mount = new MountPoint();
                             mount.setServerId(serverId);
                             mount.setDiskPath(path);
                             mount.setSource("checkmk");
                         }
 
-                        mount.setCapacityInBytes((long) (dto.sizeMiB() * 1024 * 1024));
-                        mount.setFreeSpaceInBytes((long) (dto.freeMiB() * 1024 * 1024));
+                        mount.setCapacityInBytes(capacity);
+                        mount.setFreeSpaceInBytes(free);
                         return mount;
                     })
                     .filter(Objects::nonNull)
-                    .toList();
-            mountsToSave.addAll(serverMounts);
+                    .toList());
         }
+
+        final var staleMounts = mounts
+                .stream()
+                .filter(mp ->
+                        Objects.equals(mp.getSource(), "checkmk")
+                                && mountsProcessed.stream().noneMatch(np -> Objects.equals(np.getId(), mp.getId())))
+                .toList();
 
         if (!missingHostnames.isEmpty()) {
             log.debug("Server not found for {} Checkmk hostnames (sorted, unique): {}", missingHostnames.size(), missingHostnames);
@@ -138,8 +153,8 @@ public class CheckMkImportService {
             log.info("Metrics import skipped (no servers found).");
         }
 
-        if (!mountsToSave.isEmpty()) {
-            saveMounts(mountsToSave);
+        if (!mountsToSave.isEmpty() || !staleMounts.isEmpty()) {
+            saveMounts(mountsToSave, staleMounts);
         } else {
             log.info("Mounts import skipped (no servers found).");
         }
@@ -176,35 +191,53 @@ public class CheckMkImportService {
         }
     }
 
-    private void saveMounts(List<MountPoint> mounts) {
+    private void saveMounts(List<MountPoint> mountsToSave, List<MountPoint> mountsToDelete) {
+        int saved = 0;
+        int saveSkippedServerDeleted = 0;
+        int saveSkippedDuplicate = 0;
+        int deleted = 0;
+        int deleteSkipped = 0;
+
         try {
-            mountPointRepository.saveAll(mounts);
-            log.info("Successfully saved mount point data for {} mounts", mounts.size());
+            mountPointRepository.saveAll(mountsToSave);
+            saved += mountsToSave.size();
         } catch (Exception e) {
             log.warn("Mount bulk save failed, falling back to individual saves: {}", e.getMessage());
-
-            int saved = 0;
-            int skippedDeleted = 0;
-            int skippedDuplicate = 0;
-
-            for (final var m : mounts) {
+            for (final var m : mountsToSave) {
                 try {
                     mountPointRepository.save(m);
                     saved++;
                 } catch (Exception ex) {
                     if (ex.getMessage() != null && ex.getMessage().contains("foreign key constraint")) {
-                        skippedDeleted++;
+                        saveSkippedServerDeleted++;
                         log.warn("Failed mount import: Server was deleted during import: server_id={}", m.getServerId());
                     } else {
-                        skippedDuplicate++;
+                        saveSkippedDuplicate++;
                         log.warn("Failed mount import: Duplicate or other error for server_id={}: {}", m.getServerId(), ex.getMessage());
                     }
                 }
             }
-
-            log.info("Mount import complete: saved={}/{}, skipped_deleted_servers={}, skipped_duplicates={}",
-                    saved, mounts.size(), skippedDeleted, skippedDuplicate);
         }
+
+        try {
+            mountPointRepository.deleteAll(mountsToDelete);
+            deleted += mountsToDelete.size();
+        } catch (Exception e) {
+            log.warn("Mount bulk deletion failed, falling back to individual deletions: {}", e.getMessage());
+            for (final var m : mountsToDelete) {
+                try {
+                    mountPointRepository.delete(m);
+                    deleted++;
+                } catch (Exception ex) {
+                    deleteSkipped++;
+                    log.warn("Failed mount deletion: Error for server_id={}: {}", m.getServerId(), ex.getMessage());
+                }
+            }
+        }
+
+        log.info("Mount import complete: saved={}/{}, deleted={}/{}, skipped_deleted_servers={}, skipped_duplicates={}, skipped_deletions={}",
+                saved, mountsToSave.size(), deleted, mountsToDelete.size(),
+                saveSkippedServerDeleted, saveSkippedDuplicate, deleteSkipped);
     }
 
     /**

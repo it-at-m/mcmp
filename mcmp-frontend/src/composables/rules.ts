@@ -102,6 +102,14 @@ export function useRules() {
             instlServerDetails.osVersion != null
           );
         }
+        if (instlServerDetails.categoryType == categoryType.App) {
+          return (
+            instlServerDetails.appservice != null &&
+            instlServerDetails.osType != null &&
+            instlServerDetails.osVersion != null &&
+            instlServerDetails.applications.length > 0
+          );
+        }
         return (
           instlServerDetails.appservice != null &&
           instlServerDetails.osType != null &&

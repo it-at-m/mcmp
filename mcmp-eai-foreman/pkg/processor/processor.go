@@ -75,6 +75,9 @@ var (
 	mountpointPattern     = regexp.MustCompile(`^mountpoints::([^:]+)::(.+)$`)
 	partitionsPattern     = regexp.MustCompile(`^partitions::([^:]+)::(.+)$`)
 	logicalVolumesPattern = regexp.MustCompile(`^logical_volumes::([^:]+)::(.+)$`)
+
+	// virtWhoHostPrefix identifies hosts created by virt-who (case-insensitive).
+  	virtWhoHostPrefix = "virt-who-"
 )
 
 // NewServiceProcessor creates a new instance of ServiceProcessor with initialized clients.
@@ -167,9 +170,12 @@ func (sp *ServiceProcessor) ProcessForemanHosts(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("failed to retrieve hosts from Foreman instance %d: %w", i+1, err)
 		}
-		clientHosts[client] = hosts
-		totalHostCount += len(hosts)
-		sp.debugPrintf("Retrieved %d hosts from Foreman instance %d", len(hosts), i+1)
+		originalCount := len(hosts)
+        hosts = filterVirtWhoHosts(hosts)
+        sp.debugPrintf("Filtered out %d virt-who hosts from Foreman instance %d", originalCount-len(hosts), i+1)
+        clientHosts[client] = hosts
+        totalHostCount += len(hosts)
+        sp.debugPrintf("Retrieved %d hosts from Foreman instance %d", len(hosts), i+1)
 	}
 
 	sp.debugPrintf("Total hosts to process: %d", totalHostCount)
@@ -1380,4 +1386,17 @@ func extractByPattern[T any](
 	}
 
 	return result
+}
+
+// filterVirtWhoHosts removes all hosts whose name starts with "virt-who-"
+// from the given slice. The comparison is case-insensitive.
+func filterVirtWhoHosts(hosts []foreman.Host) []foreman.Host {
+	filtered := make([]foreman.Host, 0, len(hosts))
+	for _, host := range hosts {
+		if strings.HasPrefix(strings.ToLower(host.Name), virtWhoHostPrefix) {
+			continue
+		}
+		filtered = append(filtered, host)
+	}
+	return filtered
 }

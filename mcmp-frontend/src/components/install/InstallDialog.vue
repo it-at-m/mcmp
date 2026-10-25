@@ -257,11 +257,12 @@ function reset() {
 
 function createDefaultInstallServerDetails(): installServerDetails {
   const details = new installServerDetails(
-    null,
-    null,
     props.appservice ?? null,
     null,
     null,
+    null,
+    null,
+    [],
     {
       mariaPostgresMysqlOracle: {
         db_type: "",
@@ -432,6 +433,10 @@ function order() {
     instlServerDetails.value.serverName!.prefix || "";
   instlServerDetails.value.serverName!.serverType = serverType;
 
+  const applicationLabels = instlServerDetails.value
+    .selectedApplications()
+    .map((app) => app.label);
+
   // 1. RHEL 10
   if (
     instlServerDetails.value.osType == OsType.Linux &&
@@ -441,6 +446,7 @@ function order() {
       fqdn: instlServerDetails.value.serverName,
       categoryType: instlServerDetails.value.categoryType,
       serverType: instlServerDetails.value.category,
+      applications: applicationLabels,
       ram: instlServerDetails.value.memory,
       cpu: instlServerDetails.value.cpu,
       network_group_id: instlServerDetails.value.networkGroup.id,
@@ -464,6 +470,7 @@ function order() {
       fqdn: instlServerDetails.value.serverName,
       categoryType: instlServerDetails.value.categoryType,
       serverType: instlServerDetails.value.category,
+      applications: applicationLabels,
       ram: instlServerDetails.value.memory,
       cpu: instlServerDetails.value.cpu,
       network_group_id: instlServerDetails.value.networkGroup.id,

@@ -19,6 +19,10 @@ import de.muenchen.mcmp.greenit.shutdown.GreenItShutdownRepository;
 import de.muenchen.mcmp.infoblox.InfobloxService;
 import de.muenchen.mcmp.job.incident.JobIncidentSummary;
 import de.muenchen.mcmp.job.node.JobNodeHierarchy;
+import de.muenchen.mcmp.kubernetes.KubernetesCluster;
+import de.muenchen.mcmp.kubernetes.KubernetesClusterRepository;
+import de.muenchen.mcmp.kubernetes.KubernetesNamespace;
+import de.muenchen.mcmp.kubernetes.KubernetesNamespaceRepository;
 import de.muenchen.mcmp.loadbalancer.LbPool;
 import de.muenchen.mcmp.loadbalancer.LbPoolMember;
 import de.muenchen.mcmp.loadbalancer.LbVirtualServer;
@@ -36,6 +40,7 @@ import de.muenchen.mcmp.server.ServerRepository;
 import de.muenchen.mcmp.storage.UnifiedStorageItemDto;
 import de.muenchen.mcmp.types.CloudType;
 import de.muenchen.mcmp.types.DbType;
+import de.muenchen.mcmp.types.EnvironmentType;
 import de.muenchen.mcmp.user.User;
 import de.muenchen.mcmp.user.UserRepository;
 import lombok.AllArgsConstructor;
@@ -45,6 +50,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URLEncoder;
@@ -109,6 +115,9 @@ public class JobService {
     private final InfobloxService infobloxService;
 
     private final ActionToJobMapper actionToJobMapper;
+
+    private final KubernetesNamespaceRepository kubernetesNamespaceRepository;
+    private final KubernetesClusterRepository kubernetesClusterRepository;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -579,32 +588,18 @@ public class JobService {
         createJob(linux_mountpoint_change_identifier, server, params, new HashMap<>());
     }
 
-    public void linuxRhelServer(final Map<?, ?> fqdnBuildingBlocks, final String categoryType, final Map<?, ?> serverTypeMap, final int ram, final int cpu, final Long networkGroupId, final Long applicationServiceId, final Map<String, Map<?, ?>> dbParams, String nonPostgresReason, final boolean middlewareUser, final String linux_rhel_server_identifier) {
+    public void linuxRhelServer(final Map<?, ?> fqdnBuildingBlocks, final String categoryType, final Map<?, ?> serverTypeMap, final Set<LinuxServerApplication> applications, final int ram, final int cpu, final Long networkGroupId, final Long applicationServiceId, final Map<String, Map<?, ?>> dbParams, String nonPostgresReason, final boolean middlewareUser, final String linux_rhel_server_identifier) {
         Appservice appservice = getAppserviceOrThrow(applicationServiceId);
         Map<String, Object> params = new HashMap<>();
         boolean nonOss = false;
 
-        // checks for what serverType to install
-        final Map<String, List<String>> serverTypeNameToAwxInstallParamName = Map.of(
-                "Apache", List.of("webserver_install"),
-                "Apache/PHP", List.of("webserver_install", "php_install"),
-                "Java", List.of("java_install"),
-                "Apache/Tomcat", List.of("webserver_install", "tomcat_install", "java_install")
-        );
-        if (categoryType.equals("App") || categoryType.equals("Mixed")) {
-            String labelToCheck = serverTypeMap.get("label").toString();
-            if (categoryType.equals("Mixed")) {
-                labelToCheck = labelToCheck.split("\\+")[0].trim();
-            }
-            for (String param : serverTypeNameToAwxInstallParamName.get(labelToCheck)) {
-                params.put(param, true);
-            }
+        for (LinuxServerApplication application : applications) {
+            params.put(application.getAwxInstallParam(), true);
         }
-
 
         // calculate FQDN
         String serverType;
-        if (!categoryType.equals("Standard") && !serverTypeMap.get("kenner").toString().isEmpty()) {
+        if (serverTypeMap != null && !serverTypeMap.get("kenner").toString().isEmpty()) {
             serverType = serverTypeMap.get("kenner").toString();
         } else {
             serverType = "lx";
@@ -1124,7 +1119,51 @@ public class JobService {
         params.put("cap_logging", awxExtraVars.get("logging"));
         params.put("cap_quayorga", awxExtraVars.get("quayOrga"));
 
-        createJob(openshift_namespace_order_identifier, null, appservice, params, new HashMap<>(), job -> job.setHostname((String) params.get("cap_project")));
+        final KubernetesCluster cluster = findOpenshiftClusterForAppservice(appservice);
+
+        createJob(openshift_namespace_order_identifier, null, appservice, params, new HashMap<>(), job -> {
+            job.setHostname((String) params.get("cap_project"));
+            job.setKubernetesCluster(cluster);
+        });
+    }
+
+    private KubernetesCluster findOpenshiftClusterForAppservice(final Appservice appservice) {
+        final EnvironmentType clusterEnvironment = switch (appservice.getEnvironment()) {
+            case C, K -> EnvironmentType.K;
+            case P -> EnvironmentType.P;
+            default -> null;
+        };
+        if (clusterEnvironment == null) {
+            throw new BusinessValidationException("Der Openshift Namespace kann nicht bestellt werden, da es für die Umgebung "
+                    + appservice.getEnvironment() + " des Anwendungsservices keinen Openshift Cluster gibt.");
+        }
+
+        final List<KubernetesCluster> clusters = kubernetesClusterRepository.findAll().stream()
+                .filter(cluster -> cluster.getEnvironment() == clusterEnvironment)
+                .toList();
+        if (clusters.size() != 1) {
+            log.warn("Expected exactly one Openshift cluster with environment {}, found {}", clusterEnvironment, clusters.size());
+            throw new BusinessValidationException("Der Openshift Namespace kann nicht bestellt werden, da kein eindeutiger Openshift Cluster für die Umgebung "
+                    + clusterEnvironment + " gefunden wurde.");
+        }
+        return clusters.getFirst();
+    }
+
+    public void openshiftNamespaceDelete(final Long kubernetesNamespaceId, final String identifier) {
+        final KubernetesNamespace namespace = kubernetesNamespaceRepository.findByIdWithDetails(kubernetesNamespaceId)
+                .orElseThrow(() -> new NoSuchElementException("Openshift Namespace not found: " + kubernetesNamespaceId));
+
+        final Appservice appservice = requireSingleAppservice(namespace.getAppservices(),
+                "Openshift Namespace can only be deleted for namespaces assigned to exactly one application service.");
+
+        final Map<String, Object> params = new HashMap<>();
+        params.put("application_service_environment", appservice.getEnvironment().name());
+        params.put("cap_project", namespace.getName());
+
+        createJob(identifier, null, appservice, params, new HashMap<>(), job -> {
+            job.setHostname(namespace.getName());
+            job.setKubernetesNamespace(namespace);
+        });
     }
 
     // -----------------------------------------------------------------------------------------------------------------
@@ -1178,29 +1217,35 @@ public class JobService {
         });
     }
 
+    @Transactional
     public void paketshopRepoAttach(final String identifier, final Repository repository, final boolean enabled,
-                                    final boolean gpgcheck, final List<String> systems) {
+                                    final boolean gpgcheck, final List<Server> servers) {
         final Map<String, Object> repo = new HashMap<>();
         repo.put("name", repository.getName());
         repo.put("enabled", enabled);
         repo.put("gpgcheck", gpgcheck);
 
-        final Map<String, Object> params = new HashMap<>();
-        params.put(PAKETSHOP_REPO_VAR, repo);
-        params.put("control_paketshop_repos_systems", systems);
-
-        createJob(identifier, null, getSingleAppserviceOrThrow(repository), params, new HashMap<>(), job -> {
-            job.setHostname(repository.getName());
-            job.setRepository(repository);
-        });
+        for (Server server : servers) {
+            final Map<String, Object> params = new HashMap<>();
+            params.put(PAKETSHOP_REPO_VAR, repo);
+            params.put("control_paketshop_repos_systems", List.of(server.getFqdn()));
+            createPaketshopServerJob(identifier, repository, server, params);
+        }
     }
 
-    public void paketshopRepoDetach(final String identifier, final Repository repository, final List<String> systems) {
-        final Map<String, Object> params = new HashMap<>();
-        params.put(PAKETSHOP_REPO_VAR, Map.of("name", repository.getName()));
-        params.put("control_paketshop_repos_systems", systems);
+    @Transactional
+    public void paketshopRepoDetach(final String identifier, final Repository repository, final List<Server> servers) {
+        for (Server server : servers) {
+            final Map<String, Object> params = new HashMap<>();
+            params.put(PAKETSHOP_REPO_VAR, Map.of("name", repository.getName()));
+            params.put("control_paketshop_repos_systems", List.of(server.getFqdn()));
+            createPaketshopServerJob(identifier, repository, server, params);
+        }
+    }
 
-        createJob(identifier, null, getSingleAppserviceOrThrow(repository), params, new HashMap<>(), job -> {
+    private void createPaketshopServerJob(final String identifier, final Repository repository, final Server server,
+                                          final Map<String, Object> params) {
+        createJob(identifier, server, getSingleAppserviceOrThrow(repository), params, new HashMap<>(), job -> {
             job.setHostname(repository.getName());
             job.setRepository(repository);
         });

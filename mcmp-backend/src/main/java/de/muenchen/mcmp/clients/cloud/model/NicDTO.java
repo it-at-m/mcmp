@@ -34,14 +34,19 @@ public record NicDTO(
      * to the database, based on an existing nic entity.
      *
      * @param existing The nic entity to compare.
+     * @param portGroup Optionally the portgroup entity the nic should be mapped to.
      * @return True if changes should be written.
      */
-    public boolean hasChanges(Nic existing) {
+    public boolean hasChanges(Nic existing, PortGroup portGroup) {
         return !Objects.equals(existing.getUnitNumber(), unitNumber)
                 || !Objects.equals(existing.getDevice(), device)
                 || !Objects.equals(existing.getMacAddress(), macAddress)
                 || !Objects.equals(existing.getNetwork(), network)
                 || !Objects.equals(existing.getConnected(), connected)
+                || !Objects.equals(existing.getPortGroup() == null
+                                       ? null : existing.getPortGroup().getId(),
+                                   portGroup == null
+                                       ? null : portGroup.getId())
                 || !Objects.equals(existing.getPortGroupSummary(), portGroupSummary)
                 || !Objects.equals(existing.getPortGroupKey(), portGroupKey)
                 || !Objects.equals(existing.getDistributedPortKey(), distributedPortGroupKey)
@@ -56,13 +61,15 @@ public record NicDTO(
      * Applies the DTO's data to an existing nic entity.
      *
      * @param existing The entity to be modified.
+     * @param portGroup Optionally the portgroup entity the nic belongs to.
      */
-    public void applyChanges(Nic existing) {
+    public void applyChanges(Nic existing, PortGroup portGroup) {
         existing.setUnitNumber(unitNumber);
         existing.setDevice(device);
         existing.setMacAddress(macAddress);
         existing.setNetwork(network);
         existing.setConnected(connected);
+        existing.setPortGroup(portGroup);
         existing.setPortGroupSummary(portGroupSummary);
         existing.setPortGroupKey(portGroupKey);
         existing.setDistributedPortKey(distributedPortGroupKey);
@@ -77,26 +84,14 @@ public record NicDTO(
      * Builds a new nic entity which can be persisted to the database.
      *
      * @param server The server entity the nic belongs to.
-     * @return A new snapshot entity.
-     */
-    public Nic build(Server server) {
-        var nic = new Nic();
-        nic.setVnicKey(vNicKey);
-        nic.setServerId(server.getId());
-        applyChanges(nic);
-        return nic;
-    }
-
-    /**
-     * Builds a new nic entity which can be persisted to the database.
-     *
-     * @param server    The server entity the nic belongs to.
-     * @param portGroup The portgroup entity the nic belongs to.
+     * @param portGroup Optionally the portgroup entity the nic belongs to.
      * @return A new snapshot entity.
      */
     public Nic build(Server server, PortGroup portGroup) {
-        var nic = build(server);
-        nic.setPortGroup(portGroup);
+        var nic = new Nic();
+        nic.setVnicKey(vNicKey);
+        nic.setServerId(server.getId());
+        applyChanges(nic, portGroup);
         return nic;
     }
 }

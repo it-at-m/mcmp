@@ -82,6 +82,12 @@ public class KubernetesNamespaceService {
                 .collect(Collectors.toList());
     }
 
+    public boolean canUserEditNamespace(final Long namespaceId) {
+        final UserRoles userRoles = AuthUtils.getCurrentUserRoles();
+        return Boolean.TRUE.equals(repository.canUserEditNamespace(
+                namespaceId, userRoles.getUsername(), userRoles.hasAdminRole()));
+    }
+
     @Transactional(readOnly = true)
     public KubernetesNamespaceDetailDTO getNamespaceById(final Long id) {
         final KubernetesNamespace namespace = repository.findByIdWithDetails(id)
@@ -91,9 +97,7 @@ public class KubernetesNamespaceService {
                 ? new java.util.ArrayList<>(namespace.getAppservices())
                 : Collections.emptyList();
 
-        final UserRoles userRoles = AuthUtils.getCurrentUserRoles();
-        final boolean canEdit = Boolean.TRUE.equals(repository.canUserEditNamespace(
-                id, userRoles.getUsername(), userRoles.hasAdminRole()));
+        final boolean canEdit = canUserEditNamespace(id);
 
         String webconsoleUrl = null;
         if (namespace.getCluster() != null && namespace.getCluster().getWebConsoleUrl() != null) {

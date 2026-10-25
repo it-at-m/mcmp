@@ -11,7 +11,11 @@
   >
     <strong>{{ text }}</strong>
     <v-spacer />
-    <common-alert v-if="hint" color="info" class="my-3">
+    <common-alert
+      v-if="hint"
+      color="info"
+      class="my-3"
+    >
       {{ hint }}
     </common-alert>
     <v-form
@@ -30,8 +34,9 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
-import CommonDialog from "@/components/common/CommonDialog.vue";
+
 import CommonAlert from "@/components/common/CommonAlert.vue";
+import CommonDialog from "@/components/common/CommonDialog.vue";
 
 const props = defineProps<{
   title: string;

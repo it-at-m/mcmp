@@ -7,6 +7,7 @@ export interface ServerCategoryType {
   allowedPrefixes: string[];
   isApp?: boolean;
   isDb?: boolean;
+  requires?: string[];
   allowedDBVersions?: Partial<Record<OsVersion, string[]>>;
 }
 
@@ -23,18 +24,20 @@ export const categorys: {
       isApp: true,
     },
     php: {
-      label: "Apache/PHP",
+      label: "PHP",
       osVersion: [OsVersion.RHEL10, OsVersion.RHEL9],
       kenner: "",
       allowedPrefixes: [],
       isApp: true,
+      requires: ["Apache"],
     },
     tomcat: {
-      label: "Apache/Tomcat",
+      label: "Tomcat",
       osVersion: [OsVersion.RHEL10, OsVersion.RHEL9],
       kenner: "",
       allowedPrefixes: [],
       isApp: true,
+      requires: ["Apache", "Java"],
     },
     java: {
       label: "Java",

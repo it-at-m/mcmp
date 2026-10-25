@@ -55,16 +55,26 @@ import { useTestEnv } from "@/composables/useTestEnv";
 const props = defineProps<{
   repos: Repository[];
   loading: boolean;
-  server?: { id: number; name: string; fqdn: string; canEdit: boolean } | null;
+  server?: {
+    id: number;
+    name: string;
+    fqdn: string;
+    canEdit: boolean;
+    powerState: string;
+  } | null;
 }>();
 
 const emit = defineEmits<(e: "changed") => void>();
 
 const { isTestEnv } = useTestEnv();
 
-const editDisabledReason = computed(() =>
-  props.server?.canEdit ? "" : "Keine Bestellberechtigung für diesen Server."
-);
+const editDisabledReason = computed(() => {
+  if (!props.server?.canEdit)
+    return "Keine Bestellberechtigung für diesen Server.";
+  if (props.server.powerState !== "poweredOn")
+    return "Der Server muss eingeschaltet sein.";
+  return "";
+});
 
 const headers = computed(() => [
   { title: "Name", key: "name" },

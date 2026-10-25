@@ -5,6 +5,7 @@ import de.muenchen.mcmp.caching.ConfigurableEntityCache;
 import de.muenchen.mcmp.caching.CacheFallbackStrategy;
 import de.muenchen.mcmp.server.Server;
 import de.muenchen.mcmp.server.ServerService;
+import de.muenchen.mcmp.server.ServerUtils;
 import de.muenchen.mcmp.server.matching.ServerMatcher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -108,6 +109,34 @@ public class ForemanServerCache implements AutoCloseable {
                 "uuid",
                 "UUID",
                 keyExtractor
+        );
+    }
+
+    /**
+     * Creates a {@code ServerMatcher} instance for serial number based matching with
+     * VMware serial number conversion.
+     *
+     * <p>VMware serial numbers (format {@code VMwares-...}) are converted to a standard
+     * UUID string via {@link ServerUtils#convertSerialToUUID(String)} and then looked up
+     * against the cached {@code uuid} key. Non-VMware serial numbers are passed through
+     * unchanged. A {@code null} serial number results in no match.</p>
+     *
+     * @param <T> the type of objects to be matched
+     * @param keyExtractor a function that extracts the serial number as a string from an object of type {@code T}
+     * @return a {@code ServerMatcher} instance configured for serial number based lookup and matching
+     * @see ServerUtils#convertSerialToUUID(String)
+     */
+    public <T> ServerMatcher<T> createSerialNumberMatcher(Function<T, String> keyExtractor) {
+        return configurableCache.createCachedMatcher(
+                "uuid",
+                "Serial number (VMware UUID conversion)",
+                dto -> {
+                    final String serial = keyExtractor.apply(dto);
+                    if (serial == null) {
+                        return null;
+                    }
+                    return ServerUtils.convertSerialToUUID(serial);
+                }
         );
     }
 

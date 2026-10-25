@@ -407,7 +407,7 @@ public class ServerService {
     }
 
     private static ServerFqdnDTO toServerFqdnDTO(final ServerFqdnProjection projection) {
-        return new ServerFqdnDTO(projection.getId(), projection.getName(), projection.getFqdn());
+        return new ServerFqdnDTO(projection.getId(), projection.getName(), projection.getFqdn(), projection.getPowerState());
     }
 
     public List<ServerAutocompleteDTO> searchServersForAutocomplete(final String query) {

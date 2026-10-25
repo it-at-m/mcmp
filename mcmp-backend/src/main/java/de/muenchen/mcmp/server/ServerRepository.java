@@ -687,13 +687,14 @@ ORDER BY s.name ASC
     List<ServerAutocompleteDTO> findForAutocomplete(@Param("query") String query);
 
     /**
-     * Servers a repository can be attached to / detached from by the current user: managed Linux servers
-     * with exactly one appservice that the user can edit (same rules as {@link #canUserEditServer} plus the
-     * single-appservice check in JobController). Requires the alias {@code s} for the server.
+     * Servers a repository can be attached to / detached from by the current user: powered on, managed Linux
+     * servers with exactly one appservice that the user can edit (same rules as {@link #canUserEditServer} plus
+     * the single-appservice and power state checks in JobController). Requires the alias {@code s} for the server.
      */
     String REPO_TARGET_SERVER_CONDITION = """
         s.managed = TRUE
         AND s.role_linux = TRUE
+        AND s.power_state = 'poweredOn'
         AND s.locked = FALSE
         AND :isMaintenanceMode = FALSE
         AND (SELECT COUNT(*) FROM cmp.server_assignment sac WHERE sac.server_id = s.id) = 1
@@ -716,7 +717,7 @@ ORDER BY s.name ASC
         """;
 
     @Query(value = """
-        SELECT s.id AS id, s.name AS name, s.fqdn AS fqdn
+        SELECT s.id AS id, s.name AS name, s.fqdn AS fqdn, s.power_state AS powerState
         FROM cmp.server s
         WHERE s.fqdn IS NOT NULL
           AND (:search IS NULL OR :search = '' OR s.name ILIKE CONCAT('%', :search, '%') OR s.fqdn ILIKE CONCAT('%', :search, '%'))
@@ -748,7 +749,7 @@ ORDER BY s.name ASC
      * All servers the repository is attached to. Access to the repository must be checked by the caller.
      */
     @Query(value = """
-        SELECT s.id AS id, s.name AS name, s.fqdn AS fqdn
+        SELECT s.id AS id, s.name AS name, s.fqdn AS fqdn, s.power_state AS powerState
         FROM cmp.server s
         JOIN cmp.repository_assignment ra ON ra.server_id = s.id
         WHERE ra.repository_id = :repositoryId
@@ -757,7 +758,7 @@ ORDER BY s.name ASC
     List<ServerFqdnProjection> findAllByRepositoryId(@Param("repositoryId") Long repositoryId);
 
     @Query(value = """
-        SELECT DISTINCT s.id AS id, s.name AS name, s.fqdn AS fqdn, LOWER(s.name) AS sort_name
+        SELECT DISTINCT s.id AS id, s.name AS name, s.fqdn AS fqdn, s.power_state AS powerState, LOWER(s.name) AS sort_name
         FROM cmp.server s
         JOIN cmp.repository_assignment ra ON ra.server_id = s.id
         WHERE ra.repository_id IN (:repositoryIds)

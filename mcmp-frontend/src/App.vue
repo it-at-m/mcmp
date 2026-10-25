@@ -241,6 +241,7 @@ import type { AppVersion } from "@/types/AppVersion.ts";
 
 import {
   mdiAlphaABox,
+  mdiDatabase,
   mdiHarddisk,
   mdiHelpCircleOutline,
   mdiHistory,
@@ -532,6 +533,17 @@ const buttonsCenter = computed(() => [
     path: "/openshift",
     isNew: !seenNewNavPaths.value.includes("/openshift"),
   },
+  // Databases are only available in test environments for now
+  ...(isTestEnv.value
+    ? [
+        {
+          text: "Datenbank",
+          icon: mdiDatabase,
+          path: "/database",
+          isNew: false,
+        },
+      ]
+    : []),
   {
     text: "Repo",
     icon: mdiPackageVariant,

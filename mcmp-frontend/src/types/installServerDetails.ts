@@ -54,6 +54,7 @@ export default class installServerDetails {
     public osVersion: OsVersion | null,
     public categoryType: categoryType | null,
     public category: ServerCategoryType | ServerTypeMixed | null,
+    public applications: ServerCategoryType[],
 
     // extra settings (db)
     public dbParams: dbParams | null,
@@ -83,5 +84,13 @@ export default class installServerDetails {
 
   isDatabase(): boolean {
     return this.categoryType === categoryType.DB;
+  }
+
+  selectedApplications(): ServerCategoryType[] {
+    if (this.categoryType === categoryType.App) return this.applications;
+    if (this.categoryType === categoryType.Mixed && this.category) {
+      return (this.category as ServerTypeMixed).appCategorys;
+    }
+    return [];
   }
 }

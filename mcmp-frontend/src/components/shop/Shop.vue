@@ -97,6 +97,10 @@
           </v-list>
         </v-menu>
       </v-list-item>
+      <!-- Database orders are only available in test environments for now -->
+      <v-list-item v-if="isTestEnv">
+        <v-btn flat>Datenbank</v-btn>
+      </v-list-item>
       <!-- Repo actions are only available in test environments for now -->
       <v-list-item v-if="isTestEnv">
         <v-menu

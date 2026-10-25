@@ -5,6 +5,7 @@ import de.muenchen.mcmp.config.app.MaintenanceModeConfiguration;
 import de.muenchen.mcmp.config.app.MaintenanceModeInterceptor;
 import de.muenchen.mcmp.configuration.nfcconverter.NfcRequestFilter;
 import de.muenchen.mcmp.errorlog.ErrorLogService;
+import de.muenchen.mcmp.kubernetes.KubernetesNamespaceService;
 import de.muenchen.mcmp.loadbalancer.LoadbalancerService;
 import de.muenchen.mcmp.mountPoint.MountPointService;
 import de.muenchen.mcmp.network.NetworkService;
@@ -74,6 +75,8 @@ class JobControllerReadEndpointsTest {
     private LoadbalancerService loadbalancerService;
     @MockitoBean
     private RepositoryService repositoryService;
+    @MockitoBean
+    private KubernetesNamespaceService kubernetesNamespaceService;
     @MockitoBean
     private ErrorLogService errorLogService;
 

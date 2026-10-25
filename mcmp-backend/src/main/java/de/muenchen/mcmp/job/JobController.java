@@ -2,8 +2,10 @@ package de.muenchen.mcmp.job;
 
 import de.muenchen.mcmp.appservice.Appservice;
 import de.muenchen.mcmp.appservice.AppserviceService;
+import de.muenchen.mcmp.exception.BusinessValidationException;
 import de.muenchen.mcmp.job.incident.JobIncidentSummary;
 import de.muenchen.mcmp.job.node.JobNodeHierarchy;
+import de.muenchen.mcmp.kubernetes.KubernetesNamespaceService;
 import de.muenchen.mcmp.loadbalancer.LoadbalancerService;
 import de.muenchen.mcmp.loadbalancer.UnifiedLoadbalancer;
 import de.muenchen.mcmp.loadbalancer.UnifiedLoadbalancerMemberDTO;
@@ -61,6 +63,7 @@ public class JobController {
     private final UserService userService;
     private final LoadbalancerService loadbalancerService;
     private final RepositoryService repositoryService;
+    private final KubernetesNamespaceService kubernetesNamespaceService;
 
     public static final String START_SERVER = "START_SERVER";
     public static final String STOP_SERVER = "STOP_SERVER";
@@ -117,6 +120,7 @@ public class JobController {
     public static final String VM_RESOURCE_UPGRADE = "VM_RESOURCE_UPGRADE";
 
     public static final String OPENSHIFT_NAMESPACE_ORDER = "OPENSHIFT_NAMESPACE_ORDER";
+    public static final String OPENSHIFT_NAMESPACE_DELETE = "OPENSHIFT_NAMESPACE_DELETE";
 
     public static final String PAKETSHOP_REPO_CREATE = "PAKETSHOP_REPO_CREATE";
     public static final String PAKETSHOP_REPO_COPY = "PAKETSHOP_REPO_COPY";
@@ -828,7 +832,7 @@ public class JobController {
 
 
         logCreatedJob(LINUX_RHEL10_SERVER, serverId);
-        jobService.linuxRhelServer(linuxRecord.fqdnBuildingBlocks(), linuxRecord.categoryType(), linuxRecord.serverTypeMap(), linuxRecord.ram(), linuxRecord.cpu(), linuxRecord.networkGroupId(), linuxRecord.applicationServiceId(), linuxRecord.dbParams(), linuxRecord.nonPostgresReason(), middlewareUser, LINUX_RHEL10_SERVER);
+        jobService.linuxRhelServer(linuxRecord.fqdnBuildingBlocks(), linuxRecord.categoryType(), linuxRecord.serverTypeMap(), linuxRecord.applications(), linuxRecord.ram(), linuxRecord.cpu(), linuxRecord.networkGroupId(), linuxRecord.applicationServiceId(), linuxRecord.dbParams(), linuxRecord.nonPostgresReason(), middlewareUser, LINUX_RHEL10_SERVER);
     }
 
     @PostMapping("/create/" + LINUX_RHEL9_SERVER)
@@ -845,7 +849,7 @@ public class JobController {
         checkServerInstallCanUserEditAppservice(linuxRecord.applicationServiceId());
 
         logCreatedJob(LINUX_RHEL9_SERVER, serverId);
-        jobService.linuxRhelServer(linuxRecord.fqdnBuildingBlocks(), linuxRecord.categoryType(), linuxRecord.serverTypeMap(), linuxRecord.ram(), linuxRecord.cpu(), linuxRecord.networkGroupId(), linuxRecord.applicationServiceId(), linuxRecord.dbParams(), linuxRecord.nonPostgresReason(), false, LINUX_RHEL9_SERVER);
+        jobService.linuxRhelServer(linuxRecord.fqdnBuildingBlocks(), linuxRecord.categoryType(), linuxRecord.serverTypeMap(), linuxRecord.applications(), linuxRecord.ram(), linuxRecord.cpu(), linuxRecord.networkGroupId(), linuxRecord.applicationServiceId(), linuxRecord.dbParams(), linuxRecord.nonPostgresReason(), false, LINUX_RHEL9_SERVER);
     }
 
     private linuxRecord getAndCheckLinuxRhelVars(Map<String, Object> awxExtraVars) {
@@ -853,6 +857,7 @@ public class JobController {
         Object fqdnObj = awxExtraVars.get("fqdn");
         Object categoryTypeObj = awxExtraVars.get("categoryType");
         Object serverTypeObj = awxExtraVars.get("serverType");
+        Object applicationsObj = awxExtraVars.get("applications");
         Object ramObj = awxExtraVars.get("ram");
         Object cpuObj = awxExtraVars.get("cpu");
         Object networkGroupIdObj = awxExtraVars.get("network_group_id");
@@ -895,8 +900,12 @@ public class JobController {
         }
 
         Map<?, ?> serverTypeMap = null;
-        if (!categoryType.equals("Standard")) {
+        if (!categoryType.equals("Standard") && !categoryType.equals("App")) {
             serverTypeMap = requireMap(serverTypeObj, "Server type");
+        }
+        Set<LinuxServerApplication> applications = Set.of();
+        if (categoryType.equals("App") || categoryType.equals("Mixed")) {
+            applications = LinuxServerApplication.parseSelection(requireList(applicationsObj, "Applications"));
         }
         String nonPostgresReason = null;
         if (categoryType.equals("DB") || categoryType.equals("Mixed")) {
@@ -915,10 +924,10 @@ public class JobController {
         if (!networkService.isAllowedNetworkGroupForAppservice(networkGroupId, applicationServiceId, categoryType.equals("DB"))) {
             throw new AccessDeniedException("You are not allowed to order a server for this combination of application service and network group.");
         }
-        return new linuxRecord(fqdnBuildingBlocks, dbParams, categoryType, ram, cpu, applicationServiceId, serverTypeMap, nonPostgresReason, networkGroupId);
+        return new linuxRecord(fqdnBuildingBlocks, dbParams, categoryType, ram, cpu, applicationServiceId, serverTypeMap, applications, nonPostgresReason, networkGroupId);
     }
 
-    private record linuxRecord(Map<?,?> fqdnBuildingBlocks, Map<String, Map<?,?>> dbParams, String categoryType, int ram, int cpu, long applicationServiceId, Map<?,?> serverTypeMap, String nonPostgresReason, long networkGroupId) {
+    private record linuxRecord(Map<?,?> fqdnBuildingBlocks, Map<String, Map<?,?>> dbParams, String categoryType, int ram, int cpu, long applicationServiceId, Map<?,?> serverTypeMap, Set<LinuxServerApplication> applications, String nonPostgresReason, long networkGroupId) {
     }
 
     // -----------------------------------------------------------------------------------------------------------------
@@ -2158,6 +2167,29 @@ public class JobController {
         jobService.openshiftNamespaceOrder(awxExtraVars, OPENSHIFT_NAMESPACE_ORDER);
     }
 
+    @PostMapping("/create/" + OPENSHIFT_NAMESPACE_DELETE)
+    public void openshiftNamespaceDelete(@RequestParam(name = "serverId") final Long serverId,
+                                         @RequestBody final Map<String, Object> awxExtraVars) {
+        Object kubernetesNamespaceIdObj = awxExtraVars.get("kubernetes_namespace_id");
+        if (kubernetesNamespaceIdObj == null) {
+            throw new MissingFormatArgumentException("Openshift Namespace ID must be provided.");
+        }
+        final long kubernetesNamespaceId;
+        try {
+            kubernetesNamespaceId = Long.parseLong(kubernetesNamespaceIdObj.toString());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Openshift Namespace ID is invalid.");
+        }
+
+        if (!kubernetesNamespaceService.canUserEditNamespace(kubernetesNamespaceId)) {
+            logTriedToCreateJob(OPENSHIFT_NAMESPACE_DELETE, serverId);
+            throw new AccessDeniedException("You are not allowed to delete this Openshift Namespace.");
+        }
+
+        logCreatedJob(OPENSHIFT_NAMESPACE_DELETE, serverId);
+        jobService.openshiftNamespaceDelete(kubernetesNamespaceId, OPENSHIFT_NAMESPACE_DELETE);
+    }
+
     private void validateMemoryLimit(final String memoryLimit) {
         if (!memoryLimit.matches("^[0-9]+Gi$")) {
             throw new IllegalArgumentException("Invalid memory limit format: " + memoryLimit);
@@ -2244,28 +2276,28 @@ public class JobController {
         }
         final boolean enabled = requireBoolean(awxExtraVars.get("enabled"), "Enabled");
         final boolean gpgcheck = requireBoolean(awxExtraVars.get("gpgcheck"), "GPG check");
-        final List<String> systems = requireEditableServerFqdns(awxExtraVars.get("control_paketshop_repos_systems"), "Systems", identifier);
-        requireCompatibleEnvironments(repository, systems, identifier);
+        final List<Server> servers = requireEditableServers(awxExtraVars.get("control_paketshop_repos_systems"), "Systems", identifier);
+        requireCompatibleEnvironments(repository, servers, identifier);
 
-        logCreatedJob(identifier, null);
-        jobService.paketshopRepoAttach(identifier, repository, enabled, gpgcheck, systems);
+        servers.forEach(server -> logCreatedJob(identifier, server.getId()));
+        jobService.paketshopRepoAttach(identifier, repository, enabled, gpgcheck, servers);
     }
 
     @PostMapping("/create/" + PAKETSHOP_REPO_DETACH)
     public void paketshopRepoDetach(@RequestBody final Map<String, Object> awxExtraVars) {
         final Repository repository = requireEditableRepository(awxExtraVars.get("name"), PAKETSHOP_REPO_DETACH);
-        final List<String> systems = requireEditableServerFqdns(awxExtraVars.get("control_paketshop_repos_systems"), "Systems", PAKETSHOP_REPO_DETACH);
+        final List<Server> servers = requireEditableServers(awxExtraVars.get("control_paketshop_repos_systems"), "Systems", PAKETSHOP_REPO_DETACH);
 
-        logCreatedJob(PAKETSHOP_REPO_DETACH, null);
-        jobService.paketshopRepoDetach(PAKETSHOP_REPO_DETACH, repository, systems);
+        servers.forEach(server -> logCreatedJob(PAKETSHOP_REPO_DETACH, server.getId()));
+        jobService.paketshopRepoDetach(PAKETSHOP_REPO_DETACH, repository, servers);
     }
 
     /**
      * See {@link PaketshopEnvironmentRule}.
      */
-    private void requireCompatibleEnvironments(final Repository repository, final List<String> fqdns, final String jobIdentifier) {
+    private void requireCompatibleEnvironments(final Repository repository, final List<Server> servers, final String jobIdentifier) {
         final EnvironmentType repoEnvironment = repository.getAppservices().iterator().next().getEnvironment();
-        for (Server server : serverService.findByFqdnIn(fqdns)) {
+        for (Server server : servers) {
             final Long serverAppserviceId = appserviceService.getAppservicesByServerId(server.getId()).getFirst().getId();
             final EnvironmentType serverEnvironment = appserviceService.getAppservice(serverAppserviceId).getEnvironment();
             if (!PaketshopEnvironmentRule.isCompatible(serverEnvironment, repoEnvironment)) {
@@ -2518,11 +2550,12 @@ public class JobController {
 
     /**
      * Resolves a list of FQDNs to servers. Every FQDN must belong to an existing server that the
-     * current user can edit and that is assigned to exactly one Application Service.
+     * current user can edit, that is assigned to exactly one Application Service and that is powered on.
+     * In sync with {@code ServerRepository.REPO_TARGET_SERVER_CONDITION}.
      *
-     * @return List of FQDNs
+     * @return List of distinct servers
      */
-    private List<String> requireEditableServerFqdns(final Object fqdnsObj, final String fieldLabel, final String jobIdentifier) {
+    private List<Server> requireEditableServers(final Object fqdnsObj, final String fieldLabel, final String jobIdentifier) {
         final List<?> rawFqdns = requireList(fqdnsObj, fieldLabel);
         if (rawFqdns.isEmpty()) {
             throw new IllegalArgumentException("At least one server is required.");
@@ -2536,6 +2569,7 @@ public class JobController {
         }
         final List<Server> servers = serverService.findByFqdnIn(new ArrayList<>(fqdns));
         final Set<String> foundFqdns = new HashSet<>();
+        final Map<Long, Server> distinctServers = new LinkedHashMap<>();
         for (Server server : servers) {
             if (!serverService.canUserEditServer(server.getId())) {
                 logTriedToCreateJob(jobIdentifier, server.getId());
@@ -2546,13 +2580,18 @@ public class JobController {
                 logTriedToCreateJob(jobIdentifier, server.getId());
                 throw new AccessDeniedException("Server " + server.getFqdn() + " must be assigned to exactly one Application Service.");
             }
+            if (!"poweredOn".equals(server.getPowerState())) {
+                logTriedToCreateJob(jobIdentifier, server.getId());
+                throw new BusinessValidationException("Server " + server.getFqdn() + " ist nicht eingeschaltet.");
+            }
             foundFqdns.add(server.getFqdn().toUpperCase(Locale.ROOT));
+            distinctServers.putIfAbsent(server.getId(), server);
         }
         for (String fqdn : fqdns) {
             if (!foundFqdns.contains(fqdn.toUpperCase(Locale.ROOT))) {
                 throw new IllegalArgumentException("No server found for FQDN: " + fqdn);
             }
         }
-        return servers.stream().map(Server::getFqdn).distinct().toList();
+        return new ArrayList<>(distinctServers.values());
     }
 }

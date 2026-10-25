@@ -1,27 +1,27 @@
 <template>
   <div
-      v-if="props.selectedAppservice"
-      class="links"
+    v-if="props.selectedAppservice"
+    class="links"
   >
     <common-card
-        :title="cardTitle"
-        top-margin="0"
-        :is-default-expanded="false"
+      :title="cardTitle"
+      top-margin="0"
+      :is-default-expanded="false"
     >
       <template #append-title>
         <count-badge :count="serverCount" />
         <v-tooltip
-            v-if="anyServerHasWarnings"
-            location="top"
-            text="Handlungsbedarf an mind. einem Server"
+          v-if="anyServerHasWarnings"
+          location="top"
+          text="Handlungsbedarf an mind. einem Server"
         >
           <template #activator="{ props: tooltipProps }">
             <v-icon
-                v-bind="tooltipProps"
-                :icon="mdiAlert"
-                color="orange"
-                size="22"
-                class="ml-2"
+              v-bind="tooltipProps"
+              :icon="mdiAlert"
+              color="orange"
+              size="22"
+              class="ml-2"
             />
           </template>
         </v-tooltip>
@@ -30,143 +30,148 @@
       <template #toolbar-actions>
         <div class="action-buttons">
           <add-snapshot
-              :is-batch-operation="true"
-              :selected-server-ids="selectedServers"
-              :selected-servers="serversForBatch"
-              :parent-all-selected-servers-eligible="
+            :is-batch-operation="true"
+            :selected-server-ids="selectedServers"
+            :selected-servers="serversForBatch"
+            :parent-all-selected-servers-eligible="
               allSelectedServersEligibleForSnapshot
             "
-              :parent-disabled-tooltip="snapshotDisabledTooltip"
-              @save="onBatchOrderCompleteDone"
+            :parent-disabled-tooltip="snapshotDisabledTooltip"
+            @save="onBatchOrderCompleteDone"
           />
           <action-button
-              color="btn_green"
-              :icon="mdiPlay"
-              :tooltip="powerStartTooltip"
-              :is-batch-operation="true"
-              :selected-server-ids="selectedServers"
-              :selected-servers="serversForBatch"
-              :parent-all-selected-servers-eligible="
+            color="btn_green"
+            :icon="mdiPlay"
+            :tooltip="powerStartTooltip"
+            :is-batch-operation="true"
+            :selected-server-ids="selectedServers"
+            :selected-servers="serversForBatch"
+            :parent-all-selected-servers-eligible="
               allSelectedServersEligibleToStart
             "
-              job-to-call="START_SERVER"
-              show-confirm-dialog
-              confirm-dialog-title="VM starten"
-              confirm-dialog-text="Wollen Sie diese VMs wirklich starten?"
-              @change="onBatchOrderCompleteDone"
+            job-to-call="START_SERVER"
+            show-confirm-dialog
+            confirm-dialog-title="VM starten"
+            confirm-dialog-text="Wollen Sie diese VMs wirklich starten?"
+            @change="onBatchOrderCompleteDone"
           />
           <action-button
-              color="btn_red"
-              :icon="mdiStop"
-              :tooltip="powerStopTooltip"
-              :is-batch-operation="true"
-              :selected-server-ids="selectedServers"
-              :selected-servers="serversForBatch"
-              :parent-all-selected-servers-eligible="
+            color="btn_red"
+            :icon="mdiStop"
+            :tooltip="powerStopTooltip"
+            :is-batch-operation="true"
+            :selected-server-ids="selectedServers"
+            :selected-servers="serversForBatch"
+            :parent-all-selected-servers-eligible="
               allSelectedServersEligibleToStop
             "
-              job-to-call="STOP_SERVER"
-              show-confirm-dialog
-              confirm-dialog-title="VM Stoppen"
-              confirm-dialog-text="Wollen Sie diese VMs wirklich stoppen?"
-              use-extra-sure-dialog
-              extra-sure-checkbox-text="Mir ist bewusst, dass durch das Stoppen der VM eine Serviceunterbrechung entsteht."
-              @change="onBatchOrderCompleteDone"
+            job-to-call="STOP_SERVER"
+            show-confirm-dialog
+            confirm-dialog-title="VM Stoppen"
+            confirm-dialog-text="Wollen Sie diese VMs wirklich stoppen?"
+            use-extra-sure-dialog
+            extra-sure-checkbox-text="Mir ist bewusst, dass durch das Stoppen der VM eine Serviceunterbrechung entsteht."
+            @change="onBatchOrderCompleteDone"
           />
           <action-button
-              color="btn_red"
-              :icon="mdiRestart"
-              :tooltip="powerRestartTooltip"
-              :is-batch-operation="true"
-              :selected-server-ids="selectedServers"
-              :selected-servers="serversForBatch"
-              :parent-all-selected-servers-eligible="
+            color="btn_red"
+            :icon="mdiRestart"
+            :tooltip="powerRestartTooltip"
+            :is-batch-operation="true"
+            :selected-server-ids="selectedServers"
+            :selected-servers="serversForBatch"
+            :parent-all-selected-servers-eligible="
               allSelectedServersEligibleToRestart
             "
-              job-to-call="RESTART_SERVER"
-              show-confirm-dialog
-              confirm-dialog-title="VM Neustarten"
-              confirm-dialog-text="Wollen Sie diese VMs wirklich neustarten?"
-              use-extra-sure-dialog
-              extra-sure-checkbox-text="Mir ist bewusst, dass durch das Neustarten der VM eine Serviceunterbrechung entsteht."
-              @change="onBatchOrderCompleteDone"
+            job-to-call="RESTART_SERVER"
+            show-confirm-dialog
+            confirm-dialog-title="VM Neustarten"
+            confirm-dialog-text="Wollen Sie diese VMs wirklich neustarten?"
+            use-extra-sure-dialog
+            extra-sure-checkbox-text="Mir ist bewusst, dass durch das Neustarten der VM eine Serviceunterbrechung entsteht."
+            @change="onBatchOrderCompleteDone"
           />
           <pause-server-btn
-              :icon="mdiWrenchClock"
-              :tooltip="powerPauseTooltip"
-              :is-batch-operation="true"
-              :selected-server-ids="selectedServers"
-              :selected-servers="serversForBatch"
-              :parent-all-selected-servers-eligible="
+            :icon="mdiWrenchClock"
+            :tooltip="powerPauseTooltip"
+            :is-batch-operation="true"
+            :selected-server-ids="selectedServers"
+            :selected-servers="serversForBatch"
+            :parent-all-selected-servers-eligible="
               allSelectedServersEligibleToPause
             "
-              @change="onBatchOrderCompleteDone"
+            @change="onBatchOrderCompleteDone"
           />
           <root-admin-rechte-btn
-              :icon="mdiKeyChain"
-              :is-batch-operation="true"
-              :selected-server-ids="selectedServers"
-              :selected-servers="serversForBatch"
-              :disabled="!allSelectedServersEligibleForRoot"
-              :tooltip="rootAdminTooltip"
-              :show-confirm-dialog="true"
-              :confirm-dialog-title="`Root/Admin-Rechte für ${selectedServers.length} Server bestellen`"
-              :confirm-dialog-text="`Sind Sie sicher, dass Sie Root/Admin-Rechte für die ${selectedServers.length} ausgewählten Server bestellen möchten?`"
-              @change="onBatchOrderCompleteDone"
+            :icon="mdiKeyChain"
+            :is-batch-operation="true"
+            :selected-server-ids="selectedServers"
+            :selected-servers="serversForBatch"
+            :disabled="!allSelectedServersEligibleForRoot"
+            :tooltip="rootAdminTooltip"
+            :show-confirm-dialog="true"
+            :confirm-dialog-title="`Root/Admin-Rechte für ${selectedServers.length} Server bestellen`"
+            :confirm-dialog-text="`Sind Sie sicher, dass Sie Root/Admin-Rechte für die ${selectedServers.length} ausgewählten Server bestellen möchten?`"
+            @change="onBatchOrderCompleteDone"
           />
           <check-mk-dialog
-              title="checkmk Überwachung Downtime"
-              :is-batch-operation="true"
-              :selected-server-ids="selectedServers"
-              :parent-all-selected-servers-eligible="
+            title="checkmk Überwachung Downtime"
+            :is-batch-operation="true"
+            :selected-server-ids="selectedServers"
+            :parent-all-selected-servers-eligible="
               allSelectedServersEligibleForDowntime
             "
-              :parent-disabled-tooltip="downtimeDisabledTooltip"
-              @save="onBatchOrderCompleteDone"
+            :parent-disabled-tooltip="downtimeDisabledTooltip"
+            @save="onBatchOrderCompleteDone"
           />
           <win-wartungs-modus-batch-menu
-              :selected-server-ids="selectedServers"
-              :parent-all-selected-servers-eligible="
+            :selected-server-ids="selectedServers"
+            :parent-all-selected-servers-eligible="
               allSelectedServersEligibleForWindowsMaintenance
             "
-              :parent-disabled-tooltip="windowsMaintenanceDisabledTooltip"
-              @save="onBatchOrderCompleteDone"
+            :parent-disabled-tooltip="windowsMaintenanceDisabledTooltip"
+            @save="onBatchOrderCompleteDone"
           />
           <action-button
-              color="btn_red"
-              :icon="mdiDelete"
-              :tooltip="deleteTooltip"
-              :is-batch-operation="true"
-              :selected-server-ids="selectedServers"
-              :selected-servers="serversForBatch"
-              :parent-all-selected-servers-eligible="
+            color="btn_red"
+            :icon="mdiDelete"
+            :tooltip="deleteTooltip"
+            :is-batch-operation="true"
+            :selected-server-ids="selectedServers"
+            :selected-servers="serversForBatch"
+            :parent-all-selected-servers-eligible="
               allSelectedServersEligibleToDelete
             "
-              :job-resolver="(server) => server.roleLinux ? 'LINUX_DELETE_SERVER' : 'WINDOWS_DELETE_SERVER'"
-              show-confirm-dialog
-              confirm-dialog-title="Server abbauen"
-              confirm-dialog-text="Wollen Sie die ausgewählten Server wirklich abbauen?"
-              confirm-dialog-hint="Hinweis: Shares/Netzlaufwerke welche mit dem Abbau dieser Server verwaist sind werden automatisch mit abgebaut."
-              use-extra-sure-dialog
-              extra-sure-checkbox-text="Ich bin mir sicher."
-              @change="onBatchOrderCompleteDone"
+            :job-resolver="
+              (server) =>
+                server.roleLinux
+                  ? 'LINUX_DELETE_SERVER'
+                  : 'WINDOWS_DELETE_SERVER'
+            "
+            show-confirm-dialog
+            confirm-dialog-title="Server abbauen"
+            confirm-dialog-text="Wollen Sie die ausgewählten Server wirklich abbauen?"
+            confirm-dialog-hint="Hinweis: Shares/Netzlaufwerke welche mit dem Abbau dieser Server verwaist sind werden automatisch mit abgebaut."
+            use-extra-sure-dialog
+            extra-sure-checkbox-text="Ich bin mir sicher."
+            @change="onBatchOrderCompleteDone"
           />
           <install-dialog
-              :key="props.selectedAppservice.id"
-              :appservice="props.selectedAppservice"
-              @order-done="onBatchOrderCompleteDone"
+            :key="props.selectedAppservice.id"
+            :appservice="props.selectedAppservice"
+            @order-done="onBatchOrderCompleteDone"
           >
             <template #activator="{ props: activatorProps }">
               <v-tooltip
-                  location="top"
-                  text="zusätzlichen Server bestellen"
+                location="top"
+                text="zusätzlichen Server bestellen"
               >
                 <template #activator="{ props: tooltipProps }">
                   <v-btn
-                      v-bind="{ ...activatorProps, ...tooltipProps }"
-                      icon
-                      flat
-                      aria-label="zusätzlichen Server bestellen"
+                    v-bind="{ ...activatorProps, ...tooltipProps }"
+                    icon
+                    flat
+                    aria-label="zusätzlichen Server bestellen"
                   >
                     <v-icon :icon="mdiPlus" />
                   </v-btn>
@@ -178,16 +183,16 @@
       </template>
 
       <v-data-table
-          v-model="selectedServers"
-          :headers="headers"
-          :items="servers"
-          :items-per-page="-1"
-          item-value="id"
-          density="compact"
-          hover
-          show-select
-          hide-default-footer
-          class="server-table"
+        v-model="selectedServers"
+        :headers="headers"
+        :items="servers"
+        :items-per-page="-1"
+        item-value="id"
+        density="compact"
+        hover
+        show-select
+        hide-default-footer
+        class="server-table"
       >
         <template #no-data>
           <div class="py-4 text-center text-medium-emphasis">
@@ -196,15 +201,15 @@
         </template>
         <template #item.serverKind="{ item }">
           <v-icon
-              v-if="serverKindText(item.serverKind)"
-              size="small"
-              class="server-kind-icon"
-              @mouseenter="
+            v-if="serverKindText(item.serverKind)"
+            size="small"
+            class="server-kind-icon"
+            @mouseenter="
               onRowTooltipHover($event, serverKindText(item.serverKind))
             "
-              @mouseleave="onRowTooltipLeave"
-              @focus="onRowTooltipHover($event, serverKindText(item.serverKind))"
-              @blur="onRowTooltipLeave"
+            @mouseleave="onRowTooltipLeave"
+            @focus="onRowTooltipHover($event, serverKindText(item.serverKind))"
+            @blur="onRowTooltipLeave"
           >
             {{ serverKindIcon(item.serverKind) }}
           </v-icon>
@@ -217,19 +222,19 @@
               </router-link>
             </span>
             <router-link
-                v-if="item.hasWarnings"
-                :to="`/server/${item.id}`"
-                class="d-flex align-center text-decoration-none"
+              v-if="item.hasWarnings"
+              :to="`/server/${item.id}`"
+              class="d-flex align-center text-decoration-none"
             >
               <v-icon
-                  :icon="mdiAlert"
-                  color="orange"
-                  size="20"
-                  class="ml-1"
-                  @mouseenter="onRowTooltipHover($event, 'Handlung erforderlich')"
-                  @mouseleave="onRowTooltipLeave"
-                  @focus="onRowTooltipHover($event, 'Handlung erforderlich')"
-                  @blur="onRowTooltipLeave"
+                :icon="mdiAlert"
+                color="orange"
+                size="20"
+                class="ml-1"
+                @mouseenter="onRowTooltipHover($event, 'Handlung erforderlich')"
+                @mouseleave="onRowTooltipLeave"
+                @focus="onRowTooltipHover($event, 'Handlung erforderlich')"
+                @blur="onRowTooltipLeave"
               />
             </router-link>
           </div>
@@ -238,48 +243,48 @@
           <div class="d-flex align-center">
             <div class="power-state-icon-inline mr-2">
               <v-icon
-                  :color="
+                :color="
                   item.powerState === 'poweredOn'
                     ? 'btn_green'
                     : item.powerState === 'poweredOff'
                       ? 'btn_red'
                       : 'accent'
                 "
-                  size="20"
+                size="20"
               >
                 {{
                   item.powerState === "poweredOn"
-                      ? mdiPlayCircle
-                      : item.powerState === "poweredOff"
-                          ? mdiStopCircle
-                          : mdiPauseCircle
+                    ? mdiPlayCircle
+                    : item.powerState === "poweredOff"
+                      ? mdiStopCircle
+                      : mdiPauseCircle
                 }}
               </v-icon>
             </div>
             <span>
               {{
                 item.powerState === "poweredOn"
-                    ? "Ein"
-                    : item.powerState === "poweredOff"
-                        ? "Aus"
-                        : "Standby"
+                  ? "Ein"
+                  : item.powerState === "poweredOff"
+                    ? "Aus"
+                    : "Standby"
               }}
             </span>
           </div>
         </template>
         <template #item.managed="{ item }">
           <v-icon
-              v-if="item.managed"
-              :icon="mdiCheckCircle"
-              color="btn_green"
+            v-if="item.managed"
+            :icon="mdiCheckCircle"
+            color="btn_green"
           />
         </template>
         <template #item.os="{ item }">
           <div class="d-flex align-center">
             <os-cell
-                :os-full-name="item.os || ''"
-                size="small"
-                class="os-icon-inline mr-2"
+              :os-full-name="item.os || ''"
+              size="small"
+              class="os-icon-inline mr-2"
             />
             <span class="text-caption">
               {{ item.os }}
@@ -296,9 +301,9 @@
     </common-card>
 
     <v-tooltip
-        :model-value="!!rowTooltipActivator"
-        :activator="rowTooltipActivator"
-        :text="rowTooltipText"
+      :model-value="!!rowTooltipActivator"
+      :activator="rowTooltipActivator"
+      :text="rowTooltipText"
     />
   </div>
 </template>
@@ -348,12 +353,12 @@ const props = defineProps<{
 const formatter = useFormatter();
 const userStore = useUserStore();
 const isOperator = computed(() =>
-    userStore.getUser?.authorities.includes("ROLE_OPERATOR")
+  userStore.getUser?.authorities.includes("ROLE_OPERATOR")
 );
 
 const cardTitle = computed(() => "Server");
 const serverCount = computed(
-    () => props.selectedAppservice?.servers?.length ?? 0
+  () => props.selectedAppservice?.servers?.length ?? 0
 );
 
 const rowTooltipActivator = ref<HTMLElement | undefined>(undefined);
@@ -393,12 +398,12 @@ const serverKindIcon = (kind?: string | null) => {
 };
 
 const localeCompare = (a: unknown, b: unknown) =>
-    String(a ?? "")
-        .toLowerCase()
-        .localeCompare(String(b ?? "").toLowerCase());
+  String(a ?? "")
+    .toLowerCase()
+    .localeCompare(String(b ?? "").toLowerCase());
 
 const numericCompare = (a: unknown, b: unknown) =>
-    Number(a ?? 0) - Number(b ?? 0);
+  Number(a ?? 0) - Number(b ?? 0);
 
 const headers: DataTableHeader[] = [
   { title: "Typ", key: "serverKind", sort: localeCompare, width: 60 },
@@ -456,16 +461,16 @@ const loadSnapshotCount = async (id: number) => {
 
 const serversForBatch = computed(() => {
   return selectedServers.value
-      .map((id) => fullServerCache.value.get(Number(id)))
-      .filter((s): s is Server => !!s);
+    .map((id) => fullServerCache.value.get(Number(id)))
+    .filter((s): s is Server => !!s);
 });
 
 watch(
-    () => props.selectedAppservice?.id,
-    () => {
-      selectedServers.value = [];
-      fullServerCache.value = new Map();
-    }
+  () => props.selectedAppservice?.id,
+  () => {
+    selectedServers.value = [];
+    fullServerCache.value = new Map();
+  }
 );
 
 watch(selectedServers, (newIds, oldIds) => {
@@ -478,8 +483,8 @@ const onBatchOrderCompleteDone = () => {
 };
 
 const allSelectedDataLoaded = () =>
-    selectedServers.value.length > 0 &&
-    Array.from(fullServerCache.value.keys()).length >=
+  selectedServers.value.length > 0 &&
+  Array.from(fullServerCache.value.keys()).length >=
     selectedServers.value.length;
 
 const allSelectedPass = (check: (s: any, id: number) => boolean) => {
@@ -487,96 +492,96 @@ const allSelectedPass = (check: (s: any, id: number) => boolean) => {
   if (!allSelectedDataLoaded()) return false;
   return selectedServers.value.every((id) => {
     const s =
-        fullServerCache.value.get(Number(id)) ||
-        (props.selectedAppservice?.servers || []).find(
-            (ss: any) => Number(ss.id) === Number(id)
-        );
+      fullServerCache.value.get(Number(id)) ||
+      (props.selectedAppservice?.servers || []).find(
+        (ss: any) => Number(ss.id) === Number(id)
+      );
     if (!s) return false;
     return check(s, Number(id));
   });
 };
 
 const allSelectedServersEligibleForSnapshot = computed(() =>
-    allSelectedPass((s: any, id: number) => {
-      if (String((s as any).serverKind).toUpperCase() !== "VIRTUAL") return false;
-      if (!(s as any).canEdit) return false;
-      const cached = snapshotCountCache.value.get(Number(id));
-      if (cached == null) return false;
-      return cached === 0;
-    })
+  allSelectedPass((s: any, id: number) => {
+    if (String((s as any).serverKind).toUpperCase() !== "VIRTUAL") return false;
+    if (!(s as any).canEdit) return false;
+    const cached = snapshotCountCache.value.get(Number(id));
+    if (cached == null) return false;
+    return cached === 0;
+  })
 );
 
 const allSelectedServersEligibleForRoot = computed(() =>
-    allSelectedPass((s: any) => {
-      if ((s as any).roleLinux) {
-        return (s.canEdit || (isOperator.value && !s.locked)) && s.managed;
-      }
-      if ((s as any).roleWindows) return s.canEdit && s.managed;
-      return false;
-    })
+  allSelectedPass((s: any) => {
+    if ((s as any).roleLinux) {
+      return (s.canEdit || (isOperator.value && !s.locked)) && s.managed;
+    }
+    if ((s as any).roleWindows) return s.canEdit && s.managed;
+    return false;
+  })
 );
 
 const allSelectedServersEligibleToStart = computed(() =>
-    allSelectedPass(
-        (s: any) =>
-            (s as any).canEdit &&
-            ((s as any).cloud?.cloudType === "VMWARE" ||
-                (s as any).cloud?.cloudType === "PROXMOX") &&
-            (s as any).powerState === "poweredOff"
-    )
+  allSelectedPass(
+    (s: any) =>
+      (s as any).canEdit &&
+      ((s as any).cloud?.cloudType === "VMWARE" ||
+        (s as any).cloud?.cloudType === "PROXMOX") &&
+      (s as any).powerState === "poweredOff"
+  )
 );
 
 const allSelectedServersEligibleToStop = computed(() =>
-    allSelectedPass(
-        (s: any) =>
-            (s as any).canEdit &&
-            ((s as any).cloud?.cloudType === "VMWARE" ||
-                (s as any).cloud?.cloudType === "PROXMOX") &&
-            (s as any).powerState === "poweredOn"
-    )
+  allSelectedPass(
+    (s: any) =>
+      (s as any).canEdit &&
+      ((s as any).cloud?.cloudType === "VMWARE" ||
+        (s as any).cloud?.cloudType === "PROXMOX") &&
+      (s as any).powerState === "poweredOn"
+  )
 );
 
 const allSelectedServersEligibleToPause = computed(() =>
-    allSelectedPass(
-        (s: any) =>
-            (s as any).canEdit &&
-            ((s as any).cloud?.cloudType === "VMWARE" ||
-                (s as any).cloud?.cloudType === "PROXMOX") &&
-            (s as any).powerState === "poweredOn"
-    )
+  allSelectedPass(
+    (s: any) =>
+      (s as any).canEdit &&
+      ((s as any).cloud?.cloudType === "VMWARE" ||
+        (s as any).cloud?.cloudType === "PROXMOX") &&
+      (s as any).powerState === "poweredOn"
+  )
 );
 
 const allSelectedServersEligibleToRestart = computed(() =>
-    allSelectedPass(
-        (s: any) =>
-            (s as any).canEdit &&
-            ((s as any).cloud?.cloudType === "VMWARE" ||
-                (s as any).cloud?.cloudType === "PROXMOX") &&
-            (s as any).powerState === "poweredOn"
-    )
+  allSelectedPass(
+    (s: any) =>
+      (s as any).canEdit &&
+      ((s as any).cloud?.cloudType === "VMWARE" ||
+        (s as any).cloud?.cloudType === "PROXMOX") &&
+      (s as any).powerState === "poweredOn"
+  )
 );
 
 const allSelectedServersEligibleToDelete = computed(() =>
-    allSelectedPass((s: any) => {
-      const cloudType = (s as any).cloud?.cloudType;
-      const hasValidOsRole = !!(s as any).roleLinux || !!(s as any).roleWindows;
-      return (
-          !!(s as any).canEdit &&
-          !!(s as any).managed &&
-          hasValidOsRole &&
-          (cloudType === "VMWARE" || cloudType === "PROXMOX")
-      );
-    })
+  allSelectedPass((s: any) => {
+    const cloudType = (s as any).cloud?.cloudType;
+    const hasValidOsRole = !!(s as any).roleLinux || !!(s as any).roleWindows;
+    return (
+      !!(s as any).canEdit &&
+      !!(s as any).managed &&
+      hasValidOsRole &&
+      (cloudType === "VMWARE" || cloudType === "PROXMOX")
+    );
+  })
 );
 
 const allSelectedServersEligibleForDowntime = computed(() =>
-    allSelectedPass((s: any) => !!s.canEdit)
+  allSelectedPass((s: any) => !!s.canEdit)
 );
 
 const allSelectedServersEligibleForWindowsMaintenance = computed(() =>
-    allSelectedPass(
-        (s: any) => !!(s as any).roleWindows && s.canEdit && s.managed
-    )
+  allSelectedPass(
+    (s: any) => !!(s as any).roleWindows && s.canEdit && s.managed
+  )
 );
 
 const noSelectionTooltip = "Keine Server ausgewählt.";
@@ -585,8 +590,8 @@ const snapshotDisabledTooltip = computed(() => {
   if (allSelectedServersEligibleForSnapshot.value) return "";
   if (selectedServers.value.length === 0) return noSelectionTooltip;
   if (
-      Array.from(fullServerCache.value.keys()).length <
-      selectedServers.value.length
+    Array.from(fullServerCache.value.keys()).length <
+    selectedServers.value.length
   ) {
     return "Serverdaten werden geladen. Bitte warten.";
   }
@@ -597,8 +602,8 @@ const downtimeDisabledTooltip = computed(() => {
   if (allSelectedServersEligibleForDowntime.value) return "";
   if (selectedServers.value.length === 0) return noSelectionTooltip;
   if (
-      Array.from(fullServerCache.value.keys()).length <
-      selectedServers.value.length
+    Array.from(fullServerCache.value.keys()).length <
+    selectedServers.value.length
   ) {
     return "Serverdaten werden geladen. Bitte warten.";
   }
@@ -609,8 +614,8 @@ const windowsMaintenanceDisabledTooltip = computed(() => {
   if (allSelectedServersEligibleForWindowsMaintenance.value) return "";
   if (selectedServers.value.length === 0) return noSelectionTooltip;
   if (
-      Array.from(fullServerCache.value.keys()).length <
-      selectedServers.value.length
+    Array.from(fullServerCache.value.keys()).length <
+    selectedServers.value.length
   ) {
     return "Serverdaten werden geladen. Bitte warten.";
   }
@@ -621,29 +626,29 @@ const powerStartTooltip = computed(() => {
   if (selectedServers.value.length === 0) return noSelectionTooltip;
   if (!allSelectedDataLoaded()) return "Wird geladen...";
   return allSelectedServersEligibleToStart.value
-      ? "Start"
-      : "die/eine ausgewählte VM ist bereits gestartet";
+    ? "Start"
+    : "die/eine ausgewählte VM ist bereits gestartet";
 });
 
 const powerStopTooltip = computed(() => {
   if (selectedServers.value.length === 0) return noSelectionTooltip;
   if (!allSelectedDataLoaded()) return "Wird geladen...";
   return allSelectedServersEligibleToStop.value
-      ? "Stop"
-      : "die/eine ausgewählte VM ist bereits gestoppt";
+    ? "Stop"
+    : "die/eine ausgewählte VM ist bereits gestoppt";
 });
 
 const powerPauseTooltip = computed(() => {
   if (selectedServers.value.length === 0) return noSelectionTooltip;
   if (!allSelectedDataLoaded()) return "Wird geladen...";
   return allSelectedServersEligibleToPause.value
-      ? "Pausieren / geplante Server Downtime"
-      : "Nicht möglich";
+    ? "Pausieren / geplante Server Downtime"
+    : "Nicht möglich";
 });
 
 const anyServerHasWarnings = computed(() => {
   return (props.selectedAppservice?.servers || []).some(
-      (server: any) => server.hasWarnings
+    (server: any) => server.hasWarnings
   );
 });
 
@@ -651,8 +656,8 @@ const powerRestartTooltip = computed(() => {
   if (selectedServers.value.length === 0) return noSelectionTooltip;
   if (!allSelectedDataLoaded()) return "Wird geladen...";
   return allSelectedServersEligibleToRestart.value
-      ? "Restart"
-      : "Nicht möglich";
+    ? "Restart"
+    : "Nicht möglich";
 });
 
 const deleteTooltip = computed(() => {
@@ -668,8 +673,8 @@ const rootAdminTooltip = computed(() => {
   if (selectedServers.value.length === 0) return noSelectionTooltip;
 
   if (
-      Array.from(fullServerCache.value.keys()).length <
-      selectedServers.value.length
+    Array.from(fullServerCache.value.keys()).length <
+    selectedServers.value.length
   ) {
     return "Serverdaten werden geladen. Bitte warten.";
   }

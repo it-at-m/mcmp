@@ -10,6 +10,8 @@ import de.muenchen.mcmp.mountPoint.MountPoint;
 import de.muenchen.mcmp.mountPoint.MountPointRepository;
 import de.muenchen.mcmp.nic.Nic;
 import de.muenchen.mcmp.nic.NicRepository;
+import de.muenchen.mcmp.portgroup.PortGroup;
+import de.muenchen.mcmp.portgroup.PortGroupRepository;
 import de.muenchen.mcmp.server.Server;
 import de.muenchen.mcmp.server.ServerService;
 import de.muenchen.mcmp.snapshot.Snapshot;
@@ -34,6 +36,7 @@ public class CloudImportService {
     private final DiskRepository diskRepository;
     private final NicRepository nicRepository;
     private final MountPointRepository mountPointRepository;
+    private final PortGroupRepository portGroupRepository;
 
     public void importCloudData(final CloudDTO cloudDTO) {
         log.info("Starting Cloud import process for {} servers.", cloudDTO.servers().size());
@@ -45,6 +48,9 @@ public class CloudImportService {
         }
 
         // Fetch current DB state in advance.
+        final var portGroups = portGroupRepository.findAllByCloudId(cloud.getId())
+                .stream()
+                .collect(Collectors.toMap(PortGroup::getPortGroupKey, Function.identity()));
         final var servers = serverService.findAllByCloudId(cloud.getId())
                 .stream()
                 .collect(Collectors.toMap(Server::getUuid, Function.identity()));
@@ -63,14 +69,60 @@ public class CloudImportService {
 
         // Keep track of UUIDs to handle duplicates.
         final Set<String> importedUuids = new HashSet<>();
+        final Set<String> importedPortGroupKeys = new HashSet<>();
 
-        // Statistics
+        // Statistics (servers only)
         int inserted = 0;
         int updated = 0;
         int deleted = 0;
         int skipped = 0;
         int errors = 0;
 
+        // Handle port groups first so we can map server NICs to their
+        // entities immediately
+        for (final PortGroupDTO dto : cloudDTO.portGroups()) {
+            if (dto.portGroupKey() == null || dto.portGroupKey().isBlank()) {
+                log.warn("Portgruppe ohne PortGroupKey übersprungen: name={}", dto.name());
+                continue;
+            }
+
+            if (!importedPortGroupKeys.add(dto.portGroupKey())) {
+                log.warn("Portgruppe mit duplizierter PortGroupKey übersprungen: name={}, port_group_key={}",
+                         dto.name(), dto.portGroupKey());
+                continue;
+            }
+
+            var portGroup = portGroups.get(dto.portGroupKey());
+            if (portGroup == null) {
+                portGroup = tryApply(portGroupRepository::save, dto.build(cloud), p ->
+                                     "beim Insert von Portgruppe name=%s".formatted(p.getName()));
+
+                if (portGroup == null)
+                    continue;
+
+                portGroups.put(portGroup.getPortGroupKey(), portGroup);
+            } else if (dto.hasChanges(portGroup)) {
+                dto.applyChanges(portGroup);
+                portGroup = tryApply(portGroupRepository::save, portGroup, p ->
+                                     "beim Update von Portgruppe name=%s".formatted(p.getName()));
+
+                if (portGroup == null)
+                    continue;
+
+                portGroups.put(portGroup.getPortGroupKey(), portGroup);
+            }
+        }
+
+        for (var iterator = portGroups.entrySet().iterator(); iterator.hasNext(); ) {
+            final var entry = iterator.next();
+            if (!importedPortGroupKeys.contains(entry.getKey())) {
+                iterator.remove();
+                tryConsume(portGroupRepository::delete, entry.getValue(), p ->
+                           "beim Delete von Portgruppe name=%s".formatted(p.getName()));
+            }
+        }
+
+        // Handle servers
         for (final ServerDTO dto : cloudDTO.servers()) {
             if (dto.uuid() == null || dto.uuid().isBlank()) {
                 log.warn("Server ohne UUID übersprungen: name={}", dto.name());
@@ -125,7 +177,7 @@ public class CloudImportService {
 
             if (dto.nics().isPresent()) {
                 final var serverNics = nics.getOrDefault(server.getId(), new ArrayList<>());
-                importNics(server, serverNics, dto.nics().get());
+                importNics(server, portGroups, serverNics, dto.nics().get());
             }
         }
 
@@ -206,6 +258,7 @@ public class CloudImportService {
 
     private void importNics(
             final Server server,
+            final Map<String, PortGroup> portGroupsByKey,
             final List<Nic> nics,
             final List<NicDTO> dtos
     ) {
@@ -215,12 +268,13 @@ public class CloudImportService {
 
         for (final var dto : dtos) {
             importedKeys.add(dto.vNicKey());
+            var portGroup = portGroupsByKey.get(dto.portGroupKey());
             var nic = nicsByKey.get(dto.vNicKey());
             if (nic == null) {
-                tryConsume(nicRepository::save, dto.build(server), s ->
+                tryConsume(nicRepository::save, dto.build(server, portGroup), s ->
                         "beim Insert von NIC serverID=%s vNicKey=%d".formatted(s.getServerId(), s.getVnicKey()));
-            } else if (dto.hasChanges(nic)) {
-                dto.applyChanges(nic);
+            } else if (dto.hasChanges(nic, portGroup)) {
+                dto.applyChanges(nic, portGroup);
                 tryConsume(nicRepository::save, nic, s ->
                         "beim Update von Nic serverID=%s vNicKey=%d".formatted(s.getServerId(), s.getVnicKey()));
             }

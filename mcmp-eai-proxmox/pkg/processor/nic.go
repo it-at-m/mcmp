@@ -6,12 +6,13 @@ import (
 
 // A Nic object to save to the MCMP database.
 type Nic struct {
-	VNicKey    uint32 `json:"vnic_key"`
-	Device     string `json:"device,omitempty"`
-	MacAddress string `json:"mac_address,omitempty"`
-	Network    string `json:"network,omitempty"`
-	Connected  bool   `json:"connected,omitempty"`
-	CardType   string `json:"card_type,omitempty"`
+	VNicKey      uint32 `json:"vnic_key"`
+	Device       string `json:"device,omitempty"`
+	MacAddress   string `json:"mac_address,omitempty"`
+	Network      string `json:"network,omitempty"`
+	PortGroupKey string `json:"port_group_key,omitempty"`
+	Connected    bool   `json:"connected,omitempty"`
+	CardType     string `json:"card_type,omitempty"`
 }
 
 // processNics processes all Nics from the given VMConfig data.
@@ -20,12 +21,13 @@ func (p *Processor) processNics(cfg *proxmox.VMConfig) []*Nic {
 
 	for name, net := range cfg.Nets {
 		result = append(result, &Nic{
-			VNicKey:    uint32(net.Seq),
-			Device:     name,
-			MacAddress: net.MacAddress,
-			Network:    net.Bridge,
-			Connected:  !net.LinkDown,
-			CardType:   net.Model,
+			VNicKey:      uint32(net.Seq),
+			Device:       name,
+			MacAddress:   net.MacAddress,
+			Network:      net.Bridge,
+			PortGroupKey: net.Bridge,
+			Connected:    !net.LinkDown,
+			CardType:     net.Model,
 		})
 	}
 

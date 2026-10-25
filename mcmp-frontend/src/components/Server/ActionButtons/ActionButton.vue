@@ -1,33 +1,33 @@
 <template>
   <v-tooltip
-      :text="tooltip"
-      location="bottom"
-      :aria-label="tooltip"
+    :text="tooltip"
+    location="bottom"
+    :aria-label="tooltip"
   >
     <template #activator="{ props: tooltipProps }">
       <span
-          v-bind="tooltipProps"
-          class="tooltip-activator"
-          style="display: inline-flex"
+        v-bind="tooltipProps"
+        class="tooltip-activator"
+        style="display: inline-flex"
       >
         <v-btn
-            :disabled="computedDisabled || loading"
-            :color="color"
-            :loading="loading"
-            class="material-action-btn"
-            variant="flat"
-            :href="link"
-            target="_blank"
-            icon
-            size="small"
-            :alt="tooltip"
-            :aria-label="tooltip"
-            v-on="server || props.isBatchOperation ? { click: onBtnClick } : {}"
+          :disabled="computedDisabled || loading"
+          :color="color"
+          :loading="loading"
+          class="material-action-btn"
+          variant="flat"
+          :href="link"
+          target="_blank"
+          icon
+          size="small"
+          :alt="tooltip"
+          :aria-label="tooltip"
+          v-on="server || props.isBatchOperation ? { click: onBtnClick } : {}"
         >
           <v-icon
-              :size="tooltip == 'KVM Konsole öffnen' ? 'large' : 'x-large'"
-              role="img"
-              :style="
+            :size="tooltip == 'KVM Konsole öffnen' ? 'large' : 'x-large'"
+            role="img"
+            :style="
               tooltip == 'Server neustarten' ? 'transform: rotate(45deg);' : ''
             "
           >
@@ -39,63 +39,63 @@
   </v-tooltip>
 
   <common-dialog
-      :model-value="dialog"
-      :title="confirmDialogTitle"
-      :icon="icon"
-      max-width="600"
-      show-actions
-      :submit-activated="validated"
-      :show-change-warning="true"
-      :check-for-enabled-actions="action"
-      @dialog-confirm="onDialogConfirm"
-      @dialog-cancel="onDialogCancel"
+    :model-value="dialog"
+    :title="confirmDialogTitle"
+    :icon="icon"
+    max-width="600"
+    show-actions
+    :submit-activated="validated"
+    :show-change-warning="true"
+    :check-for-enabled-actions="action"
+    @dialog-confirm="onDialogConfirm"
+    @dialog-cancel="onDialogCancel"
   >
     <common-alert
-        v-if="
+      v-if="
         server || (props.isBatchOperation && props.selectedServerIds?.length)
       "
-        color="accent"
+      color="accent"
     >
       <div
-          v-if="server"
-          class="confirm-entity-label"
+        v-if="server"
+        class="confirm-entity-label"
       >
         Ausgewählter Server:
       </div>
       <div
-          v-if="server"
-          class="confirm-entity-name"
+        v-if="server"
+        class="confirm-entity-name"
       >
         {{ server.name }}
       </div>
 
       <div
-          v-else-if="props.isBatchOperation"
-          class="confirm-entity-label"
+        v-else-if="props.isBatchOperation"
+        class="confirm-entity-label"
       >
         Ausgewählte Server:
       </div>
       <div
-          v-else-if="props.isBatchOperation"
-          class="confirm-entity-name"
+        v-else-if="props.isBatchOperation"
+        class="confirm-entity-name"
       >
         {{ props.selectedServerIds?.length }} Server
       </div>
 
       <div
-          v-if="
+        v-if="
           props.isBatchOperation &&
           props.selectedServers &&
           props.selectedServers.length
         "
-          class="mt-2"
+        class="mt-2"
       >
         <ul class="pl-4">
           <li
-              v-for="s in props.selectedServers.filter((x) =>
+            v-for="s in props.selectedServers.filter((x) =>
               props.selectedServerIds?.includes(x.id)
             )"
-              :key="s.id"
+            :key="s.id"
           >
             {{ s.name }}
           </li>
@@ -108,15 +108,15 @@
     <br />
     <v-form ref="form">
       <v-checkbox
-          v-model="schedule"
-          label="Durchführungszeitpunkt anpassen"
-          @change="changeToSchedule"
+        v-model="schedule"
+        label="Durchführungszeitpunkt anpassen"
+        @change="changeToSchedule"
       />
       <common-time-picker
-          v-if="schedule"
-          v-model:raw-date-in="rawDate"
-          lable-text="Durchführungs"
-          :time-rules="[
+        v-if="schedule"
+        v-model:raw-date-in="rawDate"
+        lable-text="Durchführungs"
+        :time-rules="[
           validationRules.notEmptyRule('Endzeitpunkt darf nicht leer sein.'),
           validationRules.isNotPastTime(
             new Date(),
@@ -127,24 +127,24 @@
       />
     </v-form>
     <a
-        v-if="confirmDialogLink"
-        :href="confirmDialogLink"
-        target="_blank"
+      v-if="confirmDialogLink"
+      :href="confirmDialogLink"
+      target="_blank"
     >
       hier
     </a>
   </common-dialog>
 
   <dialog-extra-sure
-      v-if="props.useExtraSureDialog && extraSureDialog"
-      v-model="extraSureDialog"
-      :title="confirmDialogTitle || 'Bestätigen sie die Aktion'"
-      :text="confirmDialogText || 'Wollen sie die Aktion ausführen?'"
-      :hint="confirmDialogHint"
-      :checkbox-text="extraSureCheckboxText || 'Ich bin mir sicher.'"
-      :icon="icon"
-      @do="onExtraSureDialogConfirm"
-      @cancel="onDialogCancel"
+    v-if="props.useExtraSureDialog && extraSureDialog"
+    v-model="extraSureDialog"
+    :title="confirmDialogTitle || 'Bestätigen sie die Aktion'"
+    :text="confirmDialogText || 'Wollen sie die Aktion ausführen?'"
+    :hint="confirmDialogHint"
+    :checkbox-text="extraSureCheckboxText || 'Ich bin mir sicher.'"
+    :icon="icon"
+    @do="onExtraSureDialogConfirm"
+    @cancel="onDialogCancel"
   />
 </template>
 
@@ -283,22 +283,22 @@ function makeJobCall() {
       if (!job) return Promise.resolve(); // Fallback für fehlerhafte Konfiguration
 
       return jobService.startJob(
-          loading,
-          job,
-          server.id,
-          schedule.value ? { scheduleTime: rawDate.value.toISOString() } : {}
+        loading,
+        job,
+        server.id,
+        schedule.value ? { scheduleTime: rawDate.value.toISOString() } : {}
       );
     });
 
     Promise.all(promises)
-        .then(() => emit("change"))
-        .catch((err) => console.error("Batch job error", err))
-        .finally(() => {
-          loading.value = false;
-          validated.value = true;
-          schedule.value = false;
-          rawDate.value = new Date();
-        });
+      .then(() => emit("change"))
+      .catch((err) => console.error("Batch job error", err))
+      .finally(() => {
+        loading.value = false;
+        validated.value = true;
+        schedule.value = false;
+        rawDate.value = new Date();
+      });
 
     return;
   }
@@ -310,15 +310,15 @@ function makeJobCall() {
   }
 
   jobService
-      .startJob(
-          loading,
-          singleJob,
-          props.server!.id,
-          schedule.value ? { scheduleTime: rawDate.value.toISOString() } : {}
-      )
-      .then(() => {
-        emit("change");
-      });
+    .startJob(
+      loading,
+      singleJob,
+      props.server!.id,
+      schedule.value ? { scheduleTime: rawDate.value.toISOString() } : {}
+    )
+    .then(() => {
+      emit("change");
+    });
   validated.value = true;
   schedule.value = false;
   rawDate.value = new Date();

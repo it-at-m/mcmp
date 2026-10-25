@@ -41,7 +41,7 @@ public class MountPoint extends AbstractEntity {
     @NotNull
     @ColumnDefault("true")
     @Column(name = "editable", nullable = false)
-    private Boolean editable = false;
+    private Boolean editable = true;
 
     @Size(max = 50)
     @Column(name = "foreman_uuid", length = 50)

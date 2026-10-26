@@ -59,7 +59,11 @@ while read -r dir; do
 
     printf "%-40s %-10s %-10s %-10s\n" "$dir" "$MOD_VERSION" "${LINTER_VERSION:-N/A}" "$STATUS"
     PROJECTS+=("$dir|$MOD_VERSION|$LINTER_VERSION")
-done < <(find . -name "go.mod" -not -path "*/vendor/*" -exec dirname {} \;)
+done < <(find . -name "go.mod" \
+    -not -path "*/vendor/*" \
+    -not -path "*/dev-tools/*" \
+    -exec dirname {} \;)
+
 
 echo "------------------------------------------------------------"
 
@@ -81,6 +85,7 @@ fi
 # 4. Processing with Reporting
 FAILED_BUILDS=()
 FAILED_TESTS=()
+FAILED_UPDATES=()
 
 for entry in "${PROJECTS[@]}"; do
     IFS="|" read -r dir mod_ver lint_ver <<< "$entry"
@@ -106,7 +111,7 @@ for entry in "${PROJECTS[@]}"; do
         if command -v gofumpt &> /dev/null; then gofumpt -w . ; else go fmt ./... ; fi
 
         go mod tidy
-        go get -u ./...
+        go get -u=patch ./...
         go mod tidy
 
         echo "-> Building..."
@@ -123,19 +128,30 @@ for entry in "${PROJECTS[@]}"; do
         echo "   ✅ OK"
     ) || {
         RET=$?
-        if [ $RET -eq 2 ]; then FAILED_BUILDS+=("$dir"); fi
-        if [ $RET -eq 3 ]; then FAILED_TESTS+=("$dir"); fi
+        case $RET in
+            2) FAILED_BUILDS+=("$dir") ;;
+            3) FAILED_TESTS+=("$dir") ;;
+            *) FAILED_UPDATES+=("$dir") ;;
+        esac
     }
 done
+
+if [ -f "go.work" ]; then
+  echo "------------------------------------------------------------"
+  echo "-> Syncing workspace..."
+  go work sync || echo "   ⚠️  go work sync fehlgeschlagen"
+fi
 
 # 5. Final Summary
 echo "============================================================"
 echo "SUMMARY"
 echo "============================================================"
-if [ ${#FAILED_BUILDS[@]} -eq 0 ] && [ ${#FAILED_TESTS[@]} -eq 0 ]; then
+if [ ${#FAILED_BUILDS[@]} -eq 0 ] && [ ${#FAILED_TESTS[@]} -eq 0 ] \
+   && [ ${#FAILED_UPDATES[@]} -eq 0 ]; then
     echo "✅ All projects updated and verified successfully!"
 else
     [ ${#FAILED_BUILDS[@]} -gt 0 ] && echo "❌ Build failures in: ${FAILED_BUILDS[*]}"
     [ ${#FAILED_TESTS[@]} -gt 0 ] && echo "❌ Test failures in: ${FAILED_TESTS[*]}"
+    [ ${#FAILED_UPDATES[@]} -gt 0 ] && echo "❌ Update failures in: ${FAILED_UPDATES[*]}"
     exit 1
 fi

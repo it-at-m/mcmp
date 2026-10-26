@@ -1,9 +1,9 @@
 module github.com/it-at-m/mcmp/mcmp-eai-patchnight
 
-go 1.27.2
+go 1.27.3
 
 require (
-	github.com/it-at-m/mcmp/mcmp-eai-common v0.0.0-20261011180204-7e92135b5f9f
+	github.com/it-at-m/mcmp/mcmp-eai-common v0.0.0-20261025192727-49576af51ef4
 	github.com/spf13/viper v1.21.0
 	golang.org/x/oauth2 v0.37.0
 )
@@ -16,6 +16,7 @@ require (
 	github.com/spf13/afero v1.15.0 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
+	github.com/stretchr/testify v1.12.1 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/sys v0.49.0 // indirect

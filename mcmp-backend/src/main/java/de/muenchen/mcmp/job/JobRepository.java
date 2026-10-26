@@ -62,7 +62,8 @@ public interface JobRepository extends JpaRepository<Job, Long> {
     @Query("UPDATE Job j SET j.notification = false WHERE j.user.username = :username AND j.notification = true")
     void resetNotificationsByUsername(@Param("username") String username);
 
-    @Query(value = "SELECT j.hostname FROM cmp.job j WHERE j.server_installation = true AND j.status NOT IN ('successful', 'failed', 'error', 'canceled')", nativeQuery = true)
+    // If you make changes to the SQL query, be sure to update the idx_job_server_unfinished index in the job table!
+    @Query(value = "SELECT j.hostname FROM cmp.job j WHERE j.tagging_action = 'SERVER' AND j.status NOT IN ('successful', 'failed', 'error', 'canceled', 'rejected')", nativeQuery = true)
     List<String> findHostnamesForActiveServerInstallations();
 
     @Query(value = """
@@ -202,7 +203,8 @@ public interface JobRepository extends JpaRepository<Job, Long> {
            j.awx_job_failed as awxJobFailed,
            j.awx_job_status as awxJobStatus,
            EXTRACT(EPOCH FROM j.awx_duration)::bigint as awxJobDuration,
-           j.awx_template_link as awxTemplateLink
+           j.awx_template_link as awxTemplateLink,
+           j.tagging_action as taggingAction
     FROM cmp.job j
     LEFT JOIN cmp.user u ON j.user_id = u.id
     LEFT JOIN cmp.server s ON j.server_id = s.id
@@ -331,7 +333,8 @@ public interface JobRepository extends JpaRepository<Job, Long> {
            j.awx_job_failed as awxJobFailed,
            j.awx_job_status as awxJobStatus,
            EXTRACT(EPOCH FROM j.awx_duration)::bigint as awxJobDuration,
-           j.awx_template_link as awxTemplateLink
+           j.awx_template_link as awxTemplateLink,
+           j.tagging_action as taggingAction
     FROM cmp.job j
     LEFT JOIN cmp.user u ON j.user_id = u.id
     LEFT JOIN cmp.server s ON j.server_id = s.id

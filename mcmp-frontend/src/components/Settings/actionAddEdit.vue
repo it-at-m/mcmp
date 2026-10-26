@@ -741,7 +741,6 @@
             />
           </v-col>
         </v-row>
-
         <v-row
           v-if="actionTmp.snowConfig"
           class="ml-6"
@@ -750,13 +749,15 @@
             <v-toolbar color="backgroundLight">
               <v-toolbar-title>
                 <v-switch
-                  v-model="actionTmp.quickdiscovery"
+                  :model-value="taggingEnabled"
                   color="_blue"
                   class="mt-5"
+                  @update:model-value="onTaggingEnabledChange"
                 >
                   <template #label>
                     <span class="v-toolbar-title"
-                      >Quick Discovery in ServiceNow durchführen</span
+                      >CI in ServiceNow erstellen und einen Anwendungsservice in
+                      ServiceNow zuordnen</span
                     >
                   </template>
                 </v-switch>
@@ -765,26 +766,25 @@
           </v-col>
         </v-row>
         <v-row
-          v-if="actionTmp.snowConfig"
+          v-if="actionTmp.snowConfig && taggingEnabled"
           class="ml-6"
         >
-          <v-col cols="12">
-            <v-toolbar color="backgroundLight">
-              <v-toolbar-title>
-                <v-switch
-                  v-model="actionTmp.serverInstallation"
-                  color="_blue"
-                  class="mt-5"
-                >
-                  <template #label>
-                    <span class="v-toolbar-title"
-                      >Server Installation (ServiceNow: Quick Discovery +
-                      Tagging)</span
-                    >
-                  </template>
-                </v-switch>
-              </v-toolbar-title>
-            </v-toolbar>
+          <v-col cols="6">
+            <v-select
+              v-model="actionTmp.taggingAction"
+              :items="taggingActionOptions"
+              item-title="text"
+              item-value="key"
+              label="CI-Typ"
+              clearable
+              placeholder="Bitte eine CI-Typ auswählen"
+              hint="Definiert den CI-Typ mit den das CI in ServiceNow erstellt und danach einen Anwendungsservice zugeordnet wird."
+              persistent-hint
+              :rules="[
+                rules.notEmptySelectRule('Tagging Aktion ist ein Pflichtfeld.'),
+              ]"
+              :menu-props="{ persistent: true, closeOnContentClick: true }"
+            />
           </v-col>
         </v-row>
       </div>
@@ -806,6 +806,7 @@ import ActionImport from "@/components/Settings/actionImport.vue";
 import { useRules } from "@/composables/rules";
 import { STATUS_INDICATORS } from "@/constants";
 import { useSnackbarStore } from "@/stores/snackbar.ts";
+import { taggingActionOptions } from "@/types/TaggingAction";
 
 const props = defineProps<{
   title: string;
@@ -835,6 +836,7 @@ const loadingTestEnv = ref(false);
 const selectedAction = ref<Action | null>(null);
 const importedFile = ref<File | File[] | null>(null);
 const fileImported = ref(false);
+const taggingEnabled = ref(false);
 
 const actionTmp = ref<Action>(
   props.action ? { ...props.action } : getEmptyAction()
@@ -854,6 +856,7 @@ onMounted(() => {
 watch(dialog, (val) => {
   if (val) {
     actionTmp.value = props.action ? { ...props.action } : getEmptyAction();
+    taggingEnabled.value = actionTmp.value.taggingAction != null;
     if (!actionTmp.value.changeType) {
       actionTmp.value.changeType = "normal";
     }
@@ -878,9 +881,17 @@ watch(
   }
 );
 
+watch(
+  () => actionTmp.value.taggingAction,
+  (newValue) => {
+    taggingEnabled.value = newValue != null;
+  }
+);
+
 watch(selectedAction, (action) => {
   if (!action) {
     actionTmp.value = getEmptyAction();
+    taggingEnabled.value = false;
     return;
   }
 
@@ -888,6 +899,7 @@ watch(selectedAction, (action) => {
 
   // Identifier zurücksetzen
   actionTmp.value.identifier = "";
+  taggingEnabled.value = actionTmp.value.taggingAction != null;
 });
 
 function getEmptyAction(): Action {
@@ -899,8 +911,6 @@ function getEmptyAction(): Action {
     description: "",
     comment: "",
     enabled: false,
-    quickdiscovery: false,
-    serverInstallation: false,
     changeRequired: false,
     changeType: "normal",
     changeAction: "other",
@@ -936,6 +946,7 @@ function getEmptyAction(): Action {
     changeBackoutPlan: null,
     isLowPriority: false,
     createIncidents: true,
+    taggingAction: null,
   };
 }
 
@@ -948,6 +959,7 @@ function openLink() {
 
 function onImport(action: Action) {
   actionTmp.value = action;
+  taggingEnabled.value = action.taggingAction != null;
 }
 
 function handleFileImport(files: File | File[] | null) {
@@ -958,6 +970,7 @@ function handleFileImport(files: File | File[] | null) {
     .then((text) => {
       const parsed = JSON.parse(text);
       actionTmp.value = { ...getEmptyAction(), ...parsed };
+      taggingEnabled.value = actionTmp.value.taggingAction != null;
       fileImported.value = true;
     })
     .catch(() => {
@@ -978,6 +991,7 @@ function reset() {
   selectedAction.value = null;
   importedFile.value = null;
   fileImported.value = false;
+  taggingEnabled.value = false;
 }
 
 function save() {
@@ -993,8 +1007,8 @@ function onSnowEnabledChange(enabled: boolean | null) {
   if (!enabled) {
     actionTmp.value.snowConfig = null;
     actionTmp.value.changeRequired = false;
-    actionTmp.value.quickdiscovery = false;
-    actionTmp.value.serverInstallation = false;
+    actionTmp.value.taggingAction = null;
+    taggingEnabled.value = false;
     // Reset change details
     actionTmp.value.changeJustification = null;
     actionTmp.value.changeImplementationPlan = null;
@@ -1005,6 +1019,13 @@ function onSnowEnabledChange(enabled: boolean | null) {
   } else if (props.snowConfigs.length > 0) {
     actionTmp.value.snowConfig = props.snowConfigs[0] as SnowConfig;
     actionTmp.value.createIncidents = true;
+  }
+}
+
+function onTaggingEnabledChange(enabled: boolean | null) {
+  taggingEnabled.value = !!enabled;
+  if (!enabled) {
+    actionTmp.value.taggingAction = null;
   }
 }
 </script>

@@ -190,8 +190,6 @@ function mapTemplateToAction(t: any): Action {
     description: t.description ?? "",
     comment: "",
     enabled: true,
-    quickdiscovery: false,
-    serverInstallation: false,
     changeRequired: false,
     changeType: "",
     changeTemplate: "",
@@ -224,6 +222,7 @@ function mapTemplateToAction(t: any): Action {
     awxDescription: t.description ?? "",
     awxErrorTitle: "",
     awxErrorDescription: "",
+    taggingAction: t.tagging_action ?? null,
   };
 }
 

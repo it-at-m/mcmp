@@ -2,7 +2,9 @@ package de.muenchen.mcmp.action;
 
 import de.muenchen.mcmp.awxConfig.AwxConfig;
 import de.muenchen.mcmp.common.AbstractEntity;
+import de.muenchen.mcmp.converter.TaggingActionConverter;
 import de.muenchen.mcmp.snowConfig.SnowConfig;
+import de.muenchen.mcmp.types.TaggingAction;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
@@ -164,4 +166,8 @@ public class Action extends AbstractEntity {
     @Column(name = "create_incidents")
     private Boolean createIncidents = true;
 
+    @Convert(converter = TaggingActionConverter.class)
+    @Column(name = "tagging_action")
+    @ColumnTransformer(write = "?::tagging_action")
+    private TaggingAction taggingAction;
 }

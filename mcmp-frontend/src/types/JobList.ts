@@ -1,3 +1,9 @@
+import type { TaggingAction } from "@/types/TaggingAction";
+
+
+
+
+
 export default class JobList {
   constructor(
     public appServiceId: number,
@@ -25,14 +31,12 @@ export default class JobList {
     public hostname: string,
     public id: number,
     public ip: string,
-    public quickdiscovery: boolean,
     public quickdiscoveryCiName: string,
     public quickdiscoveryCiSysid: string,
     public quickdiscoveryError: string,
     public quickdiscoveryErrorCounter: number,
     public quickdiscoveryStatus: string,
     public serverId: number,
-    public serverInstallation: boolean,
     public serverName: string,
     public snowApiDescription: string,
     public status: string,
@@ -49,6 +53,7 @@ export default class JobList {
     public awxJobFailed: boolean,
     public awxJobStatus: string,
     public awxJobDuration: number,
-    public awxTemplateLink: string
+    public awxTemplateLink: string,
+    public taggingAction: TaggingAction | null
   ) {}
 }

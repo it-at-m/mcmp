@@ -39,6 +39,28 @@
       </v-chip-group>
     </div>
 
+    <div class="d-flex align-center flex-wrap ga-2 mb-3">
+      <span class="text-body-2 text-medium-emphasis">Abweichende IPs:</span>
+      <v-chip-group
+        v-model="ipCountFilter"
+        mandatory
+        class="ip-count-filter"
+      >
+        <v-chip
+          v-for="option in ipCountFilterOptions"
+          :key="option.value"
+          :value="option.value"
+          :prepend-icon="option.icon"
+          :color="option.color"
+          variant="tonal"
+          size="small"
+        >
+          {{ option.title }}
+          <span class="ms-1 font-weight-bold">({{ option.count }})</span>
+        </v-chip>
+      </v-chip-group>
+    </div>
+
     <v-data-table
       :headers="headers"
       :items="filteredItems"
@@ -196,6 +218,8 @@ import type { CsvColumn } from "@/util/csv";
 import type { DataTableHeader } from "vuetify/framework";
 
 import {
+  mdiAlertCircleOutline,
+  mdiFormatListBulleted,
   mdiMicrosoftExcel,
   mdiPauseCircle,
   mdiPlayCircle,
@@ -219,8 +243,10 @@ const items = ref<ForemanIpMismatchServer[]>([]);
 
 type PowerStateKey = "poweredOn" | "poweredOff" | "standby";
 type PowerStateFilter = "all" | PowerStateKey;
+type IpCountFilter = "all" | number;
 
 const powerStateFilter = ref<PowerStateFilter>("all");
+const ipCountFilter = ref<IpCountFilter>("all");
 
 const sortBy = ref([{ key: "server_name", order: "asc" as "asc" | "desc" }]);
 
@@ -246,7 +272,11 @@ const headers = ref<DataTableHeader[]>([
     title: "Abweichende IPs",
     key: "ips",
     align: "start",
-    sortable: false,
+    sortable: true,
+    // Nach Anzahl der abweichenden IPs sortieren, nicht nach dem Array-Inhalt
+    sortRaw: (a, b) =>
+      (a as ForemanIpMismatchServer).ips.length -
+      (b as ForemanIpMismatchServer).ips.length,
   },
 ]);
 
@@ -297,7 +327,7 @@ const powerStateCounts = computed<Record<PowerStateKey, number>>(() => {
     poweredOff: 0,
     standby: 0,
   };
-  for (const item of items.value) {
+  for (const item of itemsMatchingIpCount.value) {
     const key = normalizePowerState(item.power_state);
     if (key === "poweredOn") {
       counts.poweredOn += 1;
@@ -308,6 +338,58 @@ const powerStateCounts = computed<Record<PowerStateKey, number>>(() => {
     }
   }
   return counts;
+});
+
+const itemsMatchingPowerState = computed<ForemanIpMismatchServer[]>(() =>
+  powerStateFilter.value === "all"
+    ? items.value
+    : items.value.filter(
+        (item) =>
+          normalizePowerState(item.power_state) === powerStateFilter.value
+      )
+);
+
+const itemsMatchingIpCount = computed<ForemanIpMismatchServer[]>(() =>
+  ipCountFilter.value === "all"
+    ? items.value
+    : items.value.filter((item) => item.ips.length === ipCountFilter.value)
+);
+
+const ipCountCounts = computed<Map<number, number>>(() => {
+  const counts = new Map<number, number>();
+  for (const item of itemsMatchingPowerState.value) {
+    const count = item.ips.length;
+    counts.set(count, (counts.get(count) ?? 0) + 1);
+  }
+  return counts;
+});
+
+const ipCountFilterOptions = computed<
+  {
+    value: IpCountFilter;
+    title: string;
+    icon: string;
+    color: string;
+    count: number;
+  }[]
+>(() => {
+  const values = [...ipCountCounts.value.keys()].sort((a, b) => a - b);
+  return [
+    {
+      value: "all",
+      title: "Alle",
+      icon: mdiFormatListBulleted,
+      color: "secondary",
+      count: itemsMatchingPowerState.value.length,
+    },
+    ...values.map((value) => ({
+      value,
+      title: String(value),
+      icon: mdiAlertCircleOutline,
+      color: value <= 1 ? "warning" : "error",
+      count: ipCountCounts.value.get(value) ?? 0,
+    })),
+  ];
 });
 
 const powerStateFilterOptions = computed<
@@ -350,20 +432,44 @@ const powerStateFilterOptions = computed<
 ]);
 
 const filteredItems = computed<ForemanIpMismatchServer[]>(() => {
-  const filter = powerStateFilter.value ?? "all";
-  return filter === "all"
-    ? items.value
-    : items.value.filter(
-        (item) => normalizePowerState(item.power_state) === filter
-      );
+  const powerFilter = powerStateFilter.value ?? "all";
+  const countFilter = ipCountFilter.value ?? "all";
+  return items.value.filter((item) => {
+    if (
+      powerFilter !== "all" &&
+      normalizePowerState(item.power_state) !== powerFilter
+    ) {
+      return false;
+    }
+    if (countFilter !== "all" && item.ips.length !== countFilter) {
+      return false;
+    }
+    return true;
+  });
 });
 
 const noDataText = computed<string>(() => {
-  const filter = powerStateFilter.value ?? "all";
-  return filter === "all"
-    ? "Keine IP-Abweichungen zwischen MCMP und Foreman gefunden!"
-    : "Keine IP-Abweichungen mit dem gewählten Power-Status gefunden!";
+  const powerFilter = powerStateFilter.value ?? "all";
+  const countFilter = ipCountFilter.value ?? "all";
+  if (powerFilter === "all" && countFilter === "all") {
+    return "Keine IP-Abweichungen zwischen MCMP und Foreman gefunden!";
+  }
+  if (countFilter === "all") {
+    return "Keine IP-Abweichungen mit dem gewählten Power-Status gefunden!";
+  }
+  if (powerFilter === "all") {
+    return `Keine Server mit ${ipCountLabel(countFilter)} gefunden!`;
+  }
+  return `Keine Server mit dem gewählten Power-Status und ${ipCountLabel(
+    countFilter
+  )} gefunden!`;
 });
+
+function ipCountLabel(count: number): string {
+  return `${count} abweichende${count === 1 ? "r" : "n"} IP${
+    count === 1 ? "" : "s"
+  }`;
+}
 
 function normalizePowerState(powerState: string): PowerStateKey {
   switch (powerState) {

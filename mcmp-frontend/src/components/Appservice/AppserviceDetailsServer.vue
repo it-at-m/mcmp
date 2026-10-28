@@ -286,18 +286,18 @@
               v-else-if="getManagedServerItem(item).virtualAppliance"
               :icon="mdiServerNetwork"
               color="accent"
-              @mouseenter="onRowTooltipHover($event, 'virtuelle Appliance')"
+              @mouseenter="onRowTooltipHover($event, 'virtuelle Appliance, eingeschränkte Funktionen')"
               @mouseleave="onRowTooltipLeave"
-              @focus="onRowTooltipHover($event, 'virtuelle Appliance')"
+              @focus="onRowTooltipHover($event, 'virtuelle Appliance, eingeschränkte Funktionen')"
               @blur="onRowTooltipLeave"
           />
           <v-icon
               v-else
               :icon="mdiCancel"
               color="grey"
-              @mouseenter="onRowTooltipHover($event, 'nicht verwaltet, eingeschränkte Funktion')"
+              @mouseenter="onRowTooltipHover($event, 'nicht verwaltet, eingeschränkte Funktionen')"
               @mouseleave="onRowTooltipLeave"
-              @focus="onRowTooltipHover($event, 'nicht verwaltet, eingeschränkte Funktion')"
+              @focus="onRowTooltipHover($event, 'nicht verwaltet, eingeschränkte Funktionen')"
               @blur="onRowTooltipLeave"
           />
         </template>

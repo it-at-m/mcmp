@@ -783,4 +783,43 @@ ORDER BY s.name ASC
         Long getId();
         String getGuestToolsIpAddress();
     }
+
+    /**
+     * Retrieves a list of unmanaged servers that are not part of a virtual appliance.
+     * This method queries the database for servers that meet the following criteria:
+     * - They are marked as unmanaged (`managed = FALSE`).
+     * - They are not part of a virtual appliance (`virtual_appliance = FALSE`).
+     * - Their names are not included in the provided excluded names list (`excludeNames`).
+     * - Their clusters are not included in the provided excluded clusters list (`excludeClusters`).
+     *
+     * The results are ordered by the server's name in the ascending order.
+     *
+     * @param excludeNames {@code ILIKE}-Patterns für den Servernamen (z. B. {@code ["esxi%","%-master-%"]}).
+     *                     Leeres Array = keine zusätzlichen Ausschlüsse, nie {@code null}.
+     * @param excludeClusters {@code ILIKE}-Patterns für den Cluster. Leeres Array = keine Ausschlüsse.
+     */
+    @Query(value = """
+                SELECT s.id                                     AS serverID,
+                       s.name                                   AS serverName,
+                       s.fqdn                                   AS serverFQDN,
+                       s.power_state                            AS serverPowerState,
+                       s.vm_id                                  AS serverVMID,
+                       CASE
+                           WHEN s.operatingsystem IS NOT NULL AND s.operatingsystem <> '' THEN s.operatingsystem
+                           WHEN s.guest_tools_full_name IS NOT NULL AND s.guest_tools_full_name <> '' THEN s.guest_tools_full_name
+                           ELSE s.guest_config_full_name
+                       END                                      AS serverOS,
+                       s.cluster                                AS cluster,
+                       c.name                                   AS cloudName,
+                       c.server_gui                             AS vCenterServerGUI
+                FROM cmp.server s
+                JOIN cmp.cloud c ON s.cloud_id = c.id
+                WHERE s.managed = FALSE
+                  AND s.virtual_appliance = FALSE
+                  AND NOT (s.name ILIKE ANY (CAST(:excludeNames AS text[])))
+                  AND NOT (COALESCE(s.cluster, '') ILIKE ANY (CAST(:excludeClusters AS text[])))
+                ORDER BY s.name
+                """, nativeQuery = true)
+    List<UnmanagedServerDTO> findUnmanagedNonVirtualAppliances(@Param("excludeNames") String[] excludeNames,
+                                                               @Param("excludeClusters") String[] excludeClusters);
 }

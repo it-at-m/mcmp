@@ -38,8 +38,10 @@ import de.muenchen.mcmp.security.UserRoles;
 import de.muenchen.mcmp.server.Server;
 import de.muenchen.mcmp.server.ServerRepository;
 import de.muenchen.mcmp.storage.UnifiedStorageItemDto;
+import de.muenchen.mcmp.testenvironment.TestEnvProperties;
 import de.muenchen.mcmp.types.CloudType;
 import de.muenchen.mcmp.types.DbType;
+import de.muenchen.mcmp.types.EmailStatus;
 import de.muenchen.mcmp.types.EnvironmentType;
 import de.muenchen.mcmp.user.User;
 import de.muenchen.mcmp.user.UserRepository;
@@ -118,6 +120,7 @@ public class JobService {
 
     private final KubernetesNamespaceRepository kubernetesNamespaceRepository;
     private final KubernetesClusterRepository kubernetesClusterRepository;
+    private final TestEnvProperties testEnvProperties;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -286,6 +289,10 @@ public class JobService {
                 job.setNonPostgres(true);
                 job.setNonOss(nonOss);
                 job.setNonPostgresJustification(nonPostgresMailBody);
+                if (testEnvProperties.isEnabled()) {
+                    // do not send mails in test envs
+                    job.setNonPostgresEmailStatus(EmailStatus.SKIPPED);
+                }
             } else {
                 job.setNonPostgres(false);
                 job.setNonOss(false);

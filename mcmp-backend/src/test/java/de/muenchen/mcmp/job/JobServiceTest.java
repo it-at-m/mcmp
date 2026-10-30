@@ -20,6 +20,8 @@ import de.muenchen.mcmp.ontap.OntapVolumeRepository;
 import de.muenchen.mcmp.repository.Repository;
 import de.muenchen.mcmp.server.Server;
 import de.muenchen.mcmp.storage.UnifiedStorageItemDto;
+import de.muenchen.mcmp.testenvironment.TestEnvProperties;
+import de.muenchen.mcmp.types.EmailStatus;
 import de.muenchen.mcmp.types.EnvironmentType;
 import de.muenchen.mcmp.user.User;
 import de.muenchen.mcmp.user.UserRepository;
@@ -55,7 +57,7 @@ public class JobServiceTest {
     public void testMergeJsonStrings() throws JacksonException {
         ObjectMapper objectMapper = new ObjectMapper();
         JobService jobService = new JobService(
-                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
         );
 
         // Erstes JSON-Objekt (awxExtraVars)
@@ -94,7 +96,7 @@ public class JobServiceTest {
     @Test
     public void testChechmkDowntimeEndtimeDateConversion() {
         JobService jobService = new JobService(
-                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
         );
 
         // Testfall 1: Gültiges Datum
@@ -144,7 +146,7 @@ public class JobServiceTest {
 
         JobService jobService = new JobService(
                 jobRepository, actionRepository, userRepository, null, appserviceRepository,
-                null, null, null, null, null, null, null, actionToJobMapper, null, null
+                null, null, null, null, null, null, null, actionToJobMapper, null, null, null
         );
 
         Appservice appservice = new Appservice();
@@ -222,7 +224,7 @@ public class JobServiceTest {
 
         JobService jobService = new JobService(
                 jobRepository, actionRepository, userRepository, null, null,
-                null, null, null, null, null, null, null, actionToJobMapper, null, null
+                null, null, null, null, null, null, null, actionToJobMapper, null, null, null
         );
 
         Server server = new Server();
@@ -268,7 +270,7 @@ public class JobServiceTest {
 
         JobService jobService = new JobService(
                 jobRepository, actionRepository, userRepository, null, null,
-                null, lbVirtualServerRepository, null, null, null, null, null, actionToJobMapper, null, null
+                null, lbVirtualServerRepository, null, null, null, null, null, actionToJobMapper, null, null, null
         );
 
         when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -323,7 +325,7 @@ public class JobServiceTest {
 
         JobService jobService = new JobService(
                 jobRepository, actionRepository, userRepository, null, appserviceRepository,
-                null, null, null, null, null, null, null, actionToJobMapper, null, kubernetesClusterRepository
+                null, null, null, null, null, null, null, actionToJobMapper, null, kubernetesClusterRepository, null
         );
 
         when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -385,7 +387,7 @@ public class JobServiceTest {
 
         JobService jobService = new JobService(
                 jobRepository, null, null, null, appserviceRepository,
-                null, null, null, null, null, null, null, null, null, kubernetesClusterRepository
+                null, null, null, null, null, null, null, null, null, kubernetesClusterRepository, null
         );
 
         Appservice appservice = new Appservice();
@@ -417,7 +419,7 @@ public class JobServiceTest {
 
         JobService jobService = new JobService(
                 jobRepository, actionRepository, userRepository, null, null,
-                null, lbVirtualServerRepository, null, null, null, null, null, actionToJobMapper, null, null
+                null, lbVirtualServerRepository, null, null, null, null, null, actionToJobMapper, null, null, null
         );
 
         when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -478,7 +480,7 @@ public class JobServiceTest {
 
         JobService jobService = new JobService(
                 jobRepository, actionRepository, userRepository, null, null,
-                null, null, ontapVolumeRepository, null, null, null, null, actionToJobMapper, null, null
+                null, null, ontapVolumeRepository, null, null, null, null, actionToJobMapper, null, null, null
         );
 
         when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -535,7 +537,7 @@ public class JobServiceTest {
 
         JobService jobService = new JobService(
                 jobRepository, actionRepository, userRepository, null, null,
-                null, null, ontapVolumeRepository, null, null, null, null, actionToJobMapper, null, null
+                null, null, ontapVolumeRepository, null, null, null, null, actionToJobMapper, null, null, null
         );
 
         UUID volumeUuid = UUID.randomUUID();
@@ -580,7 +582,7 @@ public class JobServiceTest {
 
         JobService jobService = new JobService(
                 jobRepository, actionRepository, userRepository, null, null,
-                null, null, ontapVolumeRepository, null, null, null, null, actionToJobMapper, null, null
+                null, null, ontapVolumeRepository, null, null, null, null, actionToJobMapper, null, null, null
         );
 
         when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -614,6 +616,59 @@ public class JobServiceTest {
         verify(jobRepository, times(1)).save(any(Job.class));
     }
 
+    @Test
+    public void testCreateJobForNewServer_nonPostgresInTestEnv_skipsEmail() {
+        Job job = createNonPostgresJobForNewServer(true);
+
+        assertTrue(job.getNonPostgres());
+        assertEquals("justification", job.getNonPostgresJustification(), "the justification is still stored in the test environment");
+        assertEquals(EmailStatus.SKIPPED, job.getNonPostgresEmailStatus(),
+                "the scheduler only sends the non-postgres mail for NEW, so test environment orders must not be NEW");
+    }
+
+    @Test
+    public void testCreateJobForNewServer_nonPostgresOutsideTestEnv_sendsEmail() {
+        Job job = createNonPostgresJobForNewServer(false);
+
+        assertTrue(job.getNonPostgres());
+        assertEquals(EmailStatus.NEW, job.getNonPostgresEmailStatus());
+    }
+
+    private Job createNonPostgresJobForNewServer(final boolean testEnvEnabled) {
+        JobRepository jobRepository = mock(JobRepository.class);
+        ActionRepository actionRepository = mock(ActionRepository.class);
+        UserRepository userRepository = mock(UserRepository.class);
+        ActionToJobMapper actionToJobMapper = mock(ActionToJobMapper.class);
+        TestEnvProperties testEnvProperties = new TestEnvProperties();
+        testEnvProperties.setEnabled(testEnvEnabled);
+
+        JobService jobService = new JobService(
+                jobRepository, actionRepository, userRepository, null, null,
+                null, null, null, null, null, null, null, actionToJobMapper, null, null, testEnvProperties
+        );
+        when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Action action = new Action();
+        action.setIdentifier("LINUX_RHEL10_SERVER");
+        action.setEnabled(true);
+        AwxConfig awxConfig = new AwxConfig();
+        awxConfig.setEnabled(true);
+        action.setAwxConfig(awxConfig);
+        when(actionRepository.findByIdentifier("LINUX_RHEL10_SERVER")).thenReturn(action);
+
+        User user = new User();
+        user.setUsername("tester");
+        when(userRepository.findByUsername("tester")).thenReturn(user);
+        SecurityContextHolder.getContext().setAuthentication(
+                new TestingAuthenticationToken("tester", null, Collections.emptyList()));
+
+        Appservice appservice = new Appservice();
+        appservice.setId(2002L);
+
+        return jobService.createJobForNewServer("LINUX_RHEL10_SERVER", "da-test01.srv.muenchen.de", appservice,
+                new HashMap<>(), "justification", false, null);
+    }
+
     private JobService paketshopJobService(final JobRepository jobRepository, final String actionIdentifier,
                                            final AppserviceRepository appserviceRepository) {
         ActionRepository actionRepository = mock(ActionRepository.class);
@@ -637,7 +692,7 @@ public class JobServiceTest {
 
         return new JobService(
                 jobRepository, actionRepository, userRepository, null, appserviceRepository,
-                null, null, null, null, null, null, null, actionToJobMapper, null, null
+                null, null, null, null, null, null, null, actionToJobMapper, null, null, null
         );
     }
 

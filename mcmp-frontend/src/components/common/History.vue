@@ -803,8 +803,8 @@
                     <div class="detail-row">
                       <span class="detail-label">CI-Typ:</span>
                       <span class="detail-value">{{
-                          formatTaggingAction(item.taggingAction)
-                        }}</span>
+                        formatTaggingAction(item.taggingAction)
+                      }}</span>
                     </div>
                     <div class="detail-row">
                       <span class="detail-label">Status:</span>

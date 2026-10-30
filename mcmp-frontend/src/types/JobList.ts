@@ -1,9 +1,5 @@
 import type { TaggingAction } from "@/types/TaggingAction";
 
-
-
-
-
 export default class JobList {
   constructor(
     public appServiceId: number,

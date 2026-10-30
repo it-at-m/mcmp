@@ -441,7 +441,6 @@ const greenItBannerIntroText = computed(() => {
     : "Für den Server sind folgende Green-IT Maßnahmen geplant:";
 });
 
-
 const handleNavigateToHistory = () => {
   emit("navigateToHistory");
 };

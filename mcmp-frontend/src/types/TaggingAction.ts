@@ -14,7 +14,7 @@ export type TaggingAction = (typeof taggingActionOptions)[number]["key"];
  * @return {boolean} - Returns `true` if the tagging action is provided (not null or undefined), otherwise `false`.
  */
 export function isDiscoveryAndTaggingEnabled(
-  taggingAction?: TaggingAction | null,
+  taggingAction?: TaggingAction | null
 ): boolean {
   return taggingAction != null;
 }
@@ -26,7 +26,7 @@ export function isDiscoveryAndTaggingEnabled(
  * @return {string} A string describing the discovery and tagging status, or a default message if disabled.
  */
 export function getDiscoveryAndTaggingText(
-  taggingAction?: TaggingAction | null,
+  taggingAction?: TaggingAction | null
 ): string {
   if (!isDiscoveryAndTaggingEnabled(taggingAction)) {
     return "Keine Erkennung / kein Tagging";

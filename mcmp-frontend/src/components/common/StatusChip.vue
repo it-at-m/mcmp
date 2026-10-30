@@ -1,21 +1,21 @@
 <template>
   <v-tooltip
-      :text="tooltip"
-      location="bottom"
-      :aria-label="tooltip"
-      content-class="status-chip-tooltip"
+    :text="tooltip"
+    location="bottom"
+    :aria-label="tooltip"
+    content-class="status-chip-tooltip"
   >
     <template #activator="{ props: tooltipProps }">
       <v-chip
-          v-bind="tooltip === '' ? {} : tooltipProps"
-          :text="isMatch ? matchText : notMatchText"
-          :base-color="isMatch ? '_green' : '_red'"
-          :ripple="false"
-          tabindex="-1"
-          variant="flat"
-          :href="href"
-          target="_blank"
-          @click="$emit('click', $event)"
+        v-bind="tooltip === '' ? {} : tooltipProps"
+        :text="isMatch ? matchText : notMatchText"
+        :base-color="isMatch ? '_green' : '_red'"
+        :ripple="false"
+        tabindex="-1"
+        variant="flat"
+        :href="href"
+        target="_blank"
+        @click="$emit('click', $event)"
       />
     </template>
   </v-tooltip>
@@ -25,19 +25,19 @@
 import { computed } from "vue";
 
 const props = withDefaults(
-    defineProps<{
-      tooltip?: string;
-      value?: string | number | boolean;
-      checkValue: string | number | boolean;
-      matchText: string;
-      notMatchText: string;
-      matchMode: "equal" | "greater" | "less" | "greaterEquals" | "lessEquals";
-      href?: string;
-    }>(),
-    {
-      value: false,
-      tooltip: "",
-    }
+  defineProps<{
+    tooltip?: string;
+    value?: string | number | boolean;
+    checkValue: string | number | boolean;
+    matchText: string;
+    notMatchText: string;
+    matchMode: "equal" | "greater" | "less" | "greaterEquals" | "lessEquals";
+    href?: string;
+  }>(),
+  {
+    value: false,
+    tooltip: "",
+  }
 );
 
 // Klick-Event für die Komponente definieren

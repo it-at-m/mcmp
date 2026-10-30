@@ -3,11 +3,8 @@ import type UnmanagedServerDTO from "@/types/UnmanagedServerDTO.ts";
 import type UnmappedForemanHost from "@/types/UnmappedForemanHost";
 import type { Ref } from "vue";
 
-
-
 import { apiFetch } from "@/api/fetch-utils";
 import { getApiBase, REPORT_BASE } from "@/constants";
-
 
 const BASE_URL = () => `${getApiBase()}${REPORT_BASE}`;
 

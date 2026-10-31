@@ -5,6 +5,7 @@ import de.muenchen.mcmp.awxConfig.AwxConfigRepository;
 import de.muenchen.mcmp.snowConfig.SnowConfig;
 import de.muenchen.mcmp.snowConfig.SnowConfigRepository;
 import de.muenchen.mcmp.testenvironment.TestEnvProperties;
+import de.muenchen.mcmp.types.TaggingAction;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mapstruct.factory.Mappers;
@@ -53,14 +54,13 @@ public class ActionServiceTest {
                 .comment("Test comment").executionTitle("Execution Title").executionDescription("Execution Description")
                 .successTitle("Success Title").successDescription("Success Description")
                 .errorTitle("Error Title").errorDescription("Error Description")
-                .enabled(true).quickdiscovery(false).serverInstallation(false).changeRequired(false)
+                .enabled(true).changeRequired(false)
                 .changeType("none").changeTemplate("")
                 .awxJobEnabled(false).awxTemplateType("template")
                 .awxTemplateId(0).awxInventoryId(0).awxCredentials("").awxJobType("").awxLimit("")
                 .awxJobTags("").awxSkipTags("").awxExtraVars("").awxScmBranch("").awxVerbosity(0)
                 .awxTimeout(0).awxForks(0).awxJobSliceCount(0).awxExecutionEnvironment(0)
-                .awxInstanceGroups("").awxLabels("").awxEstimatedRuntime(0).build();
-
+                .awxInstanceGroups("").awxLabels("").awxEstimatedRuntime(0).taggingAction(TaggingAction.SERVER).build();
         Action action = new Action();
         action.setSnowConfig(actionDTO.snowConfig());
         action.setAwxConfig(actionDTO.awxConfig());
@@ -75,8 +75,6 @@ public class ActionServiceTest {
         action.setSuccessTitle(actionDTO.successTitle());
         action.setSuccessDescription(actionDTO.successDescription());
         action.setEnabled(actionDTO.enabled());
-        action.setQuickdiscovery(actionDTO.quickdiscovery());
-        action.setServerInstallation(actionDTO.serverInstallation());
         action.setChangeRequired(actionDTO.changeRequired());
         action.setChangeType(actionDTO.changeType());
         action.setChangeTemplate(actionDTO.changeTemplate());
@@ -99,6 +97,7 @@ public class ActionServiceTest {
         action.setAwxInstanceGroups(actionDTO.awxInstanceGroups());
         action.setAwxLabels(actionDTO.awxLabels());
         action.setAwxEstimatedRuntime(actionDTO.awxEstimatedRuntime());
+        action.setTaggingAction(actionDTO.taggingAction());
 
         when(actionRepository.findByIdentifier("test-action")).thenReturn(action);
         when(snowConfigRepository.findById(1L)).thenReturn(Optional.of(snowConfig));

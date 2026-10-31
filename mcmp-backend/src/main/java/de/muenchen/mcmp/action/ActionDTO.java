@@ -2,6 +2,7 @@ package de.muenchen.mcmp.action;
 
 import de.muenchen.mcmp.awxConfig.AwxConfig;
 import de.muenchen.mcmp.snowConfig.SnowConfig;
+import de.muenchen.mcmp.types.TaggingAction;
 import lombok.Builder;
 
 @Builder
@@ -19,8 +20,6 @@ public record ActionDTO(
     String successTitle,
     String successDescription,
     Boolean enabled,
-    Boolean quickdiscovery,
-    Boolean serverInstallation,
     Boolean changeRequired,
     String changeType,
     String changeAction,
@@ -49,6 +48,7 @@ public record ActionDTO(
     String awxLabels,
     Integer awxEstimatedRuntime,
     Boolean isLowPriority,
-    Boolean createIncidents
+    Boolean createIncidents,
+    TaggingAction taggingAction
 ) {}
 

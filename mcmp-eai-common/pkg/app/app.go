@@ -3,12 +3,18 @@ package app
 import (
 	"context"
 	"errors"
+	"flag"
+	"fmt"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
 	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/lock"
 	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/logging"
 )
+
+var ErrWrongNumberOfArguments = errors.New("wrong number of arguments")
 
 // DataSource defines the interface for a data source (vCenter, NetApp, etc.)
 type DataSource[T any] interface {
@@ -27,6 +33,25 @@ type EAIConfig struct {
 	AppName     string
 	MaxWorkers  int
 	LockEnabled bool
+}
+
+func Main(run func(ctx context.Context) error) {
+	Bootstrap(func(ctx context.Context) error {
+		flag.Usage = func() {
+			exePath, err := os.Executable()
+			if err != nil {
+				_, _ = fmt.Fprintf(os.Stderr, "failed to get executable path: %v\n", err)
+			}
+			_, _ = fmt.Fprintf(flag.CommandLine.Output(), "Usage: %s\n", filepath.Base(exePath))
+			flag.PrintDefaults()
+		}
+		flag.Parse()
+
+		if len(os.Args) != 1 {
+			return ErrWrongNumberOfArguments
+		}
+		return run(ctx)
+	})
 }
 
 // RunEAI processes data from multiple sources concurrently using the provided configuration, context, and logger.

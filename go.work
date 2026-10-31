@@ -1,4 +1,4 @@
-go 1.27.2
+go 1.27.3
 
 use (
 	./mcmp-callback-server
@@ -6,6 +6,7 @@ use (
 	./mcmp-eai-baas
 	./mcmp-eai-checkmk
 	./mcmp-eai-common
+	./mcmp-eai-db-base
 	./mcmp-eai-db-oracle
 	./mcmp-eai-foreman
 	./mcmp-eai-loadbalancer

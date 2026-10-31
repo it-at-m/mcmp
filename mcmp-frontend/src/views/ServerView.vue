@@ -879,7 +879,7 @@ function navigateToHistory() {
 }
 
 function navigateToPatchnight() {
-  tab.value = "PatchnightStatus";
+  tab.value = "Patchnight";
 }
 
 watch(

@@ -1,5 +1,6 @@
 package de.muenchen.mcmp.action;
 
+import de.muenchen.mcmp.types.TaggingAction;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.JsonNodeFactory;
@@ -87,6 +88,13 @@ public class ActionService {
         updatedAction.setCreatedAt(actionToUpdate.getCreatedAt());
         updatedAction.setIdentifier(actionToUpdate.getIdentifier());
         updatedAction.setVersion(actionToUpdate.getVersion());
+        if (actionDTO.taggingAction() != null && TaggingAction.SERVER.equals(actionDTO.taggingAction())) {
+            updatedAction.setQuickdiscovery(true);
+            updatedAction.setServerInstallation(true);
+        } else {
+            updatedAction.setQuickdiscovery(false);
+            updatedAction.setServerInstallation(false);
+        }
         actionRepository.save(updatedAction);
     }
 

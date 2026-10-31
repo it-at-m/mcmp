@@ -1,5 +1,6 @@
 import type { AwxConfig } from "@/types/AwxConfig";
 import type { SnowConfig } from "@/types/SnowConfig";
+import type { TaggingAction } from "@/types/TaggingAction";
 
 export default class Action {
   [key: string]: any;
@@ -17,8 +18,6 @@ export default class Action {
     public successTitle: string,
     public successDescription: string,
     public enabled: boolean,
-    public quickdiscovery: boolean,
-    public serverInstallation: boolean,
     public changeRequired: boolean,
     public changeType: "normal" | "standard",
     public changeAction: string | null,
@@ -47,6 +46,7 @@ export default class Action {
     public awxLabels: string,
     public awxEstimatedRuntime: number,
     public isLowPriority: boolean,
-    public createIncidents: boolean
+    public createIncidents: boolean,
+    public taggingAction: TaggingAction | null
   ) {}
 }

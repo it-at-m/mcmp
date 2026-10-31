@@ -169,7 +169,7 @@
           <div
             class="job-banner"
             aria-label="Zur History"
-            @click="$emit('navigateToHistory')"
+            @click="handleNavigateToHistory"
           >
             <strong>{{ jobBannerText }}</strong>
           </div>
@@ -185,7 +185,7 @@
             class="green-it-banner"
             :class="{ 'dark-mode': isDark }"
             aria-label="Zur History"
-            @click="$emit('navigateToHistory')"
+            @click="handleNavigateToHistory"
           >
             <p>{{ greenItBannerIntroText }}</p>
             <ul>
@@ -440,6 +440,14 @@ const greenItBannerIntroText = computed(() => {
     ? "Für den Server ist folgende Green-IT Maßnahme geplant:"
     : "Für den Server sind folgende Green-IT Maßnahmen geplant:";
 });
+
+const handleNavigateToHistory = () => {
+  emit("navigateToHistory");
+};
+
+const handleNavigateToPatchnight = () => {
+  emit("navigateToPatchnight");
+};
 </script>
 
 <!--suppress CssUnresolvedCustomProperty -->

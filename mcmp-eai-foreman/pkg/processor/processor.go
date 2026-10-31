@@ -77,7 +77,7 @@ var (
 	logicalVolumesPattern = regexp.MustCompile(`^logical_volumes::([^:]+)::(.+)$`)
 
 	// virtWhoHostPrefix identifies hosts created by virt-who (case-insensitive).
-  	virtWhoHostPrefix = "virt-who-"
+	virtWhoHostPrefix = "virt-who-"
 )
 
 // NewServiceProcessor creates a new instance of ServiceProcessor with initialized clients.
@@ -171,11 +171,11 @@ func (sp *ServiceProcessor) ProcessForemanHosts(ctx context.Context) error {
 			return fmt.Errorf("failed to retrieve hosts from Foreman instance %d: %w", i+1, err)
 		}
 		originalCount := len(hosts)
-        hosts = filterVirtWhoHosts(hosts)
-        sp.debugPrintf("Filtered out %d virt-who hosts from Foreman instance %d", originalCount-len(hosts), i+1)
-        clientHosts[client] = hosts
-        totalHostCount += len(hosts)
-        sp.debugPrintf("Retrieved %d hosts from Foreman instance %d", len(hosts), i+1)
+		hosts = filterVirtWhoHosts(hosts)
+		sp.debugPrintf("Filtered out %d virt-who hosts from Foreman instance %d", originalCount-len(hosts), i+1)
+		clientHosts[client] = hosts
+		totalHostCount += len(hosts)
+		sp.debugPrintf("Retrieved %d hosts from Foreman instance %d", len(hosts), i+1)
 	}
 
 	sp.debugPrintf("Total hosts to process: %d", totalHostCount)

@@ -716,10 +716,10 @@
                   </div>
                 </common-card>
 
-                <!-- QuickDiscovery Bereich -->
+                <!-- Discovery Bereich -->
                 <common-card
-                  v-if="item.quickdiscovery || item.serverInstallation"
-                  title="QuickDiscovery"
+                  v-if="item.taggingAction"
+                  title="Discovery"
                   :is-default-expanded="false"
                   top-margin="0"
                 >
@@ -731,10 +731,22 @@
                   </template>
                   <div class="detail-content">
                     <div class="detail-row">
+                      <span class="detail-label">CI-Typ:</span>
+                      <span class="detail-value">{{
+                        formatTaggingAction(item.taggingAction)
+                      }}</span>
+                    </div>
+                    <div
+                      v-if="item.hostname"
+                      class="detail-row"
+                    >
                       <span class="detail-label">Hostname:</span>
                       <span class="detail-value">{{ item.hostname }}</span>
                     </div>
-                    <div class="detail-row">
+                    <div
+                      v-if="item.ip"
+                      class="detail-row"
+                    >
                       <span class="detail-label">IP:</span>
                       <span class="detail-value">{{ item.ip }}</span>
                     </div>
@@ -776,7 +788,7 @@
 
                 <!-- Tagging Bereich -->
                 <common-card
-                  v-if="item.serverInstallation"
+                  v-if="item.taggingAction"
                   title="Tagging"
                   :is-default-expanded="false"
                   top-margin="0"
@@ -788,6 +800,12 @@
                     />
                   </template>
                   <div class="detail-content">
+                    <div class="detail-row">
+                      <span class="detail-label">CI-Typ:</span>
+                      <span class="detail-value">{{
+                        formatTaggingAction(item.taggingAction)
+                      }}</span>
+                    </div>
                     <div class="detail-row">
                       <span class="detail-label">Status:</span>
                       <span class="detail-value"
@@ -865,6 +883,7 @@ import CommonCard from "@/components/common/CommonCard.vue";
 import IncidentStatusIcon from "@/components/common/IncidentStatusIcon.vue";
 import JobStatusIcon from "@/components/common/JobStatusIcon.vue";
 import WorkflowStatus from "@/components/common/WorkflowStatus.vue";
+import { taggingActionOptions } from "@/types/TaggingAction";
 import { formatDuration, formatToBerlinDateTime } from "@/util/formatter";
 
 const props = withDefaults(
@@ -1022,6 +1041,10 @@ function setSort(key: string) {
   emit("update:sortBy", sortBy.value);
   emit("update:sortDesc", sortDesc.value);
   emit("update:sort", { by: sortBy.value, desc: sortDesc.value });
+}
+
+function formatTaggingAction(action: JobList["taggingAction"]) {
+  return taggingActionOptions.find((o) => o.key === action)?.text ?? "–";
 }
 </script>
 

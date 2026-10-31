@@ -391,4 +391,9 @@ public class Job extends AbstractEntity {
     @ColumnDefault("true")
     @Column(name = "create_incidents")
     private Boolean createIncidents = true;
+
+    @Convert(converter = TaggingActionConverter.class)
+    @Column(name = "tagging_action")
+    @ColumnTransformer(write = "?::tagging_action")
+    private TaggingAction taggingAction;
 }

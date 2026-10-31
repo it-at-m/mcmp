@@ -3,6 +3,7 @@ package processor
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -49,6 +50,7 @@ type Server struct {
 	Disks                 []*Disk     `json:"disks"`                              // Attached Disks.
 	VDisks                uint64      `json:"vdisks,omitempty"`                   // Number of attached virtual Disks.
 	VDisksCapacityInBytes uint64      `json:"vdisks_capacity_in_bytes,omitempty"` // Size of attached virtual Disks.
+	VirtualAppliance      bool        `json:"virtual_appliance,omitempty"`        // If the VM is a virtual appliance.
 }
 
 // ProcessServer processes a single server based on a proxmox.Resource
@@ -81,7 +83,7 @@ func (p *Processor) ProcessServer(ctx context.Context, res *proxmox.Resource) (*
 	// the SMBIOS/DMI UUID instead
 	server.UUID = cfg.SMBIOS1.UUID
 	if server.UUID == "" {
-		return nil, fmt.Errorf("server %s (%s) is missing a UUID", res.Name, res.VMID)
+		return nil, fmt.Errorf("server %s (%d) is missing a UUID", res.Name, res.VMID)
 	}
 
 	server.VMID = strconv.FormatUint(res.VMID, 10)
@@ -106,6 +108,10 @@ func (p *Processor) ProcessServer(ctx context.Context, res *proxmox.Resource) (*
 		server.PowerState = PowerStatePoweredOn
 	case "stopped":
 		server.PowerState = PowerStatePoweredOff
+	}
+
+	if slices.Contains(res.Tags, "virtual_appliance") {
+		server.VirtualAppliance = true
 	}
 
 	bootTime := time.Now().Add(time.Duration(-res.Uptime) * time.Second)

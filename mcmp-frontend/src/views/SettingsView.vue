@@ -167,6 +167,10 @@
               "
             />
 
+            <unmanaged-server
+              v-if="isAdmin && monitoringTab === 'UnmanagedServer'"
+            />
+
             <job-statistics
               v-if="isAdmin && monitoringTab === 'JobStatistics'"
             />
@@ -207,6 +211,7 @@ import {
   mdiNetwork,
   mdiPuzzle,
   mdiRocketLaunch,
+  mdiServerMinus,
   mdiServerOff,
   mdiSwapHorizontal,
 } from "@mdi/js";
@@ -224,6 +229,7 @@ import JobStatistics from "@/components/Settings/JobStatistics.vue";
 import NetworkGroup from "@/components/Settings/NetworkGroup.vue";
 import PatchnightStatus from "@/components/Settings/PatchnightStatus.vue";
 import Prices from "@/components/Settings/Prices.vue";
+import UnmanagedServer from "@/components/Settings/UnmanagedServer.vue";
 import UnmappedForemanHosts from "@/components/Settings/UnmappedForemanHosts.vue";
 import { useUserStore } from "@/stores/user";
 
@@ -288,6 +294,12 @@ const monitoringItems = computed(() =>
       value: "ForemanIpMismatches",
       title: "Foreman IP-Abweichungen",
       icon: mdiSwapHorizontal,
+      visible: canViewForemanReports.value,
+    },
+    {
+      value: "UnmanagedServer",
+      title: "Unmanaged Server",
+      icon: mdiServerMinus,
       visible: canViewForemanReports.value,
     },
     {

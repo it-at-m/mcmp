@@ -720,8 +720,8 @@ public class OntapImportService {
                 exportPolicy = policyMap.get(createExportPolicyKey(qtreeData.exportPolicy().id()));
             }
 
-            if (isNew || hasQtreeChanges(qtree, qtreeData, exportPolicy)) {
-                updateQtreeFromData(qtree, qtreeData, exportPolicy);
+            if (isNew || hasQtreeChanges(volumeData, qtree, qtreeData, exportPolicy)) {
+                updateQtreeFromData(volumeData, qtree, qtreeData, exportPolicy);
                 qtreesToSave.add(qtree);
             }
             processCifsSharesForQtree(qtreeData, qtree, context, sharesToSave, aclsToSave);
@@ -1229,37 +1229,82 @@ public class OntapImportService {
     /**
      * Checks if a qtree has changes compared to the DTO data.
      *
+     * @param volumeData the parent volume data, used as fallback when the qtree has no quota
      * @param qtree the existing qtree entity
      * @param data the qtree data from DTO
      * @param exportPolicy the export policy to compare
      * @return true if there are changes, false otherwise
      */
-    private boolean hasQtreeChanges(final OntapQtree qtree, final OntapDTO.QTreeData data,
+    private boolean hasQtreeChanges(final OntapDTO.VolumeData volumeData,
+                                    final OntapQtree qtree,
+                                    final OntapDTO.QTreeData data,
                                     final OntapExportPolicy exportPolicy) {
+
         return !Objects.equals(qtree.getName(), data.name()) ||
                 !Objects.equals(qtree.getPath(), data.path()) ||
                 !Objects.equals(qtree.getMountPathNfs(), data.mountPathNfs()) ||
                 !Objects.equals(qtree.getSecurityStyle(), data.securityStyle()) ||
                 !Objects.equals(qtree.getExportPolicy(), exportPolicy) ||
-                hasQuotaChanges(qtree, data.quota());
+                hasQuotaChanges(qtree, data, volumeData);
     }
 
+
+
     /**
-     * Checks if quota data has changes.
+     * Checks if the quota data of a qtree has changes compared to the DTO data.
+     * If the qtree has no quota of its own, the values derived from the parent volume must match.
      *
      * @param qtree the existing qtree entity
-     * @param quota the quota data from DTO
+     * @param data the qtree data from DTO
+     * @param volumeData the parent volume data, used as fallback when the qtree has no quota
      * @return true if there are changes, false otherwise
      */
-    private boolean hasQuotaChanges(final OntapQtree qtree, final OntapDTO.QuotaData quota) {
-        if (quota == null) {
-            return qtree.getQuotaIndex() != null;
-        }
+    private boolean hasQuotaChanges(final OntapQtree qtree, final OntapDTO.QTreeData data,
+                                    final OntapDTO.VolumeData volumeData) {
+        final QuotaValues quota = resolveQtreeQuota(data, volumeData);
         return !Objects.equals(qtree.getQuotaIndex(), quota.index()) ||
                 !Objects.equals(qtree.getQuotaType(), quota.type()) ||
                 !Objects.equals(qtree.getQuotaHardLimit(), quota.hardLimit()) ||
                 !Objects.equals(qtree.getQuotaUsedBytes(), quota.usedBytes()) ||
                 !Objects.equals(qtree.getQuotaUsedPercent(), quota.usedPercent());
+    }
+
+    /**
+     * Quota values as they should be persisted on a qtree.
+     */
+    private record QuotaValues(Long index, String type, Long hardLimit, Long usedBytes, Integer usedPercent) {
+    }
+
+    /**
+     * Resolves the quota values to persist for a qtree.
+     * If the qtree has its own quota, its values are used. Otherwise the logical space of the
+     * parent volume is used, so the qtree reflects the space it shares with the volume.
+     *
+     * @param data the qtree data from DTO
+     * @param volumeData the parent volume data
+     * @return the resolved quota values, never null
+     */
+    private QuotaValues resolveQtreeQuota(final OntapDTO.QTreeData data, final OntapDTO.VolumeData volumeData) {
+        final OntapDTO.QuotaData quota = data != null ? data.quota() : null;
+        if (quota != null) {
+            return new QuotaValues(quota.index(), quota.type(), quota.hardLimit(),
+                    quota.usedBytes(), quota.usedPercent());
+        }
+
+        final OntapDTO.LogicalSpaceData logical = volumeData != null && volumeData.space() != null
+                ? volumeData.space().logicalSpace()
+                : null;
+        if (logical == null) {
+            // No quota and no volume space data available -> nothing to inherit
+            return new QuotaValues(null, null, null, null, null);
+        }
+
+        final Long used = logical.used();
+        final Long available = logical.available();
+        // The volume's logical total size is used + available, so that hardLimit and
+        // usedBytes match the inherited usedPercent.
+        final Long hardLimit = used != null && available != null ? used + available : null;
+        return new QuotaValues(null, null, hardLimit, used, logical.usedPercent());
     }
 
     /**
@@ -1363,13 +1408,16 @@ public class OntapImportService {
     }
 
     /**
-     * Updates a qtree entity from the DTO data.
+     * Updates the properties of an {@code OntapQtree} object based on the provided data.
      *
-     * @param qtree the qtree entity to update
-     * @param data the qtree data from DTO
-     * @param exportPolicy the export policy to assign
+     * @param volumeData   the volume data associated with the qtree.
+     * @param qtree        the qtree to be updated.
+     * @param data         the source data containing the new qtree properties.
+     * @param exportPolicy the export policy to set for the qtree.
      */
-    private void updateQtreeFromData(final OntapQtree qtree, final OntapDTO.QTreeData data,
+    private void updateQtreeFromData(final OntapDTO.VolumeData volumeData,
+                                     final OntapQtree qtree,
+                                     final OntapDTO.QTreeData data,
                                      final OntapExportPolicy exportPolicy) {
         qtree.setName(data.name());
         qtree.setPath(data.path());
@@ -1377,13 +1425,13 @@ public class OntapImportService {
         qtree.setSecurityStyle(data.securityStyle());
         qtree.setExportPolicy(exportPolicy);
 
-        if (data.quota() != null) {
-            qtree.setQuotaIndex(data.quota().index());
-            qtree.setQuotaType(data.quota().type());
-            qtree.setQuotaHardLimit(data.quota().hardLimit());
-            qtree.setQuotaUsedBytes(data.quota().usedBytes());
-            qtree.setQuotaUsedPercent(data.quota().usedPercent());
-        }
+        // Uses the qtree's own quota if present, otherwise the parent volume's logical space
+        final QuotaValues quota = resolveQtreeQuota(data, volumeData);
+        qtree.setQuotaIndex(quota.index());
+        qtree.setQuotaType(quota.type());
+        qtree.setQuotaHardLimit(quota.hardLimit());
+        qtree.setQuotaUsedBytes(quota.usedBytes());
+        qtree.setQuotaUsedPercent(quota.usedPercent());
     }
 
 

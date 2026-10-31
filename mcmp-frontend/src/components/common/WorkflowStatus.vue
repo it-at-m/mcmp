@@ -14,12 +14,14 @@
               <template #activator="{ props: tooltipProps }">
                 <div v-bind="tooltipProps">
                   <job-status-icon
+                    v-if="step.status"
                     :status="step.status"
                     hide-tooltip
                   />
+                  <span v-else>–</span>
                 </div>
               </template>
-              <span>{{ step.label }}: {{ step.status }}</span>
+              <span>{{ step.label }}: {{ step.status ?? "unbekannt" }}</span>
             </v-tooltip>
           </div>
           <div
@@ -44,20 +46,49 @@
 
 <script setup lang="ts">
 import type JobList from "@/types/JobList";
+import type { TaggingAction } from "@/types/TaggingAction";
 
 import { computed } from "vue";
 
 import JobStatusIcon from "@/components/common/JobStatusIcon.vue";
+import { taggingActionOptions } from "@/types/TaggingAction";
 
 const props = defineProps<{
   job: JobList;
   hideLabels?: boolean;
 }>();
 
-const activeSteps = computed(() => {
-  const steps = [];
+interface WorkflowStep {
+  label: string;
+  status: string | null;
+  isMain?: boolean;
+}
 
-  steps.push({ label: "Gesamt", status: props.job.status, isMain: true });
+/**
+ * Leere Strings / Whitespace aus dem Backend werden als "kein Status" behandelt.
+ */
+function normalizeStatus(value?: string | null): string | null {
+  if (value == null) return null;
+  const trimmed = value.trim();
+  return trimmed === "" || trimmed === "null" ? null : trimmed;
+}
+
+/**
+ * Prüft strikt gegen die bekannten Tagging-Action-Keys.
+ * Fängt damit auch "", "null" und unbekannte Werte ab.
+ */
+function isTaggingActionSet(value?: string | null): boolean {
+  return taggingActionOptions.some((option) => option.key === value);
+}
+
+const activeSteps = computed<WorkflowStep[]>(() => {
+  const steps: WorkflowStep[] = [];
+
+  steps.push({
+    label: "Gesamt",
+    status: normalizeStatus(props.job.status),
+    isMain: true,
+  });
 
   if (props.job.changeRequired) {
     steps.push({ label: "Change", status: props.job.changeStatus });
@@ -65,11 +96,17 @@ const activeSteps = computed(() => {
   if (props.job.awxJobEnabled) {
     steps.push({ label: "AWX", status: props.job.awxStatus });
   }
-  if (props.job.quickdiscovery) {
-    steps.push({ label: "Discovery", status: props.job.quickdiscoveryStatus });
-  }
-  if (props.job.serverInstallation) {
-    steps.push({ label: "Tagging", status: props.job.taggingStatus });
+
+  // Discovery & Tagging nur, wenn die Action es wirklich aktiviert.
+  if (isTaggingActionSet(props.job.taggingAction)) {
+    steps.push({
+      label: "Discovery",
+      status: normalizeStatus(props.job.quickdiscoveryStatus),
+    });
+    steps.push({
+      label: "Tagging",
+      status: normalizeStatus(props.job.taggingStatus),
+    });
   }
 
   return steps;

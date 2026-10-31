@@ -205,3 +205,4 @@ route-map.d.ts
 !/dev-tools/exports/.gitkeep
 
 .aiassistant
+.update-logs/

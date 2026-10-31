@@ -1,15 +1,19 @@
 package de.muenchen.mcmp.servicenow;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
 import de.muenchen.mcmp.configuration.EncryptionProperties;
 import de.muenchen.mcmp.servicenow.json.ServiceNowUserResponse;
 import de.muenchen.mcmp.servicenow.json.ServiceNowUserResult;
 import de.muenchen.mcmp.snowConfig.SnowConfigRepository;
 import de.muenchen.mcmp.snowConfig.SnowConfigWithDecryptedPassword;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
@@ -25,6 +29,10 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class ServiceNowClientTest {
+
+    private static final Logger CLIENT_LOGGER = (Logger) LoggerFactory.getLogger(ServiceNowClient.class);
+
+    private Level originalLogLevel;
 
     @Mock
     private EncryptionProperties encryptionProperties;
@@ -54,7 +62,14 @@ class ServiceNowClientTest {
 
     @BeforeEach
     void setUp() {
+        originalLogLevel = CLIENT_LOGGER.getLevel();
+        CLIENT_LOGGER.setLevel(Level.OFF);
         serviceNowClient = new ServiceNowClient(encryptionProperties, snowConfigRepository, serviceNowProperties);
+    }
+
+    @AfterEach
+    void tearDown() {
+        CLIENT_LOGGER.setLevel(originalLogLevel);
     }
 
     private void setupDefaultConfigLenient() {

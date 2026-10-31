@@ -274,9 +274,51 @@
         </template>
         <template #item.managed="{ item }">
           <v-icon
-            v-if="item.managed"
+            v-if="getManagedServerItem(item).managed"
             :icon="mdiCheckCircle"
             color="btn_green"
+            @mouseenter="onRowTooltipHover($event, 'in Foreman verwaltet')"
+            @mouseleave="onRowTooltipLeave"
+            @focus="onRowTooltipHover($event, 'in Foreman verwaltet')"
+            @blur="onRowTooltipLeave"
+          />
+          <v-icon
+            v-else-if="getManagedServerItem(item).virtualAppliance"
+            :icon="mdiServerNetwork"
+            color="accent"
+            @mouseenter="
+              onRowTooltipHover(
+                $event,
+                'virtuelle Appliance, eingeschränkte Funktionen'
+              )
+            "
+            @mouseleave="onRowTooltipLeave"
+            @focus="
+              onRowTooltipHover(
+                $event,
+                'virtuelle Appliance, eingeschränkte Funktionen'
+              )
+            "
+            @blur="onRowTooltipLeave"
+          />
+          <v-icon
+            v-else
+            :icon="mdiCancel"
+            color="grey"
+            @mouseenter="
+              onRowTooltipHover(
+                $event,
+                'nicht verwaltet, eingeschränkte Funktionen'
+              )
+            "
+            @mouseleave="onRowTooltipLeave"
+            @focus="
+              onRowTooltipHover(
+                $event,
+                'nicht verwaltet, eingeschränkte Funktionen'
+              )
+            "
+            @blur="onRowTooltipLeave"
           />
         </template>
         <template #item.os="{ item }">
@@ -304,7 +346,7 @@
       :model-value="!!rowTooltipActivator"
       :activator="rowTooltipActivator"
       :text="rowTooltipText"
-    />
+    ></v-tooltip>
   </div>
 </template>
 
@@ -315,6 +357,7 @@ import type { DataTableHeader } from "vuetify";
 
 import {
   mdiAlert,
+  mdiCancel,
   mdiCheckCircle,
   mdiCloud,
   mdiDelete,
@@ -325,6 +368,7 @@ import {
   mdiPlus,
   mdiRestart,
   mdiServer,
+  mdiServerNetwork,
   mdiStop,
   mdiStopCircle,
   mdiWrenchClock,
@@ -352,6 +396,7 @@ const props = defineProps<{
 
 const formatter = useFormatter();
 const userStore = useUserStore();
+
 const isOperator = computed(() =>
   userStore.getUser?.authorities.includes("ROLE_OPERATOR")
 );
@@ -409,7 +454,7 @@ const headers: DataTableHeader[] = [
   { title: "Typ", key: "serverKind", sort: localeCompare, width: 60 },
   { title: "Servername", key: "name", sort: localeCompare },
   { title: "Status", key: "powerState", sort: localeCompare },
-  { title: "Verwaltet", key: "managed" },
+  { title: "Modus", key: "managed" },
   { title: "Betriebssystem", key: "os", sort: localeCompare },
   { title: "CPUs", key: "numCpu", sort: numericCompare },
   { title: "RAM", key: "memoryMb", sort: numericCompare },
@@ -459,6 +504,17 @@ const loadSnapshotCount = async (id: number) => {
   }
 };
 
+const getManagedServerItem = (item: any) => {
+  const serverId = Number(item.id);
+  const fullServer = fullServerCache.value.get(serverId);
+
+  if (!fullServer && !fullServerCache.value.has(serverId)) {
+    loadFullServer(serverId);
+  }
+
+  return fullServer || item;
+};
+
 const serversForBatch = computed(() => {
   return selectedServers.value
     .map((id) => fullServerCache.value.get(Number(id)))
@@ -471,6 +527,17 @@ watch(
     selectedServers.value = [];
     fullServerCache.value = new Map();
   }
+);
+
+watch(
+  () => props.selectedAppservice?.servers,
+  (newServers) => {
+    if (newServers && newServers.length) {
+      const ids = newServers.map((s: any) => Number(s.id)).filter(Boolean);
+      preloadFullServers(ids);
+    }
+  },
+  { immediate: true, deep: true }
 );
 
 watch(selectedServers, (newIds, oldIds) => {

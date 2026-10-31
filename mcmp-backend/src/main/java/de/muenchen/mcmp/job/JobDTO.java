@@ -119,4 +119,6 @@ public class JobDTO {
     public String awxJobErrorMessage;
     public String awxTemplateLink;
     public String awxTemplateName;
+
+    public TaggingAction taggingAction;
 }

@@ -160,13 +160,26 @@ use([CanvasRenderer, BarChart, GridComponent, TooltipComponent]);
 const theme = useTheme();
 const loading = ref(false);
 const statistics = ref<JobStatistics[]>([]);
-const startDate = ref("2025-12-01");
-const endDate = ref("2026-03-03");
+const startDate = ref("2026-01-01");
+const endDate = ref(getTomorrowIsoDate());
 
 const currentSortBy = ref<{ key: string; order: "asc" | "desc" }>({
   key: "action",
   order: "asc",
 });
+
+function formatIsoDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getTomorrowIsoDate(): string {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return formatIsoDate(tomorrow);
+}
 
 const sortedStatistics = computed(() => {
   const summe = statistics.value.find((item) => item.action === "SUMME");

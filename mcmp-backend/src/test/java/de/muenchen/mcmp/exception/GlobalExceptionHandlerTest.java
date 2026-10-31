@@ -1,11 +1,15 @@
 package de.muenchen.mcmp.exception;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
 import de.muenchen.mcmp.clients.greenit.GreenITResponseDTO;
 import de.muenchen.mcmp.errorlog.ErrorLogReference;
 import de.muenchen.mcmp.errorlog.ErrorLogService;
 import jakarta.servlet.http.HttpServletRequest;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,17 +34,29 @@ import static org.mockito.Mockito.when;
 
 class GlobalExceptionHandlerTest {
 
+    private static final Logger HANDLER_LOGGER = (Logger) LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    private Level originalLogLevel;
+
     private ErrorLogService errorLogService;
     private GlobalExceptionHandler handler;
     private HttpServletRequest request;
 
     @BeforeEach
     void setUp() {
+        originalLogLevel = HANDLER_LOGGER.getLevel();
+        HANDLER_LOGGER.setLevel(Level.OFF);
+
         errorLogService = mock(ErrorLogService.class);
         handler = new GlobalExceptionHandler(errorLogService);
         request = mock(HttpServletRequest.class);
         when(request.getMethod()).thenReturn("POST");
         when(request.getRequestURI()).thenReturn("/job/create/LINUX_RHEL10_SERVER");
+    }
+
+    @AfterEach
+    void tearDown() {
+        HANDLER_LOGGER.setLevel(originalLogLevel);
     }
 
     @Test

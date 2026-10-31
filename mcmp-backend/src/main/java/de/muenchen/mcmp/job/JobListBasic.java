@@ -1,5 +1,7 @@
 package de.muenchen.mcmp.job;
 
+import de.muenchen.mcmp.types.TaggingAction;
+
 import java.time.Instant;
 
 public interface JobListBasic {
@@ -103,4 +105,6 @@ public interface JobListBasic {
     Long getAwxJobDuration();
 
     String getAwxTemplateLink();
+
+    TaggingAction getTaggingAction();
 }

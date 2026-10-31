@@ -15,6 +15,7 @@
         variant="flat"
         :href="href"
         target="_blank"
+        @click="$emit('click', $event)"
       />
     </template>
   </v-tooltip>
@@ -39,6 +40,11 @@ const props = withDefaults(
   }
 );
 
+// Klick-Event für die Komponente definieren
+defineEmits<{
+  (e: "click", event: MouseEvent): void;
+}>();
+
 const isMatch = computed(() => {
   if (props.value === undefined || props.value === null) {
     return false;
@@ -58,6 +64,7 @@ const isMatch = computed(() => {
   }
 });
 </script>
+
 <style scoped>
 :deep(.status-chip-tooltip) {
   white-space: pre-line;

@@ -87,6 +87,7 @@ public record ServerDTO(
         @JsonProperty("cpu_allocation_reservation") Long cpuAllocationReservation,
         @JsonProperty("vdisks") Short vdisks,
         @JsonProperty("vdisks_capacity_in_bytes") Long vdisksCapacityInBytes,
+        @JsonProperty("virtual_appliance") Boolean virtualAppliance,
 
         // semantics for optional lists:
         //  (1) missing / `null` => ignored
@@ -150,6 +151,9 @@ public record ServerDTO(
             overallStatus = ServerStatusType.gray;
         if (configStatus == null)
             configStatus = ServerStatusType.gray;
+
+        if (virtualAppliance == null)
+            virtualAppliance = false;
 
         // remove nulls from collections
         disks.ifPresent(lst -> lst.removeIf(Objects::isNull));
@@ -236,7 +240,8 @@ public record ServerDTO(
                 || !Objects.equals(existing.getCpuAllocationOverheadLimit(), memoryAllocationOverheadLimit)
                 || !Objects.equals(existing.getCpuAllocationReservation(), cpuAllocationReservation)
                 || !Objects.equals(existing.getVdisks(), vdisks)
-                || !Objects.equals(existing.getVdisksCapacityInBytes(), vdisksCapacityInBytes);
+                || !Objects.equals(existing.getVdisksCapacityInBytes(), vdisksCapacityInBytes)
+                || !Objects.equals(existing.getVirtualAppliance(), virtualAppliance);
     }
 
     /**
@@ -333,6 +338,7 @@ public record ServerDTO(
         existing.setCpuAllocationReservation(cpuAllocationReservation);
         existing.setVdisks(vdisks);
         existing.setVdisksCapacityInBytes(vdisksCapacityInBytes);
+        existing.setVirtualAppliance(virtualAppliance);
     }
 
     /**

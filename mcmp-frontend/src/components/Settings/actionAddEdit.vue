@@ -600,6 +600,8 @@
                 'windows_disk_upgrade',
                 'linux_disk_upgrade',
                 'vm_resource_upgrade',
+                'packetshop_repo_create',
+                'packetshop_repo_attach',
               ]"
               maxlength="64"
               :rules="[

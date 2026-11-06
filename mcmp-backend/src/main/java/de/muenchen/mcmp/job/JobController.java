@@ -2285,7 +2285,7 @@ public class JobController {
 
     @PostMapping("/create/" + PAKETSHOP_REPO_DETACH)
     public void paketshopRepoDetach(@RequestBody final Map<String, Object> awxExtraVars) {
-        final Repository repository = requireEditableRepository(awxExtraVars.get("name"), PAKETSHOP_REPO_DETACH);
+        final Repository repository = requireUnlockedRepository(awxExtraVars.get("name"));
         final List<Server> servers = requireEditableServers(awxExtraVars.get("control_paketshop_repos_systems"), "Systems", PAKETSHOP_REPO_DETACH);
 
         servers.forEach(server -> logCreatedJob(PAKETSHOP_REPO_DETACH, server.getId()));
@@ -2583,6 +2583,12 @@ public class JobController {
             if (!"poweredOn".equals(server.getPowerState())) {
                 logTriedToCreateJob(jobIdentifier, server.getId());
                 throw new BusinessValidationException("Server " + server.getFqdn() + " ist nicht eingeschaltet.");
+            }
+            final CloudType cloudType = server.getCloud() == null ? null : server.getCloud().getCloudType();
+            if (cloudType != CloudType.VMWARE && cloudType != CloudType.PROXMOX) {
+                logTriedToCreateJob(jobIdentifier, server.getId());
+                throw new IllegalArgumentException("Server " + server.getFqdn() + " (cloud type " + cloudType
+                        + ") does not support repository actions.");
             }
             foundFqdns.add(server.getFqdn().toUpperCase(Locale.ROOT));
             distinctServers.putIfAbsent(server.getId(), server);

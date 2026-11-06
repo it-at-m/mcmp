@@ -6,4 +6,5 @@ public interface RepositoryListProjection {
     String getLockStatus();
     Boolean getIsFavorite();
     Boolean getCanEdit();
+    Long getAppserviceCount();
 }

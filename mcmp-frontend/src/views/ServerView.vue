@@ -388,6 +388,7 @@
                       :repos="repos"
                       :loading="loadingRepos"
                       :server="selectedServerItem"
+                      @changed="fetchRepos()"
                     />
                   </v-tabs-window-item>
 

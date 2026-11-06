@@ -60,7 +60,25 @@
         v-else
         v-model="selectedRepo"
         :target-server-id="props.server?.id"
-      />
+      >
+        <template #append>
+          <info-tooltip>
+            Es werden nur Repositories angezeigt, die:
+            <ul class="ml-4">
+              <li>genau einem Anwendungsservice zugeordnet sind</li>
+              <li>nicht gesperrt sind</li>
+              <li>
+                offen sind oder, falls nur für Besitzer freigegeben, von Ihnen
+                bearbeitet werden dürfen
+              </li>
+              <li>
+                zur Umgebung des Servers passen (P nur mit -prod, C/K nur mit
+                -test)
+              </li>
+            </ul>
+          </info-tooltip>
+        </template>
+      </repo-autocomplete-field>
 
       <common-alert
         v-if="props.server"
@@ -102,12 +120,13 @@
             <ul class="ml-4">
               <li>eingeschaltet sind</li>
               <li>von MCMP verwaltete Linux-Server sind</li>
+              <li>virtuelle Maschinen sind (VMware, Proxmox)</li>
               <li>nicht gesperrt sind</li>
               <li>genau einem Anwendungsservice zugeordnet sind</li>
               <li>von Ihnen bearbeitet werden dürfen</li>
               <li>
-                zur Umgebung des Repositories passen (P nur mit P, C/K nur mit
-                C/K)
+                zur Umgebung des Repositories passen (-prod nur mit P, -test nur
+                mit C/K)
               </li>
             </ul>
           </info-tooltip>
@@ -120,6 +139,16 @@
         class="mt-3"
       >
         {{ blockedReason }}
+      </common-alert>
+      <common-alert
+        v-else-if="notOwnedRepoNames.length > 0"
+        color="warning"
+        class="mt-3"
+      >
+        Sie sind nicht Besitzer von
+        {{ notOwnedRepoNames.length > 1 ? "den Repositories" : "Repository" }}
+        {{ notOwnedRepoNames.join(", ") }}. Die Anbindung muss zuerst von den
+        Besitzern des Repositories genehmigt werden.
       </common-alert>
 
       <v-checkbox
@@ -231,6 +260,11 @@ const fqdnsToAttach = computed<string[]>(() =>
 // e.g. SELF_ONLY repositories the user doesn't own, the backend rejects those
 const blockedReason = computed(
   () => reposToAttach.value.map(repoAttachDisabledReason).find((r) => r) ?? ""
+);
+
+// attaching repositories the user doesn't own (PAKETSHOP_REPO_ATTACH_NOT_OWNED_REPO) needs the owners' approval
+const notOwnedRepoNames = computed(() =>
+  reposToAttach.value.filter((r) => r.canEdit === false).map((r) => r.name)
 );
 
 const canSubmit = computed(

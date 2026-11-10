@@ -1666,7 +1666,30 @@ public class JobService {
         }
     }
 
+    private static Map<String, Object> flattenPlaceholderVars(final Map<String, Object> params) {
+        if (params == null) {
+            return null;
+        }
+        final Map<String, Object> flattened = new HashMap<>(params);
+        params.forEach((key, value) -> addNestedPlaceholderVars(flattened, key, value));
+        return flattened;
+    }
+
+    private static void addNestedPlaceholderVars(final Map<String, Object> target, final String prefix, final Object value) {
+        if (value instanceof Map<?, ?> nested) {
+            nested.forEach((nestedKey, nestedValue) -> {
+                if (nestedValue != null) {
+                    final String key = prefix + "." + nestedKey;
+                    target.put(key, nestedValue);
+                    addNestedPlaceholderVars(target, key, nestedValue);
+                }
+            });
+        }
+    }
+
     private String replaceJobPlaceholderVars(Map<String, Object> descriptionParams, Job job, String ActionExtraVars, Map<String, Object> guiParams) {
+        descriptionParams = flattenPlaceholderVars(descriptionParams);
+        guiParams = flattenPlaceholderVars(guiParams);
         if (descriptionParams != null) {
             for (Map.Entry<String, Object> entry : descriptionParams.entrySet()) {
                 final String placeholder = Pattern.quote("${" + entry.getKey() + "}");

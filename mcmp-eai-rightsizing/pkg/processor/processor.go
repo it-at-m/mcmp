@@ -778,7 +778,7 @@ func (p *Processor) calculateRecommendedMemory(vmName string, currentMemoryMB in
 			result = currentMemoryMB
 		} else {
 			// Above minimum — don't go below 6 GB
-			result = max(result, 6)
+			result = max(result, 6*1024)
 		}
 	} else {
 		if currentMemoryMB*1024 < 4 {
@@ -786,7 +786,7 @@ func (p *Processor) calculateRecommendedMemory(vmName string, currentMemoryMB in
 			result = currentMemoryMB
 		} else {
 			// Above minimum — don't go below 4 GB
-			result = max(result, 4)
+			result = max(result, 4*1024)
 		}
 	}
 

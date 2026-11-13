@@ -775,7 +775,7 @@ func (p *Processor) calculateRecommendedMemory(vmName string, currentMemoryMB in
 		result = result + 2*1024 //add 2 GB safty for Oracle DB server
 		if result < 6*1024 {
 			// Already at or below minimum — never downsize
-			result = currentMemoryMB * 1024
+			result = currentMemoryMB
 		} else {
 			// Above minimum — don't go below 6 GB
 			result = max(result, 6)
@@ -783,7 +783,7 @@ func (p *Processor) calculateRecommendedMemory(vmName string, currentMemoryMB in
 	} else {
 		if currentMemoryMB*1024 < 4 {
 			// Already at or below minimum — never downsize
-			result = currentMemoryMB * 1024
+			result = currentMemoryMB
 		} else {
 			// Above minimum — don't go below 4 GB
 			result = max(result, 4)

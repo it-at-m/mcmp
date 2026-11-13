@@ -772,6 +772,7 @@ func (p *Processor) calculateRecommendedMemory(vmName string, currentMemoryMB in
 
 	// db-server: special RAM floor rules
 	if reDB.MatchString(vmName) {
+		result = result + 2*1024 //add 2 GB safty for Oracle DB server
 		if result < 6*1024 {
 			// Already at or below minimum — never downsize
 			result = currentMemoryMB * 1024

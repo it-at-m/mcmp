@@ -781,7 +781,7 @@ func (p *Processor) calculateRecommendedMemory(vmName string, currentMemoryMB in
 			result = max(result, 6*1024)
 		}
 	} else {
-		if currentMemoryMB*1024 < 4 {
+		if currentMemoryMB < 4*1024 {
 			// Already at or below minimum — never downsize
 			result = currentMemoryMB
 		} else {

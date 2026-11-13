@@ -105,7 +105,7 @@ public class JobController {
 
     public static final String STORAGE_MODIFY_NFS = "STORAGE_MODIFY_NFS";
     public static final String STORAGE_MODIFY_CIFS = "STORAGE_MODIFY_CIFS";
-//    public static final String STORAGE_DELETE_NFS = "STORAGE_DELETE_NFS";
+    //    public static final String STORAGE_DELETE_NFS = "STORAGE_DELETE_NFS";
 //    public static final String STORAGE_DELETE_CIFS = "STORAGE_DELETE_CIFS";
     public static final String STORAGE_CHANGE_NFS_EXPORT_POLICY = "STORAGE_CHANGE_NFS_EXPORT_POLICY";
     public static final String STORAGE_CHANGE_CIFS_PERMISSIONS = "STORAGE_CHANGE_CIFS_PERMISSIONS";
@@ -448,8 +448,14 @@ public class JobController {
             throw new IllegalArgumentException("CPU must be at least 1, RAM must be at least 2 GB.");
         }
 
-        // 4. Nur das von den Schwellenwerten abhängige Suffix ermitteln
-        String actionSuffix = (ram > 100 || cpu > 72) ? VM_RESOURCE_UPGRADE : CHANGE_CPU_RAM;
+        // 4. Nur das von den Schwellenwerten abhängige Suffix ermitteln (unter Berücksichtigung des Ist-Zustands)
+        int currentCpu = (server != null && server.numCpu() != null) ? server.numCpu() : 0;
+        int currentRamGb = (server != null && server.memoryMb() != null) ? (server.memoryMb() / 1024) : 0;
+
+        boolean isCpuUpgrade = cpu > 72 && cpu > currentCpu;
+        boolean isRamUpgrade = ram > 100 && ram > currentRamGb;
+
+        String actionSuffix = (isCpuUpgrade || isRamUpgrade) ? VM_RESOURCE_UPGRADE : CHANGE_CPU_RAM;
 
         // 5. Job anlegen – Der JobService ermittelt die Cloud des Servers und baut den vollständigen Action-Namen
         logCreatedJob(actionSuffix, serverId);
@@ -1246,7 +1252,7 @@ public class JobController {
     // -----------------------------------------------------------------------------------------------------------------
     @PostMapping("/create/" + DB_ORACLE_CREATE_BACKUP)
     public void createOracleBackup(@RequestParam(name = "serverId") final Long serverId,
-                                         @RequestBody final Map<String, Object> awxExtraVars) {
+                                   @RequestBody final Map<String, Object> awxExtraVars) {
         if (!serverService.canUserEditServer(serverId)) {
             logTriedToCreateJob(DB_ORACLE_CREATE_BACKUP, serverId);
             throw new AccessDeniedException("You are not allowed to create a job for this server.");
@@ -1477,7 +1483,7 @@ public class JobController {
 
     @PostMapping("/create/" + LOADBALANCER_F5_CHANGE_POOL_MEMBERS)
     public void loadbalancerF5ChangePoolMembers(@RequestParam(name = "serverId") final Long serverId,
-                                                 @RequestBody final Map<String, Object> awxExtraVars) {
+                                                @RequestBody final Map<String, Object> awxExtraVars) {
         Object lbVirtualServerIdObj = awxExtraVars.get("lb_virtual_server_id");
         if (lbVirtualServerIdObj == null) {
             throw new MissingFormatArgumentException("Loadbalancer ID must be provided.");
@@ -1590,7 +1596,7 @@ public class JobController {
 
     @PostMapping("/create/" + LOADBALANCER_F5_DELETE)
     public void loadbalancerF5Delete(@RequestParam(name = "serverId") final Long serverId,
-                                      @RequestBody final Map<String, Object> awxExtraVars) {
+                                     @RequestBody final Map<String, Object> awxExtraVars) {
         Object lbVirtualServerIdObj = awxExtraVars.get("lb_virtual_server_id");
         if (lbVirtualServerIdObj == null) {
             throw new MissingFormatArgumentException("Loadbalancer ID must be provided.");
@@ -1727,8 +1733,8 @@ public class JobController {
         if (newSize < 1 || newSize > 2048 ||
                 (newSize < oldSize && (
                         spaceLogicalUsed > newSize * 1024L * 1024L * 1024L ||
-                        spaceSnapshotUsed > newSize * 1024L * 1024L * 1024L ||
-                        spaceLogicalUsedByAfs > newSize * 1024L * 1024L * 1024L)) ||
+                                spaceSnapshotUsed > newSize * 1024L * 1024L * 1024L ||
+                                spaceLogicalUsedByAfs > newSize * 1024L * 1024L * 1024L)) ||
                 newSize > ((3L * oldSize + 1L) / 2L)) {
             log.warn("Invalid new size provided by user: {} for serverId: {} for job {}", AuthUtils.getUsername(), serverId, jobIdentifier);
             throw new IllegalArgumentException("New size must be between 1 and 2048 GB, and can only be smaller than the old size if the used size including snapshots and AFS is smaller than the new size, and can only be bigger than the old size with max 50%.");
@@ -1749,7 +1755,7 @@ public class JobController {
 
     @PostMapping("/create/" + STORAGE_CREATE_SNAPSHOT_NFS)
     public void storageCreateSnapshotNfs(@RequestParam(name = "serverId") final Long serverId,
-                                  @RequestBody final Map<String, Object> awxExtraVars) {
+                                         @RequestBody final Map<String, Object> awxExtraVars) {
         handleStorageCreateSnapshotShare(
                 awxExtraVars,
                 serverId,
@@ -1818,7 +1824,7 @@ public class JobController {
 
     @PostMapping("/create/" + STORAGE_DELETE_SNAPSHOT_NFS)
     public void storageDeleteSnapshotNfs(@RequestParam(name = "serverId") final Long serverId,
-                                          @RequestBody final Map<String, Object> awxExtraVars) {
+                                         @RequestBody final Map<String, Object> awxExtraVars) {
         handleStorageDeleteSnapshotShare(
                 awxExtraVars,
                 serverId,
@@ -1830,7 +1836,7 @@ public class JobController {
 
     @PostMapping("/create/" + STORAGE_DELETE_SNAPSHOT_CIFS)
     public void storageDeleteSnapshotCifs(@RequestParam(name = "serverId") final Long serverId,
-                                           @RequestBody final Map<String, Object> awxExtraVars) {
+                                          @RequestBody final Map<String, Object> awxExtraVars) {
         handleStorageDeleteSnapshotShare(
                 awxExtraVars,
                 serverId,
@@ -1841,10 +1847,10 @@ public class JobController {
     }
 
     private void handleStorageDeleteSnapshotShare(Map<String, Object> awxExtraVars,
-                                                   Long serverId,
-                                                   StorageType storageType,
-                                                   String storageLabel,
-                                                   String jobIdentifier) {
+                                                  Long serverId,
+                                                  StorageType storageType,
+                                                  String storageLabel,
+                                                  String jobIdentifier) {
         final String snapshotNameRegex = "^[a-z0-9_.-]{3,60}$";
         Object storageUuidObj = awxExtraVars.get("uuid");
         Object snapshotNameObj = awxExtraVars.get("snapshotName");
@@ -1888,7 +1894,7 @@ public class JobController {
 
     @PostMapping("/create/" + STORAGE_CHANGE_SNAPSHOT_POLICY_NFS)
     public void storageChangeSnapshotPolicyNfs(@RequestParam(name = "serverId") final Long serverId,
-                                          @RequestBody final Map<String, Object> awxExtraVars) {
+                                               @RequestBody final Map<String, Object> awxExtraVars) {
         handleStorageChangeSnapshotPolicyShare(
                 awxExtraVars,
                 serverId,
@@ -1900,7 +1906,7 @@ public class JobController {
 
     @PostMapping("/create/" + STORAGE_CHANGE_SNAPSHOT_POLICY_CIFS)
     public void storageChangeSnapshotPolicyCifs(@RequestParam(name = "serverId") final Long serverId,
-                                           @RequestBody final Map<String, Object> awxExtraVars) {
+                                                @RequestBody final Map<String, Object> awxExtraVars) {
         handleStorageChangeSnapshotPolicyShare(
                 awxExtraVars,
                 serverId,
@@ -1912,7 +1918,7 @@ public class JobController {
 
     @PostMapping("/create/" + STORAGE_CHANGE_NFS_EXPORT_POLICY)
     public void storageChangeNfsExportPolicy(@RequestParam(name = "serverId") final Long serverId,
-                                                @RequestBody final Map<String, Object> awxExtraVars) {
+                                             @RequestBody final Map<String, Object> awxExtraVars) {
         Object storageUuidObj = awxExtraVars.get("uuid");
         Object fqdnObj = awxExtraVars.get("fqdn");
         Object permissionObj = awxExtraVars.get("permission");
@@ -1955,7 +1961,7 @@ public class JobController {
         boolean fqdnAlreadyInExportPolicy = storageItem.getNfs_export_policy() != null
                 && storageItem.getNfs_export_policy().getOntapExportPolicyRules() != null
                 && storageItem.getNfs_export_policy().getOntapExportPolicyRules().stream()
-                        .anyMatch(rule -> rule.getClients() != null && rule.getClients().contains(fqdn));
+                .anyMatch(rule -> rule.getClients() != null && rule.getClients().contains(fqdn));
         if (!fqdnAlreadyInExportPolicy) {
             log.info("FQDN provided by user: {} for serverId: {} is not part of the existing export policy.", AuthUtils.getUsername(), serverId);
             throw new IllegalArgumentException("FQDN is not part of the existing export policy.");
@@ -2021,10 +2027,10 @@ public class JobController {
     }
 
     private void handleStorageChangeSnapshotPolicyShare(Map<String, Object> awxExtraVars,
-                                                   Long serverId,
-                                                   StorageType storageType,
-                                                   String storageLabel,
-                                                   String jobIdentifier) {
+                                                        Long serverId,
+                                                        StorageType storageType,
+                                                        String storageLabel,
+                                                        String jobIdentifier) {
         Object storageUuidObj = awxExtraVars.get("uuid");
         Object newPolicyObj = awxExtraVars.get("newPolicy");
 

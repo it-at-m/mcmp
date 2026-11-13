@@ -99,8 +99,8 @@
 
         <!-- Hinweis bei Überschreitung der Grenzwerte -->
         <v-col
-          v-if="cpus > 72 || ram > 100"
-          cols="12"
+            v-if="(cpus > 72 && cpus > server.numCpu) || (ram > 100 && ram > formatter.calculateMBtoGB(server.memoryMb))"
+            cols="12"
         >
           <common-alert color="info">
             <h4>Hinweis:</h4>

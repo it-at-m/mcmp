@@ -767,32 +767,41 @@ func (p *Processor) calculateRecommendedMemory(vmName string, currentMemoryMB in
 		recommendedMemoryMB = recommendedMemoryMB * p.config.MemoryMarginFactor
 	}
 
+	// All memory values below are handled in MB.
+	const (
+		memoryIncrementMB = 1024     // 1 GB sizing increment
+		minMemoryMB       = 4 * 1024 // 4 GB general floor
+		minMemoryDBMB     = 6 * 1024 // 6 GB floor for DB servers
+		oracleSafetyMB    = 2 * 1024 // extra headroom for Oracle DB servers
+	)
+
 	// Round to nearest 1024MB increment (common VM memory sizing)
-	result := int((recommendedMemoryMB+512)/1024) * 1024
+	result := int((recommendedMemoryMB+512)/float64(memoryIncrementMB)) * memoryIncrementMB
 
 	// db-server: special RAM floor rules
 	if reDB.MatchString(vmName) {
-		result = result + 2*1024 //add 2 GB safty for Oracle DB server
-		if result < 6*1024 {
+		result += oracleSafetyMB // add 2 GB safety for Oracle DB server
+		if currentMemoryMB <= minMemoryDBMB {
 			// Already at or below minimum — never downsize
 			result = currentMemoryMB
 		} else {
 			// Above minimum — don't go below 6 GB
-			result = max(result, 6*1024)
+			result = max(result, minMemoryDBMB)
 		}
 	} else {
-		if currentMemoryMB < 4*1024 {
+		if currentMemoryMB <= minMemoryMB {
 			// Already at or below minimum — never downsize
 			result = currentMemoryMB
 		} else {
 			// Above minimum — don't go below 4 GB
-			result = max(result, 4*1024)
+			result = max(result, minMemoryMB)
 		}
 	}
 
 	// Never recommend less than half the current allocation, regardless of server class.
-	if float64(result) < float64(currentMemoryMB)/2 {
-		result = int(math.Round(float64(currentMemoryMB)/2/1024)) * 1024
+	// Use math.Ceil so rounding to the 1 GB grid cannot drop below half.
+	if result < currentMemoryMB/2 {
+		result = int(math.Ceil(float64(currentMemoryMB)/2/float64(memoryIncrementMB))) * memoryIncrementMB
 	}
 
 	return result

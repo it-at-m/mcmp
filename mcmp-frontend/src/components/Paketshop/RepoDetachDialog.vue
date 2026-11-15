@@ -94,6 +94,7 @@
               <li>das Repository angebunden haben</li>
               <li>eingeschaltet sind</li>
               <li>von MCMP verwaltete Linux-Server sind</li>
+              <li>virtuelle Maschinen sind (VMware, Proxmox)</li>
               <li>nicht gesperrt sind</li>
               <li>genau einem Anwendungsservice zugeordnet sind</li>
               <li>von Ihnen bearbeitet werden dürfen</li>
@@ -101,6 +102,17 @@
           </info-tooltip>
         </template>
       </v-autocomplete>
+
+      <common-alert
+        v-if="notOwnedRepoNames.length > 0"
+        color="warning"
+        class="mt-3"
+      >
+        Sie sind nicht Besitzer von
+        {{ notOwnedRepoNames.length > 1 ? "den Repositories" : "Repository" }}
+        {{ notOwnedRepoNames.join(", ") }}. Ein erneutes Anbinden ist nur durch
+        die Besitzer oder mit deren Genehmigung möglich.
+      </common-alert>
     </v-form>
   </common-dialog>
 </template>
@@ -193,6 +205,11 @@ const title = computed(() =>
 
 const fqdnsToDetach = computed<string[]>(() =>
   props.server ? [props.server.fqdn] : selectedFqdns.value
+);
+
+// detaching only needs server permission, but reattaching repositories the user doesn't own needs the owners
+const notOwnedRepoNames = computed(() =>
+  props.repositories.filter((r) => r.canEdit === false).map((r) => r.name)
 );
 
 const canSubmit = computed(

@@ -24,12 +24,14 @@ import java.util.Optional;
 public class RepositoryService {
 
     private final RepositoryRepository repositoryRepository;
-    private final RepositoryMapper repositoryMapper;
     private final ServerRepository serverRepository;
 
     @Transactional(readOnly = true)
     public List<RepositoryDTO> findByServerId(final Long serverId) {
-        return repositoryMapper.toDTOs(repositoryRepository.findAllByServersIdOrderByNameAscIgnoreCase(serverId));
+        final UserRoles userRoles = AuthUtils.getCurrentUserRoles();
+        return repositoryRepository.findByServerId(serverId, userRoles.getUsername(), userRoles.hasAdminRole()).stream()
+                .map(RepositoryService::toDTO)
+                .toList();
     }
 
     /**
@@ -65,16 +67,11 @@ public class RepositoryService {
                 editableOnly,
                 PaketshopEnvironmentRule.excludesProduction(serverEnvironments),
                 PaketshopEnvironmentRule.excludesTest(serverEnvironments),
+                targetServerId != null,
                 sortOrder,
                 pageable
         );
-        return page.map(proj -> RepositoryDTO.builder()
-                .id(proj.getId())
-                .name(proj.getName())
-                .lockStatus(toLockStatus(proj.getLockStatus()))
-                .isFavorite(Boolean.TRUE.equals(proj.getIsFavorite()))
-                .canEdit(Boolean.TRUE.equals(proj.getCanEdit()))
-                .build());
+        return page.map(RepositoryService::toDTO);
     }
 
     @Transactional(readOnly = true)
@@ -109,13 +106,7 @@ public class RepositoryService {
                         userRoles.hasSecurityRole(),
                         userRoles.hasOperatorRole()
                 ).stream()
-                .map(proj -> RepositoryDTO.builder()
-                        .id(proj.getId())
-                        .name(proj.getName())
-                        .lockStatus(toLockStatus(proj.getLockStatus()))
-                        .isFavorite(Boolean.TRUE.equals(proj.getIsFavorite()))
-                        .canEdit(Boolean.TRUE.equals(proj.getCanEdit()))
-                        .build())
+                .map(RepositoryService::toDTO)
                 .toList();
     }
 
@@ -130,6 +121,17 @@ public class RepositoryService {
         return serverRepository.findAllByRepositoryId(id).stream()
                 .map(s -> new ServerFqdnDTO(s.getId(), s.getName(), s.getFqdn(), s.getPowerState()))
                 .toList();
+    }
+
+    private static RepositoryDTO toDTO(final RepositoryListProjection proj) {
+        return RepositoryDTO.builder()
+                .id(proj.getId())
+                .name(proj.getName())
+                .lockStatus(toLockStatus(proj.getLockStatus()))
+                .isFavorite(Boolean.TRUE.equals(proj.getIsFavorite()))
+                .canEdit(Boolean.TRUE.equals(proj.getCanEdit()))
+                .appserviceCount(proj.getAppserviceCount() == null ? 0 : proj.getAppserviceCount())
+                .build();
     }
 
     private static RepositoryLockStatus toLockStatus(final String lockStatus) {

@@ -736,25 +736,37 @@ onMounted(() => {
 const formatter = useFormatter();
 
 function change_cpu_ram(
-  cpus: number,
-  ram: number,
-  scheduleTime: string | null,
-  schedulePatchnight: boolean
+    cpus: number,
+    ram: number,
+    scheduleTime: string | null,
+    schedulePatchnight: boolean
 ) {
   let actionSuffix = "CHANGE_CPU_RAM";
 
-  if (ram > 100 || cpus > 72) {
+  // 1. Sicherstellen, dass die Slider/Textfeld-Werte echte Zahlen sind
+  const targetCpus = Number(cpus);
+  const targetRamGB = Number(ram);
+
+  // 2. Aktuelle Werte als Zahlen ermitteln (beim RAM zusätzlich runden)
+  const currentCpus = Number(props.selectedServer.numCpu || 0);
+  const currentRamGB = props.selectedServer.memoryMb ? Math.round(props.selectedServer.memoryMb / 1024) : 0;
+
+  // 3. Logik prüfen: Über Schwellenwert UND größer als bisher?
+  const isCpuUpgradeOverThreshold = targetCpus > 72 && targetCpus > currentCpus;
+  const isRamUpgradeOverThreshold = targetRamGB > 100 && targetRamGB > currentRamGB;
+
+  if (isCpuUpgradeOverThreshold || isRamUpgradeOverThreshold) {
     actionSuffix = "VM_RESOURCE_UPGRADE";
   }
 
   const cloudPrefix = props.selectedServer.cloud?.cloudType
-    ? `${props.selectedServer.cloud.cloudType}_`
-    : "";
+      ? `${props.selectedServer.cloud.cloudType}_`
+      : "";
   const actionName = `${cloudPrefix}${actionSuffix}`;
 
   jobService.startJob(loading, actionName, props.selectedServer.id, {
-    cpu: cpus,
-    ram: ram,
+    cpu: targetCpus,
+    ram: targetRamGB,
     scheduleTime: scheduleTime != null ? scheduleTime : undefined,
     schedulePatchnight: schedulePatchnight,
   });

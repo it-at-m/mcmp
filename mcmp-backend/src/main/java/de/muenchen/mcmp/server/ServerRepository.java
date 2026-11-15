@@ -688,11 +688,16 @@ ORDER BY s.name ASC
 
     /**
      * Servers a repository can be attached to / detached from by the current user: powered on, managed Linux
-     * servers with exactly one appservice that the user can edit (same rules as {@link #canUserEditServer} plus
-     * the single-appservice and power state checks in JobController). Requires the alias {@code s} for the server.
+     * virtual machines (VMware, Proxmox) with exactly one appservice that the user can edit (same rules as
+     * {@link #canUserEditServer} plus the single-appservice, power state and cloud type checks in JobController).
+     * Requires the alias {@code s} for the server.
      */
     String REPO_TARGET_SERVER_CONDITION = """
         s.managed = TRUE
+        AND EXISTS (
+            SELECT 1 FROM cmp.cloud c_rt
+            WHERE c_rt.id = s.cloud_id AND c_rt.cloud_type IN ('VMWARE', 'PROXMOX')
+        )
         AND s.role_linux = TRUE
         AND s.power_state = 'poweredOn'
         AND s.locked = FALSE

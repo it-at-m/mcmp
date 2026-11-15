@@ -27,12 +27,7 @@
           v-if="isTestEnv && server"
           :repositories="[item]"
           :server="server"
-          :disabled-reason="
-            editDisabledReason ||
-            (item.lockStatus === 'LOCKED'
-              ? 'Gesperrte Repositories können nicht entfernt werden.'
-              : '')
-          "
+          :disabled-reason="detachDisabledReason(item)"
           small
           @order-done="emit('changed')"
         />
@@ -61,6 +56,7 @@ const props = defineProps<{
     fqdn: string;
     canEdit: boolean;
     powerState: string;
+    cloud: { cloudType: string };
   } | null;
 }>();
 
@@ -68,13 +64,26 @@ const emit = defineEmits<(e: "changed") => void>();
 
 const { isTestEnv } = useTestEnv();
 
+const REPO_CLOUD_TYPES = ["VMWARE", "PROXMOX"];
+
 const editDisabledReason = computed(() => {
+  if (props.server && !REPO_CLOUD_TYPES.includes(props.server.cloud.cloudType))
+    return "Repositories können nur auf virtuellen Maschinen (VMware, Proxmox) verwaltet werden.";
   if (!props.server?.canEdit)
     return "Keine Bestellberechtigung für diesen Server.";
   if (props.server.powerState !== "poweredOn")
     return "Der Server muss eingeschaltet sein.";
   return "";
 });
+
+function detachDisabledReason(repo: Repository): string {
+  if (editDisabledReason.value) return editDisabledReason.value;
+  if (repo.lockStatus === "LOCKED")
+    return "Gesperrte Repositories können nicht bearbeitet werden.";
+  if (repo.appserviceCount !== 1)
+    return "Das Repository muss genau einem Anwendungsservice zugeordnet sein.";
+  return "";
+}
 
 const headers = computed(() => [
   { title: "Name", key: "name" },

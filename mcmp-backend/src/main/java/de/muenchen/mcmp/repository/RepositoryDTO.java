@@ -8,5 +8,6 @@ public record RepositoryDTO(
     String name,
     RepositoryLockStatus lockStatus,
     boolean isFavorite,
-    boolean canEdit
+    boolean canEdit,
+    long appserviceCount
 ) {}

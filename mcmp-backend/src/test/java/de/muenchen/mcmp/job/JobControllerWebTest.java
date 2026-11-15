@@ -4,6 +4,7 @@ import de.muenchen.mcmp.appservice.Appservice;
 import de.muenchen.mcmp.appservice.AppserviceDTO;
 import de.muenchen.mcmp.appservice.AppserviceNameAndSysId;
 import de.muenchen.mcmp.appservice.AppserviceService;
+import de.muenchen.mcmp.cloud.Cloud;
 import de.muenchen.mcmp.config.app.MaintenanceModeConfiguration;
 import de.muenchen.mcmp.config.app.MaintenanceModeInterceptor;
 import de.muenchen.mcmp.configuration.nfcconverter.NfcRequestFilter;
@@ -26,6 +27,7 @@ import de.muenchen.mcmp.server.ServerFullDTO;
 import de.muenchen.mcmp.server.ServerService;
 import de.muenchen.mcmp.snapshot.SnapshotService;
 import de.muenchen.mcmp.storage.UnifiedStorageService;
+import de.muenchen.mcmp.types.CloudType;
 import de.muenchen.mcmp.types.EnvironmentType;
 import de.muenchen.mcmp.user.UserService;
 import org.junit.jupiter.api.Test;
@@ -645,6 +647,9 @@ class JobControllerWebTest {
         server.setId(SERVER_ID);
         server.setFqdn("test.srv.muenchen.de");
         server.setPowerState("poweredOn");
+        final Cloud cloud = new Cloud();
+        cloud.setCloudType(CloudType.VMWARE);
+        server.setCloud(cloud);
         when(serverService.findByFqdnIn(anyList())).thenReturn(List.of(server));
         when(serverService.canUserEditServer(SERVER_ID)).thenReturn(canEdit);
         final List<AppserviceNameAndSysId> appservices = new ArrayList<>();
@@ -945,13 +950,69 @@ class JobControllerWebTest {
     }
 
     @Test
-    void paketshopRepoDetach_userCannotEditRepository_isBlocked() throws Exception {
+    void paketshopRepoDetach_userCannotEditRepositoryButServer_isAllowed() throws Exception {
         stubPaketshopRepository(false, 1, false);
         stubPaketshopServer(true, 1);
 
         performPaketshop("PAKETSHOP_REPO_DETACH",
                 "{\"name\":\"my-repo-test\",\"control_paketshop_repos_systems\":[\"test.srv.muenchen.de\"]}",
+                status().isOk());
+    }
+
+    @Test
+    void paketshopRepoDetach_userCannotEditServer_isBlocked() throws Exception {
+        stubPaketshopRepository(false, 1, true);
+        stubPaketshopServer(false, 1);
+
+        performPaketshop("PAKETSHOP_REPO_DETACH",
+                "{\"name\":\"my-repo-test\",\"control_paketshop_repos_systems\":[\"test.srv.muenchen.de\"]}",
                 status().isForbidden());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void paketshopRepoDetach_repositoryWithMultipleAppservices_isBlocked() throws Exception {
+        stubPaketshopRepository(false, 2, false);
+        stubPaketshopServer(true, 1);
+
+        performPaketshop("PAKETSHOP_REPO_DETACH",
+                "{\"name\":\"my-repo-test\",\"control_paketshop_repos_systems\":[\"test.srv.muenchen.de\"]}",
+                status().isForbidden());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void paketshopRepoAttach_hardwareServer_isRejected() throws Exception {
+        stubPaketshopRepository(false, 1, true);
+        stubPaketshopServer(true, 1).getCloud().setCloudType(CloudType.OLVM);
+
+        performPaketshop("PAKETSHOP_REPO_ATTACH_OWNED_REPO", PAKETSHOP_ATTACH_PAYLOAD, status().isBadRequest());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void paketshopRepoDetach_hardwareServer_isRejected() throws Exception {
+        stubPaketshopRepository(false, 1, true);
+        stubPaketshopServer(true, 1).getCloud().setCloudType(CloudType.UCS_MANAGER);
+
+        performPaketshop("PAKETSHOP_REPO_DETACH",
+                "{\"name\":\"my-repo-test\",\"control_paketshop_repos_systems\":[\"test.srv.muenchen.de\"]}",
+                status().isBadRequest());
+
+        verifyNoInteractions(jobService);
+    }
+
+    @Test
+    void paketshopRepoDetach_lockedRepository_isRejected() throws Exception {
+        stubPaketshopRepository(true, 1, true);
+        stubPaketshopServer(true, 1);
+
+        performPaketshop("PAKETSHOP_REPO_DETACH",
+                "{\"name\":\"my-repo-test\",\"control_paketshop_repos_systems\":[\"test.srv.muenchen.de\"]}",
+                status().isBadRequest());
 
         verifyNoInteractions(jobService);
     }

@@ -465,6 +465,9 @@ class JobControllerValidRequestsTest {
         server.setId(SERVER_ID);
         server.setFqdn("test.srv.muenchen.de");
         server.setPowerState("poweredOn");
+        final Cloud cloud = new Cloud();
+        cloud.setCloudType(CloudType.VMWARE);
+        server.setCloud(cloud);
         when(serverService.findByFqdnIn(anyList())).thenReturn(List.of(server));
         when(serverService.canUserEditServer(SERVER_ID)).thenReturn(true);
         final AppserviceNameAndSysId projection = mock(AppserviceNameAndSysId.class);

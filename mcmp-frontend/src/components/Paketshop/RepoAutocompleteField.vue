@@ -25,6 +25,12 @@
     <template #no-data>
       <div class="px-4 py-2">Kein Repository gefunden</div>
     </template>
+    <template
+      v-if="$slots.append"
+      #append
+    >
+      <slot name="append" />
+    </template>
   </v-autocomplete>
 </template>
 

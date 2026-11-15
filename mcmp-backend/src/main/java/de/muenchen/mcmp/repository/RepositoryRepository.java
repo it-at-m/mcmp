@@ -28,9 +28,14 @@ public interface RepositoryRepository extends JpaRepository<Repository, Long> {
         )
         """;
 
+    String APPSERVICE_COUNT_EXPRESSION = """
+        (SELECT COUNT(*) FROM cmp.repository_has_appservices rac WHERE rac.repository_id = r.id)
+        """;
+
     String CAN_EDIT_EXPRESSION = """
         (
-            (SELECT COUNT(*) FROM cmp.repository_has_appservices rce WHERE rce.repository_id = r.id) = 1
+            """ + APPSERVICE_COUNT_EXPRESSION + """
+             = 1
             AND (
                 :isAdmin
                 OR EXISTS (
@@ -46,12 +51,46 @@ public interface RepositoryRepository extends JpaRepository<Repository, Long> {
         )
         """;
 
+    /**
+     * Repositories the current user may attach to a server: assigned to exactly one Application Service and
+     * either OPEN or SELF_ONLY and editable by the user. LOCKED repositories can't be attached.
+     */
+    String ATTACHABLE_FILTER = """
+        """ + APPSERVICE_COUNT_EXPRESSION + """
+         = 1
+        AND (
+            r.lock_status = 'OPEN'
+            OR (r.lock_status = 'SELF_ONLY' AND """ + CAN_EDIT_EXPRESSION + """
+            )
+        )
+        """;
+
     Optional<Repository> findByName(String name);
 
     List<Repository> findAllByServersId(Long serverId);
 
-    @Query("SELECT r FROM Repository r JOIN r.servers s WHERE s.id = :serverId ORDER BY LOWER(r.name) ASC")
-    List<Repository> findAllByServersIdOrderByNameAscIgnoreCase(@Param("serverId") Long serverId);
+    @Query(value = """
+    SELECT
+        r.id AS id,
+        r.name AS name,
+        r.lock_status AS "lockStatus",
+        EXISTS (
+            SELECT 1 FROM cmp.user_favorite_repository ufa
+            JOIN cmp."user" u_fav ON ufa.user_id = u_fav.id
+            WHERE ufa.repositoryid = r.id AND u_fav.username = :username
+        ) AS "isFavorite",
+        """ + CAN_EDIT_EXPRESSION + """
+        AS "canEdit",
+        """ + APPSERVICE_COUNT_EXPRESSION + """
+        AS "appserviceCount"
+    FROM cmp.repository r
+    JOIN cmp.repository_assignment ras ON ras.repository_id = r.id
+    WHERE ras.server_id = :serverId
+    ORDER BY LOWER(r.name)
+    """, nativeQuery = true)
+    List<RepositoryListProjection> findByServerId(@Param("serverId") Long serverId,
+                                                  @Param("username") String username,
+                                                  @Param("isAdmin") boolean isAdmin);
 
     @Query(value = "SELECT name, id FROM cmp.repository", nativeQuery = true)
     List<RepositoryIdByName> findAllIdsByName();
@@ -185,7 +224,9 @@ public interface RepositoryRepository extends JpaRepository<Repository, Long> {
             WHERE ufa.repositoryid = r.id AND u_fav.username = :username
         ) AS "isFavorite",
         """ + CAN_EDIT_EXPRESSION + """
-        AS "canEdit"
+        AS "canEdit",
+        """ + APPSERVICE_COUNT_EXPRESSION + """
+        AS "appserviceCount"
     FROM cmp.repository r
     WHERE (
         :isAdmin
@@ -215,6 +256,8 @@ public interface RepositoryRepository extends JpaRepository<Repository, Long> {
     )
     AND (""" + ENVIRONMENT_FILTER + """
     )
+    AND (:attachableOnly = FALSE OR (""" + ATTACHABLE_FILTER + """
+    ))
     ORDER BY
         CASE WHEN EXISTS (
             SELECT 1 FROM cmp.user_favorite_repository ufa
@@ -254,6 +297,8 @@ public interface RepositoryRepository extends JpaRepository<Repository, Long> {
         )
         AND (""" + ENVIRONMENT_FILTER + """
         )
+        AND (:attachableOnly = FALSE OR (""" + ATTACHABLE_FILTER + """
+        ))
     """, nativeQuery = true)
     Page<RepositoryListProjection> findVisibleRepositories(@Param("username") String username,
                                                 @Param("isAdmin") boolean isAdmin,
@@ -266,6 +311,7 @@ public interface RepositoryRepository extends JpaRepository<Repository, Long> {
                                                 @Param("editableOnly") boolean editableOnly,
                                                 @Param("excludeProduction") boolean excludeProduction,
                                                 @Param("excludeTest") boolean excludeTest,
+                                                @Param("attachableOnly") boolean attachableOnly,
                                                 @Param("sortOrder") String sortOrder,
                                                 Pageable pageable);
 
@@ -321,7 +367,9 @@ public interface RepositoryRepository extends JpaRepository<Repository, Long> {
             WHERE ufa.repositoryid = r.id AND u_fav.username = :username
         ) AS "isFavorite",
         """ + CAN_EDIT_EXPRESSION + """
-        AS "canEdit"
+        AS "canEdit",
+        """ + APPSERVICE_COUNT_EXPRESSION + """
+        AS "appserviceCount"
     FROM cmp.repository r
     JOIN cmp.repository_has_appservices rha ON rha.repository_id = r.id
     WHERE rha.appservice_id = :appserviceId

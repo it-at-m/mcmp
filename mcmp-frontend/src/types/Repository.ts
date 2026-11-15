@@ -11,4 +11,5 @@ export default interface Repository {
   lockStatus: RepositoryLockStatus;
   isFavorite: boolean;
   canEdit?: boolean;
+  appserviceCount?: number;
 }

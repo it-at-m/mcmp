@@ -4,6 +4,7 @@ import de.muenchen.mcmp.appservice.Appservice;
 import de.muenchen.mcmp.appservice.AppserviceDTO;
 import de.muenchen.mcmp.appservice.AppserviceNameAndSysId;
 import de.muenchen.mcmp.appservice.AppserviceService;
+import de.muenchen.mcmp.clients.awx.AwxOrgTeamService;
 import de.muenchen.mcmp.cloud.Cloud;
 import de.muenchen.mcmp.config.app.MaintenanceModeConfiguration;
 import de.muenchen.mcmp.config.app.MaintenanceModeInterceptor;
@@ -107,6 +108,8 @@ class JobControllerWebTest {
     private RepositoryService repositoryService;
     @MockitoBean
     private KubernetesNamespaceService kubernetesNamespaceService;
+    @MockitoBean
+    private AwxOrgTeamService awxOrgTeamService;
     @MockitoBean
     private ErrorLogService errorLogService;
 

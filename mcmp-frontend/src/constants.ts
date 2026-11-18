@@ -24,6 +24,7 @@ export const BACKUP_BASE = `${API}/backup`;
 export const INFOBLOX_CONFIG_BASE = `${API}/infobloxConfig`;
 export const INFOBLOX_FQDN_BASE = `${API}/infobloxFQDN`;
 export const AWX_BASE = `${API}/awxConfig`;
+export const AWX_CLIENT_BASE = `${API}/awx`;
 export const SNOW_BASE = `${API}/snowConfig`;
 export const BAAS_BASE = `${API}/baasConfig`;
 export const ACTION_BASE = `${API}/action`;

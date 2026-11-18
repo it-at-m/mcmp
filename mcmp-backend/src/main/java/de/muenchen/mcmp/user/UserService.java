@@ -98,4 +98,11 @@ public class UserService {
         }
         return repository.findForAutocomplete(query.trim());
     }
+
+    public List<String> searchDepartments(final String query) {
+        if (query == null || query.trim().isEmpty()) {
+            return List.of();
+        }
+        return repository.findDepartmentsLike(query.trim());
+    }
 }

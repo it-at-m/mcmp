@@ -28,4 +28,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query("SELECT new de.muenchen.mcmp.user.UserAutocompleteDTO(u.id, u.username, u.name) FROM User u WHERE LOWER(u.username) LIKE LOWER(CONCAT('%', :query, '%')) ORDER BY u.username")
     List<UserAutocompleteDTO> findForAutocomplete(@Param("query") String query);
+
+    @Query("SELECT DISTINCT LOWER(u.department) FROM User u WHERE LOWER(u.department) LIKE LOWER(CONCAT('%', :query, '%')) ORDER BY LOWER(u.department)")
+    List<String> findDepartmentsLike(@Param("query") String query);
 }

@@ -1,11 +1,14 @@
 package de.muenchen.mcmp.clients.awx;
 
+import de.muenchen.mcmp.security.HasUserOrSpecialRole;
 import de.muenchen.mcmp.server.Server;
 import de.muenchen.mcmp.server.ServerService;
 import de.muenchen.mcmp.temporaryPrivileges.PrivilegeType;
 import de.muenchen.mcmp.temporaryPrivileges.TemporaryPrivilege;
 import de.muenchen.mcmp.temporaryPrivileges.TemporaryPrivilegeService;
+import de.muenchen.mcmp.security.AuthUtils;
 import de.muenchen.mcmp.user.User;
+import de.muenchen.mcmp.user.UserAutocompleteDTO;
 import de.muenchen.mcmp.user.UserService;
 import de.muenchen.mcmp.utils.DateTimeUtils;
 import jakarta.validation.Valid;
@@ -37,6 +40,11 @@ public class AwxController {
     private final TemporaryPrivilegeService temporaryPrivilegeService;
     private final ServerService serverService;
     private final UserService userService;
+    private final AwxOrgTeamService awxOrgTeamService;
+
+    private static final int MIN_USER_SEARCH_LENGTH = 3;
+    private static final int MIN_DEPARTMENT_SEARCH_LENGTH = 4;
+    private static final int MAX_USER_SEARCH_RESULTS = 20;
 
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final DateTimeFormatter GERMAN_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
@@ -54,6 +62,106 @@ public class AwxController {
     @GetMapping("/ping")
     public String ping() {
         return "AWX EAI API is accessible";
+    }
+
+    /**
+     * Returns the names of all AWX organizations the current user is allowed to manage,
+     * i.e. where the user's department is listed as an admin group in the AWX-P
+     * SOCIAL_AUTH_ORGANIZATION_MAP setting.
+     */
+    @GetMapping("/organizations")
+    public List<String> getOrganizations() {
+        return awxOrgTeamService.getManageableOrganizationNames();
+    }
+
+    /**
+     * Returns the names of all AWX teams the current user is allowed to manage, i.e. teams
+     * belonging to an organization the user is an admin of (per SOCIAL_AUTH_ORGANIZATION_MAP).
+     */
+    @GetMapping("/teams")
+    public List<String> getTeams() {
+        return awxOrgTeamService.getManageableTeamNames();
+    }
+
+    /**
+     * Checks whether an organization with the given name already exists in AWX and, if so,
+     * whether the current user is allowed to manage it.
+     */
+    @GetMapping("/organizations/check")
+    public AwxOrgTeamService.AwxNameCheckDTO checkOrganization(@RequestParam final String name) {
+        return awxOrgTeamService.checkOrganization(name);
+    }
+
+    /**
+     * Checks whether a team with the given name already exists in AWX and, if so, whether the
+     * current user is allowed to manage it.
+     */
+    @GetMapping("/teams/check")
+    public AwxOrgTeamService.AwxNameCheckDTO checkTeam(@RequestParam final String name) {
+        return awxOrgTeamService.checkTeam(name);
+    }
+
+    /**
+     * Searches MCMP users by username for the static member field of the org/team form.
+     */
+    @HasUserOrSpecialRole
+    @GetMapping("/users/autocomplete")
+    public List<UserAutocompleteDTO> searchUsers(@RequestParam final String query) {
+        if (query.trim().length() < MIN_USER_SEARCH_LENGTH) {
+            return List.of();
+        }
+        return userService.searchUsersForAutocomplete(query).stream().limit(MAX_USER_SEARCH_RESULTS).toList();
+    }
+
+    /**
+     * Suggestions for the cn part of LDAP group entries (lower case). Without a query (or with
+     * fewer than {@value #MIN_DEPARTMENT_SEARCH_LENGTH} characters) only the current user's own
+     * department is suggested. With a longer query, all matching departments of MCMP users are
+     * suggested, the user's own department first.
+     */
+    @HasUserOrSpecialRole
+    @GetMapping("/ldap/suggestions")
+    public List<String> getLdapGroupSuggestions(@RequestParam(required = false, defaultValue = "") final String query) {
+        final String department = AuthUtils.getCurrentUserDepartment();
+        final boolean hasOwnDepartment = department != null && !department.isBlank()
+                && !AuthUtils.NAME_UNAUTHENTICATED_USER.equals(department);
+        final String own = hasOwnDepartment ? department.toLowerCase(Locale.ROOT) : null;
+
+        final String trimmedQuery = query.trim();
+        if (trimmedQuery.length() < MIN_DEPARTMENT_SEARCH_LENGTH) {
+            return own == null ? List.of() : List.of(own);
+        }
+
+        final List<String> matches = userService.searchDepartments(trimmedQuery).stream()
+                .limit(MAX_USER_SEARCH_RESULTS)
+                .toList();
+        if (own == null || !matches.contains(own)) {
+            return matches;
+        }
+        final List<String> result = new ArrayList<>();
+        result.add(own);
+        matches.stream().filter(match -> !match.equals(own)).forEach(result::add);
+        return result;
+    }
+
+    /**
+     * Returns the current admins of an organization to prefill the edit form. Restricted to
+     * users who are admins of that organization.
+     */
+    @HasUserOrSpecialRole
+    @GetMapping("/organizations/details")
+    public AwxOrgTeamService.AwxOrgTeamDetailsDTO getOrganizationDetails(@RequestParam final String name) {
+        return awxOrgTeamService.getOrganizationDetails(name);
+    }
+
+    /**
+     * Returns the current users of a team to prefill the edit form. Restricted to users who are
+     * admins of the team's organization.
+     */
+    @HasUserOrSpecialRole
+    @GetMapping("/teams/details")
+    public AwxOrgTeamService.AwxOrgTeamDetailsDTO getTeamDetails(@RequestParam final String name) {
+        return awxOrgTeamService.getTeamDetails(name);
     }
 
     /**

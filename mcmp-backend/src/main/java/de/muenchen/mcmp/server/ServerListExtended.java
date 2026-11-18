@@ -16,5 +16,7 @@ public interface ServerListExtended {
     ServerType getServerType();
     Boolean getManaged();
     Boolean getCanEdit();
+    Integer getNumCpuRecommended();
+    Integer getMemoryMbRecommended();
     Boolean getHasWarnings();
 }

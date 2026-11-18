@@ -111,6 +111,9 @@
                 <appservice-details-allgemein
                   :selected-appservice="selectedAppservice"
                 />
+                <app-service-details-green-i-t
+                    :selected-appservice="selectedAppservice"
+                />
                 <appservice-details-server
                   :selected-appservice="selectedAppservice"
                 />
@@ -174,6 +177,7 @@ import { useRoute, useRouter } from "vue-router";
 import appserviceService from "@/api/appserviceService";
 import jobService from "@/api/jobService";
 import AppServiceDetailHistory from "@/components/Appservice/AppServiceDetailHistory.vue";
+import AppServiceDetailGreenIT from "@/components/Appservice/AppServiceDetailsGreenIT.vue";
 import AppserviceDetailsAllgemein from "@/components/Appservice/AppserviceDetailsAllgemein.vue";
 import AppserviceDetailsLoadbalancer from "@/components/Appservice/AppserviceDetailsLoadbalancer.vue";
 import AppserviceDetailsOpenshift from "@/components/Appservice/AppserviceDetailsOpenshift.vue";
@@ -188,6 +192,7 @@ import ActionButton from "@/components/Server/ActionButtons/ActionButton.vue";
 import { useCollapsibleCards } from "@/composables/useCollapsibleCards";
 import { useScrollRestoration } from "@/composables/useScrollRestoration";
 import { useTabQuerySync } from "@/composables/useTabQuerySync";
+import AppServiceDetailsGreenIT from "@/components/Appservice/AppServiceDetailsGreenIT.vue";
 
 const selectedAppserviceRows = ref<AppserviceListItem[]>([]);
 const selectedAppservice = ref<Appservice | null>(null);

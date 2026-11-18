@@ -433,6 +433,8 @@ SELECT DISTINCT s.id as id,
        s.managed as managed,
        s.num_cpu as numCpu,
        s.memory_mb as memoryMb,
+       s.num_cpu_recommended as numCpuRecommended,
+       s.memory_mb_recommended as memoryMbRecommended,
        s.vdisks_capacity_in_bytes as vdisksCapacityInBytes,
        CASE
           WHEN s.operatingsystem IS NOT NULL AND s.operatingsystem <> '' THEN s.operatingsystem
@@ -517,7 +519,7 @@ WHERE sa.appservice_id = :appserviceId
         AND u2.username = :username
     )
   )
-GROUP BY s.id, s.name, s.power_state, s.operatingsystem, s.guest_tools_full_name, s.guest_config_full_name, s.num_cpu, s.memory_mb, s.vdisks_capacity_in_bytes, s.server_kind, s.server_type, s.managed
+GROUP BY s.id, s.name, s.power_state, s.operatingsystem, s.guest_tools_full_name, s.guest_config_full_name, s.num_cpu, s.memory_mb, s.num_cpu_recommended, s.memory_mb_recommended, s.vdisks_capacity_in_bytes, s.server_kind, s.server_type, s.managed
 ORDER BY s.name ASC
 """, nativeQuery = true)
     List<ServerListExtended> findServersByAppserviceId(@Param("appserviceId") Long appserviceId,

@@ -19,6 +19,8 @@ public record ServerListExtendedDTO(
         ServerType serverType,
         Boolean managed,
         Boolean canEdit,
+        Integer numCpuRecommended,
+        Integer memoryMbRecommended,
         Boolean hasWarnings
 ) {
 }

@@ -22,8 +22,15 @@ public class AwxConfigService {
     }
 
     public AwxConfigDTO getAwxDecrypted(final Long id) {
-        final AwxConfig awxConfig = awxConfigRepository.findByIdDecrypted(id, encryptionProperties.getPassphrase());
-        return awxConfigMapper.toDTODecryptedPassword(awxConfig);
+        final AwxConfigWithDecryptedPassword awxConfig = awxConfigRepository.findByIdDecrypted(id, encryptionProperties.getPassphrase());
+        return AwxConfigDTO.builder()
+                .id(awxConfig.getId())
+                .apiDescription(awxConfig.getApiDescription())
+                .apiUsername(awxConfig.getApiUsername())
+                .apiPassword(awxConfig.getApiPassword())
+                .apiEndpoint(awxConfig.getApiEndpoint())
+                .enabled(awxConfig.getEnabled())
+                .build();
     }
 
     // create awx entry

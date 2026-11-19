@@ -9,21 +9,26 @@ import org.springframework.core.env.Environment;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
-import java.nio.charset.StandardCharsets;
+import java.net.HttpCookie;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Resolves AWX organizations and teams that the current user is allowed to manage.
@@ -41,6 +46,7 @@ import java.util.Set;
 public class AwxOrgTeamService {
 
     private static final String AWX_CONFIG_DESCRIPTION = "AWX-P";
+    private static final String LOGIN_PATH = "/api/login/";
     private static final String SETTINGS_PATH = "/api/v2/settings/authentication/";
     private static final String ORGANIZATION_MAP_FIELD = "SOCIAL_AUTH_ORGANIZATION_MAP";
     private static final String TEAM_MAP_FIELD = "SOCIAL_AUTH_TEAM_MAP";
@@ -348,12 +354,9 @@ public class AwxOrgTeamService {
 
         final AwxConfigDTO awxConfig = getAwxPConfig();
 
-        final HttpHeaders headers = new HttpHeaders();
-        final String basicAuth = Base64.getEncoder().encodeToString(
-                (awxConfig.apiUsername() + ":" + awxConfig.apiPassword()).getBytes(StandardCharsets.UTF_8));
-        headers.set("Authorization", "Basic " + basicAuth);
-
         final String url = awxConfig.apiEndpoint() + SETTINGS_PATH;
+        final HttpHeaders headers = new HttpHeaders();
+        headers.set(HttpHeaders.COOKIE, loginAndGetCookies(awxConfig));
         final ResponseEntity<JsonNode> response = restTemplate.exchange(
                 url, HttpMethod.GET, new HttpEntity<>(headers), JsonNode.class);
 
@@ -362,6 +365,58 @@ public class AwxOrgTeamService {
             throw new IllegalStateException("AWX-Authentifizierungseinstellungen konnten nicht geladen werden.");
         }
         return body;
+    }
+
+    /**
+     * fetch a CSRF token from {@code /api/login/}, post the credentials,
+     * and return the resulting session cookies as a {@code Cookie} header value.
+     */
+    private String loginAndGetCookies(final AwxConfigDTO awxConfig) {
+        final String loginUrl = awxConfig.apiEndpoint() + LOGIN_PATH;
+
+        final HttpHeaders csrfRequestHeaders = new HttpHeaders();
+        csrfRequestHeaders.setAccept(List.of(MediaType.TEXT_HTML));
+        final Map<String, String> cookies = new LinkedHashMap<>();
+        collectCookies(
+                restTemplate.exchange(loginUrl, HttpMethod.GET, new HttpEntity<>(csrfRequestHeaders), Void.class).getHeaders(),
+                cookies);
+        final String csrfToken = cookies.get("csrftoken");
+        if (csrfToken == null) {
+            throw new IllegalStateException("AWX-Login fehlgeschlagen: kein CSRF-Token erhalten.");
+        }
+
+        final HttpHeaders headers = new HttpHeaders();
+        headers.setAccept(List.of(MediaType.TEXT_HTML));
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        headers.set(HttpHeaders.COOKIE, cookieHeader(cookies));
+        headers.set(HttpHeaders.REFERER, loginUrl);
+        headers.set("X-CSRFToken", csrfToken);
+
+        final MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+        form.add("username", awxConfig.apiUsername());
+        form.add("password", awxConfig.apiPassword());
+        form.add("next", SETTINGS_PATH);
+        form.add("csrfmiddlewaretoken", csrfToken);
+
+        final ResponseEntity<Void> response = restTemplate.exchange(
+                loginUrl, HttpMethod.POST, new HttpEntity<>(form, headers), Void.class);
+        collectCookies(response.getHeaders(), cookies);
+        if (!response.getStatusCode().is3xxRedirection()) {
+            throw new IllegalStateException("AWX-Login fehlgeschlagen: unerwartete Antwort " + response.getStatusCode());
+        }
+        return cookieHeader(cookies);
+    }
+
+    private void collectCookies(final HttpHeaders headers, final Map<String, String> cookies) {
+        headers.getOrEmpty(HttpHeaders.SET_COOKIE).stream()
+                .flatMap(header -> HttpCookie.parse(header).stream())
+                .forEach(cookie -> cookies.put(cookie.getName(), cookie.getValue()));
+    }
+
+    private String cookieHeader(final Map<String, String> cookies) {
+        return cookies.entrySet().stream()
+                .map(cookie -> cookie.getKey() + "=" + cookie.getValue())
+                .collect(Collectors.joining("; "));
     }
 
     private AwxConfigDTO getAwxPConfig() {

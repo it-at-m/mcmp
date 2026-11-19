@@ -268,17 +268,17 @@ const formatter = useFormatter();
 
 const isLinux = computed(
   () =>
-    props.selectedServer.guestConfigId == "l26" // proxmox
-      || props.selectedServer.guestConfigFullName?.toLowerCase().includes("linux") // vmware
-      || false
-)
+    props.selectedServer.guestConfigId == "l26" || // proxmox
+    props.selectedServer.guestConfigFullName?.toLowerCase().includes("linux") || // vmware
+    false
+);
 
 const isLinux10 = computed(
   () =>
-    props.selectedServer.operatingsystem?.includes("RHEL Server 10")
-      || props.selectedServer.operatingsystem?.includes("AlmaLinux 10")
-      || false
-)
+    props.selectedServer.operatingsystem?.includes("RHEL Server 10") ||
+    props.selectedServer.operatingsystem?.includes("AlmaLinux 10") ||
+    false
+);
 
 function editMountPoint(
   mountPoint: MountPoint,

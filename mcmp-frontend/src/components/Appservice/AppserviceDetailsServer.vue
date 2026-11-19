@@ -23,17 +23,17 @@
           </template>
         </v-tooltip>
         <v-tooltip
-            v-if="anyServerHasWarnings"
-            location="top"
-            text="Handlungsbedarf an mind. einem Server"
+          v-if="anyServerHasWarnings"
+          location="top"
+          text="Handlungsbedarf an mind. einem Server"
         >
           <template #activator="{ props: tooltipProps }">
             <span
-                v-bind="tooltipProps"
-                class="ml-2 d-inline-flex warning-badge"
+              v-bind="tooltipProps"
+              class="ml-2 d-inline-flex warning-badge"
             >
               <count-badge
-                  :count="
+                :count="
                   (props.selectedAppservice?.servers || []).filter(
                     (s: any) => s.hasWarnings
                   ).length
@@ -462,13 +462,13 @@ const getWarningTooltip = (item: any) => {
   const recRam = Number(item.memoryMbRecommended ?? 0);
   if (recRam > 0 && recRam < curRam) {
     parts.push(
-        `RAM: ${formatter.formatMBtoGB(curRam)} -> ${formatter.formatMBtoGB(recRam)} GB`
+      `RAM: ${formatter.formatMBtoGB(curRam)} -> ${formatter.formatMBtoGB(recRam)} GB`
     );
   }
 
   return parts.length > 0
-      ? `Green-IT Empfehlung: ${parts.join(" | ")}`
-      : "Handlung erforderlich";
+    ? `Green-IT Empfehlung: ${parts.join(" | ")}`
+    : "Handlung erforderlich";
 };
 
 const serverKindText = (kind?: string | null) => {

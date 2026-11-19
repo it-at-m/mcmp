@@ -53,11 +53,11 @@ public interface AwxConfigRepository extends JpaRepository<AwxConfig, Long> {
 
     @Query(value = """
             SELECT id, api_description, api_username,
-                   pgp_sym_decrypt(api_password_encrypted, :key) AS api_password_encrypted,
-                   api_endpoint, enabled, created_at, updated_at, version
+                   pgp_sym_decrypt(api_password_encrypted, :key) AS api_password,
+                   api_endpoint, enabled
             FROM cmp.config_awx
             WHERE id = :id
             """, nativeQuery = true)
-    AwxConfig findByIdDecrypted(@Param("id") Long id, @Param("key") String key);
+    AwxConfigWithDecryptedPassword findByIdDecrypted(@Param("id") Long id, @Param("key") String key);
 }
 

@@ -7,7 +7,7 @@
           <template #activator="{ props: tooltipProps }">
             <v-btn
                 v-bind="tooltipProps"
-                :icon="mdiDownload"
+                :icon="mdiFileExportOutline"
                 size="small"
                 variant="text"
                 class="mr-2"
@@ -132,7 +132,7 @@
 
 <script setup lang="ts">
 import type Appservice from "@/types/Appservice.ts";
-import { mdiDownload, mdiLeaf, mdiInformationOutline } from "@mdi/js";
+import { mdiLeaf, mdiInformationOutline, mdiFileExportOutline } from "@mdi/js";
 import { computed } from "vue";
 
 import CommonCard from "@/components/common/CommonCard.vue";

@@ -28,9 +28,9 @@
           </template>
           <div class="text-caption">
             <strong>Ressourceneffizienz:</strong><br>
-            0% bis 3% Einsparung: Grün<br>
-            >3% bis 5% Einsparung: Gelb<br>
-            >6% Einsparung: Rot
+            0% bis 15% Einsparung: Grün<br>
+            >15% bis 20% Einsparung: Gelb<br>
+            >20% Einsparung: Rot
           </div>
         </v-tooltip>
       </div>
@@ -166,8 +166,8 @@ const ramSavingsPercentage = computed(() => {
 
 // --- 5. Farb-Logik für Blätter ---
 const getLeafColor = (percentage: number) => {
-  if (percentage <= 3) return "green";
-  if (percentage <= 6) return "orange";
+  if (percentage <= 15) return "green";
+  if (percentage <= 20) return "orange";
   return "red";
 };
 

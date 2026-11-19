@@ -45,6 +45,10 @@ const (
 	appname            = "mcmp-eai-scheduler"
 	ChangeTypeNormal   = "normal"
 	ChangeTypeStandard = "standard"
+
+	// maxChangeShortDescriptionLen is the maximum length of the short description of a
+	// ServiceNow change request.
+	maxChangeShortDescriptionLen = 160
 )
 
 // Configuration structs that define the structure of the TOML configuration file
@@ -171,11 +175,34 @@ func run() error {
 	}
 
 	siemLogger := siem.NewSiemLogger(cfg.SIEM)
+	defer func() {
+		if err := siemLogger.Close(); err != nil {
+			logger.Warn("Failed to close SIEM logger", "error", err)
+		}
+	}()
+
 	if cfg.SIEM.Enabled {
-		logger.DebugPrintf("SIEM Logger initialized. File: %s, QRadar: %s:%d (%s), Splunk: %s:%d (%s, TLS: %t)",
-			cfg.SIEM.File.Filename,
-			cfg.SIEM.QRadar.Host, cfg.SIEM.QRadar.Port, cfg.SIEM.QRadar.Protocol,
-			cfg.SIEM.Splunk.Host, cfg.SIEM.Splunk.Port, cfg.SIEM.Splunk.Protocol, cfg.SIEM.Splunk.UseTLS)
+		logger.Info("SIEM configuration loaded",
+			"deviceHostName", cfg.SIEM.DeviceHostName,
+			"file", cfg.SIEM.File.Filename,
+			"qradarHost", cfg.SIEM.QRadar.Host,
+			"qradarPort", cfg.SIEM.QRadar.Port,
+			"qradarProtocol", cfg.SIEM.QRadar.Protocol,
+			"qradarFormat", cfg.SIEM.QRadar.WireFormat(),
+			"splunkHost", cfg.SIEM.Splunk.Host,
+			"splunkPort", cfg.SIEM.Splunk.Port,
+			"splunkProtocol", cfg.SIEM.Splunk.Protocol,
+			"splunkFormat", cfg.SIEM.Splunk.WireFormat(),
+			"splunkUseTLS", cfg.SIEM.Splunk.UseTLS,
+			"splunkInsecureSkipVerify", cfg.SIEM.Splunk.InsecureSkipVerify,
+		)
+
+		for _, t := range siemLogger.ActiveTargets() {
+			logger.Info("SIEM target registered", "target", t)
+		}
+		for _, e := range siemLogger.InitErrors() {
+			logger.Error("SIEM target NOT registered", "error", e)
+		}
 	}
 
 	foremanClient, err := createForemanClient(cfg)
@@ -447,7 +474,7 @@ func processJobs(cfg *Config, mcmpClient *db.Client, awxClients map[int64]*awx.A
 		}
 
 		if job.Status == db.JobStatusTaggingCompleted {
-			log.Printf("  -> Status 'Tagging Completed': Finalizing Job %d", job.ID)
+			logger.Info("  -> Status 'Tagging Completed': Finalizing Job", "id", job.ID)
 			errMsg := ""
 			errFlag := false
 			if job.AwxStatus == db.AwxStatusError || job.AwxStatus == db.AwxStatusFailed || job.AwxStatus == db.AwxStatusCanceled {
@@ -512,6 +539,14 @@ func processJobs(cfg *Config, mcmpClient *db.Client, awxClients map[int64]*awx.A
 }
 
 func getAwxJobStatus(mcmpClient *db.Client, awxClients map[int64]*awx.AWX, job *db.Job) (bool, error) {
+	logger.Debug("AWX status check: start",
+		"mcmpId", job.ID,
+		"awxId", ptrString(job.AwxJobId),
+		"templateType", job.AwxTemplateType,
+		"awxStatus", ptrString(job.AwxJobStatus),
+		"awxStartDate", ptrString(job.AwxStartDate),
+		"estimatedRuntime", ptrString(job.AwxEstimatedRuntime),
+	)
 	if job.AwxEstimatedRuntime != nil && *job.AwxEstimatedRuntime > 1 && job.AwxStartDate != nil {
 		estimatedEnd := job.AwxStartDate.Add(time.Duration(*job.AwxEstimatedRuntime) * time.Minute).In(berlinLocation)
 		now := time.Now().In(berlinLocation)
@@ -527,27 +562,50 @@ func getAwxJobStatus(mcmpClient *db.Client, awxClients map[int64]*awx.AWX, job *
 
 	awxClient, ok := awxClients[job.Awx.ID]
 	if !ok {
+		logger.Debug("AWX status check: no client", "mcmpId", job.ID, "awxConfigId", job.Awx.ID)
 		return false, fmt.Errorf("AWX Client is not enabled or not configured. Job ID %d", job.ID)
 	}
 
 	err := fetchAndPopulateAwxJobData(context.Background(), awxClient, job)
 	if err != nil {
+		logger.Debug("AWX status check: fetch failed", "mcmpId", job.ID, "error", err)
 		return true, err
 	}
 
-	// Determine if still running based on status
+	logger.Debug("AWX status check: data fetched",
+		"mcmpId", job.ID,
+		"awxJobName", ptrString(job.AwxJobName),
+		"awxStatus", ptrString(job.AwxJobStatus),
+		"awxFailed", ptrString(job.AwxJobFailed),
+		"returnCompleted", ptrString(job.AwxJobReturnCompleted),
+		"returnMessage", ptrString(job.AwxJobReturnMessage),
+		"hasArtifacts", job.AwxJobArtifacts != nil,
+	)
+
+	// Determine if still running based on status. Only a final state may be
+	// evaluated further; everything else (including an empty status) means the
+	// job is still in progress and must NOT be treated as failed.
+	awxStatus := ""
 	if job.AwxJobStatus != nil {
-		s := *job.AwxJobStatus
-		if s != "successful" && s != "failed" && s != "error" && s != "canceled" {
-			logger.Info("  -> AWX Job is still running.", "awxId", *job.AwxJobId, "status", s)
-			return true, nil
-		}
+		awxStatus = *job.AwxJobStatus
+	}
+
+	switch awxStatus {
+	case "successful", "failed", "error", "canceled":
+		// final state -> evaluate below
+	case "":
+		logger.Info("  -> AWX Job has no status yet. Treating as still running.", "mcmpId", job.ID)
+		return true, nil
+	default:
+		logger.Info("  -> AWX Job is still running.", "mcmpId", job.ID, "status", awxStatus)
+		return true, nil
 	}
 
 	if job.AwxTemplateType == db.AwxTemplateTypeTemplate {
 		var jobSuccess bool
 		var errorMessage string
 		if job.AwxJobReturnCompleted == nil {
+			logger.Debug("AWX status check: no job_result artifact, falling back to AWX status", "mcmpId", job.ID, "awxStatus", awxStatus)
 			// Fallback to jobResult.Status if no artifact info is available
 			if job.AwxJobStatus != nil && *job.AwxJobStatus == "successful" {
 				jobSuccess = true
@@ -559,19 +617,26 @@ func getAwxJobStatus(mcmpClient *db.Client, awxClients map[int64]*awx.AWX, job *
 			// Use artifact information
 			failed := job.AwxJobFailed != nil && *job.AwxJobFailed
 			jobCompleted := *job.AwxJobReturnCompleted
-			if failed && jobCompleted {
+			logger.Debug("AWX status check: evaluating job_result artifact", "mcmpId", job.ID, "failed", failed, "completed", jobCompleted)
+			if !failed && jobCompleted {
 				jobSuccess = true
-			} else if failed || jobCompleted == false {
+			} else {
 				jobSuccess = false
-				if jobCompleted == false && job.AwxJobReturnMessage != nil {
+				switch {
+				case !jobCompleted && job.AwxJobReturnMessage != nil && *job.AwxJobReturnMessage != "":
 					errorMessage = *job.AwxJobReturnMessage
-				} else {
+				case job.AwxJobStatus != nil:
+					errorMessage = fmt.Sprintf("AWX-Status: %s", *job.AwxJobStatus)
+				default:
 					errorMessage = "AWX job failed"
 				}
 			}
 		}
 
+		logger.Debug("AWX status check: decision", "mcmpId", job.ID, "success", jobSuccess, "errorMessage", errorMessage)
+
 		if jobSuccess {
+			logger.Info("  -> AWX Job successful.", "awxId", ptrString(job.AwxJobId), "mcmpId", job.ID)
 			job.Status = db.JobStatusAwxCompleted
 			job.AwxStatus = db.AwxStatusSuccessful
 			err = mcmpClient.UpdateJob(job)
@@ -595,6 +660,8 @@ func getAwxJobStatus(mcmpClient *db.Client, awxClients map[int64]*awx.AWX, job *
 		if err != nil {
 			return true, err
 		}
+
+		logger.Debug("AWX status check: evaluating workflow", "mcmpId", job.ID, "awxStatus", awxStatus)
 
 		switch *job.AwxJobStatus {
 		case "successful":
@@ -629,6 +696,14 @@ func getAwxJobStatus(mcmpClient *db.Client, awxClients map[int64]*awx.AWX, job *
 		return false, nil
 	}
 	return false, nil
+}
+
+// ptrString renders an optional pointer value for logging without panicking.
+func ptrString[T any](p *T) string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("%v", *p)
 }
 
 // checkJobArtifacts checks job artifacts for completed status, msg, and data
@@ -1456,11 +1531,13 @@ func performNormalChange(client *snow.Client, callbackBaseUrl string, job *db.Jo
 	var requestedBy string
 	var assignedTo string
 	var assignmentGroup string
+	username := ""
 
 	if job.User != nil && job.User.SysID != "" {
 		// User is set in the database
 		requestedBy = job.User.SysID
 		assignedTo = job.User.SysID
+		username = job.User.Username
 	} else {
 		// User is null in the database -> use default sys_id from toml file
 		requestedBy = defaultServiceNowUserSysId
@@ -1476,7 +1553,7 @@ func performNormalChange(client *snow.Client, callbackBaseUrl string, job *db.Jo
 			CIs:                getCISysIDs(job),
 			ApplicationService: getApplicationAserviceSysID(job),
 			ShortDescription:   "[MCMP] " + *replaceVariables(job.ActionTitle, ""),
-			Description:        *replaceVariables(job.ActionDescription, ""),
+			Description:        buildChangeShortDescription(username, *replaceVariables(job.ActionTitle, "")),
 			StartDate:          formatChangeDate(job.ChangeStartDate),
 			EndDate:            formatChangeDate(job.ChangeEndDate),
 			RequestedBy:        requestedBy,
@@ -1513,11 +1590,13 @@ func performStandardChange(client *snow.Client, callbackBaseUrl string, job *db.
 	var requestedBy string
 	var assignedTo string
 	var assignmentGroup string
+	username := ""
 
 	if job.User != nil && job.User.SysID != "" {
 		// User is set in the database
 		requestedBy = job.User.SysID
 		assignedTo = job.User.SysID
+		username = job.User.Username
 	} else {
 		// User is null in the database -> use default sys_id from toml file
 		requestedBy = defaultServiceNowUserSysId
@@ -1535,7 +1614,7 @@ func performStandardChange(client *snow.Client, callbackBaseUrl string, job *db.
 		Change: snow.NewStandardChangeObject{
 			CIs:                    getCISysIDs(job),
 			ApplicationService:     getApplicationAserviceSysID(job),
-			ShortDescription:       "[MCMP] " + *replaceVariables(job.Title, ""),
+			ShortDescription:       buildChangeShortDescription(username, *replaceVariables(job.Title, "")),
 			Description:            *replaceVariables(job.ActionDescription, ""),
 			StartDate:              formatChangeDate(job.ChangeStartDate),
 			EndDate:                formatChangeDate(job.ChangeEndDate),
@@ -1968,12 +2047,12 @@ func sendNonPostgresEmail(cfg *Config, mcmpClient *db.Client, job *db.Job) {
 // updateAwxJobDates updates the start and end dates of a job based on AWX results
 func updateAwxJobDates(job *db.Job, started time.Time, finished time.Time, templateType string) {
 	if !started.IsZero() {
-		logger.DebugPrintf("     AwxTemplateType%s jobResult.Started : %s\n", templateType, started.Format(time.RFC3339Nano))
+		logger.DebugPrintf("     AwxTemplateType%s jobResult.Started : %s", templateType, started.Format(time.RFC3339Nano))
 		job.AwxStartDate = new(started.In(berlinLocation))
 	}
 
 	if !finished.IsZero() {
-		logger.DebugPrintf("     AwxTemplateType%s jobResult.Finished : %s\n", templateType, finished.Format(time.RFC3339Nano))
+		logger.DebugPrintf("     AwxTemplateType%s jobResult.Finished : %s", templateType, finished.Format(time.RFC3339Nano))
 		job.AwxEndDate = new(finished.In(berlinLocation))
 	} else {
 		job.AwxEndDate = new(time.Now().In(berlinLocation))
@@ -2569,4 +2648,24 @@ func hasSuccessfulPath(node *db.JobNode, nodeMap map[int64]*db.JobNode) bool {
 		}
 	}
 	return false
+}
+
+// buildChangeShortDescription builds the short description of a change request in
+// the form "[MCMP] <username> : <text>". The username part is omitted if no
+// username is available. The result is truncated to maxChangeShortDescriptionLen.
+func buildChangeShortDescription(username string, text string) string {
+	shortDescription := "[MCMP] " + text
+	if username != "" {
+		shortDescription = fmt.Sprintf("[MCMP] %s : %s", username, text)
+	}
+	return truncateString(shortDescription, maxChangeShortDescriptionLen)
+}
+
+// truncateString limits s to maxLen characters without breaking multi-byte characters.
+func truncateString(s string, maxLen int) string {
+	runes := []rune(s)
+	if len(runes) <= maxLen {
+		return s
+	}
+	return string(runes[:maxLen-3]) + "..."
 }

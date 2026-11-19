@@ -23,9 +23,12 @@ import tools.jackson.databind.ObjectMapper;
 import java.net.HttpCookie;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Resolves AWX organizations and teams that the current user is allowed to manage.
@@ -353,7 +356,7 @@ public class AwxOrgTeamService {
 
         final String url = awxConfig.apiEndpoint() + SETTINGS_PATH;
         final HttpHeaders headers = new HttpHeaders();
-        headers.set(HttpHeaders.COOKIE, "sessionid=" + loginAndGetSessionId(awxConfig));
+        headers.set(HttpHeaders.COOKIE, loginAndGetCookies(awxConfig));
         final ResponseEntity<JsonNode> response = restTemplate.exchange(
                 url, HttpMethod.GET, new HttpEntity<>(headers), JsonNode.class);
 
@@ -366,16 +369,18 @@ public class AwxOrgTeamService {
 
     /**
      * fetch a CSRF token from {@code /api/login/}, post the credentials,
-     * and return the resulting {@code sessionid} cookie.
+     * and return the resulting session cookies as a {@code Cookie} header value.
      */
-    private String loginAndGetSessionId(final AwxConfigDTO awxConfig) {
+    private String loginAndGetCookies(final AwxConfigDTO awxConfig) {
         final String loginUrl = awxConfig.apiEndpoint() + LOGIN_PATH;
 
         final HttpHeaders csrfRequestHeaders = new HttpHeaders();
         csrfRequestHeaders.setAccept(List.of(MediaType.TEXT_HTML));
-        final String csrfToken = cookieValue(
+        final Map<String, String> cookies = new LinkedHashMap<>();
+        collectCookies(
                 restTemplate.exchange(loginUrl, HttpMethod.GET, new HttpEntity<>(csrfRequestHeaders), Void.class).getHeaders(),
-                "csrftoken");
+                cookies);
+        final String csrfToken = cookies.get("csrftoken");
         if (csrfToken == null) {
             throw new IllegalStateException("AWX-Login fehlgeschlagen: kein CSRF-Token erhalten.");
         }
@@ -383,7 +388,7 @@ public class AwxOrgTeamService {
         final HttpHeaders headers = new HttpHeaders();
         headers.setAccept(List.of(MediaType.TEXT_HTML));
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-        headers.set(HttpHeaders.COOKIE, "csrftoken=" + csrfToken);
+        headers.set(HttpHeaders.COOKIE, cookieHeader(cookies));
         headers.set(HttpHeaders.REFERER, loginUrl);
         headers.set("X-CSRFToken", csrfToken);
 
@@ -395,20 +400,23 @@ public class AwxOrgTeamService {
 
         final ResponseEntity<Void> response = restTemplate.exchange(
                 loginUrl, HttpMethod.POST, new HttpEntity<>(form, headers), Void.class);
-        final String sessionId = cookieValue(response.getHeaders(), "sessionid");
-        if (sessionId == null) {
-            throw new IllegalStateException("AWX-Login fehlgeschlagen: Benutzername oder Passwort ungültig.");
+        collectCookies(response.getHeaders(), cookies);
+        if (!response.getStatusCode().is3xxRedirection()) {
+            throw new IllegalStateException("AWX-Login fehlgeschlagen: unerwartete Antwort " + response.getStatusCode());
         }
-        return sessionId;
+        return cookieHeader(cookies);
     }
 
-    private String cookieValue(final HttpHeaders headers, final String name) {
-        return headers.getOrEmpty(HttpHeaders.SET_COOKIE).stream()
+    private void collectCookies(final HttpHeaders headers, final Map<String, String> cookies) {
+        headers.getOrEmpty(HttpHeaders.SET_COOKIE).stream()
                 .flatMap(header -> HttpCookie.parse(header).stream())
-                .filter(cookie -> name.equals(cookie.getName()))
-                .map(HttpCookie::getValue)
-                .findFirst()
-                .orElse(null);
+                .forEach(cookie -> cookies.put(cookie.getName(), cookie.getValue()));
+    }
+
+    private String cookieHeader(final Map<String, String> cookies) {
+        return cookies.entrySet().stream()
+                .map(cookie -> cookie.getKey() + "=" + cookie.getValue())
+                .collect(Collectors.joining("; "));
     }
 
     private AwxConfigDTO getAwxPConfig() {

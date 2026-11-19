@@ -29,8 +29,8 @@
           <div class="text-caption">
             <strong>Ressourceneffizienz:</strong><br>
             0% bis 15% Einsparung: Grün<br>
-            >15% bis 20% Einsparung: Gelb<br>
-            >20% Einsparung: Rot
+            über 15% bis 20% Einsparung: Gelb<br>
+            über 20% Einsparung: Rot
           </div>
         </v-tooltip>
       </div>
@@ -51,12 +51,33 @@
         <div class="mt-2">
           <p><strong>Gesamt (Ist):</strong> {{ totalCpuCurrent }} Cores</p>
           <p><strong>Gesamt (Soll):</strong> {{ totalCpuTarget }} Cores</p>
-          <p class="mt-1">
-            <strong>Mögliche Einsparung:</strong>
-            {{ totalCpuSavings }} Cores
-            <span v-if="totalCpuSavings > 0">
-              ({{ cpuSavingsPercentage }}%)
+          <p class="mt-1 d-flex align-center flex-wrap">
+            <span>
+              <strong>Mögliche Gesamteinsparung:</strong>
+              {{ totalCpuSavings }} Cores
+              <span v-if="totalCpuSavings > 0">
+                ({{ cpuSavingsPercentage }}%)
+              </span>
             </span>
+            <v-tooltip location="top">
+              <template #activator="{ props: tooltipProps }">
+                <v-icon
+                    v-bind="tooltipProps"
+                    :icon="mdiInformationOutline"
+                    size="16"
+                    class="ml-1 text-medium-emphasis"
+                />
+              </template>
+              <div class="text-caption">
+                <strong>Ressourcenanpassung:</strong> {{ resizingOnlyCpuSavings }} Cores<br>
+                <span v-if="hasPoweredOffServers">
+                  <strong>ggf. abbaubar (poweredOff):</strong> {{ decommissionCpuSavings }} Cores
+                </span>
+                <span v-else>
+                  <strong>ggf. abbaubar (poweredOff):</strong> 0 Cores (keine ausgeschalteten Server)
+                </span>
+              </div>
+            </v-tooltip>
           </p>
         </div>
       </v-col>
@@ -75,12 +96,33 @@
         <div class="mt-2">
           <p><strong>Gesamt (Ist):</strong> {{ formatter.formatMBtoGB(totalRamCurrentMb) }} GB</p>
           <p><strong>Gesamt (Soll):</strong> {{ formatter.formatMBtoGB(totalRamTargetMb) }} GB</p>
-          <p class="mt-1">
-            <strong>Mögliche Einsparung:</strong>
-            {{ formatter.formatMBtoGB(totalRamSavingsMb) }} GB
-            <span v-if="totalRamSavingsMb > 0">
-              ({{ ramSavingsPercentage }}%)
+          <p class="mt-1 d-flex align-center flex-wrap">
+            <span>
+              <strong>Mögliche Gesamteinsparung:</strong>
+              {{ formatter.formatMBtoGB(totalRamSavingsMb) }} GB
+              <span v-if="totalRamSavingsMb > 0">
+                ({{ ramSavingsPercentage }}%)
+              </span>
             </span>
+            <v-tooltip location="top">
+              <template #activator="{ props: tooltipProps }">
+                <v-icon
+                    v-bind="tooltipProps"
+                    :icon="mdiInformationOutline"
+                    size="16"
+                    class="ml-1 text-medium-emphasis"
+                />
+              </template>
+              <div class="text-caption">
+                <strong>Ressourcenanpassung:</strong> {{ formatter.formatMBtoGB(resizingOnlyRamSavingsMb) }} GB<br>
+                <span v-if="hasPoweredOffServers">
+                  <strong>ggf. abbaubar (poweredOff):</strong> {{ formatter.formatMBtoGB(decommissionRamSavingsMb) }} GB
+                </span>
+                <span v-else>
+                  <strong>ggf. abbaubar (poweredOff):</strong> 0 GB (keine ausgeschalteten Server)
+                </span>
+              </div>
+            </v-tooltip>
           </p>
         </div>
       </v-col>
@@ -90,7 +132,7 @@
 
 <script setup lang="ts">
 import type Appservice from "@/types/Appservice.ts";
-import { mdiDownload, mdiLeaf } from "@mdi/js";
+import { mdiDownload, mdiLeaf, mdiInformationOutline } from "@mdi/js";
 import { computed } from "vue";
 
 import CommonCard from "@/components/common/CommonCard.vue";
@@ -104,6 +146,22 @@ const formatter = useFormatter();
 
 const servers = computed(() => props.selectedAppservice?.servers || []);
 
+const isPoweredOff = (server: any) => server.powerState === "poweredOff";
+
+const hasPoweredOffServers = computed(() =>
+    servers.value.some((server: any) => isPoweredOff(server))
+);
+
+const getResizeSavings = (current: number, recVal: unknown): number => {
+  if (recVal != null && recVal !== "" && Number(recVal) !== 0) {
+    const recommended = Number(recVal);
+    if (recommended < current) {
+      return current - recommended;
+    }
+  }
+  return 0;
+};
+
 // --- 1. Aktuelle Gesamtzahlen (Ist) berechnen ---
 const totalCpuCurrent = computed(() => {
   return servers.value.reduce((sum: number, server: any) => sum + Number(server.numCpu || 0), 0);
@@ -113,44 +171,55 @@ const totalRamCurrentMb = computed(() => {
   return servers.value.reduce((sum: number, server: any) => sum + Number(server.memoryMb || 0), 0);
 });
 
-// --- 2. Einsparungen berechnen ---
-const totalCpuSavings = computed(() => {
+// --- 2. Einsparungen nach Hebel berechnen ---
+// Potenzielle Einsparung durch Abbau ausgeschalteter Server (belegen aktuell Ressourcen)
+const decommissionCpuSavings = computed(() => {
   return servers.value.reduce((sum: number, server: any) => {
-    const current = Number(server.numCpu || 0);
-    const recVal = server.numCpuRecommended;
-
-    if (recVal != null && recVal !== '' && Number(recVal) !== 0) {
-      const recommended = Number(recVal);
-      if (recommended < current) {
-        return sum + (current - recommended);
-      }
-    }
-    return sum;
+    if (!isPoweredOff(server)) return sum;
+    return sum + Number(server.numCpu || 0);
   }, 0);
 });
 
-const totalRamSavingsMb = computed(() => {
+const decommissionRamSavingsMb = computed(() => {
   return servers.value.reduce((sum: number, server: any) => {
-    const current = Number(server.memoryMb || 0);
-    const recVal = server.memoryMbRecommended;
-
-    if (recVal != null && recVal !== '' && Number(recVal) !== 0) {
-      const recommended = Number(recVal);
-      if (recommended < current) {
-        return sum + (current - recommended);
-      }
-    }
-    return sum;
+    if (!isPoweredOff(server)) return sum;
+    return sum + Number(server.memoryMb || 0);
   }, 0);
+});
+
+// Nur über Ressourcenanpassung (bei nicht ausgeschalteten Servern)
+const resizingOnlyCpuSavings = computed(() => {
+  return servers.value.reduce((sum: number, server: any) => {
+    if (isPoweredOff(server)) return sum;
+    const current = Number(server.numCpu || 0);
+    return sum + getResizeSavings(current, server.numCpuRecommended);
+  }, 0);
+});
+
+const resizingOnlyRamSavingsMb = computed(() => {
+  return servers.value.reduce((sum: number, server: any) => {
+    if (isPoweredOff(server)) return sum;
+    const current = Number(server.memoryMb || 0);
+    return sum + getResizeSavings(current, server.memoryMbRecommended);
+  }, 0);
+});
+
+// Mögliche Gesamteinsparung (Ressourcenanpassung + Abbau-Potenzial von poweredOff-Servern)
+const totalCpuSavings = computed(() => {
+  return resizingOnlyCpuSavings.value + decommissionCpuSavings.value;
+});
+
+const totalRamSavingsMb = computed(() => {
+  return resizingOnlyRamSavingsMb.value + decommissionRamSavingsMb.value;
 });
 
 // --- 3. Zielwerte (Soll) berechnen ---
 const totalCpuTarget = computed(() => {
-  return totalCpuCurrent.value - totalCpuSavings.value;
+  return Math.max(0, totalCpuCurrent.value - totalCpuSavings.value);
 });
 
 const totalRamTargetMb = computed(() => {
-  return totalRamCurrentMb.value - totalRamSavingsMb.value;
+  return Math.max(0, totalRamCurrentMb.value - totalRamSavingsMb.value);
 });
 
 // --- 4. Prozentuale Einsparung berechnen ---
@@ -183,40 +252,48 @@ const exportGreenItCsv = () => {
   const currentServers = servers.value;
   if (currentServers.length === 0) return;
 
-  const headers = ['Servername', 'CPU Ist', 'CPU Empfohlen', 'CPU Einsparung (Cores)', 'RAM Ist (MB)', 'RAM Empfohlen (MB)', 'RAM Einsparung (MB)'];
+  const headers = [
+    "Servername",
+    "Status",
+    "CPU Ist",
+    "CPU Empfohlen",
+    "CPU Einsparung (Cores)",
+    "RAM Ist (MB)",
+    "RAM Empfohlen (MB)",
+    "RAM Einsparung (MB)",
+  ];
 
   const rows = currentServers.map((server: any) => {
+    const poweredOff = isPoweredOff(server);
     const currentCpu = Number(server.numCpu || 0);
     const recCpu = Number(server.numCpuRecommended || 0);
-    const cpuSavings = recCpu > 0 && recCpu < currentCpu ? currentCpu - recCpu : 0;
+    const cpuSavings = poweredOff ? currentCpu : getResizeSavings(currentCpu, server.numCpuRecommended);
 
     const currentRam = Number(server.memoryMb || 0);
     const recRam = Number(server.memoryMbRecommended || 0);
-    const ramSavings = recRam > 0 && recRam < currentRam ? currentRam - recRam : 0;
+    const ramSavings = poweredOff ? currentRam : getResizeSavings(currentRam, server.memoryMbRecommended);
 
     return [
-      `"${server.name || ''}"`,
+      `"${server.name || ""}"`,
+      `"${server.powerState || ""}"`,
       currentCpu,
-      recCpu > 0 ? recCpu : '',
+      recCpu > 0 ? recCpu : "",
       cpuSavings,
       currentRam,
-      recRam > 0 ? recRam : '',
-      ramSavings
+      recRam > 0 ? recRam : "",
+      ramSavings,
     ];
   });
 
-  const csvContent = [
-    headers.join(';'),
-    ...rows.map(row => row.join(';'))
-  ].join('\r\n');
+  const csvContent = [headers.join(";"), ...rows.map((row) => row.join(";"))].join("\r\n");
 
-  const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
+  const link = document.createElement("a");
 
-  const appserviceName = props.selectedAppservice?.name || 'appservice';
-  link.setAttribute('href', url);
-  link.setAttribute('download', `green-it-einsparungen-${appserviceName}.csv`);
+  const appserviceName = props.selectedAppservice?.name || "appservice";
+  link.setAttribute("href", url);
+  link.setAttribute("download", `green-it-einsparungen-${appserviceName}.csv`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

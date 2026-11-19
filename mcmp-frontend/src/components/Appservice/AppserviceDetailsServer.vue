@@ -9,7 +9,19 @@
       :is-default-expanded="false"
     >
       <template #append-title>
-        <count-badge :count="serverCount" />
+        <v-tooltip
+            location="top"
+            :text="`Gesamtanzahl Server: ${serverCount}`"
+        >
+          <template #activator="{ props: tooltipProps }">
+            <span
+                v-bind="tooltipProps"
+                class="d-inline-flex"
+            >
+              <count-badge :count="serverCount" />
+            </span>
+          </template>
+        </v-tooltip>
         <v-tooltip
             v-if="anyServerHasWarnings"
             location="top"
@@ -27,6 +39,20 @@
                   ).length
                 "
               />
+            </span>
+          </template>
+        </v-tooltip>
+        <v-tooltip
+            v-if="anyServerPoweredOff"
+            location="top"
+            :text="`${poweredOffCount} Server ausgeschaltet (poweredOff) – ggf. abbaubar`"
+        >
+          <template #activator="{ props: tooltipProps }">
+            <span
+                v-bind="tooltipProps"
+                class="ml-2 d-inline-flex powered-off-badge"
+            >
+              <count-badge :count="poweredOffCount" />
             </span>
           </template>
         </v-tooltip>
@@ -813,6 +839,16 @@ const rootAdminTooltip = computed(() => {
 
   return "Aktion deaktiviert.";
 });
+
+const poweredOffCount = computed(
+    () =>
+        (props.selectedAppservice?.servers || []).filter(
+            (s: any) => s.powerState === "poweredOff"
+        ).length
+);
+
+const anyServerPoweredOff = computed(() => poweredOffCount.value > 0);
+
 </script>
 
 <style scoped>
@@ -871,6 +907,11 @@ const rootAdminTooltip = computed(() => {
 }
 .warning-badge :deep(*) {
   background-color: orange !important;
+  color: white !important;
+}
+
+.powered-off-badge :deep(*) {
+  background-color: rgb(var(--v-theme-_blue)) !important;
   color: white !important;
 }
 </style>

@@ -371,12 +371,17 @@ public class AwxOrgTeamService {
     private String loginAndGetSessionId(final AwxConfigDTO awxConfig) {
         final String loginUrl = awxConfig.apiEndpoint() + LOGIN_PATH;
 
-        final String csrfToken = cookieValue(restTemplate.getForEntity(loginUrl, Void.class).getHeaders(), "csrftoken");
+        final HttpHeaders csrfRequestHeaders = new HttpHeaders();
+        csrfRequestHeaders.setAccept(List.of(MediaType.TEXT_HTML));
+        final String csrfToken = cookieValue(
+                restTemplate.exchange(loginUrl, HttpMethod.GET, new HttpEntity<>(csrfRequestHeaders), Void.class).getHeaders(),
+                "csrftoken");
         if (csrfToken == null) {
             throw new IllegalStateException("AWX-Login fehlgeschlagen: kein CSRF-Token erhalten.");
         }
 
         final HttpHeaders headers = new HttpHeaders();
+        headers.setAccept(List.of(MediaType.TEXT_HTML));
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
         headers.set(HttpHeaders.COOKIE, "csrftoken=" + csrfToken);
         headers.set(HttpHeaders.REFERER, loginUrl);

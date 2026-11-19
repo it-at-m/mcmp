@@ -52,6 +52,15 @@ public interface NicRepository extends JpaRepository<Nic, Long> {
         SELECT nic.*
         FROM cmp.nic
         JOIN cmp.server ON nic.server_id = server.id
+        WHERE server.id = :serverId
+    """, nativeQuery = true)
+    List<Nic> findByServerId(@Param("serverId") Long serverId);
+
+    /* For internal use only */
+    @Query(value = """
+        SELECT nic.*
+        FROM cmp.nic
+        JOIN cmp.server ON nic.server_id = server.id
         WHERE server.cloud_id = :cloudId
     """, nativeQuery = true)
     List<Nic> findByServerCloudId(@Param("cloudId") Long cloudId);

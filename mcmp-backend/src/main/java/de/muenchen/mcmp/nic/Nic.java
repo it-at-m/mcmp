@@ -1,11 +1,19 @@
 package de.muenchen.mcmp.nic;
 
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
+
 import de.muenchen.mcmp.common.AbstractEntity;
 import de.muenchen.mcmp.portgroup.PortGroup;
+import de.muenchen.mcmp.ip.IP;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.Getter;
@@ -22,6 +30,12 @@ public class Nic extends AbstractEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "port_group_id")
     private PortGroup portGroup;
+
+    @ManyToMany(cascade = CascadeType.ALL)
+    @JoinTable(name = "ip_assignment",
+               joinColumns = { @JoinColumn(name = "nic_id") },
+               inverseJoinColumns = { @JoinColumn(name = "ip_id") })
+    private Set<IP> ips = new HashSet<>();
 
     @Column(name = "vnic_key", nullable = false)
     private Integer vnicKey;
@@ -64,4 +78,14 @@ public class Nic extends AbstractEntity {
 
     @Column(name = "tools_connected", nullable = false)
     private Boolean toolsConnected;
+
+    public void assignIp(IP ip) {
+        ips.add(ip);
+        ip.getNics().add(this);
+    }
+
+    public void unassignIp(IP ip) {
+        ips.remove(ip);
+        ip.getNics().remove(this);
+    }
 }

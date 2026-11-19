@@ -3,15 +3,18 @@
     <template #append-title>
       <div class="d-flex align-center">
         <!-- CSV-Export Button -->
-        <v-tooltip location="top" text="Green-IT Bericht als CSV exportieren">
+        <v-tooltip
+          location="top"
+          text="Green-IT Bericht als CSV exportieren"
+        >
           <template #activator="{ props: tooltipProps }">
             <v-btn
-                v-bind="tooltipProps"
-                :icon="mdiDownload"
-                size="small"
-                variant="text"
-                class="mr-2"
-                @click.stop="exportGreenItCsv"
+              v-bind="tooltipProps"
+              :icon="mdiDownload"
+              size="small"
+              variant="text"
+              class="mr-2"
+              @click.stop="exportGreenItCsv"
             />
           </template>
         </v-tooltip>
@@ -20,16 +23,16 @@
         <v-tooltip location="top">
           <template #activator="{ props: tooltipProps }">
             <v-icon
-                v-bind="tooltipProps"
-                :icon="mdiLeaf"
-                :color="overallLeafColor"
-                size="24"
+              v-bind="tooltipProps"
+              :icon="mdiLeaf"
+              :color="overallLeafColor"
+              size="24"
             />
           </template>
           <div class="text-caption">
-            <strong>Ressourceneffizienz:</strong><br>
-            0% bis 15% Einsparung: Grün<br>
-            >15% bis 20% Einsparung: Gelb<br>
+            <strong>Ressourceneffizienz:</strong><br />
+            0% bis 15% Einsparung: Grün<br />
+            >15% bis 20% Einsparung: Gelb<br />
             >20% Einsparung: Rot
           </div>
         </v-tooltip>
@@ -42,10 +45,10 @@
         <h3 class="d-flex align-center">
           CPU Ressourcen
           <v-icon
-              :icon="mdiLeaf"
-              :color="cpuLeafColor"
-              size="20"
-              class="ml-2"
+            :icon="mdiLeaf"
+            :color="cpuLeafColor"
+            size="20"
+            class="ml-2"
           />
         </h3>
         <div class="mt-2">
@@ -66,15 +69,21 @@
         <h3 class="d-flex align-center">
           RAM Ressourcen
           <v-icon
-              :icon="mdiLeaf"
-              :color="ramLeafColor"
-              size="20"
-              class="ml-2"
+            :icon="mdiLeaf"
+            :color="ramLeafColor"
+            size="20"
+            class="ml-2"
           />
         </h3>
         <div class="mt-2">
-          <p><strong>Gesamt (Ist):</strong> {{ formatter.formatMBtoGB(totalRamCurrentMb) }} GB</p>
-          <p><strong>Gesamt (Soll):</strong> {{ formatter.formatMBtoGB(totalRamTargetMb) }} GB</p>
+          <p>
+            <strong>Gesamt (Ist):</strong>
+            {{ formatter.formatMBtoGB(totalRamCurrentMb) }} GB
+          </p>
+          <p>
+            <strong>Gesamt (Soll):</strong>
+            {{ formatter.formatMBtoGB(totalRamTargetMb) }} GB
+          </p>
           <p class="mt-1">
             <strong>Mögliche Einsparung:</strong>
             {{ formatter.formatMBtoGB(totalRamSavingsMb) }} GB
@@ -90,6 +99,7 @@
 
 <script setup lang="ts">
 import type Appservice from "@/types/Appservice.ts";
+
 import { mdiDownload, mdiLeaf } from "@mdi/js";
 import { computed } from "vue";
 
@@ -106,11 +116,17 @@ const servers = computed(() => props.selectedAppservice?.servers || []);
 
 // --- 1. Aktuelle Gesamtzahlen (Ist) berechnen ---
 const totalCpuCurrent = computed(() => {
-  return servers.value.reduce((sum: number, server: any) => sum + Number(server.numCpu || 0), 0);
+  return servers.value.reduce(
+    (sum: number, server: any) => sum + Number(server.numCpu || 0),
+    0
+  );
 });
 
 const totalRamCurrentMb = computed(() => {
-  return servers.value.reduce((sum: number, server: any) => sum + Number(server.memoryMb || 0), 0);
+  return servers.value.reduce(
+    (sum: number, server: any) => sum + Number(server.memoryMb || 0),
+    0
+  );
 });
 
 // --- 2. Einsparungen berechnen ---
@@ -119,7 +135,7 @@ const totalCpuSavings = computed(() => {
     const current = Number(server.numCpu || 0);
     const recVal = server.numCpuRecommended;
 
-    if (recVal != null && recVal !== '' && Number(recVal) !== 0) {
+    if (recVal != null && recVal !== "" && Number(recVal) !== 0) {
       const recommended = Number(recVal);
       if (recommended < current) {
         return sum + (current - recommended);
@@ -134,7 +150,7 @@ const totalRamSavingsMb = computed(() => {
     const current = Number(server.memoryMb || 0);
     const recVal = server.memoryMbRecommended;
 
-    if (recVal != null && recVal !== '' && Number(recVal) !== 0) {
+    if (recVal != null && recVal !== "" && Number(recVal) !== 0) {
       const recommended = Number(recVal);
       if (recommended < current) {
         return sum + (current - recommended);
@@ -171,10 +187,17 @@ const getLeafColor = (percentage: number) => {
   return "red";
 };
 
-const cpuLeafColor = computed(() => getLeafColor(Number(cpuSavingsPercentage.value)));
-const ramLeafColor = computed(() => getLeafColor(Number(ramSavingsPercentage.value)));
+const cpuLeafColor = computed(() =>
+  getLeafColor(Number(cpuSavingsPercentage.value))
+);
+const ramLeafColor = computed(() =>
+  getLeafColor(Number(ramSavingsPercentage.value))
+);
 const overallLeafColor = computed(() => {
-  const maxPct = Math.max(Number(cpuSavingsPercentage.value), Number(ramSavingsPercentage.value));
+  const maxPct = Math.max(
+    Number(cpuSavingsPercentage.value),
+    Number(ramSavingsPercentage.value)
+  );
   return getLeafColor(maxPct);
 });
 
@@ -183,40 +206,52 @@ const exportGreenItCsv = () => {
   const currentServers = servers.value;
   if (currentServers.length === 0) return;
 
-  const headers = ['Servername', 'CPU Ist', 'CPU Empfohlen', 'CPU Einsparung (Cores)', 'RAM Ist (MB)', 'RAM Empfohlen (MB)', 'RAM Einsparung (MB)'];
+  const headers = [
+    "Servername",
+    "CPU Ist",
+    "CPU Empfohlen",
+    "CPU Einsparung (Cores)",
+    "RAM Ist (MB)",
+    "RAM Empfohlen (MB)",
+    "RAM Einsparung (MB)",
+  ];
 
   const rows = currentServers.map((server: any) => {
     const currentCpu = Number(server.numCpu || 0);
     const recCpu = Number(server.numCpuRecommended || 0);
-    const cpuSavings = recCpu > 0 && recCpu < currentCpu ? currentCpu - recCpu : 0;
+    const cpuSavings =
+      recCpu > 0 && recCpu < currentCpu ? currentCpu - recCpu : 0;
 
     const currentRam = Number(server.memoryMb || 0);
     const recRam = Number(server.memoryMbRecommended || 0);
-    const ramSavings = recRam > 0 && recRam < currentRam ? currentRam - recRam : 0;
+    const ramSavings =
+      recRam > 0 && recRam < currentRam ? currentRam - recRam : 0;
 
     return [
-      `"${server.name || ''}"`,
+      `"${server.name || ""}"`,
       currentCpu,
-      recCpu > 0 ? recCpu : '',
+      recCpu > 0 ? recCpu : "",
       cpuSavings,
       currentRam,
-      recRam > 0 ? recRam : '',
-      ramSavings
+      recRam > 0 ? recRam : "",
+      ramSavings,
     ];
   });
 
   const csvContent = [
-    headers.join(';'),
-    ...rows.map(row => row.join(';'))
-  ].join('\r\n');
+    headers.join(";"),
+    ...rows.map((row) => row.join(";")),
+  ].join("\r\n");
 
-  const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const blob = new Blob(["\ufeff" + csvContent], {
+    type: "text/csv;charset=utf-8;",
+  });
   const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
+  const link = document.createElement("a");
 
-  const appserviceName = props.selectedAppservice?.name || 'appservice';
-  link.setAttribute('href', url);
-  link.setAttribute('download', `green-it-einsparungen-${appserviceName}.csv`);
+  const appserviceName = props.selectedAppservice?.name || "appservice";
+  link.setAttribute("href", url);
+  link.setAttribute("download", `green-it-einsparungen-${appserviceName}.csv`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

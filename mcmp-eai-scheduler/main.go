@@ -1552,8 +1552,8 @@ func performNormalChange(client *snow.Client, callbackBaseUrl string, job *db.Jo
 		Change: snow.NewNormalChangeObject{
 			CIs:                getCISysIDs(job),
 			ApplicationService: getApplicationAserviceSysID(job),
-			ShortDescription:   "[MCMP] " + *replaceVariables(job.ActionTitle, ""),
-			Description:        buildChangeShortDescription(username, *replaceVariables(job.ActionTitle, "")),
+			ShortDescription:   buildChangeShortDescription(username, *replaceVariables(job.ActionTitle, "")),
+			Description:        *replaceVariables(job.ActionDescription, ""),
 			StartDate:          formatChangeDate(job.ChangeStartDate),
 			EndDate:            formatChangeDate(job.ChangeEndDate),
 			RequestedBy:        requestedBy,
@@ -1614,7 +1614,7 @@ func performStandardChange(client *snow.Client, callbackBaseUrl string, job *db.
 		Change: snow.NewStandardChangeObject{
 			CIs:                    getCISysIDs(job),
 			ApplicationService:     getApplicationAserviceSysID(job),
-			ShortDescription:       buildChangeShortDescription(username, *replaceVariables(job.Title, "")),
+			ShortDescription:       buildChangeShortDescription(username, *replaceVariables(job.ActionTitle, "")),
 			Description:            *replaceVariables(job.ActionDescription, ""),
 			StartDate:              formatChangeDate(job.ChangeStartDate),
 			EndDate:                formatChangeDate(job.ChangeEndDate),

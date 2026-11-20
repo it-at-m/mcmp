@@ -1,42 +1,40 @@
 <template>
   <common-card title="Green-IT">
     <template #append-title>
-      <div class="d-flex align-center">
-        <!-- CSV-Export Button -->
-        <v-tooltip
-          location="top"
-          text="Green-IT Bericht als CSV exportieren"
-        >
-          <template #activator="{ props: tooltipProps }">
-            <v-btn
-              v-bind="tooltipProps"
-              :icon="mdiFileExportOutline"
-              size="small"
-              variant="text"
-              class="mr-2"
-              @click.stop="exportGreenItCsv"
-            />
-          </template>
-        </v-tooltip>
-
-        <!-- Das Effizienz-Blatt mit Tooltip und Skala -->
-        <v-tooltip location="top">
-          <template #activator="{ props: tooltipProps }">
-            <v-icon
-              v-bind="tooltipProps"
-              :icon="mdiLeaf"
-              :color="overallLeafColor"
-              size="24"
-            />
-          </template>
-          <div class="text-caption">
-            <strong>Ressourceneffizienz:</strong><br />
-            0% bis 15% Einsparung: Grün<br />
-            über 15% bis 20% Einsparung: Gelb<br />
-            über 20% Einsparung: Rot
-          </div>
-        </v-tooltip>
-      </div>
+      <!-- Das Effizienz-Blatt mit Tooltip und Skala -->
+      <v-tooltip location="top">
+        <template #activator="{ props: tooltipProps }">
+          <v-icon
+            v-bind="tooltipProps"
+            :icon="mdiLeaf"
+            :color="overallLeafColor"
+            size="24"
+            class="ml-1"
+          />
+        </template>
+        <div class="text-caption">
+          <strong>Ressourceneffizienz:</strong><br />
+          0% bis 15% Einsparung: Grün<br />
+          über 15% bis 20% Einsparung: Gelb<br />
+          über 20% Einsparung: Rot
+        </div>
+      </v-tooltip>
+    </template>
+    <template #toolbar-actions>
+      <!-- CSV-Export Button -->
+      <v-tooltip
+        location="top"
+        text="Green-IT Bericht als CSV exportieren"
+      >
+        <template #activator="{ props: tooltipProps }">
+          <v-btn
+            v-bind="tooltipProps"
+            :icon="mdiFileExportOutline"
+            variant="flat"
+            @click.stop="exportGreenItCsv"
+          />
+        </template>
+      </v-tooltip>
     </template>
 
     <v-row>

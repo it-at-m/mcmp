@@ -214,7 +214,7 @@ const notOwnedRepoNames = computed(() =>
 
 const canSubmit = computed(
   () =>
-    isValid.value &&
+    (props.server !== null || isValid.value) &&
     !loading.value &&
     props.repositories.length > 0 &&
     fqdnsToDetach.value.length > 0

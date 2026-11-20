@@ -2,9 +2,11 @@ package de.muenchen.mcmp.user;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 
@@ -32,4 +34,22 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 
     @Query("SELECT DISTINCT LOWER(u.department) FROM User u WHERE LOWER(u.department) LIKE LOWER(CONCAT('%', :query, '%')) ORDER BY LOWER(u.department)")
     List<String> findDepartmentsLike(@Param("query") String query);
+
+    /**
+     * Updates the login timestamp of the user with the given username to the current timestamp
+     * if it has not yet been updated during the current day in the Europe/Berlin time zone.
+     *
+     * @param username the username of the user whose login timestamp should be updated
+     * @return the number of rows updated
+     */
+    @Modifying(flushAutomatically = true)
+    @Query(value = """
+                UPDATE cmp."user"
+                   SET updated_at = CURRENT_TIMESTAMP(3)
+                 WHERE username = :username
+                   AND (updated_at IS NULL
+                        OR updated_at < date_trunc('day', now() AT TIME ZONE 'Europe/Berlin')
+                                          AT TIME ZONE 'Europe/Berlin')
+                """, nativeQuery = true)
+    int updateLoginTimestampDaily(@Param("username") String username);
 }

@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
@@ -156,5 +157,19 @@ public class UserService {
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void updateLastLogin(final String username) {
+        if (!StringUtils.hasText(username)) {
+            return;
+        }
+
+        final int updated = repository.updateLoginTimestampDaily(username);
+        if (updated > 0) {
+            log.info("Login timestamp (updated_at) for user '{}' updated", username);
+        } else {
+            log.debug("Login timestamp for user '{}' not updated (already set today or user unknown)", username);
+        }
     }
 }

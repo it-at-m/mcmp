@@ -22,12 +22,10 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.net.HttpCookie;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -36,9 +34,8 @@ import java.util.stream.Collectors;
  * This service reads the
  * {@code SOCIAL_AUTH_ORGANIZATION_MAP} and {@code SOCIAL_AUTH_TEAM_MAP} entries from
  * {@code /api/v2/settings/authentication/}. These maps define, per organization, which
- * usernames are listed as "admins". A team is only manageable if the current user is an
- * admin of the team's organization - teams have no admin concept of their own in AWX's
- * social-auth mapping.
+ * usernames are listed as "admins". All teams live in the "Default" organization; a team is
+ * only manageable if the current user is listed as one of its users.
  */
 @Slf4j
 @Service
@@ -135,9 +132,8 @@ public class AwxOrgTeamService {
      * Current members of an AWX organization (its admins) or team (its users), so that the edit
      * form can be prefilled. {@code staticMembers} ({@code STATIC:...}) and {@code ldapMembers}
      * ({@code LDAP:...}) are editable; {@code otherMembers} (any other entry) are read-only.
-     * {@code organization} is only set for teams.
      */
-    public record AwxOrgTeamDetailsDTO(String name, String organization, List<String> staticMembers,
+    public record AwxOrgTeamDetailsDTO(String name, List<String> staticMembers,
                                        List<String> ldapMembers, List<String> otherMembers) {
     }
 
@@ -158,14 +154,14 @@ public class AwxOrgTeamService {
             log.warn("User {} tried to read AWX organization {} without permission.", AuthUtils.getUsername(), orgName);
             throw new AccessDeniedException("You are not allowed to manage this organization.");
         }
-        return toDetails(orgName, null, organization.path("admins"));
+        return toDetails(orgName, organization.path("admins"));
     }
 
     /**
-     * Returns the current users of a team. Only available to admins of the team's organization.
+     * Returns the current users of a team. Only available to users who are members of the team.
      *
      * @throws NoSuchElementException if the team does not exist
-     * @throws AccessDeniedException  if the current user is not an admin of the team's organization
+     * @throws AccessDeniedException  if the current user is not a member of the team
      */
     public AwxOrgTeamDetailsDTO getTeamDetails(final String name) {
         final JsonNode teamMap = fetchTeamMap();
@@ -174,13 +170,11 @@ public class AwxOrgTeamService {
             throw new NoSuchElementException("Team not found: " + name);
         }
         final JsonNode team = teamMap.get(teamName);
-        final String organization = team.path("organization").asString(null);
-        final JsonNode organizationEntry = organization == null ? null : findCaseInsensitive(fetchOrganizationMap(), organization);
-        if (EXCLUDED_DEFAULT_NAME.equalsIgnoreCase(teamName) || !isAdminOf(organizationEntry, AuthUtils.getUsername())) {
+        if (EXCLUDED_DEFAULT_NAME.equalsIgnoreCase(teamName) || !isMemberOf(team, AuthUtils.getUsername())) {
             log.warn("User {} tried to read AWX team {} without permission.", AuthUtils.getUsername(), teamName);
             throw new AccessDeniedException("You are not allowed to manage this team.");
         }
-        return toDetails(teamName, organization, team.path("users"));
+        return toDetails(teamName, team.path("users"));
     }
 
     /**
@@ -188,7 +182,7 @@ public class AwxOrgTeamService {
      * explicit members and yield empty lists. Only entries with the exact {@code STATIC:} or
      * {@code LDAP:} prefix are editable, everything else is returned as read-only.
      */
-    private AwxOrgTeamDetailsDTO toDetails(final String name, final String organization, final JsonNode members) {
+    private AwxOrgTeamDetailsDTO toDetails(final String name, final JsonNode members) {
         final List<String> staticMembers = new ArrayList<>();
         final List<String> ldapMembers = new ArrayList<>();
         final List<String> otherMembers = new ArrayList<>();
@@ -207,7 +201,7 @@ public class AwxOrgTeamService {
                 }
             }
         }
-        return new AwxOrgTeamDetailsDTO(name, organization, staticMembers, ldapMembers, otherMembers);
+        return new AwxOrgTeamDetailsDTO(name, staticMembers, ldapMembers, otherMembers);
     }
 
     public List<String> getManageableOrganizationNames() {
@@ -225,16 +219,12 @@ public class AwxOrgTeamService {
     }
 
     public List<String> getManageableTeamNames() {
-        final JsonNode organizationMap = fetchOrganizationMap();
         final JsonNode teamMap = fetchTeamMap();
         final String username = AuthUtils.getUsername();
-        final Set<String> adminOrganizations = adminOrganizationNames(organizationMap, username);
 
         final List<String> result = new ArrayList<>();
         for (final String teamName : teamMap.propertyNames()) {
-            final String organization = teamMap.get(teamName).path("organization").asString(null);
-            if (!EXCLUDED_DEFAULT_NAME.equalsIgnoreCase(teamName)
-                    && organization != null && containsIgnoreCase(adminOrganizations, organization)) {
+            if (!EXCLUDED_DEFAULT_NAME.equalsIgnoreCase(teamName) && isMemberOf(teamMap.get(teamName), username)) {
                 result.add(teamName);
             }
         }
@@ -258,7 +248,7 @@ public class AwxOrgTeamService {
 
     /**
      * Checks whether a team with the given name already exists in AWX and, if so, whether the
-     * current user is allowed to manage it (is an admin of the team's organization).
+     * current user is allowed to manage it (is a member of the team).
      */
     public AwxNameCheckDTO checkTeam(final String name) {
         final JsonNode teamMap = fetchTeamMap();
@@ -266,26 +256,7 @@ public class AwxOrgTeamService {
         if (team == null) {
             return new AwxNameCheckDTO(false, true);
         }
-
-        final String organization = team.path("organization").asString(null);
-        if (organization == null) {
-            return new AwxNameCheckDTO(true, false);
-        }
-
-        final JsonNode organizationMap = fetchOrganizationMap();
-        final JsonNode organizationEntry = findCaseInsensitive(organizationMap, organization);
-        final boolean allowed = organizationEntry != null && isAdminOf(organizationEntry, AuthUtils.getUsername());
-        return new AwxNameCheckDTO(true, allowed);
-    }
-
-    private Set<String> adminOrganizationNames(final JsonNode organizationMap, final String username) {
-        final Set<String> adminOrganizations = new HashSet<>();
-        for (final String orgName : organizationMap.propertyNames()) {
-            if (isAdminOf(organizationMap.get(orgName), username)) {
-                adminOrganizations.add(orgName);
-            }
-        }
-        return adminOrganizations;
+        return new AwxNameCheckDTO(true, isMemberOf(team, AuthUtils.getUsername()));
     }
 
     /**
@@ -294,26 +265,32 @@ public class AwxOrgTeamService {
      * username, either plain (legacy) or as {@code STATIC:<username>}.
      */
     private boolean isAdminOf(final JsonNode organizationMapEntry, final String username) {
-        if (organizationMapEntry == null || username == null) {
+        if (organizationMapEntry == null) {
             return false;
         }
         final JsonNode admins = organizationMapEntry.path("admins");
-        if (admins.isBoolean()) {
-            return admins.asBoolean();
+        return admins.isBoolean() ? admins.asBoolean() : listsUsername(admins, username);
+    }
+
+    /**
+     * The "users" field of a SOCIAL_AUTH_TEAM_MAP entry is either a boolean or a list of entries. Only
+     * an explicit entry makes the current user a member; a boolean does not.
+     */
+    private boolean isMemberOf(final JsonNode teamMapEntry, final String username) {
+        return teamMapEntry != null && listsUsername(teamMapEntry.path("users"), username);
+    }
+
+    private boolean listsUsername(final JsonNode entries, final String username) {
+        if (username == null || !entries.isArray()) {
+            return false;
         }
-        if (admins.isArray()) {
-            for (final JsonNode admin : admins) {
-                final String value = admin.asString("");
-                if (username.equalsIgnoreCase(value) || (STATIC_PREFIX + username).equalsIgnoreCase(value)) {
-                    return true;
-                }
+        for (final JsonNode entry : entries) {
+            final String value = entry.asString("");
+            if (username.equalsIgnoreCase(value) || (STATIC_PREFIX + username).equalsIgnoreCase(value)) {
+                return true;
             }
         }
         return false;
-    }
-
-    private boolean containsIgnoreCase(final Set<String> values, final String value) {
-        return values.stream().anyMatch(v -> v.equalsIgnoreCase(value));
     }
 
     private JsonNode findCaseInsensitive(final JsonNode map, final String name) {

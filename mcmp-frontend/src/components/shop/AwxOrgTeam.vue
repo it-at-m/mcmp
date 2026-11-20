@@ -55,11 +55,33 @@
           :value="'rename'"
           label="Umbenennen"
         />
+        <v-radio
+          :value="'delete'"
+          label="Löschen"
+        />
       </v-row>
     </v-radio-group>
     <br />
 
-    <v-form ref="form">
+    <common-alert
+      v-if="action == 'delete'"
+      color="info"
+      class="links"
+    >
+      Das Löschen von Organisationen und Teams ist nur manuell möglich. <br />
+      Bitte beantragen Sie es über das Ticket:
+      <a
+        :href="AWX_SUPPORT_URL"
+        target="_blank"
+        rel="noopener noreferrer"
+        >Ansible &amp; AWX - Support beantragen</a
+      >.
+    </common-alert>
+
+    <v-form
+      v-else
+      ref="form"
+    >
       <v-text-field
         v-if="action == 'create'"
         v-model="name"
@@ -104,28 +126,15 @@
       />
 
       <template v-if="action != 'rename'">
-        <v-autocomplete
-          v-if="OrgOrTeam == 'team' && action == 'create'"
-          v-model="teamOrganization"
-          :items="orgList"
-          label="Organisation des Teams"
-          variant="outlined"
-          clearable
-          :rules="[
-            rules.notEmptySelectRule(
-              'Es muss eine Organisation gewählt werden.'
-            ),
-          ]"
-        />
-        <v-text-field
-          v-else-if="OrgOrTeam == 'team'"
-          :model-value="teamOrganization"
-          label="Organisation des Teams"
-          variant="outlined"
-          readonly
-          disabled
-        />
-
+        <common-alert
+          v-if="action == 'create'"
+          color="info"
+          class="mb-4"
+        >
+          Sie werden automatisch als
+          {{ OrgOrTeam == "org" ? "Admin der" : "Mitglied des" }} neuen
+          {{ OrgOrTeamLabel }}{{ OrgOrTeam == "org" ? "" : "s" }} eingetragen.
+        </common-alert>
         <v-autocomplete
           v-model="staticMembers"
           v-model:search="staticSearch"
@@ -140,7 +149,7 @@
           closable-chips
           clearable
           no-filter
-          class="mb-2"
+          class="mb-6"
           :disabled="memberFieldsDisabled"
           :rules="[memberRule(MEMBER_REGEX, 'Ungültiger Benutzername.')]"
         >
@@ -166,15 +175,15 @@
           :items="ldapItems"
           no-filter
           :label="ldapLabel"
-          hint="Abteilung (cn) suchen (mindestens 4 Zeichen)"
+          hint="Abteilung suchen (mindestens 4 Zeichen) oder vollständigen LDAP-Eintrag eingeben"
           persistent-hint
           variant="outlined"
           multiple
           chips
           closable-chips
           clearable
+          class="mb-6"
           :disabled="memberFieldsDisabled"
-          :rules="[memberRule(LDAP_ENTRY_REGEX, 'Ungültige LDAP-Gruppe.')]"
           @update:model-value="onLdapMembersChange"
         >
           <template #chip="{ props: chipProps, item }">
@@ -189,15 +198,14 @@
               :subtitle="String(item.value)"
             />
           </template>
+          <template #append>
+            <info-tooltip>
+              Bei LDAP-Gruppen werden nur direkte Gruppenmitglieder aufgelöst.
+              Mitglieder von verschachtelten Untergruppen werden nicht
+              berücksichtigt.
+            </info-tooltip>
+          </template>
         </v-combobox>
-        <common-alert
-          color="info"
-          class="mt-3 mb-6"
-        >
-          Bei LDAP-Gruppen werden nur direkte Gruppenmitglieder aufgelöst.
-          Mitglieder von verschachtelten Untergruppen werden nicht
-          berücksichtigt.
-        </common-alert>
         <v-combobox
           v-if="otherMembers.length > 0"
           :model-value="otherMembers"
@@ -223,13 +231,16 @@ import awxOrgTeamService from "@/api/awxOrgTeamService.ts";
 import jobService from "@/api/jobService.ts";
 import CommonAlert from "@/components/common/CommonAlert.vue";
 import CommonDialog from "@/components/common/CommonDialog.vue";
+import InfoTooltip from "@/components/common/InfoTooltip.vue";
 import { useRules } from "@/composables/rules.ts";
 import { STATUS_INDICATORS } from "@/constants";
 import { useSnackbarStore } from "@/stores/snackbar";
 
 type OrgOrTeamType = "org" | "team";
-type Action = "create" | "edit" | "rename";
+type Action = "create" | "edit" | "rename" | "delete";
 
+const AWX_SUPPORT_URL =
+  "https://it-services.muenchen.de/sp?id=sc_cat_item&sys_id=b19dfedc1ba91150948e657f7b4bcb31";
 const NAME_REGEX = /^[A-Za-z0-9._-]{1,64}$/;
 const MEMBER_REGEX = /^[A-Za-z0-9._-]{1,64}$/;
 const STATIC_PREFIX = "STATIC:";
@@ -241,13 +252,10 @@ function toLdapEntry(cn: string) {
   return LDAP_CN_PREFIX + cn.trim() + LDAP_SUFFIX;
 }
 
-const LDAP_ENTRY_REGEX =
-  /^cn=[A-Za-z0-9._-]{1,64}(,(ou|o|c)=[A-Za-z0-9._-]{1,64}){1,6}$/;
-
 function onLdapMembersChange(values: (string | { value: string })[]) {
   const entries = values.map((raw) => {
     const value = (typeof raw == "string" ? raw : raw.value).trim();
-    return value.startsWith(LDAP_CN_PREFIX) ? value : toLdapEntry(value);
+    return value.includes("=") ? value : toLdapEntry(value);
   });
   ldapMembers.value = [...new Set(entries)];
 }
@@ -281,7 +289,6 @@ const ldapItems = computed(() =>
   }))
 );
 let ldapSearchTimeout: ReturnType<typeof setTimeout> | null = null;
-const teamOrganization = ref<string | null>(null);
 
 //editable
 const staticMembers = ref<string[]>([]);
@@ -311,11 +318,13 @@ const OrgOrTeamLabel = computed(() =>
 );
 
 const staticLabel = computed(() =>
-  OrgOrTeam.value == "org" ? "Statische Admins" : "Statische Benutzer"
+  OrgOrTeam.value == "org" ? "Admins (Benutzer)" : "Mitglieder (Benutzer)"
 );
 
 const ldapLabel = computed(() =>
-  OrgOrTeam.value == "org" ? "LDAP-Admin-Gruppen" : "LDAP-Gruppen"
+  OrgOrTeam.value == "org"
+    ? "Admins (LDAP-Gruppen)"
+    : "Mitglieder (LDAP-Gruppen)"
 );
 
 const entityList = computed(() =>
@@ -350,11 +359,7 @@ const canSubmit = computed(() => {
   if (loadingDetails.value) return false;
   switch (action.value) {
     case "create":
-      return (
-        name.value.trim() != "" &&
-        hasMembers.value &&
-        (OrgOrTeam.value == "org" || !!teamOrganization.value)
-      );
+      return name.value.trim() != "" && hasMembers.value;
     case "rename":
       return !!selectedEntity.value && newName.value.trim() != "";
     case "edit":
@@ -370,7 +375,6 @@ function memberRule(regex: RegExp, message: string) {
 }
 
 function clearMembers() {
-  teamOrganization.value = null;
   staticMembers.value = [];
   ldapMembers.value = [];
   otherMembers.value = [];
@@ -382,8 +386,6 @@ watch([OrgOrTeam, action], () => {
   selectedEntity.value = null;
   searchText.value = "";
   clearMembers();
-  if (OrgOrTeam.value == "team" && action.value == "create")
-    loadOrganizations();
 });
 
 watch(selectedEntity, async (entity) => {
@@ -399,7 +401,6 @@ watch(selectedEntity, async (entity) => {
       : await awxOrgTeamService.getTeamDetails(loading, entity);
     // ignore stale responses if the selection changed meanwhile
     if (selectedEntity.value != entity) return;
-    teamOrganization.value = details.organization;
     staticMembers.value = details.staticMembers.map((entry) =>
       entry.slice(STATIC_PREFIX.length)
     );
@@ -544,7 +545,6 @@ async function save() {
     }
     payload.static = staticMembers.value;
     payload.ldap = ldapMembers.value;
-    if (!isOrg) payload.organization = teamOrganization.value;
   }
 
   if (action.value == "rename") {

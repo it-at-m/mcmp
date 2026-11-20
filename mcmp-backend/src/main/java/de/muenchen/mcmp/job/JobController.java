@@ -1332,7 +1332,7 @@ public class JobController {
     // -----------------------------------------------------------------------------------------------------------------
     private static final Pattern AWX_NAME_PATTERN = Pattern.compile("^[A-Za-z0-9._-]{1,64}$");
     private static final Pattern AWX_STATIC_USER_PATTERN = Pattern.compile("^[A-Za-z0-9._-]{1,64}$");
-    private static final Pattern AWX_LDAP_GROUP_PATTERN = Pattern.compile("^cn=[A-Za-z0-9._-]{1,64}(,(ou|o|c)=[A-Za-z0-9._-]{1,64}){1,6}$");
+    private static final Pattern AWX_LDAP_GROUP_PATTERN = Pattern.compile("^[^\\p{Cntrl}{}]{1,512}$");
 
     @HasUserOrSpecialRole
     @PostMapping("/create/" + AWX_ORG_TEAM)
@@ -1385,18 +1385,8 @@ public class JobController {
             return;
         }
 
-        // A team belongs to an organization and the user must be admin of that organization.
-        final String teamOrg = requireAwxName(awxExtraVars.get("organization"), "Organization name");
-        final AwxOrgTeamService.AwxNameCheckDTO orgCheck = awxOrgTeamService.checkOrganization(teamOrg);
-        if (!orgCheck.exists()) {
-            throw new IllegalArgumentException("Organization " + teamOrg + " does not exist.");
-        }
-        if (!orgCheck.allowed()) {
-            logTriedToCreateJob(AWX_ORG_TEAM, null);
-            throw new AccessDeniedException("You are not allowed to manage teams of this organization.");
-        }
         logCreatedJob(AWX_ORG_TEAM, null);
-        jobService.awxCreateOrEditTeam(AWX_ORG_TEAM, name, teamOrg, staticMembers, ldapMembers, check.exists());
+        jobService.awxCreateOrEditTeam(AWX_ORG_TEAM, name, staticMembers, ldapMembers, check.exists());
     }
 
     private String requireAwxName(final Object nameObj, final String fieldName) {

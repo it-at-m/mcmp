@@ -2,15 +2,18 @@ package checkmk
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 
 	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/client/httpclient"
 	"github.com/it-at-m/mcmp/mcmp-eai-common/pkg/logging"
 )
 
 const (
-	apiPrefixServiceCollection = "/lhmmon/check_mk/api/1.0/domain-types/service/collections/all"
+	apiPrefixServiceCollectionPost = "/lhmmon/check_mk/api/1.0/domain-types/service/collections/all"
+	apiPrefixServiceCollectionGet  = "/lhmmon/check_mk/api/v1/domain-types/service/collections/all"
 )
 
 var (
@@ -94,8 +97,8 @@ func (c *Client) getBaseURL() string {
 	return "https://" + c.config.Hostname
 }
 
-func (c *Client) FetchPerformanceData(ctx context.Context) ([]PerformanceItem, error) {
-	fullURL := c.getBaseURL() + apiPrefixServiceCollection
+func (c *Client) FetchPerformanceDataPost(ctx context.Context) ([]PerformanceItem, error) {
+	fullURL := c.getBaseURL() + apiPrefixServiceCollectionPost
 	payload := defaultServiceCollectionPayload
 
 	var response PerformanceResponse
@@ -103,7 +106,33 @@ func (c *Client) FetchPerformanceData(ctx context.Context) ([]PerformanceItem, e
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch performance data: %w", err)
 	}
-	// Validate the response
+
+	return c.validatePerformanceResponse(&response)
+}
+
+func (c *Client) FetchPerformanceData(ctx context.Context) ([]PerformanceItem, error) {
+	query := url.Values{}
+	for _, column := range defaultServiceCollectionPayload.Columns {
+		query.Add("columns", column)
+	}
+
+	queryJSON, err := json.Marshal(defaultServiceCollectionPayload.Query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal performance query: %w", err)
+	}
+	query.Set("query", string(queryJSON))
+
+	fullURL := c.getBaseURL() + apiPrefixServiceCollectionGet + "?" + query.Encode()
+
+	var response PerformanceResponse
+	if err := c.client.GetJSON(ctx, fullURL, &response); err != nil {
+		return nil, fmt.Errorf("failed to fetch performance data: %w", err)
+	}
+
+	return c.validatePerformanceResponse(&response)
+}
+
+func (c *Client) validatePerformanceResponse(response *PerformanceResponse) ([]PerformanceItem, error) {
 	if response.Value == nil {
 		return nil, ErrNilPerformanceResponse
 	}

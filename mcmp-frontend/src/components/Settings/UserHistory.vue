@@ -391,10 +391,12 @@ const headers = ref([
   background: transparent !important;
 }
 
+/*noinspection CssUnusedSymbol*/
 .filter-container :deep(.v-input__details) {
   display: none;
 }
 
+/*noinspection CssUnusedSymbol*/
 .filter-container :deep(.v-input) {
   margin-top: 0 !important;
   margin-bottom: 0 !important;

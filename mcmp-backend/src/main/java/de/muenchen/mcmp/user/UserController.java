@@ -42,7 +42,7 @@ public class UserController {
 
             final List<String> authorityStrings = jwtToken.getAuthorities().stream()
                     .map(GrantedAuthority::getAuthority)
-                    .filter(authority -> authority.startsWith("ROLE_"))
+                    .filter(authority -> authority != null && authority.startsWith("ROLE_"))
                     .toList();
             userInfo.put("authorities", authorityStrings);
 
@@ -131,7 +131,7 @@ public class UserController {
     public Page<UserHistoryDTO> searchUsers(
             @RequestParam(required = false) final String searchText,
             @RequestParam(required = false) final Instant updatedAtFrom,
-            @PageableDefault(size = 10, sort = "updatedAt", direction = Sort.Direction.DESC) final Pageable pageable
+            @PageableDefault(sort = "updatedAt", direction = Sort.Direction.DESC) final Pageable pageable
     ) {
         return userService.searchUsers(searchText, updatedAtFrom, pageable);
     }

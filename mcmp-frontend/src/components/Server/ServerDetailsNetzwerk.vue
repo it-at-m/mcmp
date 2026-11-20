@@ -1,5 +1,5 @@
 <template>
-  <common-card title="vNics">
+  <common-card title="Netzwerkinterfaces">
     <v-data-table
       :loading="loading"
       :headers="headers"
@@ -38,7 +38,7 @@
     </v-data-table>
   </common-card>
   <common-card
-    title="Loadbalancer Mitgliedschaften"
+    title="Loadbalancer-Mitgliedschaften"
     :loading="loadingLbMemberships"
     top-margin="0"
   >
@@ -96,7 +96,7 @@ const headers = [
   { title: "MAC", key: "macAddress" },
   { title: "Portgruppe", key: "portGroup" },
   { title: "VLAN", key: "vlan" },
-  { title: "IPs", key: "ips" },
+  { title: "IP", key: "ips" },
 ];
 
 function formatIps(ips: { ip: string; ipType: string }[]) {

@@ -201,8 +201,8 @@
         <v-combobox
           v-if="otherMembers.length > 0"
           :model-value="otherMembers"
-          :label="otherLabel"
-          hint="Diese Einträge können hier nicht geändert werden, da sie aus LDAP stammen."
+          label="Aktuelle Admins/Benutzer"
+          hint="Aktuelle Admins/Benutzer durch LDAP Auflösung und statische Einträge"
           persistent-hint
           variant="outlined"
           multiple
@@ -233,24 +233,21 @@ type Action = "create" | "edit" | "rename";
 const NAME_REGEX = /^[A-Za-z0-9._-]{1,64}$/;
 const MEMBER_REGEX = /^[A-Za-z0-9._-]{1,64}$/;
 const STATIC_PREFIX = "STATIC:";
-const LDAP_PREFIX = "LDAP:cn=";
+const LDAP_PREFIX = "LDAP:";
+const LDAP_CN_PREFIX = "cn=";
 const LDAP_SUFFIX = ",ou=groups,ou=itm,o=lhm,c=de";
 
-function toStaticEntry(user: string) {
-  return STATIC_PREFIX + user.trim();
-}
-
 function toLdapEntry(cn: string) {
-  return LDAP_PREFIX + cn.trim() + LDAP_SUFFIX;
+  return LDAP_CN_PREFIX + cn.trim() + LDAP_SUFFIX;
 }
 
 const LDAP_ENTRY_REGEX =
-  /^LDAP:cn=[A-Za-z0-9._-]{1,64}(,(ou|o|c)=[A-Za-z0-9._-]{1,64}){1,6}$/;
+  /^cn=[A-Za-z0-9._-]{1,64}(,(ou|o|c)=[A-Za-z0-9._-]{1,64}){1,6}$/;
 
 function onLdapMembersChange(values: (string | { value: string })[]) {
   const entries = values.map((raw) => {
     const value = (typeof raw == "string" ? raw : raw.value).trim();
-    return value.startsWith("LDAP:") ? value : toLdapEntry(value);
+    return value.startsWith(LDAP_CN_PREFIX) ? value : toLdapEntry(value);
   });
   ldapMembers.value = [...new Set(entries)];
 }
@@ -319,10 +316,6 @@ const staticLabel = computed(() =>
 
 const ldapLabel = computed(() =>
   OrgOrTeam.value == "org" ? "LDAP-Admin-Gruppen" : "LDAP-Gruppen"
-);
-
-const otherLabel = computed(() =>
-  OrgOrTeam.value == "org" ? "Admins aus LDAP" : "Benutzer aus LDAP"
 );
 
 const entityList = computed(() =>
@@ -410,7 +403,9 @@ watch(selectedEntity, async (entity) => {
     staticMembers.value = details.staticMembers.map((entry) =>
       entry.slice(STATIC_PREFIX.length)
     );
-    ldapMembers.value = details.ldapMembers;
+    ldapMembers.value = details.ldapMembers.map((entry) =>
+      entry.slice(LDAP_PREFIX.length)
+    );
     otherMembers.value = details.otherMembers;
     originalStatic.value = [...staticMembers.value];
     originalLdap.value = [...ldapMembers.value];
@@ -547,7 +542,7 @@ async function save() {
       );
       return;
     }
-    payload.static = staticMembers.value.map(toStaticEntry);
+    payload.static = staticMembers.value;
     payload.ldap = ldapMembers.value;
     if (!isOrg) payload.organization = teamOrganization.value;
   }

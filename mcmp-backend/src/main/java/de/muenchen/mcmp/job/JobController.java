@@ -1331,8 +1331,8 @@ public class JobController {
     // AWX ORG/TEAM JOBs
     // -----------------------------------------------------------------------------------------------------------------
     private static final Pattern AWX_NAME_PATTERN = Pattern.compile("^[A-Za-z0-9._-]{1,64}$");
-    private static final Pattern AWX_STATIC_USER_PATTERN = Pattern.compile("^STATIC:[A-Za-z0-9._-]{1,64}$");
-    private static final Pattern AWX_LDAP_GROUP_PATTERN = Pattern.compile("^LDAP:cn=[A-Za-z0-9._-]{1,64}(,(ou|o|c)=[A-Za-z0-9._-]{1,64}){1,6}$");
+    private static final Pattern AWX_STATIC_USER_PATTERN = Pattern.compile("^[A-Za-z0-9._-]{1,64}$");
+    private static final Pattern AWX_LDAP_GROUP_PATTERN = Pattern.compile("^cn=[A-Za-z0-9._-]{1,64}(,(ou|o|c)=[A-Za-z0-9._-]{1,64}){1,6}$");
 
     @HasUserOrSpecialRole
     @PostMapping("/create/" + AWX_ORG_TEAM)

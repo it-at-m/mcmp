@@ -655,6 +655,7 @@ function getSelectedServer(silent = false, targetId?: number) {
       notFoundId.value = null;
 
       selectedServer.value = [res];
+      serverListRef.value?.updateServerPowerState(res.id, res.powerState);
       const targetPath = `/server/${String(serverId ?? "")}`;
       if (route.path !== targetPath) {
         router.push({ path: targetPath, query: route.query });

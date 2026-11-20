@@ -3,6 +3,10 @@ import type PortGroup from "@/types/PortGroup";
 export default interface Nic {
   serverId: number;
   portGroup: PortGroup | null;
+  ips: {
+    ip: string;
+    ipType: string;
+  };
   vnicKey: number;
   unitNumber: number | null;
   device: string;

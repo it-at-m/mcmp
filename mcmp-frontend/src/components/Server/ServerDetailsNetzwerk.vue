@@ -33,7 +33,7 @@
         {{ item.portGroup ? item.portGroup.vlan : "-" }}
       </template>
       <template #item.ips="{ item }">
-        {{ formatIps(item.toolsIpAddress) }}
+        {{ formatIps(item.ips) }}
       </template>
     </v-data-table>
   </common-card>
@@ -99,8 +99,11 @@ const headers = [
   { title: "IPs", key: "ips" },
 ];
 
-function formatIps(ip: string) {
-  if (!ip) return "-";
-  return ip;
+function formatIps(ips: { ip: string; ipType: string }[]) {
+  const result = ips
+    ?.filter((ip) => ip?.ipType === "IPv4" && ip?.ip)
+    ?.map((ip) => ip.ip)
+    ?.join("; ");
+  return result === "" ? "-" : result;
 }
 </script>

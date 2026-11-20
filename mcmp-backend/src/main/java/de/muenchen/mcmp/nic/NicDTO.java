@@ -1,5 +1,8 @@
 package de.muenchen.mcmp.nic;
 
+import java.util.Collection;
+
+import de.muenchen.mcmp.ip.IPDTO;
 import de.muenchen.mcmp.portgroup.PortGroup;
 import lombok.Builder;
 
@@ -7,6 +10,7 @@ import lombok.Builder;
 public record NicDTO(
     Long serverId,
     PortGroup portGroup,
+    Collection<IPDTO> ips,
     Integer vnicKey,
     Integer unitNumber,
     String device,

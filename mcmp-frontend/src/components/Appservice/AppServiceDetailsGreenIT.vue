@@ -3,15 +3,18 @@
     <template #append-title>
       <div class="d-flex align-center">
         <!-- CSV-Export Button -->
-        <v-tooltip location="top" text="Green-IT Bericht als CSV exportieren">
+        <v-tooltip
+          location="top"
+          text="Green-IT Bericht als CSV exportieren"
+        >
           <template #activator="{ props: tooltipProps }">
             <v-btn
-                v-bind="tooltipProps"
-                :icon="mdiFileExportOutline"
-                size="small"
-                variant="text"
-                class="mr-2"
-                @click.stop="exportGreenItCsv"
+              v-bind="tooltipProps"
+              :icon="mdiFileExportOutline"
+              size="small"
+              variant="text"
+              class="mr-2"
+              @click.stop="exportGreenItCsv"
             />
           </template>
         </v-tooltip>
@@ -20,16 +23,16 @@
         <v-tooltip location="top">
           <template #activator="{ props: tooltipProps }">
             <v-icon
-                v-bind="tooltipProps"
-                :icon="mdiLeaf"
-                :color="overallLeafColor"
-                size="24"
+              v-bind="tooltipProps"
+              :icon="mdiLeaf"
+              :color="overallLeafColor"
+              size="24"
             />
           </template>
           <div class="text-caption">
-            <strong>Ressourceneffizienz:</strong><br>
-            0% bis 15% Einsparung: Grün<br>
-            über 15% bis 20% Einsparung: Gelb<br>
+            <strong>Ressourceneffizienz:</strong><br />
+            0% bis 15% Einsparung: Grün<br />
+            über 15% bis 20% Einsparung: Gelb<br />
             über 20% Einsparung: Rot
           </div>
         </v-tooltip>
@@ -42,10 +45,10 @@
         <h3 class="d-flex align-center">
           CPU Ressourcen
           <v-icon
-              :icon="mdiLeaf"
-              :color="cpuLeafColor"
-              size="20"
-              class="ml-2"
+            :icon="mdiLeaf"
+            :color="cpuLeafColor"
+            size="20"
+            class="ml-2"
           />
         </h3>
         <div class="mt-2">
@@ -62,19 +65,22 @@
             <v-tooltip location="top">
               <template #activator="{ props: tooltipProps }">
                 <v-icon
-                    v-bind="tooltipProps"
-                    :icon="mdiInformationOutline"
-                    size="16"
-                    class="ml-1 text-medium-emphasis"
+                  v-bind="tooltipProps"
+                  :icon="mdiInformationOutline"
+                  size="16"
+                  class="ml-1 text-medium-emphasis"
                 />
               </template>
               <div class="text-caption">
-                <strong>Ressourcenanpassung:</strong> {{ resizingOnlyCpuSavings }} Cores<br>
+                <strong>Ressourcenanpassung:</strong>
+                {{ resizingOnlyCpuSavings }} Cores<br />
                 <span v-if="hasPoweredOffServers">
-                  <strong>ggf. abbaubar (poweredOff):</strong> {{ decommissionCpuSavings }} Cores
+                  <strong>ggf. abbaubar (poweredOff):</strong>
+                  {{ decommissionCpuSavings }} Cores
                 </span>
                 <span v-else>
-                  <strong>ggf. abbaubar (poweredOff):</strong> 0 Cores (keine ausgeschalteten Server)
+                  <strong>ggf. abbaubar (poweredOff):</strong> 0 Cores (keine
+                  ausgeschalteten Server)
                 </span>
               </div>
             </v-tooltip>
@@ -87,15 +93,21 @@
         <h3 class="d-flex align-center">
           RAM Ressourcen
           <v-icon
-              :icon="mdiLeaf"
-              :color="ramLeafColor"
-              size="20"
-              class="ml-2"
+            :icon="mdiLeaf"
+            :color="ramLeafColor"
+            size="20"
+            class="ml-2"
           />
         </h3>
         <div class="mt-2">
-          <p><strong>Gesamt (Ist):</strong> {{ formatter.formatMBtoGB(totalRamCurrentMb) }} GB</p>
-          <p><strong>Gesamt (Soll):</strong> {{ formatter.formatMBtoGB(totalRamTargetMb) }} GB</p>
+          <p>
+            <strong>Gesamt (Ist):</strong>
+            {{ formatter.formatMBtoGB(totalRamCurrentMb) }} GB
+          </p>
+          <p>
+            <strong>Gesamt (Soll):</strong>
+            {{ formatter.formatMBtoGB(totalRamTargetMb) }} GB
+          </p>
           <p class="mt-1 d-flex align-center flex-wrap">
             <span>
               <strong>Mögliche Gesamteinsparung:</strong>
@@ -107,19 +119,22 @@
             <v-tooltip location="top">
               <template #activator="{ props: tooltipProps }">
                 <v-icon
-                    v-bind="tooltipProps"
-                    :icon="mdiInformationOutline"
-                    size="16"
-                    class="ml-1 text-medium-emphasis"
+                  v-bind="tooltipProps"
+                  :icon="mdiInformationOutline"
+                  size="16"
+                  class="ml-1 text-medium-emphasis"
                 />
               </template>
               <div class="text-caption">
-                <strong>Ressourcenanpassung:</strong> {{ formatter.formatMBtoGB(resizingOnlyRamSavingsMb) }} GB<br>
+                <strong>Ressourcenanpassung:</strong>
+                {{ formatter.formatMBtoGB(resizingOnlyRamSavingsMb) }} GB<br />
                 <span v-if="hasPoweredOffServers">
-                  <strong>ggf. abbaubar (poweredOff):</strong> {{ formatter.formatMBtoGB(decommissionRamSavingsMb) }} GB
+                  <strong>ggf. abbaubar (poweredOff):</strong>
+                  {{ formatter.formatMBtoGB(decommissionRamSavingsMb) }} GB
                 </span>
                 <span v-else>
-                  <strong>ggf. abbaubar (poweredOff):</strong> 0 GB (keine ausgeschalteten Server)
+                  <strong>ggf. abbaubar (poweredOff):</strong> 0 GB (keine
+                  ausgeschalteten Server)
                 </span>
               </div>
             </v-tooltip>
@@ -132,7 +147,8 @@
 
 <script setup lang="ts">
 import type Appservice from "@/types/Appservice.ts";
-import { mdiLeaf, mdiInformationOutline, mdiFileExportOutline } from "@mdi/js";
+
+import { mdiFileExportOutline, mdiInformationOutline, mdiLeaf } from "@mdi/js";
 import { computed } from "vue";
 
 import CommonCard from "@/components/common/CommonCard.vue";
@@ -149,7 +165,7 @@ const servers = computed(() => props.selectedAppservice?.servers || []);
 const isPoweredOff = (server: any) => server.powerState === "poweredOff";
 
 const hasPoweredOffServers = computed(() =>
-    servers.value.some((server: any) => isPoweredOff(server))
+  servers.value.some((server: any) => isPoweredOff(server))
 );
 
 const getResizeSavings = (current: number, recVal: unknown): number => {
@@ -164,11 +180,17 @@ const getResizeSavings = (current: number, recVal: unknown): number => {
 
 // --- 1. Aktuelle Gesamtzahlen (Ist) berechnen ---
 const totalCpuCurrent = computed(() => {
-  return servers.value.reduce((sum: number, server: any) => sum + Number(server.numCpu || 0), 0);
+  return servers.value.reduce(
+    (sum: number, server: any) => sum + Number(server.numCpu || 0),
+    0
+  );
 });
 
 const totalRamCurrentMb = computed(() => {
-  return servers.value.reduce((sum: number, server: any) => sum + Number(server.memoryMb || 0), 0);
+  return servers.value.reduce(
+    (sum: number, server: any) => sum + Number(server.memoryMb || 0),
+    0
+  );
 });
 
 // --- 2. Einsparungen nach Hebel berechnen ---
@@ -240,10 +262,17 @@ const getLeafColor = (percentage: number) => {
   return "red";
 };
 
-const cpuLeafColor = computed(() => getLeafColor(Number(cpuSavingsPercentage.value)));
-const ramLeafColor = computed(() => getLeafColor(Number(ramSavingsPercentage.value)));
+const cpuLeafColor = computed(() =>
+  getLeafColor(Number(cpuSavingsPercentage.value))
+);
+const ramLeafColor = computed(() =>
+  getLeafColor(Number(ramSavingsPercentage.value))
+);
 const overallLeafColor = computed(() => {
-  const maxPct = Math.max(Number(cpuSavingsPercentage.value), Number(ramSavingsPercentage.value));
+  const maxPct = Math.max(
+    Number(cpuSavingsPercentage.value),
+    Number(ramSavingsPercentage.value)
+  );
   return getLeafColor(maxPct);
 });
 
@@ -267,11 +296,15 @@ const exportGreenItCsv = () => {
     const poweredOff = isPoweredOff(server);
     const currentCpu = Number(server.numCpu || 0);
     const recCpu = Number(server.numCpuRecommended || 0);
-    const cpuSavings = poweredOff ? currentCpu : getResizeSavings(currentCpu, server.numCpuRecommended);
+    const cpuSavings = poweredOff
+      ? currentCpu
+      : getResizeSavings(currentCpu, server.numCpuRecommended);
 
     const currentRam = Number(server.memoryMb || 0);
     const recRam = Number(server.memoryMbRecommended || 0);
-    const ramSavings = poweredOff ? currentRam : getResizeSavings(currentRam, server.memoryMbRecommended);
+    const ramSavings = poweredOff
+      ? currentRam
+      : getResizeSavings(currentRam, server.memoryMbRecommended);
 
     return [
       `"${server.name || ""}"`,
@@ -285,9 +318,14 @@ const exportGreenItCsv = () => {
     ];
   });
 
-  const csvContent = [headers.join(";"), ...rows.map((row) => row.join(";"))].join("\r\n");
+  const csvContent = [
+    headers.join(";"),
+    ...rows.map((row) => row.join(";")),
+  ].join("\r\n");
 
-  const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" });
+  const blob = new Blob(["\ufeff" + csvContent], {
+    type: "text/csv;charset=utf-8;",
+  });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
 

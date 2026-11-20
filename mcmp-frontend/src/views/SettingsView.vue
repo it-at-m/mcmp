@@ -5,12 +5,12 @@
       <v-col>
         <v-row class="mb-1 mt-1">
           <v-tabs
-            v-model="tab"
-            align-tabs="start"
+              v-model="tab"
+              align-tabs="start"
           >
             <v-tab
-              v-if="isAdmin"
-              value="Actions"
+                v-if="isAdmin"
+                value="Actions"
             >
               Actions
               <template #prepend>
@@ -19,8 +19,8 @@
             </v-tab>
 
             <v-tab
-              v-if="isAdmin"
-              value="Integration"
+                v-if="isAdmin"
+                value="Integration"
             >
               Integration
               <template #prepend>
@@ -29,8 +29,8 @@
             </v-tab>
 
             <v-tab
-              v-if="isAdmin"
-              value="Admin"
+                v-if="isAdmin"
+                value="Admin"
             >
               Admin
               <template #prepend>
@@ -39,8 +39,8 @@
             </v-tab>
 
             <v-tab
-              v-if="isAdmin"
-              value="Price"
+                v-if="isAdmin"
+                value="Price"
             >
               Preise
               <template #prepend>
@@ -49,8 +49,8 @@
             </v-tab>
 
             <v-tab
-              v-if="isNetwork || isAdmin"
-              value="Netzwerkgruppen"
+                v-if="isNetwork || isAdmin"
+                value="Netzwerkgruppen"
             >
               Netzwerkgruppen
               <template #prepend>
@@ -59,14 +59,14 @@
             </v-tab>
 
             <v-menu
-              v-if="isAdmin || isOtherRole"
-              location="bottom start"
-              offset="4"
+                v-if="isAdmin || isOtherRole"
+                location="bottom start"
+                offset="4"
             >
               <template #activator="{ props: menuProps }">
                 <v-tab
-                  v-bind="menuProps"
-                  value="Monitoring"
+                    v-bind="menuProps"
+                    value="Monitoring"
                 >
                   Monitoring
                   <template #prepend>
@@ -80,29 +80,52 @@
 
               <v-list density="compact">
                 <v-list-item
-                  v-for="item in monitoringItems"
-                  :key="item.value"
-                  :prepend-icon="item.icon"
-                  :title="item.title"
-                  :active="monitoringTab === item.value"
-                  @click="monitoringTab = item.value"
+                    v-for="item in monitoringItems"
+                    :key="item.value"
+                    :prepend-icon="item.icon"
+                    :title="item.title"
+                    :active="monitoringTab === item.value"
+                    @click="monitoringTab = item.value"
+                />
+              </v-list>
+            </v-menu>
+
+            <!-- NEU: History als Dropdown-Menü (analog zu Monitoring) -->
+            <v-menu
+                v-if="isAdmin || isOtherRole"
+                location="bottom start"
+                offset="4"
+            >
+              <template #activator="{ props: menuProps }">
+                <v-tab
+                    v-bind="menuProps"
+                    value="History"
+                >
+                  History
+                  <template #prepend>
+                    <v-icon size="x-large">{{ mdiHistory }}</v-icon>
+                  </template>
+                  <template #append>
+                    <v-icon size="small">{{ mdiChevronDown }}</v-icon>
+                  </template>
+                </v-tab>
+              </template>
+
+              <v-list density="compact">
+                <v-list-item
+                    v-for="item in historyItems"
+                    :key="item.value"
+                    :prepend-icon="item.icon"
+                    :title="item.title"
+                    :active="historyTab === item.value"
+                    @click="selectHistoryTab(item.value)"
                 />
               </v-list>
             </v-menu>
 
             <v-tab
-              v-if="isAdmin || isOtherRole"
-              value="History"
-            >
-              <template #prepend>
-                <v-icon size="x-large">{{ mdiHistory }}</v-icon>
-              </template>
-              History
-            </v-tab>
-
-            <v-tab
-              v-if="isAdmin"
-              value="AppConfig"
+                v-if="isAdmin"
+                value="AppConfig"
             >
               Status & Health
               <template #prepend>
@@ -114,80 +137,89 @@
 
         <v-tabs-window v-model="tab">
           <v-tabs-window-item
-            v-if="isAdmin"
-            value="Actions"
+              v-if="isAdmin"
+              value="Actions"
           >
             <actions />
           </v-tabs-window-item>
 
           <v-tabs-window-item
-            v-if="isAdmin"
-            value="Integration"
+              v-if="isAdmin"
+              value="Integration"
           >
             <integration-settings />
           </v-tabs-window-item>
 
           <v-tabs-window-item
-            v-if="isAdmin"
-            value="Admin"
+              v-if="isAdmin"
+              value="Admin"
           >
             <admin-users />
           </v-tabs-window-item>
 
           <v-tabs-window-item
-            v-if="false"
-            value="Price"
+              v-if="false"
+              value="Price"
           >
             <prices />
           </v-tabs-window-item>
 
           <v-tabs-window-item
-            v-if="isNetwork || isAdmin"
-            value="Netzwerkgruppen"
+              v-if="isNetwork || isAdmin"
+              value="Netzwerkgruppen"
           >
             <network-group />
           </v-tabs-window-item>
 
           <v-tabs-window-item
-            v-if="isAdmin || isOtherRole"
-            value="Monitoring"
+              v-if="isAdmin || isOtherRole"
+              value="Monitoring"
           >
             <patchnight-status v-if="monitoringTab === 'Patchnight'" />
 
             <unmapped-foreman-hosts
-              v-if="
+                v-if="
                 canViewForemanReports &&
                 monitoringTab === 'UnmappedForemanHosts'
               "
             />
 
             <foreman-ip-mismatches
-              v-if="
+                v-if="
                 canViewForemanReports && monitoringTab === 'ForemanIpMismatches'
               "
             />
 
             <unmanaged-server
-              v-if="isAdmin && monitoringTab === 'UnmanagedServer'"
+                v-if="isAdmin && monitoringTab === 'UnmanagedServer'"
             />
 
             <job-statistics
-              v-if="isAdmin && monitoringTab === 'JobStatistics'"
+                v-if="isAdmin && monitoringTab === 'JobStatistics'"
             />
 
             <error-log v-if="isAdmin && monitoringTab === 'ErrorLog'" />
           </v-tabs-window-item>
 
+          <!-- NEU: Unterpunkte für JobHistory und UserHistory -->
           <v-tabs-window-item
-            v-if="isAdmin || isOtherRole"
-            value="History"
+              v-if="isAdmin || isOtherRole"
+              value="History"
           >
-            <admin-history :key="historyKey" />
+            <admin-history
+                v-if="historyTab === 'JobHistory'"
+                :key="historyKey"
+            />
+
+            <user-history
+                v-if="isAdmin && historyTab === 'UserHistory'"
+                :key="historyKey"
+            />
           </v-tabs-window-item>
 
           <v-tabs-window-item
-            v-if="isAdmin"
-            value="AppConfig"
+              v-if="isAdmin"
+              value="AppConfig"
           >
             <app-config />
           </v-tabs-window-item>
@@ -199,6 +231,7 @@
 
 <script setup lang="ts">
 import {
+  mdiAccountClockOutline,
   mdiAccountCog,
   mdiAlertCircleOutline,
   mdiChartBar,
@@ -209,6 +242,7 @@ import {
   mdiHistory,
   mdiMonitorDashboard,
   mdiNetwork,
+  mdiPlaylistCheck,
   mdiPuzzle,
   mdiRocketLaunch,
   mdiServerMinus,
@@ -231,12 +265,14 @@ import PatchnightStatus from "@/components/Settings/PatchnightStatus.vue";
 import Prices from "@/components/Settings/Prices.vue";
 import UnmanagedServer from "@/components/Settings/UnmanagedServer.vue";
 import UnmappedForemanHosts from "@/components/Settings/UnmappedForemanHosts.vue";
+import UserHistory from "@/components/Settings/UserHistory.vue";
 import { useUserStore } from "@/stores/user";
 
 const userStore = useUserStore();
 const router = useRouter();
 const tab = ref("History");
 const monitoringTab = ref("Patchnight");
+const historyTab = ref("JobHistory");
 const historyKey = ref(0);
 
 const hasOpenDialog = ref(false);
@@ -248,74 +284,97 @@ provide("unregisterOpenDialog", () => {
 });
 
 const isAdmin = computed(
-  () => !!userStore.getUser?.authorities?.includes("ROLE_ADMIN")
+    () => !!userStore.getUser?.authorities?.includes("ROLE_ADMIN")
 );
 
 const isNetwork = computed(
-  () => !!userStore.getUser?.authorities?.includes("ROLE_NETWORK")
+    () => !!userStore.getUser?.authorities?.includes("ROLE_NETWORK")
 );
 
 const isOtherRole = computed(() => {
   const auths = userStore.getUser?.authorities || [];
   return (
-    auths.includes("ROLE_WINDOWS") ||
-    auths.includes("ROLE_LINUX") ||
-    auths.includes("ROLE_ORACLE") ||
-    auths.includes("ROLE_NON-ORACLE") ||
-    auths.includes("ROLE_OPERATOR") ||
-    auths.includes("ROLE_SECURITY")
+      auths.includes("ROLE_WINDOWS") ||
+      auths.includes("ROLE_LINUX") ||
+      auths.includes("ROLE_ORACLE") ||
+      auths.includes("ROLE_NON-ORACLE") ||
+      auths.includes("ROLE_OPERATOR") ||
+      auths.includes("ROLE_SECURITY")
   );
 });
 
 const canViewForemanReports = computed(() => {
   const auths = userStore.getUser?.authorities || [];
   return (
-    auths.includes("ROLE_ADMIN") ||
-    auths.includes("ROLE_WINDOWS") ||
-    auths.includes("ROLE_LINUX")
+      auths.includes("ROLE_ADMIN") ||
+      auths.includes("ROLE_WINDOWS") ||
+      auths.includes("ROLE_LINUX")
   );
 });
 
 const monitoringItems = computed(() =>
-  [
-    {
-      value: "Patchnight",
-      title: "Patchnight Status",
-      icon: mdiCogOutline,
-      visible: true,
-    },
-    {
-      value: "UnmappedForemanHosts",
-      title: "Unmapped Foreman-Hosts",
-      icon: mdiServerOff,
-      visible: canViewForemanReports.value,
-    },
-    {
-      value: "ForemanIpMismatches",
-      title: "Foreman IP-Abweichungen",
-      icon: mdiSwapHorizontal,
-      visible: canViewForemanReports.value,
-    },
-    {
-      value: "UnmanagedServer",
-      title: "Unmanaged Server",
-      icon: mdiServerMinus,
-      visible: canViewForemanReports.value,
-    },
-    {
-      value: "JobStatistics",
-      title: "Job Statistics",
-      icon: mdiChartBar,
-      visible: isAdmin.value,
-    },
-    {
-      value: "ErrorLog",
-      title: "Error Logs",
-      icon: mdiAlertCircleOutline,
-      visible: isAdmin.value,
-    },
-  ].filter((item) => item.visible)
+    [
+      {
+        value: "Patchnight",
+        title: "Patchnight Status",
+        icon: mdiCogOutline,
+        visible: true,
+      },
+      {
+        value: "UnmappedForemanHosts",
+        title: "Unmapped Foreman-Hosts",
+        icon: mdiServerOff,
+        visible: canViewForemanReports.value,
+      },
+      {
+        value: "ForemanIpMismatches",
+        title: "Foreman IP-Abweichungen",
+        icon: mdiSwapHorizontal,
+        visible: canViewForemanReports.value,
+      },
+      {
+        value: "UnmanagedServer",
+        title: "Unmanaged Server",
+        icon: mdiServerMinus,
+        visible: canViewForemanReports.value,
+      },
+      {
+        value: "JobStatistics",
+        title: "Job Statistics",
+        icon: mdiChartBar,
+        visible: isAdmin.value,
+      },
+      {
+        value: "ErrorLog",
+        title: "Error Logs",
+        icon: mdiAlertCircleOutline,
+        visible: isAdmin.value,
+      },
+    ].filter((item) => item.visible)
 );
+
+const historyItems = computed(() =>
+    [
+      {
+        value: "JobHistory",
+        title: "Job-Historie",
+        icon: mdiPlaylistCheck,
+        visible: true,
+      },
+      {
+        value: "UserHistory",
+        title: "User-Historie",
+        icon: mdiAccountClockOutline,
+        visible: isAdmin.value, // Falls auch isOtherRole das sehen darf, hier einfach auf true setzen
+      },
+    ].filter((item) => item.visible)
+);
+
+function selectHistoryTab(value: string) {
+  tab.value = "History";
+  historyTab.value = value;
+  historyKey.value++;
+}
 
 onMounted(() => {
   redirectIfUnauthorized();
@@ -323,22 +382,22 @@ onMounted(() => {
 
 watch(tab, (newTab) => {
   if (newTab === "History") {
-    // Key ändern um AdminHistory neu zu mounten und Paginierung zurückzusetzen
+    // Key ändern um aktive History-Komponente neu zu mounten und Paginierung zurückzusetzen
     historyKey.value++;
   }
 });
 
 // Redirect if user is loaded but unauthorized
 watch(
-  () => userStore.getUser,
-  (user) => {
-    if (user && user.authorities) {
-      nextTick(() => {
-        redirectIfUnauthorized();
-      });
-    }
-  },
-  { immediate: true }
+    () => userStore.getUser,
+    (user) => {
+      if (user && user.authorities) {
+        nextTick(() => {
+          redirectIfUnauthorized();
+        });
+      }
+    },
+    { immediate: true }
 );
 
 function redirectIfUnauthorized() {

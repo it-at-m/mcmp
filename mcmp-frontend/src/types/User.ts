@@ -17,6 +17,13 @@ class User {
   authorities: string[] = [];
 }
 
+export class UserHistoryItem extends User {
+  id: number | string = "";
+  name = "";
+  createdAt = ""; // Erster Login
+  updatedAt = ""; // Letzte Aktivität
+}
+
 export function UserLocalDevelopment(): User {
   const u = new User();
   u.username = "Local Development User";

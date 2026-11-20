@@ -1,9 +1,17 @@
 package de.muenchen.mcmp.user;
 
+import jakarta.persistence.criteria.Predicate;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -28,18 +36,16 @@ public class UserService {
         return userMapper.toDTOs(repository.findByAdminFalseOrderByUsernameAsc());
     }
 
-    public void updateAdminPermission(final UserDTO userDTO)
-    {
+    public void updateAdminPermission(final UserDTO userDTO) {
         User toUpdateUser = repository.findById(userDTO.id()).orElseThrow(
                 () -> new IllegalArgumentException("User mit ID " + userDTO.id() + " existiert nicht."));
-        User updatedAwxConfig =  userMapper.toEntity(userDTO);
+        User updatedAwxConfig = userMapper.toEntity(userDTO);
         toUpdateUser.setVersion(toUpdateUser.getVersion());
         toUpdateUser.setAdmin(updatedAwxConfig.getAdmin());
         repository.save(toUpdateUser);
     }
 
     public List<User> findByUsernameIn(final List<String> usernames) {
-        // Konvertiere alle Usernames zu lowercase für case-insensitive Suche
         List<String> lowercaseUsernames = usernames.stream()
                 .map(String::toLowerCase)
                 .collect(Collectors.toList());
@@ -78,6 +84,7 @@ public class UserService {
                 .map(User::getDarkMode)
                 .orElse(false);
     }
+
     public void updateLoginPage(String username, String loginPage) {
         User user = repository.findByUsername(username);
         if (user == null) {
@@ -104,5 +111,50 @@ public class UserService {
             return List.of();
         }
         return repository.findDepartmentsLike(query.trim());
+    }
+
+    @Transactional(readOnly = true)
+    public Page<UserHistoryDTO> searchUsers(
+            final String searchText,
+            final Instant updatedAtFrom,
+            final Pageable pageable
+    ) {
+        Specification<User> spec = buildSearchSpecification(
+                searchText,
+                updatedAtFrom
+        );
+
+        return repository.findAll(spec, pageable)
+                .map(user -> new UserHistoryDTO(
+                        user.getId(),
+                        user.getUsername(),
+                        user.getName(),
+                        user.getEmail(),
+                        user.getCreatedAt(),
+                        user.getUpdatedAt()
+                ));
+    }
+
+    private Specification<User> buildSearchSpecification(
+            final String searchText,
+            final Instant updatedAtFrom
+    ) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (StringUtils.hasText(searchText)) {
+                String pattern = "%" + searchText.trim().toLowerCase() + "%";
+                Predicate usernameLike = cb.like(cb.lower(root.get("username")), pattern);
+                Predicate nameLike = cb.like(cb.lower(root.get("name")), pattern);
+                Predicate emailLike = cb.like(cb.lower(root.get("email")), pattern);
+                predicates.add(cb.or(usernameLike, nameLike, emailLike));
+            }
+
+            if (updatedAtFrom != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("updatedAt"), updatedAtFrom));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
     }
 }

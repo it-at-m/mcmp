@@ -99,7 +99,7 @@ public class JobController {
     public static final String ANSIBLE_USER_ADD = "ANSIBLE_USER_ADD";
     public static final String ANSIBLE_USER_REMOVE = "ANSIBLE_USER_REMOVE";
 
-    public static final String AWX_ENSURE_ORG = "AWX_ENSURE_ORG";
+    public static final String AWX_ORG_TEAM = "AWX_ORG_TEAM";
 
     public static final String LOADBALANCER_F5 = "LOADBALANCER_F5";
     public static final String LOADBALANCER_F5_CHANGE_POOL_MEMBERS = "LOADBALANCER_F5_CHANGE_POOL_MEMBERS";
@@ -1335,7 +1335,7 @@ public class JobController {
     private static final Pattern AWX_LDAP_GROUP_PATTERN = Pattern.compile("^LDAP:cn=[A-Za-z0-9._-]{1,64}(,(ou|o|c)=[A-Za-z0-9._-]{1,64}){1,6}$");
 
     @HasUserOrSpecialRole
-    @PostMapping("/create/" + AWX_ENSURE_ORG)
+    @PostMapping("/create/" + AWX_ORG_TEAM)
     public void awxEnsureOrg(@RequestBody final Map<String, Object> awxExtraVars) {
         final String orgOrTeam = requireNonBlankString(awxExtraVars.get("orgOrTeam"), "Org or team").trim();
         final String action = requireNonBlankString(awxExtraVars.get("action"), "Action").trim();
@@ -1358,7 +1358,7 @@ public class JobController {
             throw new IllegalArgumentException((isOrg ? "Organization " : "Team ") + name + " does not exist.");
         }
         if (check.exists() && !check.allowed()) {
-            logTriedToCreateJob(AWX_ENSURE_ORG, null);
+            logTriedToCreateJob(AWX_ORG_TEAM, null);
             throw new AccessDeniedException("You are not allowed to " + action + " this " + (isOrg ? "organization." : "team."));
         }
 
@@ -1367,11 +1367,11 @@ public class JobController {
             if (isOrg ? awxOrgTeamService.checkOrganization(newName).exists() : awxOrgTeamService.checkTeam(newName).exists()) {
                 throw new IllegalArgumentException("The new name " + newName + " already exists.");
             }
-            logCreatedJob(AWX_ENSURE_ORG, null);
+            logCreatedJob(AWX_ORG_TEAM, null);
             if (isOrg) {
-                jobService.awxRenameOrg(AWX_ENSURE_ORG, name, newName);
+                jobService.awxRenameOrg(AWX_ORG_TEAM, name, newName);
             } else {
-                jobService.awxRenameTeam(AWX_ENSURE_ORG, name, newName);
+                jobService.awxRenameTeam(AWX_ORG_TEAM, name, newName);
             }
             return;
         }
@@ -1380,8 +1380,8 @@ public class JobController {
         final List<String> ldapMembers = requireAwxMembers(awxExtraVars.get("ldap"), AWX_LDAP_GROUP_PATTERN, "LDAP groups");
 
         if (isOrg) {
-            logCreatedJob(AWX_ENSURE_ORG, null);
-            jobService.awxCreateOrEditOrg(AWX_ENSURE_ORG, name, staticMembers, ldapMembers, check.exists());
+            logCreatedJob(AWX_ORG_TEAM, null);
+            jobService.awxCreateOrEditOrg(AWX_ORG_TEAM, name, staticMembers, ldapMembers, check.exists());
             return;
         }
 
@@ -1392,11 +1392,11 @@ public class JobController {
             throw new IllegalArgumentException("Organization " + teamOrg + " does not exist.");
         }
         if (!orgCheck.allowed()) {
-            logTriedToCreateJob(AWX_ENSURE_ORG, null);
+            logTriedToCreateJob(AWX_ORG_TEAM, null);
             throw new AccessDeniedException("You are not allowed to manage teams of this organization.");
         }
-        logCreatedJob(AWX_ENSURE_ORG, null);
-        jobService.awxCreateOrEditTeam(AWX_ENSURE_ORG, name, teamOrg, staticMembers, ldapMembers, check.exists());
+        logCreatedJob(AWX_ORG_TEAM, null);
+        jobService.awxCreateOrEditTeam(AWX_ORG_TEAM, name, teamOrg, staticMembers, ldapMembers, check.exists());
     }
 
     private String requireAwxName(final Object nameObj, final String fieldName) {

@@ -7,7 +7,7 @@
     show-actions
     :submit-activated="canSubmit && !loading"
     :icon="mdiAccountGroup"
-    :check-for-enabled-actions="['AWX_ENSURE_ORG']"
+    :check-for-enabled-actions="['AWX_ORG_TEAM']"
     @dialog-cancel="close"
     @dialog-confirm="save"
   >
@@ -582,7 +582,7 @@ async function save() {
     }
   }
 
-  await jobService.startJob(loading, "AWX_ENSURE_ORG", -1, payload);
+  await jobService.startJob(loading, "AWX_ORG_TEAM", -1, payload);
   close();
 }
 </script>

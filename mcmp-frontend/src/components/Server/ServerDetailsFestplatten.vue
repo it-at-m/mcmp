@@ -28,7 +28,7 @@
     <template #toolbar-actions>
       <edit-mountpoint
         v-if="
-          selectedServer.guestToolsFullName?.includes('Linux 10') &&
+          isLinux10 &&
           selectedServer.managed &&
           selectedServer.canEdit &&
           (selectedServer.cloud?.cloudType == 'VMWARE' ||
@@ -154,7 +154,7 @@ import type Snapshot from "@/types/Snapshot.ts";
 import type { UnifiedStorageMountItem } from "@/types/UnifiedStorageMountItem.ts";
 
 import { mdiLock } from "@mdi/js";
-import { ref } from "vue";
+import { computed, ref } from "vue";
 
 import jobService from "@/api/jobService.ts";
 import CommonCard from "@/components/common/CommonCard.vue";
@@ -266,14 +266,26 @@ const shareMountHeaders = [
 
 const formatter = useFormatter();
 
+const isLinux = computed(
+  () =>
+    props.selectedServer.guestConfigId == "l26" || // proxmox
+    props.selectedServer.guestConfigFullName?.toLowerCase().includes("linux") || // vmware
+    false
+);
+
+const isLinux10 = computed(
+  () =>
+    props.selectedServer.operatingsystem?.includes("RHEL Server 10") ||
+    props.selectedServer.operatingsystem?.includes("AlmaLinux 10") ||
+    false
+);
+
 function editMountPoint(
   mountPoint: MountPoint,
   newCapacityGB: number,
   newVolumeGroup: string
 ) {
-  if (
-    props.selectedServer?.guestConfigFullName?.toLowerCase().includes("linux")
-  ) {
+  if (isLinux) {
     const actionName =
       newCapacityGB > 2000 ? "LINUX_DISK_UPGRADE" : "LINUX_MOUNTPOINT_CHANGE";
 
@@ -282,10 +294,7 @@ function editMountPoint(
       newSize: newCapacityGB,
       volumeGroup: newVolumeGroup,
     });
-  }
-  if (
-    props.selectedServer?.guestConfigFullName?.toLowerCase().includes("windows")
-  ) {
+  } else {
     const actionName =
       newCapacityGB > 2000
         ? "WINDOWS_DISK_UPGRADE"

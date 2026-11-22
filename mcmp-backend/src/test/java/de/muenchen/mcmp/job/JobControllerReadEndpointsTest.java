@@ -1,6 +1,7 @@
 package de.muenchen.mcmp.job;
 
 import de.muenchen.mcmp.appservice.AppserviceService;
+import de.muenchen.mcmp.clients.awx.AwxOrgTeamService;
 import de.muenchen.mcmp.config.app.MaintenanceModeConfiguration;
 import de.muenchen.mcmp.config.app.MaintenanceModeInterceptor;
 import de.muenchen.mcmp.configuration.nfcconverter.NfcRequestFilter;
@@ -77,6 +78,8 @@ class JobControllerReadEndpointsTest {
     private RepositoryService repositoryService;
     @MockitoBean
     private KubernetesNamespaceService kubernetesNamespaceService;
+    @MockitoBean
+    private AwxOrgTeamService awxOrgTeamService;
     @MockitoBean
     private ErrorLogService errorLogService;
 

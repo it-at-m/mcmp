@@ -1,10 +1,40 @@
 package de.muenchen.mcmp.clients.foreman;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
 import de.muenchen.mcmp.common.AbstractEntity;
 import de.muenchen.mcmp.foreman.ForemanHost;
+import de.muenchen.mcmp.ip.IP;
+import de.muenchen.mcmp.ip.IPRepository;
 import de.muenchen.mcmp.mountPoint.MountPoint;
 import de.muenchen.mcmp.mountPoint.MountPointRepository;
-import de.muenchen.mcmp.ontap.*;
+import de.muenchen.mcmp.nic.Nic;
+import de.muenchen.mcmp.nic.NicRepository;
+import de.muenchen.mcmp.ontap.OntapQtree;
+import de.muenchen.mcmp.ontap.OntapQtreeRepository;
+import de.muenchen.mcmp.ontap.OntapQtreeServerMount;
+import de.muenchen.mcmp.ontap.OntapQtreeServerMountRepository;
+import de.muenchen.mcmp.ontap.OntapServerMount;
+import de.muenchen.mcmp.ontap.OntapVolume;
+import de.muenchen.mcmp.ontap.OntapVolumeRepository;
+import de.muenchen.mcmp.ontap.OntapVolumeServerMount;
+import de.muenchen.mcmp.ontap.OntapVolumeServerMountRepository;
 import de.muenchen.mcmp.repository.Repository;
 import de.muenchen.mcmp.repository.RepositoryIdByName;
 import de.muenchen.mcmp.repository.RepositoryRepository;
@@ -12,18 +42,12 @@ import de.muenchen.mcmp.server.Server;
 import de.muenchen.mcmp.server.ServerRepository;
 import de.muenchen.mcmp.server.matching.ServerMatcher;
 import de.muenchen.mcmp.sleeper.ThreadSleeper;
+import de.muenchen.mcmp.types.IPType;
+import de.muenchen.mcmp.types.ServerType;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.OptimisticLockException;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.OptimisticLockingFailureException;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.*;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -32,15 +56,17 @@ public class ForemanImportService {
 
     private static final int SAVE_RETRY_ATTEMPTS = 3;
 
-    private final ServerRepository serverRepository;
-    private final MountPointRepository mountPointRepository;
     private final EntityManager entityManager;
+    private final ForemanSyncService foremanSyncService;
+    private final IPRepository ipRepository;
+    private final MountPointRepository mountPointRepository;
+    private final NicRepository nicRepository;
     private final OntapQtreeRepository ontapQtreeRepository;
     private final OntapQtreeServerMountRepository ontapQtreeServerMountRepository;
     private final OntapVolumeRepository ontapVolumeRepository;
     private final OntapVolumeServerMountRepository ontapVolumeServerMountRepository;
     private final RepositoryRepository repositoryRepository;
-    private final ForemanSyncService foremanSyncService;
+    private final ServerRepository serverRepository;
 
     /**
      * Synchronizes the raw Foreman data (config_foreman, foreman_host, foreman_interface) for
@@ -72,32 +98,41 @@ public class ForemanImportService {
 
         Server server = matchHost(hostDTO, matchingStrategies);
 
-        if (server != null) {
-            log.debug("Matched host {} to server ID {}", hostDTO.name(), server.getId());
-
-            if (isUpdateNeeded(server, hostDTO, foremanHost)) {
-                log.debug("Server {} needs update", server.getName());
-                server = saveServerWithRetry(server, hostDTO, foremanHost);
-                if (server == null) {
-                    log.error("Failed to save server after all retry attempts for host {}", hostDTO.name());
-                    return;
-                }
-            }
-
-            processedServerIDs.add(server.getId());
-            if (server.getManaged() && !server.getRoleWindows()) {
-                processMountPointsWithFallback(server, hostDTO);
-                syncOntapServerMounts(server, hostDTO.mountpoints());
-                syncRepositories(server, hostDTO.repositories(), repositoryIdByName);
-            } else {
-                // If server is unmanaged or Windows, ensure no repository assignments exist
-                if (repositoryRepository.existsAssignmentsByServerId(server.getId())) {
-                    repositoryRepository.deleteAssignmentsByServerId(server.getId());
-                    log.debug("Cleared repository assignments for server {} (now unmanaged or Windows)", server.getName());
-                }
-            }
-        } else {
+        if (server == null) {
             log.warn("Foreman Host {} from {} with ID {} could not be matched to any server", hostDTO.name(), hostDTO.source(), hostDTO.id());
+            return;
+        };
+
+        log.debug("Matched host {} to server ID {}", hostDTO.name(), server.getId());
+
+        if (isUpdateNeeded(server, hostDTO, foremanHost)) {
+            log.debug("Server {} needs update", server.getName());
+            server = saveServerWithRetry(server, hostDTO, foremanHost);
+            if (server == null) {
+                log.error("Failed to save server after all retry attempts for host {}", hostDTO.name());
+                return;
+            }
+        }
+
+        processedServerIDs.add(server.getId());
+        if (server.getManaged() && !server.getRoleWindows()) {
+            processMountPointsWithFallback(server, hostDTO);
+            syncOntapServerMounts(server, hostDTO.mountpoints());
+            syncRepositories(server, hostDTO.repositories(), repositoryIdByName);
+        } else {
+            // If server is unmanaged or Windows, ensure no repository assignments exist
+            if (repositoryRepository.existsAssignmentsByServerId(server.getId())) {
+                repositoryRepository.deleteAssignmentsByServerId(server.getId());
+                log.debug("Cleared repository assignments for server {} (now unmanaged or Windows)", server.getName());
+            }
+        }
+
+        // VMware servers get their IP assignments from the VMware
+        // guest tools, but Proxmox servers can't, so read them from
+        // Foreman instead. (We don't do this for OLVM or Blade/Rack
+        // because those servers don't have NIC data.)
+        if (server.getManaged() && server.getServerType() == ServerType.VM_PROXMOX) {
+          updateIpAssignments(server, hostDTO);
         }
     }
 
@@ -1167,6 +1202,86 @@ public class ForemanImportService {
         needsUpdate |= resetBooleanField(server::getRoleNonOracle, server::setRoleNonOracle);
 
         return needsUpdate;
+    }
+
+    /**
+     * Updates the IP assignments related to this server.
+     */
+    private void updateIpAssignments(Server server, HostDTO hostDTO) {
+        final Map<String, Nic> nics = nicRepository
+            .findByServerId(server.getId())
+            .stream()
+            .collect(Collectors.toMap(nic -> nic.getMacAddress().toUpperCase(Locale.ROOT),
+                                      Function.identity()));
+
+        // IPs are automatically persisted via CascadeType.ALL
+        final Set<Nic> changedNics = new HashSet<>();
+
+        for (var interfaceDTO : hostDTO.interfaces()) {
+            final var mac = interfaceDTO.mac().toUpperCase(Locale.ROOT);
+            final var nic = nics.get(mac);
+            if (nic == null) {
+                log.warn("Foreman refers to interface {} for server {}, but it does not exist",
+                         mac, hostDTO.name());
+                continue;
+            }
+
+            boolean hasChanged = false;
+
+            final var obsoleteIp4s = nic.getIps().stream()
+                .filter(i -> Objects.equals(i.getIpType(), IPType.IPv4))
+                .filter(i -> !Objects.equals(i.getIp(), interfaceDTO.ip()))
+                .toList();
+            if (!obsoleteIp4s.isEmpty()) {
+                for (final var obsolete : obsoleteIp4s) {
+                    nic.unassignIp(obsolete);
+                    hasChanged = true;
+                }
+            }
+
+            if (interfaceDTO.ip() != null && !interfaceDTO.ip().isEmpty()) {
+                var ip = ipRepository.findByIp(interfaceDTO.ip());
+
+                if (ip == null) {
+                    ip = new IP();
+                    ip.setIp(interfaceDTO.ip());
+                    ip.setIpType(IPType.IPv4);
+                }
+
+                nic.assignIp(ip);
+                hasChanged = true;
+            }
+
+            final var obsoleteIp6s = nic.getIps().stream()
+                .filter(i -> Objects.equals(i.getIpType(), IPType.IPv6))
+                .filter(i -> !Objects.equals(i.getIp(), interfaceDTO.ip6()))
+                .toList();
+            if (!obsoleteIp6s.isEmpty()) {
+                for (final var obsolete : obsoleteIp6s) {
+                    nic.unassignIp(obsolete);
+                    hasChanged = true;
+                }
+            }
+
+            if (interfaceDTO.ip6() != null && !interfaceDTO.ip6().isEmpty()) {
+                var ip = ipRepository.findByIp(interfaceDTO.ip6());
+
+                if (ip == null) {
+                    ip = new IP();
+                    ip.setIp(interfaceDTO.ip6());
+                    ip.setIpType(IPType.IPv6);
+                }
+
+                nic.assignIp(ip);
+                hasChanged = true;
+            }
+
+            if (hasChanged) {
+                changedNics.add(nic);
+            }
+        }
+
+        nicRepository.saveAll(changedNics);
     }
 
     /**

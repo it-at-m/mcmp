@@ -1266,6 +1266,71 @@ public class JobService {
     }
 
     // -----------------------------------------------------------------------------------------------------------------
+    // AWX ORG/TEAM JOBs
+    // -----------------------------------------------------------------------------------------------------------------
+
+    /** All AWX teams live in this organization. */
+    private static final String AWX_TEAM_ORGANIZATION = "Default";
+
+    public void awxCreateOrEditOrg(final String identifier, final String orgname,
+                                    final List<String> staticAdmins, final List<String> ldapAdmins, final boolean edit) {
+        final Map<String, Object> params = new HashMap<>();
+        params.put("org_name", orgname);
+        params.put("team_name", "");
+        params.put("org_admins", Map.of("static", staticAdmins, "ldap", ldapAdmins));
+        params.put("requesting_user", AuthUtils.getCurrentUserName());
+        params.put("OrgOrTeam", "Organisation");
+        params.put("action", edit ? "Bearbeiten" : "Erstellen");
+
+        createAwxOrgTeamJob(identifier, params, orgname, "ensure_org");
+    }
+
+    public void awxCreateOrEditTeam(final String identifier, final String teamname,
+                                    final List<String> staticUsers, final List<String> ldapUsers, final boolean edit) {
+        final Map<String, Object> params = new HashMap<>();
+        params.put("org_name", "");
+        params.put("team_name", teamname);
+        params.put("team_organization", AWX_TEAM_ORGANIZATION);
+        params.put("team_users", Map.of("static", staticUsers, "ldap", ldapUsers));
+        params.put("requesting_user", AuthUtils.getCurrentUserName());
+        params.put("OrgOrTeam", "Team");
+        params.put("action", edit ? "Bearbeiten" : "Erstellen");
+
+        createAwxOrgTeamJob(identifier, params, teamname, "ensure_team");
+    }
+
+    public void awxRenameOrg(final String identifier, final String orgname, final String newOrgname) {
+        final Map<String, Object> params = new HashMap<>();
+        params.put("org_name", orgname);
+        params.put("team_name", "");
+        params.put("new_org_name", newOrgname);
+        params.put("requesting_user", AuthUtils.getCurrentUserName());
+        params.put("OrgOrTeam", "Organisation");
+        params.put("action", "Umbenennen");
+
+        createAwxOrgTeamJob(identifier, params, newOrgname, "rename_org");
+    }
+
+    public void awxRenameTeam(final String identifier, final String teamname, final String newTeamname) {
+        final Map<String, Object> params = new HashMap<>();
+        params.put("org_name", "");
+        params.put("team_name", teamname);
+        params.put("new_team_name", newTeamname);
+        params.put("requesting_user", AuthUtils.getCurrentUserName());
+        params.put("OrgOrTeam", "Team");
+        params.put("action", "Umbenennen");
+
+        createAwxOrgTeamJob(identifier, params, newTeamname, "rename_team");
+    }
+
+    private void createAwxOrgTeamJob(final String identifier, final Map<String, Object> params,
+                                     final String hostname, final String awxJobTag) {
+        createJob(identifier, null, params, new HashMap<>(), null, null, null, null, job -> {
+            job.setAwxJobTags(awxJobTag);
+        });
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------
     // GREEN-IT JOBs
     // -----------------------------------------------------------------------------------------------------------------
     public Long createGreenItRightsizingJob(final GreenItRightsizing greenItRightsizing) {

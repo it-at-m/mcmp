@@ -30,6 +30,8 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
@@ -73,6 +75,7 @@ public class UserInfoAuthoritiesService {
     private static final String HEADER_FORWARDED = "forwarded";
     private static final String UNKNOWN_REMOTE_IP = "unknown";
     private static final String UNKNOWN_USERNAME = "unknown";
+    private static final ZoneId LOGIN_TIMESTAMP_ZONE = ZoneId.of("Europe/Berlin");
 
     private final String userInfoUri;
     private final RestTemplate restTemplate;
@@ -122,6 +125,8 @@ public class UserInfoAuthoritiesService {
                 .build();
     }
 
+    private record UserResolution(List<SimpleGrantedAuthority> authorities, User user) {
+    }
 
     /**
      * Loads and resolves authorities (roles and permissions) for an authenticated user based on their JWT token.
@@ -373,7 +378,8 @@ public class UserInfoAuthoritiesService {
             );
 
             // Add database user authorities (and manage specialRole flag)
-            authorities.addAll(resolveUserAuthorities(username, hasSpecialRoles, userInfo));
+            final UserResolution userResolution = resolveUserAuthorities(username, hasSpecialRoles, userInfo);
+            authorities.addAll(userResolution.authorities());
 
             if (authorities.stream().allMatch(auth -> auth.getAuthority().startsWith(AuthUtils.DEPT_PREFIX))) {
                 log.warn("No authorities found for user {} - denying access", username);
@@ -388,6 +394,8 @@ public class UserInfoAuthoritiesService {
                     "Granted",
                     authorities.toString()
             );
+
+            updateLoginTimestampIfNeeded(username, userResolution.user());
 
             return Collections.unmodifiableSet(authorities);
 
@@ -487,37 +495,39 @@ public class UserInfoAuthoritiesService {
      *         containing at least {@code ROLE_USER} for valid users, plus {@code ROLE_ADMIN} if the user
      *         has admin privileges; returns an empty list if the user cannot be resolved or an error occurs
      */
-    private List<SimpleGrantedAuthority> resolveUserAuthorities(final String username, final boolean hasSpecialRoles, final AuthUtils.AuthUserInfo userInfo) {
+    private UserResolution resolveUserAuthorities(final String username, final boolean hasSpecialRoles, final AuthUtils.AuthUserInfo userInfo) {
         if (username == null || username.isBlank() || userService == null) {
-            return Collections.emptyList();
+            return new UserResolution(Collections.emptyList(), null);
         }
         try {
-            var userOptional = userService.findByUsername(username);
+            final var userOptional = userService.findByUsername(username);
             if (userOptional.isPresent()) {
                 final var user = userOptional.get();
                 // Consider admin as a special role for updating specialRole flag
-                boolean effectiveHasSpecialRoles = hasSpecialRoles || Boolean.TRUE.equals(user.getAdmin());
+                final boolean effectiveHasSpecialRoles = hasSpecialRoles || Boolean.TRUE.equals(user.getAdmin());
                 updateSpecialRoleIfNeeded(user, effectiveHasSpecialRoles, username);
 
+                final List<SimpleGrantedAuthority> resolvedAuthorities;
                 if (Boolean.TRUE.equals(user.getAdmin())) {
-                    return List.of(
+                    resolvedAuthorities = List.of(
                             new SimpleGrantedAuthority(AuthUtils.ROLE_USER),
                             new SimpleGrantedAuthority(AuthUtils.ROLE_ADMIN)
                     );
                 } else {
-                    return List.of(new SimpleGrantedAuthority(AuthUtils.ROLE_USER));
+                    resolvedAuthorities = List.of(new SimpleGrantedAuthority(AuthUtils.ROLE_USER));
                 }
+                return new UserResolution(resolvedAuthorities, user);
             } else if (hasSpecialRoles) {
                 final String sysId = getSysId(username);
                 final User newUser = createNewUser(username, sysId, userInfo);
-                userService.save(newUser);
-                return List.of(new SimpleGrantedAuthority(AuthUtils.ROLE_USER));
+                final User savedUser = userService.save(newUser);
+                return new UserResolution(List.of(new SimpleGrantedAuthority(AuthUtils.ROLE_USER)), savedUser);
             }
         } catch (Exception e) {
             log.debug("Error finding or saving user by username '{}': {}", username, e.getMessage());
             logSecurityEvent(username, getCurrentRemoteIp(), "User lookup or save failed", e.getMessage());
         }
-        return Collections.emptyList();
+        return new UserResolution(Collections.emptyList(), null);
     }
 
     private void updateSpecialRoleIfNeeded(User user, boolean effectiveHasSpecialRoles, String username) {
@@ -861,5 +871,32 @@ public class UserInfoAuthoritiesService {
                 authorities.toString()
         );
         logAuthenticationSuccess(username, remoteIp, authorities, "Authentication completed");
+    }
+
+    private void updateLoginTimestampIfNeeded(final String username, final User user) {
+        if (userService == null || user == null) {
+            return;
+        }
+        if (!isUpdatedBeforeToday(user.getUpdatedAt())) {
+            log.debug("Login timestamp for user '{}' already set today ({}) - skipping DB update", username, user.getUpdatedAt());
+            return;
+        }
+        try {
+            userService.updateLastLogin(username);
+        } catch (Exception e) {
+            log.warn("Could not update login timestamp for user {}: {}", username, e.getMessage());
+        }
+    }
+
+    private static boolean isUpdatedBeforeToday(final Instant updatedAt) {
+        if (updatedAt == null) {
+            return true;
+        }
+        final Instant startOfToday = Instant.now()
+                .atZone(LOGIN_TIMESTAMP_ZONE)
+                .toLocalDate()
+                .atStartOfDay(LOGIN_TIMESTAMP_ZONE)
+                .toInstant();
+        return updatedAt.isBefore(startOfToday);
     }
 }

@@ -9,20 +9,51 @@
       :is-default-expanded="false"
     >
       <template #append-title>
-        <count-badge :count="serverCount" />
+        <v-tooltip
+          location="top"
+          :text="`Gesamtanzahl Server: ${serverCount}`"
+        >
+          <template #activator="{ props: tooltipProps }">
+            <span
+              v-bind="tooltipProps"
+              class="d-inline-flex"
+            >
+              <count-badge :count="serverCount" />
+            </span>
+          </template>
+        </v-tooltip>
         <v-tooltip
           v-if="anyServerHasWarnings"
           location="top"
           text="Handlungsbedarf an mind. einem Server"
         >
           <template #activator="{ props: tooltipProps }">
-            <v-icon
+            <span
               v-bind="tooltipProps"
-              :icon="mdiAlert"
-              color="orange"
-              size="22"
-              class="ml-2"
-            />
+              class="ml-2 d-inline-flex warning-badge"
+            >
+              <count-badge
+                :count="
+                  (props.selectedAppservice?.servers || []).filter(
+                    (s: any) => s.hasWarnings
+                  ).length
+                "
+              />
+            </span>
+          </template>
+        </v-tooltip>
+        <v-tooltip
+          v-if="anyServerPoweredOff"
+          location="top"
+          :text="`${poweredOffCount} Server ausgeschaltet (poweredOff) – ggf. abbaubar`"
+        >
+          <template #activator="{ props: tooltipProps }">
+            <span
+              v-bind="tooltipProps"
+              class="ml-2 d-inline-flex powered-off-badge"
+            >
+              <count-badge :count="poweredOffCount" />
+            </span>
           </template>
         </v-tooltip>
       </template>
@@ -231,9 +262,9 @@
                 color="orange"
                 size="20"
                 class="ml-1"
-                @mouseenter="onRowTooltipHover($event, 'Handlung erforderlich')"
+                @mouseenter="onRowTooltipHover($event, getWarningTooltip(item))"
                 @mouseleave="onRowTooltipLeave"
-                @focus="onRowTooltipHover($event, 'Handlung erforderlich')"
+                @focus="onRowTooltipHover($event, getWarningTooltip(item))"
                 @blur="onRowTooltipLeave"
               />
             </router-link>
@@ -417,6 +448,28 @@ function onRowTooltipHover(event: Event, text: string) {
 function onRowTooltipLeave() {
   rowTooltipActivator.value = undefined;
 }
+
+const getWarningTooltip = (item: any) => {
+  const parts: string[] = [];
+
+  const curCpu = Number(item.numCpu ?? 0);
+  const recCpu = Number(item.numCpuRecommended ?? 0);
+  if (recCpu > 0 && recCpu < curCpu) {
+    parts.push(`CPU: ${curCpu} -> ${recCpu} Cores`);
+  }
+
+  const curRam = Number(item.memoryMb ?? 0);
+  const recRam = Number(item.memoryMbRecommended ?? 0);
+  if (recRam > 0 && recRam < curRam) {
+    parts.push(
+      `RAM: ${formatter.formatMBtoGB(curRam)} -> ${formatter.formatMBtoGB(recRam)} GB`
+    );
+  }
+
+  return parts.length > 0
+    ? `Green-IT Empfehlung: ${parts.join(" | ")}`
+    : "Handlung erforderlich";
+};
 
 const serverKindText = (kind?: string | null) => {
   if (!kind) return "";
@@ -786,6 +839,15 @@ const rootAdminTooltip = computed(() => {
 
   return "Aktion deaktiviert.";
 });
+
+const poweredOffCount = computed(
+  () =>
+    (props.selectedAppservice?.servers || []).filter(
+      (s: any) => s.powerState === "poweredOff"
+    ).length
+);
+
+const anyServerPoweredOff = computed(() => poweredOffCount.value > 0);
 </script>
 
 <style scoped>
@@ -841,5 +903,14 @@ const rootAdminTooltip = computed(() => {
   display: flex;
   gap: 8px;
   align-items: center;
+}
+.warning-badge :deep(*) {
+  background-color: orange !important;
+  color: white !important;
+}
+
+.powered-off-badge :deep(*) {
+  background-color: rgb(var(--v-theme-_blue)) !important;
+  color: white !important;
 }
 </style>

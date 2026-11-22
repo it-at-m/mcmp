@@ -19,6 +19,11 @@
       hide-default-footer
       disable-sort
     >
+      <template #item.name="{ item }">
+        <div class="links">
+          <router-link :to="`/repo/${item.id}`">{{ item.name }}</router-link>
+        </div>
+      </template>
       <template #item.lockStatus="{ item }">
         <repo-lock-status-icon :status="item.lockStatus" />
       </template>

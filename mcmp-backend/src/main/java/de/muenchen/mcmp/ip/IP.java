@@ -1,14 +1,25 @@
 package de.muenchen.mcmp.ip;
 
+import java.util.HashSet;
+import java.util.Set;
+
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import de.muenchen.mcmp.common.AbstractEntity;
+import de.muenchen.mcmp.nic.Nic;
 import de.muenchen.mcmp.types.IPType;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 @Getter
 @Setter
@@ -35,4 +46,6 @@ public class IP extends AbstractEntity {
     @Column(name = "dns_mac", length = 17)
     private String dnsMac;
 
+    @ManyToMany(fetch = FetchType.LAZY, mappedBy = "ips")
+    private Set<Nic> nics = new HashSet<>();
 }

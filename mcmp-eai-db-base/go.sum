@@ -1,5 +1,5 @@
-github.com/it-at-m/mcmp/mcmp-eai-common v0.0.0-20261025192727-49576af51ef4 h1:a1IFQPRSrPB0WrxEaWmEtU/YL8G5GVid+PnUGIizMqM=
-github.com/it-at-m/mcmp/mcmp-eai-common v0.0.0-20261025192727-49576af51ef4/go.mod h1:hjO3/4hC81HNwBX+x0HKnsdhgYu2GJD6bapNodUR/48=
+github.com/it-at-m/mcmp/mcmp-eai-common v0.0.0-20261031151148-3c35431aad4d h1:GqT3lQOj8ZjCPyQN5jSpil1s7DI07CtLEThcauZRS1o=
+github.com/it-at-m/mcmp/mcmp-eai-common v0.0.0-20261031151148-3c35431aad4d/go.mod h1:ZusC9BPozZFw3/ENavkSOODVJN5gk8I6oxzBlrxvXhg=
 golang.org/x/oauth2 v0.37.0 h1:JUlcxA8oAtauLfiH8FX2/FkAWHAdi0QtGCGc+hofE98=
 golang.org/x/oauth2 v0.37.0/go.mod h1:IxwZNxUULJmpBFf9K/9NTMSIfZZuvuTy1gGxhigP/58=
 golang.org/x/sync v0.24.0 h1:iqiDrGoDgyuvAKrhLQthUEzU/R378N78gXbBjxed7oA=

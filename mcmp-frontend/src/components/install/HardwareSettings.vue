@@ -22,13 +22,9 @@
         <strong>Arbeitsspeicher in GB*</strong>
         <v-number-input
           v-model="instlServerDetails.memory"
-          :min="instlServerDetails.category?.label == 'OracleDB' ? 6 : 4"
+          :min="minMemory"
           :max="64"
-          :hint="
-            'Erlaubte Werte ' +
-            (instlServerDetails.category?.label == 'OracleDB' ? 6 : 4) +
-            ' bis 64'
-          "
+          :hint="'Erlaubte Werte ' + minMemory + ' bis 64'"
           persistent-hint
           control-variant="split"
           variant="solo"
@@ -130,7 +126,7 @@
 import type NetworkGroup from "@/types/NetworkGroup.ts";
 
 import { mdiOpenInNew } from "@mdi/js";
-import { onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 
 import networkService from "@/api/networkService";
 import CommonAlert from "@/components/common/CommonAlert.vue";
@@ -143,6 +139,21 @@ import installServerDetails, {
 const props = defineProps<{
   instlServerDetails: installServerDetails;
 }>();
+const minMemory = computed(() =>
+  ["OracleDB", "MSSQL"].includes(props.instlServerDetails.category?.label ?? "")
+    ? 6
+    : 4
+);
+
+watch(
+  minMemory,
+  (min) => {
+    if (props.instlServerDetails.memory < min) {
+      props.instlServerDetails.memory = min;
+    }
+  },
+  { immediate: true }
+);
 const loading = ref(false);
 const networkgroups = ref<NetworkGroup[]>([]);
 

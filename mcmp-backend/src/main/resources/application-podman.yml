@@ -154,3 +154,7 @@ greenit:
 
 error-log:
   retention-days: 30
+
+awx:
+  orgteam:
+    use-stub: true

@@ -205,7 +205,7 @@ deploy-test:mcmp:
     AWX_TEMPLATE: mcmp-k-deploy
   script:
     - awx job_templates launch $AWX_TEMPLATE
-      --verbosity 4 --monitor -f human
+      --verbosity 2 --monitor -f human
       --conf.host $AWX_HOST --conf.username=$AWX_USER --conf.password=$AWX_PW
 
 
@@ -230,7 +230,7 @@ deploy-prod:mcmp:
     AWX_TEMPLATE: mcmp-p-deploy
   script:
     - awx job_templates launch $AWX_TEMPLATE
-      --verbosity 4 --monitor -f human
+      --verbosity 2 --monitor -f human
       --conf.host $AWX_HOST --conf.username=$AWX_USER --conf.password=$AWX_PW
 
 # Löscht mcmp-Artefakte (Backend-Jars und Frontend-WARs), die älter als 4 Wochen sind,

@@ -16,9 +16,6 @@ public interface AwxConfigMapper {
     @Mapping(target = "apiPassword", ignore = true)
     AwxConfigDTO toDTO(final AwxConfig awxConfig);
 
-    @Mapping(target = "apiPassword", source = "apiPasswordEncrypted")
-    AwxConfigDTO toDTODecryptedPassword(final AwxConfig awxConfig);
-
     @IterableMapping(qualifiedByName = "toDTO")
     List<AwxConfigDTO> toDTOs(final List<AwxConfig> awxConfigs);
 

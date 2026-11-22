@@ -26,7 +26,7 @@ public class SiemLoggingService {
     private final String hostName;
     private static final org.slf4j.Logger SIEM_LOGGER = org.slf4j.LoggerFactory.getLogger("SIEM.CEF");
 
-    public SiemLoggingService(@Value("${server.hostname:localhost}") String hostName) {
+    public SiemLoggingService(@Value("${siem.device-host-name:localhost}") String hostName) {
         this.hostName = hostName;
     }
 

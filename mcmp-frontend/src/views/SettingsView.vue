@@ -90,15 +90,38 @@
               </v-list>
             </v-menu>
 
-            <v-tab
+            <!-- NEU: History als Dropdown-Menü (analog zu Monitoring) -->
+            <v-menu
               v-if="isAdmin || isOtherRole"
-              value="History"
+              location="bottom start"
+              offset="4"
             >
-              <template #prepend>
-                <v-icon size="x-large">{{ mdiHistory }}</v-icon>
+              <template #activator="{ props: menuProps }">
+                <v-tab
+                  v-bind="menuProps"
+                  value="History"
+                >
+                  History
+                  <template #prepend>
+                    <v-icon size="x-large">{{ mdiHistory }}</v-icon>
+                  </template>
+                  <template #append>
+                    <v-icon size="small">{{ mdiChevronDown }}</v-icon>
+                  </template>
+                </v-tab>
               </template>
-              History
-            </v-tab>
+
+              <v-list density="compact">
+                <v-list-item
+                  v-for="item in historyItems"
+                  :key="item.value"
+                  :prepend-icon="item.icon"
+                  :title="item.title"
+                  :active="historyTab === item.value"
+                  @click="selectHistoryTab(item.value)"
+                />
+              </v-list>
+            </v-menu>
 
             <v-tab
               v-if="isAdmin"
@@ -178,11 +201,20 @@
             <error-log v-if="isAdmin && monitoringTab === 'ErrorLog'" />
           </v-tabs-window-item>
 
+          <!-- NEU: Unterpunkte für JobHistory und UserHistory -->
           <v-tabs-window-item
             v-if="isAdmin || isOtherRole"
             value="History"
           >
-            <admin-history :key="historyKey" />
+            <admin-history
+              v-if="historyTab === 'JobHistory'"
+              :key="historyKey"
+            />
+
+            <user-history
+              v-if="isAdmin && historyTab === 'UserHistory'"
+              :key="historyKey"
+            />
           </v-tabs-window-item>
 
           <v-tabs-window-item
@@ -199,6 +231,7 @@
 
 <script setup lang="ts">
 import {
+  mdiAccountClockOutline,
   mdiAccountCog,
   mdiAlertCircleOutline,
   mdiChartBar,
@@ -209,6 +242,7 @@ import {
   mdiHistory,
   mdiMonitorDashboard,
   mdiNetwork,
+  mdiPlaylistCheck,
   mdiPuzzle,
   mdiRocketLaunch,
   mdiServerMinus,
@@ -231,12 +265,14 @@ import PatchnightStatus from "@/components/Settings/PatchnightStatus.vue";
 import Prices from "@/components/Settings/Prices.vue";
 import UnmanagedServer from "@/components/Settings/UnmanagedServer.vue";
 import UnmappedForemanHosts from "@/components/Settings/UnmappedForemanHosts.vue";
+import UserHistory from "@/components/Settings/UserHistory.vue";
 import { useUserStore } from "@/stores/user";
 
 const userStore = useUserStore();
 const router = useRouter();
 const tab = ref("History");
 const monitoringTab = ref("Patchnight");
+const historyTab = ref("JobHistory");
 const historyKey = ref(0);
 
 const hasOpenDialog = ref(false);
@@ -317,13 +353,36 @@ const monitoringItems = computed(() =>
   ].filter((item) => item.visible)
 );
 
+const historyItems = computed(() =>
+  [
+    {
+      value: "JobHistory",
+      title: "Job-Historie",
+      icon: mdiPlaylistCheck,
+      visible: true,
+    },
+    {
+      value: "UserHistory",
+      title: "User-Historie",
+      icon: mdiAccountClockOutline,
+      visible: isAdmin.value, // Falls auch isOtherRole das sehen darf, hier einfach auf true setzen
+    },
+  ].filter((item) => item.visible)
+);
+
+function selectHistoryTab(value: string) {
+  tab.value = "History";
+  historyTab.value = value;
+  historyKey.value++;
+}
+
 onMounted(() => {
   redirectIfUnauthorized();
 });
 
 watch(tab, (newTab) => {
   if (newTab === "History") {
-    // Key ändern um AdminHistory neu zu mounten und Paginierung zurückzusetzen
+    // Key ändern um aktive History-Komponente neu zu mounten und Paginierung zurückzusetzen
     historyKey.value++;
   }
 });

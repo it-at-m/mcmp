@@ -2,6 +2,7 @@ package de.muenchen.mcmp.job;
 
 import de.muenchen.mcmp.appservice.Appservice;
 import de.muenchen.mcmp.appservice.AppserviceService;
+import de.muenchen.mcmp.clients.awx.AwxOrgTeamService;
 import de.muenchen.mcmp.exception.BusinessValidationException;
 import de.muenchen.mcmp.job.incident.JobIncidentSummary;
 import de.muenchen.mcmp.job.node.JobNodeHierarchy;
@@ -46,6 +47,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.format.ResolverStyle;
 import java.util.*;
+import java.util.regex.Pattern;
 
 @RestController
 @AllArgsConstructor
@@ -64,6 +66,7 @@ public class JobController {
     private final LoadbalancerService loadbalancerService;
     private final RepositoryService repositoryService;
     private final KubernetesNamespaceService kubernetesNamespaceService;
+    private final AwxOrgTeamService awxOrgTeamService;
 
     public static final String START_SERVER = "START_SERVER";
     public static final String STOP_SERVER = "STOP_SERVER";
@@ -95,6 +98,8 @@ public class JobController {
 
     public static final String ANSIBLE_USER_ADD = "ANSIBLE_USER_ADD";
     public static final String ANSIBLE_USER_REMOVE = "ANSIBLE_USER_REMOVE";
+
+    public static final String AWX_ORG_TEAM = "AWX_ORG_TEAM";
 
     public static final String LOADBALANCER_F5 = "LOADBALANCER_F5";
     public static final String LOADBALANCER_F5_CHANGE_POOL_MEMBERS = "LOADBALANCER_F5_CHANGE_POOL_MEMBERS";
@@ -1320,6 +1325,88 @@ public class JobController {
 
         logCreatedJob(ANSIBLE_USER_REMOVE, serverId);
         jobService.ansibleUserRemove(account_name, ANSIBLE_USER_REMOVE);
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------
+    // AWX ORG/TEAM JOBs
+    // -----------------------------------------------------------------------------------------------------------------
+    private static final Pattern AWX_NAME_PATTERN = Pattern.compile("^[A-Za-z0-9._-]{1,64}$");
+    private static final Pattern AWX_STATIC_USER_PATTERN = Pattern.compile("^[A-Za-z0-9._-]{1,64}$");
+    private static final Pattern AWX_LDAP_GROUP_PATTERN = Pattern.compile("^[^\\p{Cntrl}{}]{1,512}$");
+
+    @HasUserOrSpecialRole
+    @PostMapping("/create/" + AWX_ORG_TEAM)
+    public void awxEnsureOrg(@RequestBody final Map<String, Object> awxExtraVars) {
+        final String orgOrTeam = requireNonBlankString(awxExtraVars.get("orgOrTeam"), "Org or team").trim();
+        final String action = requireNonBlankString(awxExtraVars.get("action"), "Action").trim();
+        final boolean isOrg = switch (orgOrTeam) {
+            case "org" -> true;
+            case "team" -> false;
+            default -> throw new IllegalArgumentException("Org or team must be 'org' or 'team'.");
+        };
+        if (!List.of("create", "edit", "rename").contains(action)) {
+            throw new IllegalArgumentException("Action must be 'create', 'edit' or 'rename'.");
+        }
+
+        final String name = requireAwxName(awxExtraVars.get("name"), isOrg ? "Organization name" : "Team name");
+        final AwxOrgTeamService.AwxNameCheckDTO check = isOrg
+                ? awxOrgTeamService.checkOrganization(name)
+                : awxOrgTeamService.checkTeam(name);
+
+        // Existing orgs/teams (edit, rename, or create of an existing name) may only be changed by their admins.
+        if (!"create".equals(action) && !check.exists()) {
+            throw new IllegalArgumentException((isOrg ? "Organization " : "Team ") + name + " does not exist.");
+        }
+        if (check.exists() && !check.allowed()) {
+            logTriedToCreateJob(AWX_ORG_TEAM, null);
+            throw new AccessDeniedException("You are not allowed to " + action + " this " + (isOrg ? "organization." : "team."));
+        }
+
+        if ("rename".equals(action)) {
+            final String newName = requireAwxName(awxExtraVars.get("newName"), "New name");
+            if (isOrg ? awxOrgTeamService.checkOrganization(newName).exists() : awxOrgTeamService.checkTeam(newName).exists()) {
+                throw new IllegalArgumentException("The new name " + newName + " already exists.");
+            }
+            logCreatedJob(AWX_ORG_TEAM, null);
+            if (isOrg) {
+                jobService.awxRenameOrg(AWX_ORG_TEAM, name, newName);
+            } else {
+                jobService.awxRenameTeam(AWX_ORG_TEAM, name, newName);
+            }
+            return;
+        }
+
+        final List<String> staticMembers = requireAwxMembers(awxExtraVars.get("static"), AWX_STATIC_USER_PATTERN, "Static members");
+        final List<String> ldapMembers = requireAwxMembers(awxExtraVars.get("ldap"), AWX_LDAP_GROUP_PATTERN, "LDAP groups");
+
+        if (isOrg) {
+            logCreatedJob(AWX_ORG_TEAM, null);
+            jobService.awxCreateOrEditOrg(AWX_ORG_TEAM, name, staticMembers, ldapMembers, check.exists());
+            return;
+        }
+
+        logCreatedJob(AWX_ORG_TEAM, null);
+        jobService.awxCreateOrEditTeam(AWX_ORG_TEAM, name, staticMembers, ldapMembers, check.exists());
+    }
+
+    private String requireAwxName(final Object nameObj, final String fieldName) {
+        final String name = requireNonBlankString(nameObj, fieldName).trim();
+        if (!AWX_NAME_PATTERN.matcher(name).matches()) {
+            throw new IllegalArgumentException(fieldName + " is invalid.");
+        }
+        return name;
+    }
+
+    private List<String> requireAwxMembers(final Object listObj, final Pattern pattern, final String fieldName) {
+        final List<String> result = new ArrayList<>();
+        for (final Object item : requireList(listObj, fieldName)) {
+            final String value = item == null ? "" : item.toString().trim();
+            if (!pattern.matcher(value).matches()) {
+                throw new IllegalArgumentException(fieldName + " contains an invalid entry.");
+            }
+            result.add(value);
+        }
+        return result;
     }
 
     // -----------------------------------------------------------------------------------------------------------------

@@ -111,6 +111,9 @@
                 <appservice-details-allgemein
                   :selected-appservice="selectedAppservice"
                 />
+                <app-service-details-green-i-t
+                  :selected-appservice="selectedAppservice"
+                />
                 <appservice-details-server
                   :selected-appservice="selectedAppservice"
                 />
@@ -175,6 +178,8 @@ import appserviceService from "@/api/appserviceService";
 import jobService from "@/api/jobService";
 import AppServiceDetailHistory from "@/components/Appservice/AppServiceDetailHistory.vue";
 import AppserviceDetailsAllgemein from "@/components/Appservice/AppserviceDetailsAllgemein.vue";
+import AppServiceDetailGreenIT from "@/components/Appservice/AppServiceDetailsGreenIT.vue";
+import AppServiceDetailsGreenIT from "@/components/Appservice/AppServiceDetailsGreenIT.vue";
 import AppserviceDetailsLoadbalancer from "@/components/Appservice/AppserviceDetailsLoadbalancer.vue";
 import AppserviceDetailsOpenshift from "@/components/Appservice/AppserviceDetailsOpenshift.vue";
 import AppserviceDetailsRepos from "@/components/Appservice/AppserviceDetailsRepos.vue";

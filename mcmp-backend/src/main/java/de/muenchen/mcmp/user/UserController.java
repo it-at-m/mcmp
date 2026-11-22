@@ -6,6 +6,10 @@ import de.muenchen.mcmp.security.IsAdmin;
 import de.muenchen.mcmp.security.IsAuthenticated;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -13,6 +17,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,7 +42,7 @@ public class UserController {
 
             final List<String> authorityStrings = jwtToken.getAuthorities().stream()
                     .map(GrantedAuthority::getAuthority)
-                    .filter(authority -> authority.startsWith("ROLE_"))
+                    .filter(authority -> authority != null && authority.startsWith("ROLE_"))
                     .toList();
             userInfo.put("authorities", authorityStrings);
 
@@ -64,20 +69,20 @@ public class UserController {
 
     @IsAdmin
     @GetMapping("/admin")
-    public List<UserDTO> getAdminUser(){
+    public List<UserDTO> getAdminUser() {
         return userService.getAdminUsers();
     }
 
     @IsAdmin
     @GetMapping("/notAdmin")
-    public List<UserDTO> getNotAdminUser(){
-       return userService.getNotAdminUsers();
-   }
+    public List<UserDTO> getNotAdminUser() {
+        return userService.getNotAdminUsers();
+    }
 
     @IsAdmin
     @PutMapping("/admin")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void updateAdminPermission(@RequestBody final UserDTO userDTO){
+    public void updateAdminPermission(@RequestBody final UserDTO userDTO) {
         log.info("User {} set admin permission to {} for user {}",
                 AuthUtils.getUsername(), userDTO.admin(), userDTO.username());
         userService.updateAdminPermission(userDTO);
@@ -115,11 +120,19 @@ public class UserController {
         return userService.getLoginPage(username);
     }
 
-
     @HasSpecialRole
     @GetMapping("/autocomplete")
     public List<UserAutocompleteDTO> getUsersForAutocomplete(@RequestParam(required = false) String query) {
         return userService.searchUsersForAutocomplete(query);
     }
-}
 
+    @IsAdmin
+    @GetMapping("/search")
+    public Page<UserHistoryDTO> searchUsers(
+            @RequestParam(required = false) final String searchText,
+            @RequestParam(required = false) final Instant updatedAtFrom,
+            @PageableDefault(sort = "updatedAt", direction = Sort.Direction.DESC) final Pageable pageable
+    ) {
+        return userService.searchUsers(searchText, updatedAtFrom, pageable);
+    }
+}

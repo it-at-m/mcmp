@@ -38,6 +38,10 @@
       <v-list-item>
         <ansible-user />
       </v-list-item>
+      <!-- TODO: AWX Org/Team actions are only available in test environments for now -->
+      <v-list-item v-if="isTestEnv">
+        <awx-org-team />
+      </v-list-item>
       <v-list-item>
         <v-menu
           v-model="isLoadbalancerOpen"
@@ -197,6 +201,7 @@ import OpenshiftNamespaceOrder from "@/components/Openshift/OpenshiftNamespaceOr
 import RepoCopyDialog from "@/components/Paketshop/RepoCopyDialog.vue";
 import RepoCreateDialog from "@/components/Paketshop/RepoCreateDialog.vue";
 import AnsibleUser from "@/components/shop/AnsibleUser.vue";
+import AwxOrgTeam from "@/components/shop/AwxOrgTeam.vue";
 import SnowTicketsOld from "@/components/shop/SnowTicketsOld.vue";
 import { useTestEnv } from "@/composables/useTestEnv";
 

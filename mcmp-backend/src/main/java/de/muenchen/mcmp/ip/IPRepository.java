@@ -15,4 +15,6 @@ public interface IPRepository extends JpaRepository<IP, Long> {
             ORDER BY ia.nic_id, i.ip
             """, nativeQuery = true)
     List<IPNicDTO> findAllNicIdWithIp();
+
+    IP findByIp(String ip);
 }

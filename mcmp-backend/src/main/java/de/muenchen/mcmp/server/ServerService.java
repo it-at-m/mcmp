@@ -169,6 +169,8 @@ public class ServerService {
                 .serverType(serverListExtended.getServerType())
                 .managed(serverListExtended.getManaged())
                 .canEdit(serverListExtended.getCanEdit())
+                .numCpuRecommended(serverListExtended.getNumCpuRecommended())
+                .memoryMbRecommended(serverListExtended.getMemoryMbRecommended())
                 .hasWarnings(Boolean.TRUE.equals(serverListExtended.getHasWarnings()))
                 .build();
     }

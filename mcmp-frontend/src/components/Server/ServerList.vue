@@ -647,9 +647,6 @@ function updateServerPowerState(serverId: number, newPowerState: string) {
   const idx = servers.value.findIndex((s) => s.id === serverId);
   if (idx !== -1) {
     servers.value[idx].powerState = newPowerState;
-    emit("update:selected", [
-      { ...props.selected[0], powerState: newPowerState },
-    ]);
   }
 }
 

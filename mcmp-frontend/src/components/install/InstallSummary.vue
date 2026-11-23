@@ -165,6 +165,7 @@ import Appservice from "@/types/Appservice.ts";
 import installServerDetails, {
   categoryType,
   OsType,
+  OsVersion,
 } from "@/types/installServerDetails.ts";
 
 const userStore = useUserStore();
@@ -221,7 +222,18 @@ watch(
       delete copy.networkGroup;
       Object.assign(copy, { fqdn: copy.expectedServerName });
       delete copy.expectedServerName;
-      Object.assign(copy, { os_name: "rhel" });
+
+      switch (props.instlServerDetails.osVersion) {
+        case OsVersion.RHEL10:
+        case OsVersion.RHEL9:
+          Object.assign(copy, { os_name: "rhel" });
+          break;
+        case OsVersion.ALMA10:
+        case OsVersion.ALMA9:
+          Object.assign(copy, { os_name: "alma" });
+          break;
+      }
+
       // get only number from copy.osVersion
       Object.assign(copy, { os_version: copy.osVersion.match(/\d+/)?.[0] });
       delete copy.osVersion;

@@ -8,6 +8,8 @@
     :check-for-enabled-actions="[
       'LINUX_RHEL9_SERVER',
       'LINUX_RHEL10_SERVER',
+      // 'LINUX_ALMA9_SERVER',
+      // 'LINUX_ALMA10_SERVER',
       'WINDOWS_SERVER_2025',
       'WINDOWS_SERVER_2022',
     ]"
@@ -352,6 +354,35 @@ function createDefaultInstallServerDetails(): installServerDetails {
   return details;
 }
 
+function getAction() {
+  switch (instlServerDetails.value.osType) {
+    case OsType.Linux:
+      switch (instlServerDetails.value.osVersion) {
+        case OsVersion.RHEL10:
+          return "LINUX_RHEL10_SERVER";
+        case OsVersion.RHEL9:
+          return "LINUX_RHEL9_SERVER";
+        case OsVersion.ALMA10:
+          return "LINUX_ALMA10_SERVER";
+        case OsVersion.ALMA9:
+          return "LINUX_ALMA9_SERVER";
+        default:
+          return null;
+      }
+    case OsType.Windows:
+      switch (instlServerDetails.value.osVersion) {
+        case OsVersion.Windows2025:
+          return "WINDOWS_SERVER_2025";
+        case OsVersion.Windows2022:
+          return "WINDOWS_SERVER_2022";
+        default:
+          return null;
+      }
+    default:
+      return null;
+  }
+}
+
 function order() {
   let schedule = {};
   if (instlServerDetails.value.schedule) {
@@ -365,30 +396,12 @@ function order() {
     instlServerDetails.value.isLinuxCustom &&
     userStore.getUser?.authorities?.includes("ROLE_LINUX")
   ) {
+    const action = getAction();
     const json = JSON.parse(instlServerDetails.value.linuxCustomExtraVars);
-
     Object.assign(json, { linux_custom: true });
 
-    if (
-      instlServerDetails.value.osType == OsType.Linux &&
-      instlServerDetails.value.osVersion == OsVersion.RHEL10
-    ) {
-      jobService.startJob(loading, "LINUX_RHEL10_SERVER", -1, {
-        ...json,
-        ...schedule,
-      });
-      emit("order-done");
-      close();
-      return;
-    }
-    if (
-      instlServerDetails.value.osType == OsType.Linux &&
-      instlServerDetails.value.osVersion == OsVersion.RHEL9
-    ) {
-      jobService.startJob(loading, "LINUX_RHEL9_SERVER", -1, {
-        ...json,
-        ...schedule,
-      });
+    if (instlServerDetails.value.osType == OsType.Linux) {
+      jobService.startJob(loading, action, -1, { ...json, ...schedule });
       emit("order-done");
       close();
       return;
@@ -437,36 +450,10 @@ function order() {
     .selectedApplications()
     .map((app) => app.label);
 
-  // 1. RHEL 10
-  if (
-    instlServerDetails.value.osType == OsType.Linux &&
-    instlServerDetails.value.osVersion == OsVersion.RHEL10
-  ) {
-    jobService.startJob(loading, "LINUX_RHEL10_SERVER", -1, {
-      fqdn: instlServerDetails.value.serverName,
-      categoryType: instlServerDetails.value.categoryType,
-      serverType: instlServerDetails.value.category,
-      applications: applicationLabels,
-      ram: instlServerDetails.value.memory,
-      cpu: instlServerDetails.value.cpu,
-      network_group_id: instlServerDetails.value.networkGroup.id,
-      application_service_id: instlServerDetails.value.appservice.id,
-      db_params:
-        instlServerDetails.value.categoryType == categoryType.DB ||
-        instlServerDetails.value.categoryType == categoryType.Mixed
-          ? instlServerDetails.value.dbParams
-          : null,
-      non_postgres_reason: instlServerDetails.value.nonPostgresReason,
-      middleware_user: instlServerDetails.value.middlewareUser,
-      ...schedule,
-    });
-  }
-  // 2. RHEL 9
-  else if (
-    instlServerDetails.value.osType == OsType.Linux &&
-    instlServerDetails.value.osVersion == OsVersion.RHEL9
-  ) {
-    jobService.startJob(loading, "LINUX_RHEL9_SERVER", -1, {
+  const action = getAction();
+  let json;
+  if (instlServerDetails.value.osType == OsType.Linux) {
+    json = {
       fqdn: instlServerDetails.value.serverName,
       categoryType: instlServerDetails.value.categoryType,
       serverType: instlServerDetails.value.category,
@@ -482,14 +469,18 @@ function order() {
           : null,
       non_postgres_reason: instlServerDetails.value.nonPostgresReason,
       ...schedule,
-    });
-  }
-  // 3. Windows Server 2022
-  else if (
-    instlServerDetails.value.osType == OsType.Windows &&
-    instlServerDetails.value.osVersion == OsVersion.Windows2022
-  ) {
-    jobService.startJob(loading, "WINDOWS_SERVER_2022", -1, {
+    };
+
+    if (
+      instlServerDetails.value.osVersion == OsVersion.RHEL10 ||
+      instlServerDetails.value.osVersion == OsVersion.ALMA10
+    ) {
+      Object.assign(json, {
+        middleware_user: instlServerDetails.value.middlewareUser,
+      });
+    }
+  } else if (instlServerDetails.value.osType == OsType.Windows) {
+    json = {
       fqdn: instlServerDetails.value.serverName,
       categoryType: instlServerDetails.value.categoryType,
       serverType: instlServerDetails.value.category,
@@ -509,34 +500,7 @@ function order() {
           ? instlServerDetails.value.dbParams
           : null,
       ...schedule,
-    });
-  }
-  // 4. Windows Server 2025
-  else if (
-    instlServerDetails.value.osType == OsType.Windows &&
-    instlServerDetails.value.osVersion == OsVersion.Windows2025
-  ) {
-    jobService.startJob(loading, "WINDOWS_SERVER_2025", -1, {
-      fqdn: instlServerDetails.value.serverName,
-      categoryType: instlServerDetails.value.categoryType,
-      serverType: instlServerDetails.value.category,
-      ram: instlServerDetails.value.memory,
-      cpu: instlServerDetails.value.cpu,
-      disks:
-        instlServerDetails.value.disk[OsType.Windows][
-          instlServerDetails.value.categoryType!
-        ],
-      network_group_id: instlServerDetails.value.networkGroup.id,
-      application_service_id: instlServerDetails.value.appservice.id,
-      osVersion: instlServerDetails.value.osVersion,
-      non_postgres_reason: instlServerDetails.value.nonPostgresReason,
-      db_params:
-        instlServerDetails.value.categoryType == categoryType.DB ||
-        instlServerDetails.value.categoryType == categoryType.Mixed
-          ? instlServerDetails.value.dbParams
-          : null,
-      ...schedule,
-    });
+    };
   } else {
     alert(
       "Für die ausgewählte Betriebssystemversion ist derzeit keine Bestellung möglich."
@@ -544,6 +508,7 @@ function order() {
     return;
   }
 
+  jobService.startJob(loading, action, -1, json);
   emit("order-done");
   close();
 }

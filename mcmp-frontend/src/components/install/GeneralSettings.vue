@@ -151,7 +151,8 @@
 
     <strong
       v-if="
-        instlServerDetails.osVersion == OsVersion.RHEL10 &&
+        (instlServerDetails.osVersion == OsVersion.RHEL10 ||
+          instlServerDetails.osVersion == OsVersion.ALMA10) &&
         instlServerDetails.categoryType != null &&
         instlServerDetails.categoryType != categoryType.DB
       "
@@ -159,7 +160,8 @@
     >
     <v-checkbox
       v-if="
-        instlServerDetails.osVersion == OsVersion.RHEL10 &&
+        (instlServerDetails.osVersion == OsVersion.RHEL10 ||
+          instlServerDetails.osVersion == OsVersion.ALMA10) &&
         instlServerDetails.categoryType != null &&
         instlServerDetails.categoryType != categoryType.DB
       "

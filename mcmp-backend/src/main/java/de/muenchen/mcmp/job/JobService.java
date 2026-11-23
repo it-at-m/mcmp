@@ -595,9 +595,33 @@ public class JobService {
         createJob(linux_mountpoint_change_identifier, server, params, new HashMap<>());
     }
 
-    public void linuxRhelServer(final Map<?, ?> fqdnBuildingBlocks, final String categoryType, final Map<?, ?> serverTypeMap, final Set<LinuxServerApplication> applications, final int ram, final int cpu, final Long networkGroupId, final Long applicationServiceId, final Map<String, Map<?, ?>> dbParams, String nonPostgresReason, final boolean middlewareUser, final String linux_rhel_server_identifier) {
-        Appservice appservice = getAppserviceOrThrow(applicationServiceId);
-        Map<String, Object> params = new HashMap<>();
+    public void linuxCustomServer(final String action, final Map<String, Object> vars) {
+        final String fqdn = vars.get("fqdn").toString();
+        final Appservice appservice = getAppserviceOrThrow(Long.valueOf(vars.get("appservice_id").toString()));
+        vars.remove("appservice_id");
+        createJobForNewServer(action,
+                              fqdn,
+                              appservice,
+                              vars,
+                              null,
+                              false,
+                              null);
+    }
+
+    public void linuxServer(final String action,
+                            final Map<?, ?> fqdnBuildingBlocks,
+                            final String categoryType,
+                            final Map<?, ?> serverTypeMap,
+                            final Set<LinuxServerApplication> applications,
+                            final int ram,
+                            final int cpu,
+                            final Long networkGroupId,
+                            final Long applicationServiceId,
+                            final Map<String, Map<?, ?>> dbParams,
+                            String nonPostgresReason,
+                            final boolean middlewareUser) {
+        final Appservice appservice = getAppserviceOrThrow(applicationServiceId);
+        final Map<String, Object> params = new HashMap<>();
         boolean nonOss = false;
 
         for (LinuxServerApplication application : applications) {
@@ -655,22 +679,38 @@ public class JobService {
         params.put("application_service_environment", appservice.getEnvironment());
         params.put("is_microsegmented", appservice.getCswEnforced());
         params.put("application_service_number", appservice.getNumber());
-        params.put("os_name", "rhel");
-        if (Objects.equals(linux_rhel_server_identifier, "LINUX_RHEL9_SERVER")) {
-            params.put("os_version", "9");
-        } else {
+
+        switch (action) {
+        case "LINUX_RHEL10_SERVER":
+            params.put("os_name", "rhel");
             params.put("os_version", "10");
+            break;
+        case "LINUX_ALMA10_SERVER":
+            params.put("os_name", "alma");
+            params.put("os_version", "10");
+            break;
+        case "LINUX_RHEL9_SERVER":
+            params.put("os_name", "rhel");
+            params.put("os_version", "9");
+            break;
+        case "LINUX_ALMA9_SERVER":
+            params.put("os_name", "alma");
+            params.put("os_version", "9");
+            break;
+        default:
+            throw new IllegalArgumentException("Unknown action: %s".formatted(action));
         }
 
-        createJobForNewServer(linux_rhel_server_identifier, fqdn, appservice, params, nonPostgresReason, nonOss, targetDbType);
-    }
+        // TODO: decide on proxmox vs vcenter.
+        params.put("hypervisor", "vcenter");
 
-    public void linuxCustomRhelServer(final Map<String, Object> awxExtraVars, final String linux_custom_rhel_server_identifier) {
-        String fqdn = awxExtraVars.get("fqdn").toString();
-        Appservice appservice = getAppserviceOrThrow(Long.valueOf(awxExtraVars.get("appservice_id").toString()));
-        awxExtraVars.remove("appservice_id");
-
-        createJobForNewServer(linux_custom_rhel_server_identifier, fqdn, appservice, awxExtraVars, null, false, null);
+        createJobForNewServer(action,
+                              fqdn,
+                              appservice,
+                              params,
+                              nonPostgresReason,
+                              nonOss,
+                              targetDbType);
     }
 
     // -----------------------------------------------------------------------------------------------------------------

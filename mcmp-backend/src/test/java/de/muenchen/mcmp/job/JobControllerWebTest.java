@@ -157,8 +157,9 @@ class JobControllerWebTest {
                                  "non_postgres_reason":"","middleware_user":false}""".formatted(VALID_RHEL10_FQDN)))
                 .andExpect(status().isOk());
 
-        verify(jobService).linuxRhelServer(any(), eq("Standard"), any(), eq(Set.of()), eq(2), eq(1), eq(NETWORK_GROUP_ID),
-                eq(APPSERVICE_ID), any(), any(), eq(false), eq("LINUX_RHEL10_SERVER"));
+        verify(jobService).linuxServer(eq("LINUX_RHEL10_SERVER"), any(), eq("Standard"), any(),
+                                       eq(Set.of()), eq(2), eq(1), eq(NETWORK_GROUP_ID),
+                                       eq(APPSERVICE_ID), any(), any(), eq(false));
     }
 
     @Test
@@ -173,9 +174,10 @@ class JobControllerWebTest {
                                  "non_postgres_reason":"","middleware_user":false}""".formatted(VALID_RHEL10_FQDN)))
                 .andExpect(status().isOk());
 
-        verify(jobService).linuxRhelServer(any(), eq("App"), any(),
-                eq(Set.of(LinuxServerApplication.APACHE, LinuxServerApplication.JAVA, LinuxServerApplication.TOMCAT)),
-                eq(2), eq(1), eq(NETWORK_GROUP_ID), eq(APPSERVICE_ID), any(), any(), eq(false), eq("LINUX_RHEL10_SERVER"));
+        verify(jobService).linuxServer(eq("LINUX_RHEL10_SERVER"), any(), eq("App"), any(),
+                                       eq(Set.of(LinuxServerApplication.APACHE, LinuxServerApplication.JAVA, LinuxServerApplication.TOMCAT)),
+                                       eq(2), eq(1), eq(NETWORK_GROUP_ID), eq(APPSERVICE_ID), any(),
+                                       any(), eq(false));
     }
 
     @ParameterizedTest

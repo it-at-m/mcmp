@@ -237,14 +237,16 @@
     !instlServerDetails.category?.label.match(/PostgreSQL/)
   "
         class="v-messages reason-counter-message mb-3"
-        :class="{ 'reason-counter-message--error': remainingReasonChars === 0 }"
+        :class="
+    remainingReasonChars === 0 ? 'text-error' : 'text-medium-emphasis'
+  "
     >
       <div class="v-messages__wrapper">
         <div class="v-messages__message">
           {{
             remainingReasonChars > 0
                 ? `${remainingReasonChars} Zeichen übrig`
-                : "Maximale Zeichenzahl erreicht – bitte Text kürzen"
+                : "Maximale Zeichenzahl erreicht"
           }}
         </div>
       </div>
@@ -566,12 +568,6 @@ watch(nonPostgresOption, (newVal) => {
 
 .reason-counter-message {
   min-height: unset;
-  opacity: var(--v-medium-emphasis-opacity);
   padding-inline: 16px;
-}
-
-.reason-counter-message--error {
-  color: rgb(var(--v-theme-error));
-  opacity: 1;
 }
 </style>

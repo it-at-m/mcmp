@@ -68,7 +68,8 @@
       color="info"
       class="links"
     >
-      Das Löschen von Organisationen und Teams ist nur manuell möglich. <br />
+      Vor dem Entfernen von Organisationen und Teams müssen Ressourcen und
+      Berechtigungen haben zahlreiche Abhängigkeiten, ist nur manuell möglich.
       Bitte beantragen Sie es über das Ticket:
       <a
         :href="AWX_SUPPORT_URL"
@@ -126,6 +127,27 @@
       />
 
       <template v-if="action != 'rename'">
+        <v-autocomplete
+          v-if="OrgOrTeam == 'team' && action == 'create'"
+          v-model="teamOrganization"
+          :items="orgList"
+          label="Organisation des Teams"
+          variant="outlined"
+          clearable
+          :rules="[
+            rules.notEmptySelectRule(
+              'Es muss eine Organisation gewählt werden.'
+            ),
+          ]"
+        />
+        <v-text-field
+          v-else-if="OrgOrTeam == 'team'"
+          :model-value="teamOrganization"
+          label="Organisation des Teams"
+          variant="outlined"
+          readonly
+          disabled
+        />
         <common-alert
           v-if="action == 'create'"
           color="info"
@@ -291,6 +313,7 @@ const ldapItems = computed(() =>
 let ldapSearchTimeout: ReturnType<typeof setTimeout> | null = null;
 
 //editable
+const teamOrganization = ref<string | null>(null);
 const staticMembers = ref<string[]>([]);
 const ldapMembers = ref<string[]>([]);
 
@@ -359,7 +382,11 @@ const canSubmit = computed(() => {
   if (loadingDetails.value) return false;
   switch (action.value) {
     case "create":
-      return name.value.trim() != "" && hasMembers.value;
+      return (
+        name.value.trim() != "" &&
+        hasMembers.value &&
+        (OrgOrTeam.value == "org" || !!teamOrganization.value)
+      );
     case "rename":
       return !!selectedEntity.value && newName.value.trim() != "";
     case "edit":
@@ -375,6 +402,7 @@ function memberRule(regex: RegExp, message: string) {
 }
 
 function clearMembers() {
+  teamOrganization.value = null;
   staticMembers.value = [];
   ldapMembers.value = [];
   otherMembers.value = [];
@@ -386,6 +414,8 @@ watch([OrgOrTeam, action], () => {
   selectedEntity.value = null;
   searchText.value = "";
   clearMembers();
+  if (OrgOrTeam.value == "team" && action.value == "create")
+    loadOrganizations();
 });
 
 watch(selectedEntity, async (entity) => {
@@ -401,6 +431,7 @@ watch(selectedEntity, async (entity) => {
       : await awxOrgTeamService.getTeamDetails(loading, entity);
     // ignore stale responses if the selection changed meanwhile
     if (selectedEntity.value != entity) return;
+    teamOrganization.value = details.organization;
     staticMembers.value = details.staticMembers.map((entry) =>
       entry.slice(STATIC_PREFIX.length)
     );
@@ -545,6 +576,7 @@ async function save() {
     }
     payload.static = staticMembers.value;
     payload.ldap = ldapMembers.value;
+    if (!isOrg) payload.organization = teamOrganization.value;
   }
 
   if (action.value == "rename") {

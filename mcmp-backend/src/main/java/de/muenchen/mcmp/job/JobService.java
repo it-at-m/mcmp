@@ -1309,9 +1309,6 @@ public class JobService {
     // AWX ORG/TEAM JOBs
     // -----------------------------------------------------------------------------------------------------------------
 
-    /** All AWX teams live in this organization. */
-    private static final String AWX_TEAM_ORGANIZATION = "Default";
-
     public void awxCreateOrEditOrg(final String identifier, final String orgname,
                                     final List<String> staticAdmins, final List<String> ldapAdmins, final boolean edit) {
         final Map<String, Object> params = new HashMap<>();
@@ -1325,12 +1322,12 @@ public class JobService {
         createAwxOrgTeamJob(identifier, params, orgname, "ensure_org");
     }
 
-    public void awxCreateOrEditTeam(final String identifier, final String teamname,
+    public void awxCreateOrEditTeam(final String identifier, final String teamname, final String teamorg,
                                     final List<String> staticUsers, final List<String> ldapUsers, final boolean edit) {
         final Map<String, Object> params = new HashMap<>();
         params.put("org_name", "");
         params.put("team_name", teamname);
-        params.put("team_organization", AWX_TEAM_ORGANIZATION);
+        params.put("team_organization", teamorg);
         params.put("team_users", Map.of("static", staticUsers, "ldap", ldapUsers));
         params.put("requesting_user", AuthUtils.getCurrentUserName());
         params.put("OrgOrTeam", "Team");

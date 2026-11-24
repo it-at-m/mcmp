@@ -149,13 +149,11 @@
           disabled
         />
         <common-alert
-          v-if="action == 'create'"
+          v-if="action == 'create' && OrgOrTeam == 'org'"
           color="info"
           class="mb-4"
         >
-          Sie werden automatisch als
-          {{ OrgOrTeam == "org" ? "Admin der" : "Mitglied des" }} neuen
-          {{ OrgOrTeamLabel }}{{ OrgOrTeam == "org" ? "" : "s" }} eingetragen.
+          Sie werden automatisch als Admin der neuen Organisation eingetragen.
         </common-alert>
         <v-autocomplete
           v-model="staticMembers"

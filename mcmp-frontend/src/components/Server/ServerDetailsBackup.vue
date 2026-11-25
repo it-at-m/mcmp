@@ -139,9 +139,9 @@
         :close-on-content-click="false"
         location="right"
       >
-        <template #activator="{ props }">
+        <template #activator="{ props: activatorProps }">
           <v-btn
-            v-bind="props"
+            v-bind="activatorProps"
             density="compact"
             class="mr-4"
             :prepend-icon="mdiFilterVariant"

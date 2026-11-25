@@ -85,9 +85,9 @@
           text="Die Größe für dieses Laufwerk kann nicht angepasst werden!"
           location="top"
         >
-          <template #activator="{ props }">
+          <template #activator="{ props: activatorProps }">
             <v-icon
-              v-bind="props"
+              v-bind="activatorProps"
               :icon="mdiLock"
               size="small"
             />

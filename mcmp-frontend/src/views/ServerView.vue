@@ -643,10 +643,9 @@ function getSelectedServerFromServerListComponent(newSelected: Server[]) {
 
 function getSelectedServer(silent = false, targetId?: number) {
   const loadingRef = silent ? ref(false) : loadingDetails;
-  const currentId = targetId ?? selectedServerItem.value?.id;
+  const serverId = targetId ?? selectedServerItem.value?.id;
 
-  if (!currentId) return;
-  const serverId = currentId!;
+  if (!serverId) return;
 
   serverService
     .getServerById(loadingRef, serverId)

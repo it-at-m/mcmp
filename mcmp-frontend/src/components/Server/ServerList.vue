@@ -434,7 +434,7 @@ function sortServersByFavorite() {
   });
 }
 
-function removeIfBeyondLoadedRange(server: any) {
+function removeIfBeyondLoadedRange(server: ServerList) {
   if (!hasMore.value) return;
   const order = sortBy.value[0]?.order === "desc" ? -1 : 1;
   const nonFavorites = servers.value.filter(
@@ -448,13 +448,13 @@ function removeIfBeyondLoadedRange(server: any) {
   }
 }
 
-function onRowKeydown({ key, item }: { key: string; item: any }) {
+function onRowKeydown({ key, item }: { key: string; item: ServerList }) {
   if (key === "f" || key === "F") {
     toggleFavorite(item);
   }
 }
 
-async function toggleFavorite(server: any) {
+async function toggleFavorite(server: ServerList) {
   const originalState = server.isFavorite;
   server.isFavorite = !server.isFavorite;
 

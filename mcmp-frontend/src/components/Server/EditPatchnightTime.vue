@@ -10,9 +10,9 @@
     @dialog-cancel="close"
     @dialog-confirm="save"
   >
-    <template #activator="{ props }">
+    <template #activator="{ props: activatorProps }">
       <v-btn
-        v-bind="props"
+        v-bind="activatorProps"
         icon
         variant="flat"
         aria-label="Zeit für zukünftige Patchnight anpassen"

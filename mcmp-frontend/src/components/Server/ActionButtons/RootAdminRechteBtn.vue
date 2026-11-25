@@ -189,7 +189,7 @@ const props = defineProps<{
   tooltip: string;
   server?: Server;
   selectedServerIds?: number[];
-  selectedServers?: any[];
+  selectedServers?: Server[];
   jobToCall?: string;
   showConfirmDialog?: boolean;
   confirmDialogTitle?: string;
@@ -281,7 +281,7 @@ function makeJobCall() {
     const promises = ids.map((id) => {
       const server = props.selectedServers?.find((s) => s.id === id);
       const action = props.jobToCall ?? getActionIdentifierForServer(server);
-      const extraVars: Record<string, any> = {
+      const extraVars: Record<string, unknown> = {
         duration: "3 days",
       };
       if (isOtherUser.value) extraVars.other_username = otherUsername.value;
@@ -290,7 +290,7 @@ function makeJobCall() {
 
     Promise.all(promises)
       .then(() => emit("change"))
-      .catch((err) => console.error("Batch job error", err))
+      .catch((err) => console.debug("Batch job error", err))
       .finally(() => (loading.value = false));
 
     return;
@@ -303,15 +303,20 @@ function makeJobCall() {
   // format duration in awx format e.g. 3 days or 72 hours
   const duration = "3 days";
 
+  const serverId = props.server?.id;
+  if (serverId === undefined) {
+    return;
+  }
+
   jobService
-    .startJob(loading, props.jobToCall, props.server!.id, {
+    .startJob(loading, props.jobToCall, serverId, {
       duration: duration,
       other_username: isOtherUser.value ? otherUsername.value : undefined,
     })
     .then(() => {
       emit("change");
     })
-    .catch((err) => console.error("Job start error", err));
+    .catch((err) => console.debug("Job start error", err));
 }
 </script>
 

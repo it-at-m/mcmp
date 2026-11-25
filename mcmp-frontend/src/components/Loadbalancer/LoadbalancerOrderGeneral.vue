@@ -95,14 +95,16 @@ import infobloxFQDNService from "@/api/infobloxFQDNService.ts";
 import CommonAlert from "@/components/common/CommonAlert.vue";
 import { useRules } from "@/composables/rules.ts";
 
-const props = defineProps<{
-  ldblOrder: LoadbalancerOrder;
+const ldblOrder = defineModel<LoadbalancerOrder>("ldblOrder", {
+  required: true,
+});
+defineProps<{
   hasServers: boolean;
 }>();
 const rules = useRules();
 const isValid = ref(false);
-const emit = defineEmits(["validation-change"]);
-const applicationServices = ref<AppserviceList[]>([]);
+const emit = defineEmits<(e: "validation-change", valid: boolean) => void>();
+const applicationServices = ref<Pick<AppserviceList, "id" | "name">[]>([]);
 const loading = ref(false);
 const search = ref("");
 const offset = ref(0);
@@ -152,7 +154,7 @@ function onSearchUpdate(val: string) {
   if (val === null) return;
 
   // Suche nicht auslösen, wenn der Suchwert dem bereits ausgewählten Service entspricht
-  if (props.ldblOrder.appservice && val === props.ldblOrder.appservice.name) {
+  if (ldblOrder.value.appservice && val === ldblOrder.value.appservice.name) {
     return;
   }
 
@@ -180,7 +182,7 @@ function debouncedGenerateDnsEntry() {
 
 function generateDnsEntry() {
   nextTick(() => {
-    if (!dns.value || !props.ldblOrder.appservice) {
+    if (!dns.value || !ldblOrder.value.appservice) {
       expectedDnsEntry.value = "";
       return;
     }
@@ -201,10 +203,10 @@ function generateDnsEntry() {
     expectedDnsEntry.value = "";
 
     infobloxFQDNService
-      .getFreeDnsEntry(dnsLoading, dnsName, props.ldblOrder.appservice.id)
+      .getFreeDnsEntry(dnsLoading, dnsName, ldblOrder.value.appservice.id)
       .then((responseDnsEntry) => {
         expectedDnsEntry.value = responseDnsEntry;
-        props.ldblOrder.dns = responseDnsEntry;
+        ldblOrder.value.dns = responseDnsEntry;
       })
       .catch(() => {
         expectedDnsEntry.value =
@@ -214,7 +216,7 @@ function generateDnsEntry() {
 }
 
 watch(
-  () => [dns.value, props.ldblOrder.appservice],
+  () => [dns.value, ldblOrder.value.appservice],
   ([dns, appservice]) => {
     if (dns && appservice) {
       debouncedGenerateDnsEntry();

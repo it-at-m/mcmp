@@ -28,13 +28,13 @@ export interface MonitorType {
 export default class LoadbalancerOrder {
   constructor(
     // General
-    public appservice: AppserviceList | null,
+    public appservice: Pick<AppserviceList, "id" | "name"> | null,
     public dns: string | null,
 
     // Virtual-IP / Listener
-    public listener: Listener[],
+    public listener: [Listener],
 
     // Server-Pool
-    public server_pools: ServerPools[]
+    public server_pools: [ServerPools]
   ) {}
 }

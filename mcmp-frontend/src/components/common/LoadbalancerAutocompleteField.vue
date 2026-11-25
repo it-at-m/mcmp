@@ -10,7 +10,7 @@
     outlined
     dense
     clearable
-    item-title="displayName"
+    item-title="name"
     item-value="id"
     :return-object="true"
     @update:model-value="$emit('update:modelValue', $event)"
@@ -53,7 +53,7 @@ const props = withDefaults(defineProps<Props>(), {
   loading: false,
 });
 
-const items = ref<(LoadbalancerListItem & { displayName: string })[]>([]);
+const items = ref<LoadbalancerListItem[]>([]);
 const isLoading = ref(false);
 const loadingRef = ref(false);
 const searchInput = ref("");
@@ -68,10 +68,7 @@ const onSearch = (searchText: string) => {
       loadbalancerService
         .getVisibleLoadbalancers(loadingRef, 0, 20, "name", "asc", searchText)
         .then((res) => {
-          items.value = res.content.map((lb) => ({
-            ...lb,
-            displayName: lb.name,
-          }));
+          items.value = res.content;
         })
         .catch(() => {
           items.value = [];

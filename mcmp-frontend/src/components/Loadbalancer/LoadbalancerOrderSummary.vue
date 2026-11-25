@@ -103,7 +103,7 @@ import { onMounted } from "vue";
 import { useFormatter } from "@/composables/formatter.ts";
 
 const emit = defineEmits(["validation-change"]);
-const props = defineProps<{
+defineProps<{
   ldblOrder: LoadbalancerOrder;
   protocol?: "tcp" | "http" | "https";
 }>();

@@ -384,6 +384,7 @@
 <script setup lang="ts">
 import type Appservice from "@/types/Appservice.ts";
 import type Server from "@/types/Server.ts";
+import type { ServerListExtended } from "@/types/ServerListExtended.ts";
 import type { DataTableHeader } from "vuetify";
 
 import {
@@ -449,7 +450,7 @@ function onRowTooltipLeave() {
   rowTooltipActivator.value = undefined;
 }
 
-const getWarningTooltip = (item: any) => {
+const getWarningTooltip = (item: ServerListExtended) => {
   const parts: string[] = [];
 
   const curCpu = Number(item.numCpu ?? 0);
@@ -557,7 +558,7 @@ const loadSnapshotCount = async (id: number) => {
   }
 };
 
-const getManagedServerItem = (item: any) => {
+const getManagedServerItem = (item: ServerListExtended): ServerEligibility => {
   const serverId = Number(item.id);
   const fullServer = fullServerCache.value.get(serverId);
 
@@ -586,7 +587,7 @@ watch(
   () => props.selectedAppservice?.servers,
   (newServers) => {
     if (newServers && newServers.length) {
-      const ids = newServers.map((s: any) => Number(s.id)).filter(Boolean);
+      const ids = newServers.map((s) => Number(s.id)).filter(Boolean);
       preloadFullServers(ids);
     }
   },
@@ -607,24 +608,43 @@ const allSelectedDataLoaded = () =>
   Array.from(fullServerCache.value.keys()).length >=
     selectedServers.value.length;
 
-const allSelectedPass = (check: (s: any, id: number) => boolean) => {
+// Felder, die für die Berechtigungsprüfung gelesen werden. Erfüllt sowohl der
+// vollständige Server als auch der Listeneintrag (Fallback bis zum Laden).
+interface ServerEligibility {
+  serverKind?: string;
+  canEdit?: boolean;
+  managed?: boolean;
+  locked?: boolean;
+  roleLinux?: boolean;
+  roleWindows?: boolean;
+  virtualAppliance?: boolean;
+  powerState?: string;
+  cloud?: { cloudType?: string } | null;
+}
+
+const allSelectedPass = (
+  check: (s: ServerEligibility, id: number) => boolean
+) => {
   if (selectedServers.value.length === 0) return false;
   if (!allSelectedDataLoaded()) return false;
   return selectedServers.value.every((id) => {
     const s =
       fullServerCache.value.get(Number(id)) ||
       (props.selectedAppservice?.servers || []).find(
-        (ss: any) => Number(ss.id) === Number(id)
+        (ss) => Number(ss.id) === Number(id)
       );
     if (!s) return false;
     return check(s, Number(id));
   });
 };
 
+const isVmwareOrProxmox = (s: ServerEligibility) =>
+  s.cloud?.cloudType === "VMWARE" || s.cloud?.cloudType === "PROXMOX";
+
 const allSelectedServersEligibleForSnapshot = computed(() =>
-  allSelectedPass((s: any, id: number) => {
-    if (String((s as any).serverKind).toUpperCase() !== "VIRTUAL") return false;
-    if (!(s as any).canEdit) return false;
+  allSelectedPass((s, id) => {
+    if (String(s.serverKind).toUpperCase() !== "VIRTUAL") return false;
+    if (!s.canEdit) return false;
     const cached = snapshotCountCache.value.get(Number(id));
     if (cached == null) return false;
     return cached === 0;
@@ -632,76 +652,52 @@ const allSelectedServersEligibleForSnapshot = computed(() =>
 );
 
 const allSelectedServersEligibleForRoot = computed(() =>
-  allSelectedPass((s: any) => {
-    if ((s as any).roleLinux) {
-      return (s.canEdit || (isOperator.value && !s.locked)) && s.managed;
+  allSelectedPass((s) => {
+    if (s.roleLinux) {
+      return !!(s.canEdit || (isOperator.value && !s.locked)) && !!s.managed;
     }
-    if ((s as any).roleWindows) return s.canEdit && s.managed;
+    if (s.roleWindows) return !!s.canEdit && !!s.managed;
     return false;
   })
 );
 
 const allSelectedServersEligibleToStart = computed(() =>
   allSelectedPass(
-    (s: any) =>
-      (s as any).canEdit &&
-      ((s as any).cloud?.cloudType === "VMWARE" ||
-        (s as any).cloud?.cloudType === "PROXMOX") &&
-      (s as any).powerState === "poweredOff"
+    (s) => !!s.canEdit && isVmwareOrProxmox(s) && s.powerState === "poweredOff"
   )
 );
 
 const allSelectedServersEligibleToStop = computed(() =>
   allSelectedPass(
-    (s: any) =>
-      (s as any).canEdit &&
-      ((s as any).cloud?.cloudType === "VMWARE" ||
-        (s as any).cloud?.cloudType === "PROXMOX") &&
-      (s as any).powerState === "poweredOn"
+    (s) => !!s.canEdit && isVmwareOrProxmox(s) && s.powerState === "poweredOn"
   )
 );
 
 const allSelectedServersEligibleToPause = computed(() =>
   allSelectedPass(
-    (s: any) =>
-      (s as any).canEdit &&
-      ((s as any).cloud?.cloudType === "VMWARE" ||
-        (s as any).cloud?.cloudType === "PROXMOX") &&
-      (s as any).powerState === "poweredOn"
+    (s) => !!s.canEdit && isVmwareOrProxmox(s) && s.powerState === "poweredOn"
   )
 );
 
 const allSelectedServersEligibleToRestart = computed(() =>
   allSelectedPass(
-    (s: any) =>
-      (s as any).canEdit &&
-      ((s as any).cloud?.cloudType === "VMWARE" ||
-        (s as any).cloud?.cloudType === "PROXMOX") &&
-      (s as any).powerState === "poweredOn"
+    (s) => !!s.canEdit && isVmwareOrProxmox(s) && s.powerState === "poweredOn"
   )
 );
 
 const allSelectedServersEligibleToDelete = computed(() =>
-  allSelectedPass((s: any) => {
-    const cloudType = (s as any).cloud?.cloudType;
-    const hasValidOsRole = !!(s as any).roleLinux || !!(s as any).roleWindows;
-    return (
-      !!(s as any).canEdit &&
-      !!(s as any).managed &&
-      hasValidOsRole &&
-      (cloudType === "VMWARE" || cloudType === "PROXMOX")
-    );
+  allSelectedPass((s) => {
+    const hasValidOsRole = !!s.roleLinux || !!s.roleWindows;
+    return !!s.canEdit && !!s.managed && hasValidOsRole && isVmwareOrProxmox(s);
   })
 );
 
 const allSelectedServersEligibleForDowntime = computed(() =>
-  allSelectedPass((s: any) => !!s.canEdit)
+  allSelectedPass((s) => !!s.canEdit)
 );
 
 const allSelectedServersEligibleForWindowsMaintenance = computed(() =>
-  allSelectedPass(
-    (s: any) => !!(s as any).roleWindows && s.canEdit && s.managed
-  )
+  allSelectedPass((s) => !!s.roleWindows && !!s.canEdit && !!s.managed)
 );
 
 const noSelectionTooltip = "Keine Server ausgewählt.";
@@ -768,7 +764,7 @@ const powerPauseTooltip = computed(() => {
 
 const anyServerHasWarnings = computed(() => {
   return (props.selectedAppservice?.servers || []).some(
-    (server: any) => server.hasWarnings
+    (server) => server.hasWarnings
   );
 });
 
@@ -809,20 +805,20 @@ const rootAdminTooltip = computed(() => {
 
   selectedServers.value.forEach((id) => {
     const s = fullServerCache.value.get(Number(id));
-    const name = (s && (s as any).name) || `Server ${id}`;
+    const name = s?.name || `Server ${id}`;
     if (!s) return;
-    if (!(s as any).managed) {
+    if (!s.managed) {
       notManaged.push(name);
       return;
     }
-    if ((s as any).roleLinux) {
-      if (!((s as any).canEdit || (isOperator.value && !(s as any).locked))) {
+    if (s.roleLinux) {
+      if (!(s.canEdit || (isOperator.value && !s.locked))) {
         noPermission.push(name);
       }
       return;
     }
-    if ((s as any).roleWindows) {
-      if (!(s as any).canEdit) {
+    if (s.roleWindows) {
+      if (!s.canEdit) {
         noPermission.push(name);
       }
       return;
@@ -843,7 +839,7 @@ const rootAdminTooltip = computed(() => {
 const poweredOffCount = computed(
   () =>
     (props.selectedAppservice?.servers || []).filter(
-      (s: any) => s.powerState === "poweredOff"
+      (s) => s.powerState === "poweredOff"
     ).length
 );
 
@@ -885,6 +881,7 @@ const anyServerPoweredOff = computed(() => poweredOffCount.value > 0);
 
 .power-state-icon-inline {
   display: flex;
+  /* noinspection CssUnresolvedCustomProperty */
   background-color: rgb(var(--v-theme-bg_icon));
   align-items: center;
   justify-content: center;
@@ -910,6 +907,7 @@ const anyServerPoweredOff = computed(() => poweredOffCount.value > 0);
 }
 
 .powered-off-badge :deep(*) {
+  /* noinspection CssUnresolvedCustomProperty */
   background-color: rgb(var(--v-theme-_blue)) !important;
   color: white !important;
 }

@@ -6,6 +6,8 @@ export interface ServerListExtended {
   appserviceNames?: string;
   numCpu?: number;
   memoryMb?: number;
+  numCpuRecommended?: number;
+  memoryMbRecommended?: number;
   vdisksCapacityInBytes?: number;
   serverKind?: string;
   serverType?: string;

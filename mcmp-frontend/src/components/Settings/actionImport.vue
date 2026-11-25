@@ -105,15 +105,21 @@ const props = defineProps<{
   disable?: boolean;
 }>();
 
+interface AwxTemplate {
+  id?: number;
+  name?: string;
+  type?: string;
+}
+
 const dialog = ref(false);
 const loading = ref(false);
 const loadingOrganizations = ref(false);
-const templates = ref<any[]>([]);
-const organizations = ref<any[]>([]);
-const organizationsCache = ref<any[]>([]);
-const selectedTemplate = ref<any>(null);
-const selectedTemplateDetails = ref<any>(null);
-const selectedOrganization = ref<any>(null);
+const templates = ref<AwxTemplate[]>([]);
+const organizations = ref<string[]>([]);
+const organizationsCache = ref<string[]>([]);
+const selectedTemplate = ref<AwxTemplate | null>(null);
+const selectedTemplateDetails = ref<AwxTemplate | null>(null);
+const selectedOrganization = ref<string | null>(null);
 
 function openDialog() {
   dialog.value = true;
@@ -131,12 +137,11 @@ function fetchOrganizations(force = false) {
     organizations.value = organizationsCache.value;
     return;
   }
+  const awxConfigId = props.currentAction.awxConfig?.id;
+  if (awxConfigId === undefined) return;
   actionService
-    .getOrganizationsFromAwx(
-      loadingOrganizations,
-      props.currentAction.awxConfig.id
-    )
-    .then((data: any) => {
+    .getOrganizationsFromAwx(loadingOrganizations, awxConfigId)
+    .then((data: unknown) => {
       organizationsCache.value = Array.isArray(data) ? data : [];
       organizations.value = organizationsCache.value;
     });
@@ -147,9 +152,11 @@ watch(selectedOrganization, (org) => {
     templates.value = [];
     selectedTemplate.value = null;
     selectedTemplateDetails.value = null;
+    const awxConfigId = props.currentAction.awxConfig?.id;
+    if (awxConfigId === undefined) return;
     actionService
-      .getTemplatesFromAwx(loading, org, props.currentAction.awxConfig.id)
-      .then((data: any) => {
+      .getTemplatesFromAwx(loading, org, awxConfigId)
+      .then((data: unknown) => {
         templates.value = Array.isArray(data) ? data : [];
       });
   }
@@ -157,14 +164,13 @@ watch(selectedOrganization, (org) => {
 
 watch(selectedTemplate, (template) => {
   if (template) {
+    const awxConfigId = props.currentAction.awxConfig?.id;
+    if (template.id === undefined || awxConfigId === undefined) return;
     actionService
-      .getSingleJobTemplateFromAwx(
-        loading,
-        template.id,
-        props.currentAction.awxConfig.id
-      )
-      .then((data: any) => {
-        selectedTemplateDetails.value = data?.results[0] ?? null;
+      .getSingleJobTemplateFromAwx(loading, template.id, awxConfigId)
+      .then((data: unknown) => {
+        const results = (data as { results?: AwxTemplate[] } | null)?.results;
+        selectedTemplateDetails.value = results?.[0] ?? null;
       });
   }
 });
@@ -179,89 +185,15 @@ function closeDialog() {
 
 const emit = defineEmits<(e: "imported", action: Action) => void>();
 
-function mapTemplateToAction(t: any): Action {
-  const identifier = generateIdentifier(t.name ?? "");
+// only set Type and ID
+const importFields = ["awxTemplateType", "awxTemplateId"] as const;
+
+function mapTemplateToAction(t: AwxTemplate): Action {
   return {
     ...props.currentAction,
-    identifier: identifier,
-    snowConfig: props.currentAction.snowConfig,
-    awxConfig: props.currentAction.awxConfig,
-    title: t.name ?? "",
-    description: t.description ?? "",
-    comment: "",
-    enabled: true,
-    changeRequired: false,
-    changeType: "",
-    changeTemplate: "",
-    changeTitle: "",
-    changeDescription: "",
-    errorTitle: "",
-    errorDescription: "",
-    awxJobEnabled: true,
     awxTemplateType: t.type == "job_template" ? "template" : "workflow",
     awxTemplateId: t.id ?? 0,
-    awxInventoryId: t.inventory ?? 0,
-    awxCredentials: t.summary_fields?.credentials
-      ? t.summary_fields.credentials.map((c: any) => c.id).join(",")
-      : "",
-    awxJobType: t.job_type ?? "",
-    awxLimit: t.limit ?? "",
-    awxJobTags: t.job_tags ?? "",
-    awxSkipTags: t.skip_tags ?? "",
-    awxExtraVars: t.extra_vars?.trim() === "---" ? "" : (t.extra_vars ?? ""),
-    awxScmBranch: t.scm_branch ?? "",
-    awxVerbosity: t.verbosity ?? 0,
-    awxTimeout: t.timeout ?? 0,
-    awxForks: t.forks ?? 0,
-    awxJobSliceCount: t.job_slice_count ?? 0,
-    awxExecutionEnvironment: t.execution_environment ?? 0,
-    awxInstanceGroups: t.instance_groups ?? "",
-    awxLabels: t.labels ?? "",
-    awxEstimatedRuntime: 0,
-    awxTitle: t.name ?? "",
-    awxDescription: t.description ?? "",
-    awxErrorTitle: "",
-    awxErrorDescription: "",
-    taggingAction: t.tagging_action ?? null,
   };
-}
-
-const importFields = [
-  "awxTemplateType",
-  "awxTemplateId",
-  "awxInventoryId",
-  "awxJobTags",
-  "awxSkipTags",
-  "awxExtraVars",
-  "awxScmBranch",
-  "awxCredentials",
-  "awxJobType",
-  "awxVerbosity",
-  "awxTimeout",
-  "awxForks",
-  "awxJobSliceCount",
-  "awxExecutionEnvironment",
-  "awxInstanceGroups",
-  "awxLabels",
-  "awxEstimatedRuntime",
-  "awxTitle",
-  "awxDescription",
-  "awxErrorTitle",
-  "awxErrorDescription",
-];
-
-function generateIdentifier(title: string): string {
-  const base = title
-    .trim()
-    .toUpperCase()
-    .replace(/[\s-]+/g, "_");
-  let identifier = base;
-  let exists = props.allActions.some((a) => a.identifier === identifier);
-  while (exists) {
-    identifier = base + "_" + Math.floor(Math.random() * 10000);
-    exists = props.allActions.some((a) => a.identifier === identifier);
-  }
-  return identifier;
 }
 
 const changedFields = computed(() => {

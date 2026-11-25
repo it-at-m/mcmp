@@ -157,6 +157,13 @@ import CommonCard from "@/components/common/CommonCard.vue";
 
 use([CanvasRenderer, BarChart, GridComponent, TooltipComponent]);
 
+interface TooltipParam {
+  name: string;
+  value: number;
+  color: string;
+  seriesName: string;
+}
+
 const theme = useTheme();
 const loading = ref(false);
 const statistics = ref<JobStatistics[]>([]);
@@ -181,6 +188,15 @@ function getTomorrowIsoDate(): string {
   return formatIsoDate(tomorrow);
 }
 
+function statisticValue(
+  item: JobStatistics,
+  key: string
+): string | number | boolean | null | undefined {
+  return (item as unknown as Record<string, string | number | boolean | null>)[
+    key
+  ];
+}
+
 const sortedStatistics = computed(() => {
   const summe = statistics.value.find((item) => item.action === "SUMME");
   const others = statistics.value.filter((item) => item.action !== "SUMME");
@@ -189,8 +205,8 @@ const sortedStatistics = computed(() => {
   const desc = order === "desc";
 
   others.sort((a, b) => {
-    const aVal = (a as any)[key] ?? "";
-    const bVal = (b as any)[key] ?? "";
+    const aVal = statisticValue(a, key) ?? "";
+    const bVal = statisticValue(b, key) ?? "";
     const aStr = typeof aVal === "string" ? aVal.toLowerCase() : aVal;
     const bStr = typeof bVal === "string" ? bVal.toLowerCase() : bVal;
     if (aStr < bStr) return desc ? 1 : -1;
@@ -320,7 +336,7 @@ function exportToCsv() {
 
   const rows = sortedStatistics.value.map((item) =>
     columnOrder.map((key) => {
-      const val = (item as any)[key];
+      const val = statisticValue(item, key);
       if (typeof val === "boolean") return val ? "Ja" : "Nein";
       if (val === null || val === undefined) return "";
       return String(val);
@@ -360,7 +376,11 @@ const chartOption = computed(() => {
 
   const actions = chartData.value.map((d) => d.action);
 
-  const seriesConfig = [
+  const seriesConfig: {
+    name: string;
+    key: keyof JobStatistics;
+    color: string;
+  }[] = [
     { name: "Rejected", key: "changeStatusRejected", color: "#D32F2F" },
     { name: "Canceled", key: "changeStatusCanceled", color: "#F57C00" },
     { name: "Skipped", key: "changeStatusSkipped", color: "#FBC02D" },
@@ -372,12 +392,12 @@ const chartOption = computed(() => {
     tooltip: {
       trigger: "axis",
       axisPointer: { type: "shadow" },
-      formatter: (params: any[]) => {
+      formatter: (params: TooltipParam[]) => {
         const total =
           chartData.value.find((d) => d.action === params[0]?.name)
             ?.totalJobs ?? 0;
         const lines = params.map(
-          (p: any) =>
+          (p) =>
             `<span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:${p.color};"></span>${p.seriesName}: <b>${p.value}</b>`
         );
         lines.push(`<hr style="margin:4px 0"/><b>Anzahl Jobs: ${total}</b>`);
@@ -410,7 +430,7 @@ const chartOption = computed(() => {
       name: s.name,
       type: "bar",
       stack: "changeStatus",
-      data: chartData.value.map((d) => (d as any)[s.key] ?? 0),
+      data: chartData.value.map((d) => d[s.key] ?? 0),
       label: {
         show: false,
       },
@@ -445,9 +465,9 @@ const durationChartOption = computed(() => {
     tooltip: {
       trigger: "axis",
       axisPointer: { type: "shadow" },
-      formatter: (params: any[]) => {
+      formatter: (params: TooltipParam[]) => {
         const p = params[0];
-        return `${p.name}: ${p.value} Sek.`;
+        return p ? `${p.name}: ${p.value} Sek.` : "";
       },
     },
     grid: {

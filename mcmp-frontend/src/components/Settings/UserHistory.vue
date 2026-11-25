@@ -365,7 +365,7 @@ async function copyEmailsToClipboard() {
       color: "success",
     };
   } catch (err) {
-    console.error("Fehler beim Kopieren der E-Mail-Adressen:", err);
+    console.debug("Fehler beim Kopieren der E-Mail-Adressen:", err);
     snackbar.value = {
       show: true,
       text: "Fehler beim Kopieren in die Zwischenablage.",

@@ -1,9 +1,9 @@
 <template>
   <v-tooltip :text="status ?? ''">
-    <template #activator="{ props }">
+    <template #activator="{ props: activatorProps }">
       <div class="status-icon round-icon">
         <v-icon
-          v-bind="props"
+          v-bind="activatorProps"
           :icon="icon"
           :color="color"
           size="small"

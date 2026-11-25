@@ -1,5 +1,5 @@
 <template>
-  <history
+  <common-history
     :type="'user'"
     :history="history?.content || []"
     :loading="loading"
@@ -86,7 +86,7 @@
         </v-col>
       </v-row>
     </v-sheet>
-  </history>
+  </common-history>
 </template>
 
 <script setup lang="ts">
@@ -97,7 +97,7 @@ import { mdiClose, mdiMagnify } from "@mdi/js";
 import { computed, onUnmounted, ref, watch } from "vue";
 
 import CommonDatePicker from "@/components/common/CommonDatePicker.vue";
-import History from "@/components/common/History.vue";
+import CommonHistory from "@/components/common/CommonHistory.vue";
 
 defineProps<{
   history: Page<JobList> | null;

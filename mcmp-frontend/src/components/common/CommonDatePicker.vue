@@ -3,9 +3,9 @@
     v-model="menu"
     :close-on-content-click="false"
   >
-    <template #activator="{ props }">
+    <template #activator="{ props: activatorProps }">
       <v-text-field
-        v-bind="props"
+        v-bind="activatorProps"
         :model-value="inputValue"
         :label="label"
         :rounded="rounded"

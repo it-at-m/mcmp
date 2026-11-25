@@ -1,5 +1,5 @@
 <template>
-  <history
+  <common-history
     :type="'admin'"
     :history="history"
     :loading="loading"
@@ -180,7 +180,7 @@
         </v-col>
       </v-row>
     </v-sheet>
-  </history>
+  </common-history>
 </template>
 
 <script setup lang="ts">
@@ -197,7 +197,7 @@ import { onMounted, onUnmounted, ref, watch } from "vue";
 import jobService from "@/api/jobService";
 import CommonDatePicker from "@/components/common/CommonDatePicker.vue";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import History from "@/components/common/History.vue";
+import CommonHistory from "@/components/common/CommonHistory.vue";
 import LoadbalancerAutocompleteField from "@/components/common/LoadbalancerAutocompleteField.vue";
 import OpenshiftNamespaceAutocompleteField from "@/components/common/OpenshiftNamespaceAutocompleteField.vue";
 import ServerAutocompleteField from "@/components/common/ServerAutocompleteField.vue";

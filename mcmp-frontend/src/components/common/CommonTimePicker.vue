@@ -47,13 +47,15 @@
 </template>
 
 <script setup lang="ts">
+import type { ValidationRule } from "vuetify";
+
 import { mdiChevronDown, mdiChevronUp } from "@mdi/js";
 import { computed, ref, watch } from "vue";
 
 const props = defineProps<{
   lableText: string;
-  timeRules?: any[];
-  dateRules?: any[];
+  timeRules?: ValidationRule[];
+  dateRules?: ValidationRule[];
   rawDateIn: Date;
   round?: boolean;
   withButtons?: boolean;

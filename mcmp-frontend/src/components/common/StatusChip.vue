@@ -37,6 +37,7 @@ const props = withDefaults(
   {
     value: false,
     tooltip: "",
+    href: undefined,
   }
 );
 

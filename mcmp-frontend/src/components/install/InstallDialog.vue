@@ -130,7 +130,7 @@
         </div>
       </template>
 
-      <template #actions="{ next, prev }">
+      <template #actions="{ prev }">
         <div class="d-flex justify-space-between w-100 mt-4 mb-4 px-4">
           <v-btn
             :prepend-icon="mdiArrowLeft"
@@ -190,9 +190,7 @@ const props = defineProps<{
   appservice?: Appservice | null;
 }>();
 
-const emit = defineEmits<{
-  (e: "order-done"): void;
-}>();
+const emit = defineEmits<(e: "order-done") => void>();
 
 const validationRules = useRules();
 const userStore = useUserStore();

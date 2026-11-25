@@ -75,6 +75,7 @@
         <div
           v-for="(value, key) in instlServerDetails.dbParams
             ?.mariaPostgresMysqlOracle"
+          :key="key"
         >
           <v-row>
             <v-col
@@ -105,6 +106,7 @@
             v-for="diskConf in instlServerDetails.disk[
               instlServerDetails.osType
             ]?.[instlServerDetails.categoryType!]"
+            :key="diskConf.label"
           >
             {{ diskConf.label }}: {{ diskConf.size }} GB
           </div>

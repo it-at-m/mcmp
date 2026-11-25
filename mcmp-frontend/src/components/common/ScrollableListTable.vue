@@ -116,8 +116,7 @@ const emit = defineEmits<{
   (e: "update:sortBy", val: { key: string; order: "asc" | "desc" }[]): void;
   (e: "update:search", val: string): void;
   (e: "rowClick", item: T): void;
-  (e: "loadMore"): void;
-  (e: "clearSelection"): void;
+  (e: "loadMore" | "clearSelection"): void;
   (e: "rowKeydown", val: { key: string; item: T }): void;
 }>();
 

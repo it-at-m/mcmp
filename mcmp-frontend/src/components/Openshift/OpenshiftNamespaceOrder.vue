@@ -127,9 +127,7 @@ const props = defineProps<{
   appservice?: Appservice | null;
 }>();
 
-const emit = defineEmits<{
-  (e: "order-done"): void;
-}>();
+const emit = defineEmits<(e: "order-done") => void>();
 
 const registerOpenDialog = inject<() => void>("registerOpenDialog");
 const unregisterOpenDialog = inject<() => void>("unregisterOpenDialog");

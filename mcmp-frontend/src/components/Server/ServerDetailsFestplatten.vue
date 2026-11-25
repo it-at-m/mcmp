@@ -285,7 +285,7 @@ function editMountPoint(
   newCapacityGB: number,
   newVolumeGroup: string
 ) {
-  if (isLinux) {
+  if (isLinux.value) {
     const actionName =
       newCapacityGB > 2000 ? "LINUX_DISK_UPGRADE" : "LINUX_MOUNTPOINT_CHANGE";
 

@@ -19,7 +19,7 @@
 import { useRules } from "@/composables/rules.ts";
 import installServerDetails from "@/types/installServerDetails.ts";
 
-const props = defineProps<{
+defineProps<{
   instlServerDetails: installServerDetails;
 }>();
 const rules = useRules();

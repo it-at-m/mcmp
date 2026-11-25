@@ -355,7 +355,7 @@ export function useRules() {
     toValidateText: string,
     message = "Error"
   ) {
-    return toCompareText === toCompareText;
+    return toCompareText === toValidateText || message;
   }
 
   return {

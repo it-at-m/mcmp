@@ -18,7 +18,7 @@
 <script setup lang="ts">
 import { mdiInformationSlabCircleOutline } from "@mdi/js";
 
-const props = defineProps<{
+defineProps<{
   location?: string;
   marginTop?: string;
 }>();

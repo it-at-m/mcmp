@@ -46,7 +46,7 @@ afterEach(() => {
 describe("LoadbalancerOrderGeneral.vue — dns resolution", () => {
   test("ldblOrder.dns stays unset while the debounced lookup is still pending", async () => {
     vi.mocked(infobloxFQDNService.getFreeDnsEntry).mockImplementation(
-      () => new Promise(() => {}) // never resolves within the test
+      () => new Promise(() => undefined) // never resolves within the test
     );
     const { wrapper, ldblOrder } = mountGeneral();
     ldblOrder.appservice = appservice;

@@ -151,9 +151,11 @@
           </v-btn>
         </template>
         <v-list>
-          <v-list-item v-for="type in backupTypes">
+          <v-list-item
+            v-for="type in backupTypes"
+            :key="type"
+          >
             <v-checkbox
-              :key="type"
               v-model="selectedTypes"
               :label="getBackupTypeName(type)"
               :value="type"

@@ -616,7 +616,7 @@ const props = defineProps<{
   selectedServer: Server;
 }>();
 
-const emit = defineEmits<{
+defineEmits<{
   changed: [];
 }>();
 

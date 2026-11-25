@@ -68,9 +68,9 @@
       color="info"
       class="links"
     >
-      Vor dem Entfernen von Organisationen und Teams müssen Ressourcen und
-      Berechtigungen haben zahlreiche Abhängigkeiten, ist nur manuell möglich.
-      Bitte beantragen Sie es über das Ticket:
+      Vor Entfernung von Organisationen und Teams sollten sicherheitshalber
+      zugehörige Ressourcen und Berechtigungen geprüft und aufgeräumt werden.
+      Bitte öffnen Sie hierfür ein Ticket:
       <a
         :href="AWX_SUPPORT_URL"
         target="_blank"
@@ -417,7 +417,6 @@ watch([OrgOrTeam, action], () => {
 });
 
 watch(selectedEntity, async (entity) => {
-  searchText.value = "";
   clearMembers();
   if (!entity || action.value != "edit") return;
 

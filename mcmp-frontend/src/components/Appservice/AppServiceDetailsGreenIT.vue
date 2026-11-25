@@ -39,15 +39,24 @@
 
     <v-row>
       <!-- CPU Spalte -->
+      <!-- CPU Spalte -->
       <v-col cols="6">
         <h3 class="d-flex align-center">
           CPU Ressourcen
-          <v-icon
-            :icon="mdiLeaf"
-            :color="cpuLeafColor"
-            size="20"
-            class="ml-2"
-          />
+          <v-tooltip location="top">
+            <template #activator="{ props: tooltipProps }">
+              <v-icon
+                  v-bind="tooltipProps"
+                  :icon="mdiLeaf"
+                  :color="cpuLeafColor"
+                  size="20"
+                  class="ml-2"
+              />
+            </template>
+            <span class="text-caption">
+              Zum aktuellen Zeitpunkt maximal mögliche Einsparung inkl. ausgeschalteten Servern <br /> und Servern mit abgelehnten Green-IT Maßnahmen
+            </span>
+          </v-tooltip>
         </h3>
         <div class="mt-2">
           <p><strong>Gesamt (Ist):</strong> {{ totalCpuCurrent }} Cores</p>
@@ -87,15 +96,24 @@
       </v-col>
 
       <!-- RAM Spalte -->
+      <!-- RAM Spalte -->
       <v-col cols="6">
         <h3 class="d-flex align-center">
           RAM Ressourcen
-          <v-icon
-            :icon="mdiLeaf"
-            :color="ramLeafColor"
-            size="20"
-            class="ml-2"
-          />
+          <v-tooltip location="top">
+            <template #activator="{ props: tooltipProps }">
+              <v-icon
+                  v-bind="tooltipProps"
+                  :icon="mdiLeaf"
+                  :color="ramLeafColor"
+                  size="20"
+                  class="ml-2"
+              />
+            </template>
+            <span class="text-caption">
+              Zum aktuellen Zeitpunkt maximal mögliche Einsparung inkl. ausgeschalteten Servern <br /> und Servern mit abgelehnten Green-IT Maßnahmen
+            </span>
+          </v-tooltip>
         </h3>
         <div class="mt-2">
           <p>

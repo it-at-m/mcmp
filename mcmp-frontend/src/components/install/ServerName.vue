@@ -72,14 +72,15 @@ import installServerDetails, {
   OperatingSystem,
 } from "@/types/installServerDetails.ts";
 
-const props = defineProps<{
-  instlServerDetails: installServerDetails;
-}>();
+const instlServerDetails = defineModel<installServerDetails>(
+  "instlServerDetails",
+  { required: true }
+);
 
 const changeNumbers = ref(false);
 const useClusterPrefix = ref(false); // neue Checkbox
 const domains = computed(() =>
-  OperatingSystem.Windows.includes(props.instlServerDetails.osVersion ?? "")
+  OperatingSystem.Windows.includes(instlServerDetails.value.osVersion ?? "")
     ? ["srv.muenchen.de", "testlhm.de"]
     : ["srv.muenchen.de"]
 );
@@ -91,8 +92,8 @@ const DEBOUNCE_MS = 500;
 const validationRules = useRules();
 
 function computeMaxLength(): number {
-  const prefix = props.instlServerDetails.serverName?.prefix ?? "";
-  const osVersion = props.instlServerDetails.osVersion ?? "";
+  const prefix = instlServerDetails.value.serverName?.prefix ?? "";
+  const osVersion = instlServerDetails.value.osVersion ?? "";
   let allowedAppLength = 12;
 
   // Windows Server names can be max 15 chars long
@@ -137,22 +138,27 @@ function generateServerName() {
   nextTick(() => {
     form.value?.validate().then((validation: { valid: boolean }) => {
       if (validation.valid) {
-        if (props.instlServerDetails.serverName == null) {
-          console.error("serverName is null, that should not be possible.");
+        const serverName = instlServerDetails.value.serverName;
+        if (serverName == null) {
+          console.debug("serverName is null, that should not be possible.");
           return;
         }
-        if (props.instlServerDetails.osVersion == null) {
+        if (instlServerDetails.value.osVersion == null) {
           return;
         }
-        props.instlServerDetails.expectedServerName = "";
+        const appserviceId = instlServerDetails.value.appservice?.id;
+        if (appserviceId === undefined) {
+          return;
+        }
+        instlServerDetails.value.expectedServerName = "";
 
-        let serverType = props.instlServerDetails.serverName.serverType;
+        let serverType = serverName.serverType;
         if (
-          props.instlServerDetails.category &&
-          "kenner" in props.instlServerDetails.category &&
-          !("appCategorys" in props.instlServerDetails.category)
+          instlServerDetails.value.category &&
+          "kenner" in instlServerDetails.value.category &&
+          !("appCategorys" in instlServerDetails.value.category)
         ) {
-          const category = props.instlServerDetails
+          const category = instlServerDetails.value
             .category as ServerCategoryType;
           if (category.kenner) {
             serverType = serverType + category.kenner;
@@ -162,11 +168,11 @@ function generateServerName() {
         // set Os prefix only if no kenner is set
         if (serverType.length == 0) {
           if (
-            OperatingSystem.Linux.includes(props.instlServerDetails.osVersion)
+            OperatingSystem.Linux.includes(instlServerDetails.value.osVersion)
           ) {
             serverType = serverType + "lx";
           } else if (
-            OperatingSystem.Windows.includes(props.instlServerDetails.osVersion)
+            OperatingSystem.Windows.includes(instlServerDetails.value.osVersion)
           ) {
             serverType = serverType + "wi";
           } else {
@@ -177,15 +183,15 @@ function generateServerName() {
         infobloxFQDNService
           .getFreeServerFQDN(
             loading,
-            props.instlServerDetails.serverName.prefix,
-            props.instlServerDetails.serverName.application,
+            serverName.prefix,
+            serverName.application,
             serverType,
-            props.instlServerDetails.appservice!.id,
-            props.instlServerDetails.serverName.domain,
-            props.instlServerDetails.serverName.customNumber
+            appserviceId,
+            serverName.domain,
+            serverName.customNumber
           )
           .then((responseFQDN) => {
-            props.instlServerDetails.expectedServerName = responseFQDN;
+            instlServerDetails.value.expectedServerName = responseFQDN;
           });
       }
     });
@@ -194,33 +200,36 @@ function generateServerName() {
 
 // Handler für die Cluster-Checkbox
 function onClusterToggle() {
-  props.instlServerDetails.serverName!.prefix = useClusterPrefix.value
-    ? "cn-"
-    : "";
+  const serverName = instlServerDetails.value.serverName;
+  if (!serverName) return;
+  serverName.prefix = useClusterPrefix.value ? "cn-" : "";
   debouncedGenerateServerName();
 }
 
 onMounted(() => {
   // set srv.muenchen.de as default domain
-  if (!props.instlServerDetails.serverName?.domain) {
-    props.instlServerDetails.serverName!.domain = "srv.muenchen.de";
+  const serverName = instlServerDetails.value.serverName;
+  if (serverName && !serverName.domain) {
+    serverName.domain = "srv.muenchen.de";
   }
 });
 
 watch(
   () => [
-    props.instlServerDetails.appservice,
-    props.instlServerDetails.osType,
-    props.instlServerDetails.osVersion,
-    props.instlServerDetails.categoryType,
-    props.instlServerDetails.category,
+    instlServerDetails.value.appservice,
+    instlServerDetails.value.osType,
+    instlServerDetails.value.osVersion,
+    instlServerDetails.value.categoryType,
+    instlServerDetails.value.category,
   ],
   ([appservice, osType, osVersion, categoryTypeInst, category]) => {
-    props.instlServerDetails.serverName!.prefix = "";
+    const serverName = instlServerDetails.value.serverName;
+    if (!serverName) return;
+    serverName.prefix = "";
     useClusterPrefix.value = false;
     // reset domain if it is not available for the selected OS
-    if (!domains.value.includes(props.instlServerDetails.serverName!.domain)) {
-      props.instlServerDetails.serverName!.domain = "srv.muenchen.de";
+    if (!domains.value.includes(serverName.domain)) {
+      serverName.domain = "srv.muenchen.de";
     }
     if (appservice && osType && osVersion && categoryTypeInst && category) {
       generateServerName();
@@ -232,7 +241,7 @@ watch(
     ) {
       generateServerName();
     } else {
-      props.instlServerDetails.expectedServerName = "";
+      instlServerDetails.value.expectedServerName = "";
     }
   }
 );

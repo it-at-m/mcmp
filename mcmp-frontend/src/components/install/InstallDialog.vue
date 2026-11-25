@@ -43,7 +43,7 @@
     >
       <template #item.1>
         <div style="min-height: 500px">
-          <general-settings :instl-server-details="instlServerDetails" />
+          <general-settings v-model:instl-server-details="instlServerDetails" />
         </div>
       </template>
 
@@ -58,7 +58,7 @@
           />
           <server-name
             v-else
-            :instl-server-details="instlServerDetails"
+            v-model:instl-server-details="instlServerDetails"
           />
         </div>
       </template>
@@ -70,11 +70,11 @@
               instlServerDetails.categoryType === categoryType.DB ||
               instlServerDetails.categoryType === categoryType.Mixed
             "
-            :instl-server-details="instlServerDetails"
+            v-model:instl-server-details="instlServerDetails"
           />
           <hardware-settings
             v-else
-            :instl-server-details="instlServerDetails"
+            v-model:instl-server-details="instlServerDetails"
           />
         </div>
       </template>
@@ -86,7 +86,7 @@
               instlServerDetails.categoryType === categoryType.DB ||
               instlServerDetails.categoryType === categoryType.Mixed
             "
-            :instl-server-details="instlServerDetails"
+            v-model:instl-server-details="instlServerDetails"
           />
           <delete-schedule
             v-else-if="
@@ -95,11 +95,11 @@
                 instlServerDetails.categoryType === categoryType.Mixed
               ) && instlServerDetails.schedule
             "
-            :instl-server-details="instlServerDetails"
+            v-model:instl-server-details="instlServerDetails"
           />
           <install-summary
             v-else
-            :instl-server-details="instlServerDetails"
+            v-model:instl-server-details="instlServerDetails"
           />
         </div>
       </template>
@@ -112,11 +112,11 @@
                 instlServerDetails.categoryType === categoryType.Mixed) &&
               instlServerDetails.schedule
             "
-            :instl-server-details="instlServerDetails"
+            v-model:instl-server-details="instlServerDetails"
           />
           <install-summary
             v-else
-            :instl-server-details="instlServerDetails"
+            v-model:instl-server-details="instlServerDetails"
           />
         </div>
       </template>
@@ -125,7 +125,7 @@
         <div style="min-height: 500px">
           <install-summary
             v-if="instlServerDetails.schedule"
-            :instl-server-details="instlServerDetails"
+            v-model:instl-server-details="instlServerDetails"
           />
         </div>
       </template>
@@ -416,7 +416,12 @@ function order() {
     return;
   }
 
-  let serverType = instlServerDetails.value.serverName!.serverType;
+  const serverName = instlServerDetails.value.serverName;
+  if (serverName == null) {
+    return;
+  }
+
+  let serverType = serverName.serverType;
   if (
     instlServerDetails.value.category &&
     "kenner" in instlServerDetails.value.category &&
@@ -429,20 +434,18 @@ function order() {
   }
 
   if (serverType.length == 0) {
-    if (OperatingSystem.Linux.includes(instlServerDetails.value.osVersion!)) {
+    const osVersion = instlServerDetails.value.osVersion ?? "";
+    if (OperatingSystem.Linux.includes(osVersion)) {
       serverType = serverType + "lx";
-    } else if (
-      OperatingSystem.Windows.includes(instlServerDetails.value.osVersion!)
-    ) {
+    } else if (OperatingSystem.Windows.includes(osVersion)) {
       serverType = serverType + "wi";
     } else {
-      console.error("OsVersion is not in linux or windows.");
+      console.debug("OsVersion is not in linux or windows.");
       return;
     }
   }
-  instlServerDetails.value.serverName!.prefix =
-    instlServerDetails.value.serverName!.prefix || "";
-  instlServerDetails.value.serverName!.serverType = serverType;
+  serverName.prefix = serverName.prefix || "";
+  serverName.serverType = serverType;
 
   const applicationLabels = instlServerDetails.value
     .selectedApplications()
@@ -484,10 +487,11 @@ function order() {
       serverType: instlServerDetails.value.category,
       ram: instlServerDetails.value.memory,
       cpu: instlServerDetails.value.cpu,
-      disks:
-        instlServerDetails.value.disk[OsType.Windows][
-          instlServerDetails.value.categoryType!
-        ],
+      disks: instlServerDetails.value.categoryType
+        ? instlServerDetails.value.disk[OsType.Windows][
+            instlServerDetails.value.categoryType
+          ]
+        : undefined,
       network_group_id: instlServerDetails.value.networkGroup.id,
       application_service_id: instlServerDetails.value.appservice.id,
       osVersion: instlServerDetails.value.osVersion,

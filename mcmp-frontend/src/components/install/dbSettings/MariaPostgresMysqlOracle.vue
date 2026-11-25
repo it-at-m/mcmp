@@ -257,8 +257,10 @@ const dbVersionItems = computed<string[]>(() => {
 });
 
 function getServers() {
+  const appserviceId = props.instlServerDetails.appservice?.id;
+  if (appserviceId === undefined) return;
   serverService
-    .getServersByAppserviceId(loading, props.instlServerDetails.appservice!.id)
+    .getServersByAppserviceId(loading, appserviceId)
     .then((response) => {
       servers.value = response;
     });
@@ -267,54 +269,41 @@ function getServers() {
 watch(
   () => props.instlServerDetails.category,
   (newCategory) => {
-    if (newCategory) {
-      props.instlServerDetails.dbParams!.mariaPostgresMysqlOracle.customer_db_schema =
-        "";
-      props.instlServerDetails.dbParams!.mariaPostgresMysqlOracle.customer_db_charset =
-        "";
-      props.instlServerDetails.dbParams!.mariaPostgresMysqlOracle.postgis = [];
-      if (newCategory.label.match(/MariaDB/)) {
-        props.instlServerDetails.dbParams!.mariaPostgresMysqlOracle.db_type =
-          "mariadb";
-        props.instlServerDetails.dbParams!.mariaPostgresMysqlOracle.db_version =
-          "11.4";
-        props.instlServerDetails.dbParams!.mariaPostgresMysqlOracle.customer_db_charset =
-          "utf8mb4";
-      } else if (newCategory.label.match(/PostgreSQL/)) {
-        props.instlServerDetails.dbParams!.mariaPostgresMysqlOracle.db_type =
-          "postgresql";
-        props.instlServerDetails.dbParams!.mariaPostgresMysqlOracle.db_version =
-          "18";
-      } else if (newCategory.label.match(/MySQL/)) {
-        props.instlServerDetails.dbParams!.mariaPostgresMysqlOracle.db_type =
-          "mysql";
-        props.instlServerDetails.dbParams!.mariaPostgresMysqlOracle.db_version =
-          "8.4";
-        props.instlServerDetails.dbParams!.mariaPostgresMysqlOracle.customer_db_charset =
-          "utf8mb4";
-      } else if (newCategory.label.match(/OracleDB/)) {
-        props.instlServerDetails.dbParams!.mariaPostgresMysqlOracle.db_type =
-          "oracle";
-        props.instlServerDetails.dbParams!.mariaPostgresMysqlOracle.db_version =
-          "19c";
-        props.instlServerDetails.dbParams!.mariaPostgresMysqlOracle.customer_db_charset =
-          "AL32UTF8";
-      }
+    const params = props.instlServerDetails.dbParams?.mariaPostgresMysqlOracle;
+    if (!newCategory || !params) return;
+    params.customer_db_schema = "";
+    params.customer_db_charset = "";
+    params.postgis = [];
+    if (newCategory.label.match(/MariaDB/)) {
+      params.db_type = "mariadb";
+      params.db_version = "11.4";
+      params.customer_db_charset = "utf8mb4";
+    } else if (newCategory.label.match(/PostgreSQL/)) {
+      params.db_type = "postgresql";
+      params.db_version = "18";
+    } else if (newCategory.label.match(/MySQL/)) {
+      params.db_type = "mysql";
+      params.db_version = "8.4";
+      params.customer_db_charset = "utf8mb4";
+    } else if (newCategory.label.match(/OracleDB/)) {
+      params.db_type = "oracle";
+      params.db_version = "19c";
+      params.customer_db_charset = "AL32UTF8";
     }
   },
   { immediate: true }
 );
 watch(
   () =>
-    props.instlServerDetails.dbParams!.mariaPostgresMysqlOracle
+    props.instlServerDetails.dbParams?.mariaPostgresMysqlOracle
       .customer_db_name,
   (newDbName) => {
+    const params = props.instlServerDetails.dbParams?.mariaPostgresMysqlOracle;
+    if (!params || newDbName === undefined) return;
     if (props.instlServerDetails.category?.label.match(/PostgreSQL/)) {
-      props.instlServerDetails.dbParams!.mariaPostgresMysqlOracle.customer_db_schema =
-        newDbName;
+      params.customer_db_schema = newDbName;
     }
-    props.instlServerDetails.dbParams!.mariaPostgresMysqlOracle.customer_db_user =
-      newDbName;
+    params.customer_db_user = newDbName;
   }
 );
 </script>

@@ -171,19 +171,20 @@ import installServerDetails, {
 } from "@/types/installServerDetails.ts";
 
 const userStore = useUserStore();
-const props = defineProps<{
-  instlServerDetails: installServerDetails;
-}>();
+const instlServerDetails = defineModel<installServerDetails>(
+  "instlServerDetails",
+  { required: true }
+);
 const formatter = useFormatter();
 const jsonError = ref("");
 const loading = ref(false);
 
 watch(
-  () => props.instlServerDetails.isLinuxCustom,
+  () => instlServerDetails.value.isLinuxCustom,
   (isChecked) => {
     if (isChecked) {
-      const copy = JSON.parse(JSON.stringify(props.instlServerDetails));
-      const selectedApplications = props.instlServerDetails
+      const copy = JSON.parse(JSON.stringify(instlServerDetails.value));
+      const selectedApplications = instlServerDetails.value
         .selectedApplications()
         .map((app) => app.label);
 
@@ -225,7 +226,7 @@ watch(
       Object.assign(copy, { fqdn: copy.expectedServerName });
       delete copy.expectedServerName;
 
-      switch (props.instlServerDetails.osVersion) {
+      switch (instlServerDetails.value.osVersion) {
         case OsVersion.RHEL10:
         case OsVersion.RHEL9:
           Object.assign(copy, { os_name: "rhel" });
@@ -262,7 +263,7 @@ watch(
         })
         .finally(() => {
           // String initial setzen
-          props.instlServerDetails.linuxCustomExtraVars = JSON.stringify(
+          instlServerDetails.value.linuxCustomExtraVars = JSON.stringify(
             copy,
             null,
             2
@@ -271,16 +272,16 @@ watch(
         });
     } else {
       // Reset wenn deaktiviert
-      props.instlServerDetails.linuxCustomExtraVars = "";
+      instlServerDetails.value.linuxCustomExtraVars = "";
       jsonError.value = "";
     }
   }
 );
 
 watch(
-  () => props.instlServerDetails.linuxCustomExtraVars,
+  () => instlServerDetails.value.linuxCustomExtraVars,
   (newVal) => {
-    if (!props.instlServerDetails.isLinuxCustom) return;
+    if (!instlServerDetails.value.isLinuxCustom) return;
 
     if (!newVal.trim()) {
       jsonError.value = "";

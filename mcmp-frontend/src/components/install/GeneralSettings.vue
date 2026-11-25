@@ -318,9 +318,10 @@ import installServerDetails, {
 } from "@/types/installServerDetails";
 import { categorys, serverTypeMixes } from "@/types/ServerTypes";
 
-const props = defineProps<{
-  instlServerDetails: installServerDetails;
-}>();
+const instlServerDetails = defineModel<installServerDetails>(
+  "instlServerDetails",
+  { required: true }
+);
 
 const applicationServices = ref<AppserviceList[]>([]);
 const selectedAppService = ref<AppserviceList | null>(null);
@@ -333,7 +334,7 @@ const nonPostgresOption = ref<"lcm" | "newDb" | null>(null);
 
 // 1. Initialisierung und Übernahme von Änderungen aus den Props
 watch(
-  () => props.instlServerDetails.appservice,
+  () => instlServerDetails.value.appservice,
   (val) => {
     selectedAppService.value = (val as AppserviceList) ?? null;
   },
@@ -343,9 +344,9 @@ watch(
 // 2. Rücksynchronisation bei Auswahl durch den Benutzer
 watch(selectedAppService, (newVal) => {
   if (newVal) {
-    props.instlServerDetails.appservice = newVal;
+    instlServerDetails.value.appservice = newVal;
   } else {
-    props.instlServerDetails.appservice = null;
+    instlServerDetails.value.appservice = null;
   }
 });
 
@@ -366,7 +367,7 @@ const selectableApplicationServices = computed(() => {
 });
 
 const serverCategoryOptions = computed(() => {
-  const { categoryType, osType, osVersion } = props.instlServerDetails;
+  const { categoryType, osType, osVersion } = instlServerDetails.value;
   if (!categoryType || !osType || !osVersion) return [];
 
   const osKey = osType.toLowerCase() as keyof typeof categorys;
@@ -377,22 +378,6 @@ const serverCategoryOptions = computed(() => {
     );
   }
   if (categoryType === "DB") {
-    // set PostgreSQL as default when switching to DB category
-    if (
-      !props.instlServerDetails.category ||
-      !props.instlServerDetails.category.osVersion.includes(osVersion)
-    ) {
-      const postgresCategory = Object.values(categorys[osKey]).find(
-        (cat) =>
-          cat.isDb &&
-          cat.label === "PostgreSQL" &&
-          cat.osVersion.includes(osVersion)
-      );
-      if (postgresCategory) {
-        props.instlServerDetails.category = postgresCategory;
-      }
-    }
-    // get all other db categories
     return Object.values(categorys[osKey]).filter(
       (cat) => cat.isDb && cat.osVersion.includes(osVersion)
     );
@@ -403,11 +388,35 @@ const serverCategoryOptions = computed(() => {
   return [];
 });
 
+// set PostgreSQL as default when switching to DB category
+watch(
+  () => {
+    const { categoryType, osType, osVersion, category } =
+      instlServerDetails.value;
+    return [categoryType, osType, osVersion, category] as const;
+  },
+  ([categoryType, osType, osVersion, category]) => {
+    if (categoryType !== "DB" || !osType || !osVersion) return;
+    if (category?.osVersion.includes(osVersion)) return;
+    const osKey = osType.toLowerCase() as keyof typeof categorys;
+    const postgresCategory = Object.values(categorys[osKey]).find(
+      (cat) =>
+        cat.isDb &&
+        cat.label === "PostgreSQL" &&
+        cat.osVersion.includes(osVersion)
+    );
+    if (postgresCategory) {
+      instlServerDetails.value.category = postgresCategory;
+    }
+  },
+  { immediate: true }
+);
+
 const selectedApplications = computed({
-  get: () => props.instlServerDetails.applications,
+  get: () => instlServerDetails.value.applications,
   set(newSelection: ServerCategoryType[]) {
     const options = serverCategoryOptions.value as ServerCategoryType[];
-    const previous = props.instlServerDetails.applications.map((a) => a.label);
+    const previous = instlServerDetails.value.applications.map((a) => a.label);
     const labels = new Set(newSelection.map((a) => a.label));
     newSelection
       .filter((app) => !previous.includes(app.label))
@@ -427,7 +436,7 @@ const selectedApplications = computed({
       }
     }
 
-    props.instlServerDetails.applications = options.filter((app) =>
+    instlServerDetails.value.applications = options.filter((app) =>
       labels.has(app.label)
     );
   },
@@ -445,7 +454,7 @@ const LCM_PREFIX =
 
 const nonPostgresReasonInput = computed({
   get() {
-    const val = props.instlServerDetails.nonPostgresReason || "";
+    const val = instlServerDetails.value.nonPostgresReason || "";
 
     if (nonPostgresOption.value === "lcm" && val.startsWith(LCM_PREFIX)) {
       return val.slice(LCM_PREFIX.length);
@@ -455,9 +464,9 @@ const nonPostgresReasonInput = computed({
   },
   set(value: string) {
     if (nonPostgresOption.value === "lcm") {
-      props.instlServerDetails.nonPostgresReason = LCM_PREFIX + value;
+      instlServerDetails.value.nonPostgresReason = LCM_PREFIX + value;
     } else {
-      props.instlServerDetails.nonPostgresReason = value;
+      instlServerDetails.value.nonPostgresReason = value;
     }
   },
 });
@@ -468,13 +477,13 @@ const remainingReasonChars = computed(() =>
   Math.max(
     0,
     getRemainingNonPostgresReasonChars(
-      props.instlServerDetails.nonPostgresReason
+      instlServerDetails.value.nonPostgresReason
     )
   )
 );
 
 function wouldHaveOptions(catType: categoryType): boolean {
-  const { osType, osVersion } = props.instlServerDetails;
+  const { osType, osVersion } = instlServerDetails.value;
   if (!osType || !osVersion) return false;
 
   const osKey = osType.toLowerCase() as keyof typeof categorys;
@@ -550,14 +559,14 @@ onMounted(async () => {
 
 watch(nonPostgresOption, (newVal) => {
   if (newVal === "lcm") {
-    if (!props.instlServerDetails.nonPostgresReason?.startsWith(LCM_PREFIX)) {
-      props.instlServerDetails.nonPostgresReason =
-        LCM_PREFIX + (props.instlServerDetails.nonPostgresReason || "");
+    if (!instlServerDetails.value.nonPostgresReason?.startsWith(LCM_PREFIX)) {
+      instlServerDetails.value.nonPostgresReason =
+        LCM_PREFIX + (instlServerDetails.value.nonPostgresReason || "");
     }
   } else if (newVal === "newDb") {
-    if (props.instlServerDetails.nonPostgresReason?.startsWith(LCM_PREFIX)) {
-      props.instlServerDetails.nonPostgresReason =
-        props.instlServerDetails.nonPostgresReason.slice(LCM_PREFIX.length);
+    if (instlServerDetails.value.nonPostgresReason?.startsWith(LCM_PREFIX)) {
+      instlServerDetails.value.nonPostgresReason =
+        instlServerDetails.value.nonPostgresReason.slice(LCM_PREFIX.length);
     }
   }
 });

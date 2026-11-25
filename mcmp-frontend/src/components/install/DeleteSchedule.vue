@@ -31,9 +31,10 @@ import CommonTimePicker from "@/components/common/CommonTimePicker.vue";
 import { useRules } from "@/composables/rules";
 import installServerDetails from "@/types/installServerDetails";
 
-const props = defineProps<{
-  instlServerDetails: installServerDetails;
-}>();
+const instlServerDetails = defineModel<installServerDetails>(
+  "instlServerDetails",
+  { required: true }
+);
 const validationRules = useRules();
 const form = ref<HTMLFormElement>();
 const validated = ref(false);
@@ -45,7 +46,7 @@ const nowPlusOne = computed(() => {
 });
 
 watch([rawDate], async () => {
-  props.instlServerDetails.removeScheduleTime = rawDate.value;
+  instlServerDetails.value.removeScheduleTime = rawDate.value;
   form.value?.validate().then((validation: { valid: boolean }) => {
     validated.value = validation.valid;
   });

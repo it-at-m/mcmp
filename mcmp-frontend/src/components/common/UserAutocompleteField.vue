@@ -44,7 +44,7 @@ type Emits = (e: "update:modelValue", value: UserAutocomplete | null) => void;
 
 defineEmits<Emits>();
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   label: "Suche Username",
   placeholder: "",
   loading: false,

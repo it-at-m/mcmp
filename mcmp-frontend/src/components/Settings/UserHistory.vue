@@ -252,7 +252,7 @@ watch(searchText, () => {
 function onUpdateOptions(options: {
   page: number;
   itemsPerPage: number;
-  sortBy: Array<{ key: string; order: "asc" | "desc" }>;
+  sortBy: { key: string; order: "asc" | "desc" }[];
 }) {
   currentPage.value = options.page;
   itemsPerPage.value = options.itemsPerPage;

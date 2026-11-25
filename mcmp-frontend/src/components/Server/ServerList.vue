@@ -469,7 +469,7 @@ async function toggleFavorite(server: any) {
     } else {
       await serverService.addServerToFavorites(server.id);
     }
-  } catch (error) {
+  } catch {
     server.isFavorite = originalState;
     if (!servers.value.find((s) => s.id === server.id)) {
       servers.value = [...servers.value, server];

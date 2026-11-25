@@ -46,7 +46,6 @@
 
 <script setup lang="ts">
 import type JobList from "@/types/JobList";
-import type { TaggingAction } from "@/types/TaggingAction";
 
 import { computed } from "vue";
 

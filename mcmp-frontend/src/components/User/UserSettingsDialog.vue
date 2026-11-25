@@ -43,7 +43,7 @@
       location="bottom"
       :close-on-content-click="true"
     >
-      <template v-slot:activator="{ props }">
+      <template #activator="{ props }">
         <v-text-field
           v-bind="props"
           :model-value="selectedPageTitle"

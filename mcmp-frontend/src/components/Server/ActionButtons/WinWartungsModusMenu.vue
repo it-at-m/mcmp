@@ -42,7 +42,7 @@ import { mdiTools } from "@mdi/js";
 import WinWartungsmodusDialog from "@/components/Server/ActionButtons/WinWartungsmodusDialog.vue";
 import Server from "@/types/Server";
 
-const props = defineProps<{
+defineProps<{
   server: Server;
 }>();
 </script>

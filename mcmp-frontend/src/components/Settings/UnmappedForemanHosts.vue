@@ -75,7 +75,7 @@
 
 <script setup lang="ts">
 import type UnmappedForemanHost from "@/types/UnmappedForemanHost";
-import type { CsvColumn, CsvValue } from "@/util/csv";
+import type { CsvColumn } from "@/util/csv";
 import type { DataTableHeader } from "vuetify/framework";
 
 import { mdiMicrosoftExcel } from "@mdi/js";

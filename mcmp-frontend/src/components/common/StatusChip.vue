@@ -41,9 +41,7 @@ const props = withDefaults(
 );
 
 // Klick-Event für die Komponente definieren
-defineEmits<{
-  (e: "click", event: MouseEvent): void;
-}>();
+defineEmits<(e: "click", event: MouseEvent) => void>();
 
 const isMatch = computed(() => {
   if (props.value === undefined || props.value === null) {

@@ -7,31 +7,31 @@
     </v-checkbox -->
     <strong>Anwendungsservice*</strong>
     <v-autocomplete
-        v-model="selectedAppService"
-        v-model:search="search"
-        :items="selectableApplicationServices"
-        item-title="name"
-        item-value="id"
-        :loading="loading"
-        return-object
-        rounded
-        clearable
-        variant="outlined"
-        @update:search="onSearchUpdate"
+      v-model="selectedAppService"
+      v-model:search="search"
+      :items="selectableApplicationServices"
+      item-title="name"
+      item-value="id"
+      :loading="loading"
+      return-object
+      rounded
+      clearable
+      variant="outlined"
+      @update:search="onSearchUpdate"
     >
       <template #no-data>
         <a class="ml-2">Keine Anwendungsservices gefunden</a>
       </template>
       <template #append-item>
         <div
-            v-if="hasMore"
-            v-intersect="onIntersect"
-            class="pa-4 text-center"
+          v-if="hasMore"
+          v-intersect="onIntersect"
+          class="pa-4 text-center"
         >
           <v-progress-circular
-              indeterminate
-              size="24"
-              color="primary"
+            indeterminate
+            size="24"
+            color="primary"
           />
         </div>
       </template>
@@ -39,10 +39,10 @@
 
     <strong>Betriebssystem*</strong>
     <v-radio-group
-        v-model="instlServerDetails.osType"
-        aria-label="Betriebssystem auswählen"
-        inline
-        @change="
+      v-model="instlServerDetails.osType"
+      aria-label="Betriebssystem auswählen"
+      inline
+      @change="
         instlServerDetails.osVersion = null;
         instlServerDetails.categoryType = null;
         instlServerDetails.category = null;
@@ -50,146 +50,146 @@
       "
     >
       <v-radio
-          v-for="os in OsType"
-          :key="os"
-          :value="os"
-          :label="os"
+        v-for="os in OsType"
+        :key="os"
+        :value="os"
+        :label="os"
       />
     </v-radio-group>
 
     <strong v-if="instlServerDetails.osType != null"
-    >Betriebssystem Version*</strong
+      >Betriebssystem Version*</strong
     >
     <v-radio-group
-        v-if="instlServerDetails.osType != null"
-        v-model="instlServerDetails.osVersion"
-        aria-label="Betriebssystem Version auswählen"
-        inline
-        @change="
+      v-if="instlServerDetails.osType != null"
+      v-model="instlServerDetails.osVersion"
+      aria-label="Betriebssystem Version auswählen"
+      inline
+      @change="
         instlServerDetails.categoryType = null;
         instlServerDetails.category = null;
         instlServerDetails.applications = [];
       "
     >
       <v-radio
-          v-for="os in OperatingSystem[
+        v-for="os in OperatingSystem[
           instlServerDetails.osType as keyof typeof OperatingSystem
         ]"
-          :key="os"
-          :label="os"
-          :value="os"
+        :key="os"
+        :label="os"
+        :value="os"
       />
     </v-radio-group>
 
     <strong v-if="instlServerDetails.osVersion != null">Server Typ*</strong>
     <v-radio-group
-        v-if="instlServerDetails.osVersion != null"
-        v-model="instlServerDetails.categoryType"
-        aria-label="Server Typ auswählen"
-        inline
-        @change="
+      v-if="instlServerDetails.osVersion != null"
+      v-model="instlServerDetails.categoryType"
+      aria-label="Server Typ auswählen"
+      inline
+      @change="
         instlServerDetails.category = null;
         instlServerDetails.applications = [];
       "
     >
       <template
-          v-for="type in Object.values(categoryType)"
-          :key="type"
+        v-for="type in Object.values(categoryType)"
+        :key="type"
       >
         <v-radio
-            v-if="type === categoryType.Standard || wouldHaveOptions(type)"
-            :label="categoryTypeLabels[type] || type"
-            :value="type"
+          v-if="type === categoryType.Standard || wouldHaveOptions(type)"
+          :label="categoryTypeLabels[type] || type"
+          :value="type"
         />
       </template>
     </v-radio-group>
 
     <strong v-if="serverCategoryOptions.length > 0"
-    >Anwendung/Datenbank*</strong
+      >Anwendung/Datenbank*</strong
     >
     <v-select
-        v-if="
+      v-if="
         serverCategoryOptions.length > 0 &&
         instlServerDetails.categoryType == categoryType.App
       "
-        v-model="selectedApplications"
-        :items="serverCategoryOptions"
-        item-title="label"
-        return-object
-        multiple
-        chips
-        closable-chips
-        rounded
-        variant="outlined"
-        class="mt-2 mb-2"
-        hint="PHP benötigt Apache, Tomcat benötigt Apache und Java"
-        persistent-hint
+      v-model="selectedApplications"
+      :items="serverCategoryOptions"
+      item-title="label"
+      return-object
+      multiple
+      chips
+      closable-chips
+      rounded
+      variant="outlined"
+      class="mt-2 mb-2"
+      hint="PHP benötigt Apache, Tomcat benötigt Apache und Java"
+      persistent-hint
     />
     <v-select
-        v-else-if="serverCategoryOptions.length > 0"
-        v-model="instlServerDetails.category"
-        :items="serverCategoryOptions"
-        item-title="label"
-        return-object
-        rounded
-        variant="outlined"
-        class="mt-2"
-        :menu-props="{ persistent: true, closeOnContentClick: true }"
+      v-else-if="serverCategoryOptions.length > 0"
+      v-model="instlServerDetails.category"
+      :items="serverCategoryOptions"
+      item-title="label"
+      return-object
+      rounded
+      variant="outlined"
+      class="mt-2"
+      :menu-props="{ persistent: true, closeOnContentClick: true }"
     />
     <common-alert
-        v-if="
+      v-if="
         (instlServerDetails.categoryType == categoryType.DB ||
           instlServerDetails.categoryType == categoryType.Mixed) &&
         instlServerDetails.category != null &&
         !instlServerDetails.category?.label.match(/PostgreSQL/)
       "
-        color="_red"
-    >Standard ist PostgreSQL. Sie haben mit
+      color="_red"
+      >Standard ist PostgreSQL. Sie haben mit
       {{ instlServerDetails.category?.label }} ein alternatives DB-System
       ausgewählt.</common-alert
     >
 
     <strong
-        v-if="
+      v-if="
         (instlServerDetails.osVersion == OsVersion.RHEL10 ||
           instlServerDetails.osVersion == OsVersion.ALMA10) &&
         instlServerDetails.categoryType != null &&
         instlServerDetails.categoryType != categoryType.DB
       "
-    >Middleware User</strong
+      >Middleware User</strong
     >
     <v-checkbox
-        v-if="
+      v-if="
         (instlServerDetails.osVersion == OsVersion.RHEL10 ||
           instlServerDetails.osVersion == OsVersion.ALMA10) &&
         instlServerDetails.categoryType != null &&
         instlServerDetails.categoryType != categoryType.DB
       "
-        v-model="instlServerDetails.middlewareUser"
-        label="Middleware User anlegen"
+      v-model="instlServerDetails.middlewareUser"
+      label="Middleware User anlegen"
     ></v-checkbox>
     <v-radio-group
-        v-if="
+      v-if="
         (instlServerDetails.categoryType == categoryType.DB ||
           instlServerDetails.categoryType == categoryType.Mixed) &&
         instlServerDetails.category != null &&
         !instlServerDetails.category?.label.match(/PostgreSQL/)
       "
-        v-model="nonPostgresOption"
-        class="mt-6"
+      v-model="nonPostgresOption"
+      class="mt-6"
     >
       <v-radio
-          label="Lifecycle-Maßnahme (Upgrade, Migration, technische Fortführung)"
-          value="lcm"
+        label="Lifecycle-Maßnahme (Upgrade, Migration, technische Fortführung)"
+        value="lcm"
       />
 
       <v-radio
-          label="Neue Datenbank / neues Fachverfahren"
-          value="newDb"
+        label="Neue Datenbank / neues Fachverfahren"
+        value="newDb"
       />
     </v-radio-group>
     <strong
-        v-if="
+      v-if="
         nonPostgresOption !== null &&
         (instlServerDetails.categoryType == categoryType.DB ||
           instlServerDetails.categoryType == categoryType.Mixed) &&
@@ -200,59 +200,59 @@
       Fachliche Einordnung*: <br />
     </strong>
     <span
-        v-if="
+      v-if="
         nonPostgresOption !== null &&
         (instlServerDetails.categoryType == categoryType.DB ||
           instlServerDetails.categoryType == categoryType.Mixed) &&
         instlServerDetails.category != null &&
         !instlServerDetails.category?.label.match(/PostgreSQL/)
       "
-        class="fontsize-085"
+      class="fontsize-085"
     >
       Kurze Begründung für den Einsatz eines anderen Datenbanksystems als
       PostgreSQL. <br />Bitte angeben, warum PostgreSQL nicht eingesetzt werden
       kann und ob Alternativen geprüft wurden. <br />
     </span>
     <v-textarea
-        v-if="
-    nonPostgresOption !== null &&
-    (instlServerDetails.categoryType == categoryType.DB ||
-      instlServerDetails.categoryType == categoryType.Mixed) &&
-    instlServerDetails.category != null &&
-    !instlServerDetails.category?.label.match(/PostgreSQL/)
-  "
-        v-model="nonPostgresReasonInput"
-        label=""
-        rows="3"
-        rounded
-        outlined
-        :rules="useRules().getNonPostgresReasonRules()"
+      v-if="
+        nonPostgresOption !== null &&
+        (instlServerDetails.categoryType == categoryType.DB ||
+          instlServerDetails.categoryType == categoryType.Mixed) &&
+        instlServerDetails.category != null &&
+        !instlServerDetails.category?.label.match(/PostgreSQL/)
+      "
+      v-model="nonPostgresReasonInput"
+      label=""
+      rows="3"
+      rounded
+      outlined
+      :rules="useRules().getNonPostgresReasonRules()"
     ></v-textarea>
     <div
-        v-if="
-    nonPostgresOption !== null &&
-    (instlServerDetails.categoryType == categoryType.DB ||
-      instlServerDetails.categoryType == categoryType.Mixed) &&
-    instlServerDetails.category != null &&
-    !instlServerDetails.category?.label.match(/PostgreSQL/)
-  "
-        class="v-messages reason-counter-message mb-3"
-        :class="
-    remainingReasonChars === 0 ? 'text-error' : 'text-medium-emphasis'
-  "
+      v-if="
+        nonPostgresOption !== null &&
+        (instlServerDetails.categoryType == categoryType.DB ||
+          instlServerDetails.categoryType == categoryType.Mixed) &&
+        instlServerDetails.category != null &&
+        !instlServerDetails.category?.label.match(/PostgreSQL/)
+      "
+      class="v-messages reason-counter-message mb-3"
+      :class="
+        remainingReasonChars === 0 ? 'text-error' : 'text-medium-emphasis'
+      "
     >
       <div class="v-messages__wrapper">
         <div class="v-messages__message">
           {{
             remainingReasonChars > 0
-                ? `${remainingReasonChars} Zeichen übrig`
-                : "Maximale Zeichenzahl erreicht"
+              ? `${remainingReasonChars} Zeichen übrig`
+              : "Maximale Zeichenzahl erreicht"
           }}
         </div>
       </div>
     </div>
     <strong
-        v-if="
+      v-if="
         nonPostgresOption !== null &&
         (instlServerDetails.categoryType == categoryType.DB ||
           instlServerDetails.categoryType == categoryType.Mixed) &&
@@ -263,7 +263,7 @@
       Wie geht es nach dem Absenden weiter?</strong
     >
     <div
-        v-if="
+      v-if="
         nonPostgresOption !== null &&
         (instlServerDetails.categoryType == categoryType.DB ||
           instlServerDetails.categoryType == categoryType.Mixed) &&
@@ -333,11 +333,11 @@ const nonPostgresOption = ref<"lcm" | "newDb" | null>(null);
 
 // 1. Initialisierung und Übernahme von Änderungen aus den Props
 watch(
-    () => props.instlServerDetails.appservice,
-    (val) => {
-      selectedAppService.value = (val as AppserviceList) ?? null;
-    },
-    { immediate: true }
+  () => props.instlServerDetails.appservice,
+  (val) => {
+    selectedAppService.value = (val as AppserviceList) ?? null;
+  },
+  { immediate: true }
 );
 
 // 2. Rücksynchronisation bei Auswahl durch den Benutzer
@@ -355,10 +355,10 @@ watch(selectedAppService, (newVal) => {
 // virtuell bereitgestellt, ohne das originale applicationServices-Array zu mutieren.
 const selectableApplicationServices = computed(() => {
   if (
-      selectedAppService.value &&
-      !applicationServices.value.some(
-          (s) => s.id === selectedAppService.value?.id
-      )
+    selectedAppService.value &&
+    !applicationServices.value.some(
+      (s) => s.id === selectedAppService.value?.id
+    )
   ) {
     return [selectedAppService.value, ...applicationServices.value];
   }
@@ -373,20 +373,20 @@ const serverCategoryOptions = computed(() => {
 
   if (categoryType === "App") {
     return Object.values(categorys[osKey]).filter(
-        (cat) => cat.isApp && cat.osVersion.includes(osVersion)
+      (cat) => cat.isApp && cat.osVersion.includes(osVersion)
     );
   }
   if (categoryType === "DB") {
     // set PostgreSQL as default when switching to DB category
     if (
-        !props.instlServerDetails.category ||
-        !props.instlServerDetails.category.osVersion.includes(osVersion)
+      !props.instlServerDetails.category ||
+      !props.instlServerDetails.category.osVersion.includes(osVersion)
     ) {
       const postgresCategory = Object.values(categorys[osKey]).find(
-          (cat) =>
-              cat.isDb &&
-              cat.label === "PostgreSQL" &&
-              cat.osVersion.includes(osVersion)
+        (cat) =>
+          cat.isDb &&
+          cat.label === "PostgreSQL" &&
+          cat.osVersion.includes(osVersion)
       );
       if (postgresCategory) {
         props.instlServerDetails.category = postgresCategory;
@@ -394,7 +394,7 @@ const serverCategoryOptions = computed(() => {
     }
     // get all other db categories
     return Object.values(categorys[osKey]).filter(
-        (cat) => cat.isDb && cat.osVersion.includes(osVersion)
+      (cat) => cat.isDb && cat.osVersion.includes(osVersion)
     );
   }
   if (categoryType === "Mixed") {
@@ -410,16 +410,16 @@ const selectedApplications = computed({
     const previous = props.instlServerDetails.applications.map((a) => a.label);
     const labels = new Set(newSelection.map((a) => a.label));
     newSelection
-        .filter((app) => !previous.includes(app.label))
-        .forEach((app) => app.requires?.forEach((req) => labels.add(req)));
+      .filter((app) => !previous.includes(app.label))
+      .forEach((app) => app.requires?.forEach((req) => labels.add(req)));
 
     let changed = true;
     while (changed) {
       changed = false;
       for (const app of options) {
         if (
-            labels.has(app.label) &&
-            app.requires?.some((req) => !labels.has(req))
+          labels.has(app.label) &&
+          app.requires?.some((req) => !labels.has(req))
         ) {
           labels.delete(app.label);
           changed = true;
@@ -428,7 +428,7 @@ const selectedApplications = computed({
     }
 
     props.instlServerDetails.applications = options.filter((app) =>
-        labels.has(app.label)
+      labels.has(app.label)
     );
   },
 });
@@ -441,7 +441,7 @@ const categoryTypeLabels: Record<string, string> = {
 
 // // Bei Textanpassung von LCM_PREFIX muss die Variable auch in der rules.ts angepasst werden
 const LCM_PREFIX =
-    "Diese Installation findet im Rahmen des Lifecyclemanagements statt. ";
+  "Diese Installation findet im Rahmen des Lifecyclemanagements statt. ";
 
 const nonPostgresReasonInput = computed({
   get() {
@@ -465,10 +465,12 @@ const nonPostgresReasonInput = computed({
 const { getRemainingNonPostgresReasonChars } = useRules();
 
 const remainingReasonChars = computed(() =>
-    Math.max(
-        0,
-        getRemainingNonPostgresReasonChars(props.instlServerDetails.nonPostgresReason)
+  Math.max(
+    0,
+    getRemainingNonPostgresReasonChars(
+      props.instlServerDetails.nonPostgresReason
     )
+  )
 );
 
 function wouldHaveOptions(catType: categoryType): boolean {
@@ -479,12 +481,12 @@ function wouldHaveOptions(catType: categoryType): boolean {
 
   if (catType === categoryType.App) {
     return Object.values(categorys[osKey]).some(
-        (cat) => cat.isApp && cat.osVersion.includes(osVersion)
+      (cat) => cat.isApp && cat.osVersion.includes(osVersion)
     );
   }
   if (catType === categoryType.DB) {
     return Object.values(categorys[osKey]).some(
-        (cat) => cat.isDb && cat.osVersion.includes(osVersion)
+      (cat) => cat.isDb && cat.osVersion.includes(osVersion)
     );
   }
   if (catType === categoryType.Mixed) {
@@ -505,11 +507,11 @@ async function getApplicationServiceClasses(isNewSearch = false) {
   loading.value = true;
   try {
     const res = await appserviceService.getAppservices(
-        loading,
-        offset.value,
-        limit,
-        "asc",
-        search.value
+      loading,
+      offset.value,
+      limit,
+      "asc",
+      search.value
     );
 
     const newItems = res.content;
@@ -550,12 +552,12 @@ watch(nonPostgresOption, (newVal) => {
   if (newVal === "lcm") {
     if (!props.instlServerDetails.nonPostgresReason?.startsWith(LCM_PREFIX)) {
       props.instlServerDetails.nonPostgresReason =
-          LCM_PREFIX + (props.instlServerDetails.nonPostgresReason || "");
+        LCM_PREFIX + (props.instlServerDetails.nonPostgresReason || "");
     }
   } else if (newVal === "newDb") {
     if (props.instlServerDetails.nonPostgresReason?.startsWith(LCM_PREFIX)) {
       props.instlServerDetails.nonPostgresReason =
-          props.instlServerDetails.nonPostgresReason.slice(LCM_PREFIX.length);
+        props.instlServerDetails.nonPostgresReason.slice(LCM_PREFIX.length);
     }
   }
 });

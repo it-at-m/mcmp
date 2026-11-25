@@ -10,16 +10,16 @@ import installServerDetails, {
 export function useRules() {
   function minLengthRule(length: number, message = "error") {
     return (value: string | null | undefined) =>
-        !value ||
-        ((value || value?.trim() == "") && value.length >= length) ||
-        message;
+      !value ||
+      ((value || value?.trim() == "") && value.length >= length) ||
+      message;
   }
 
   function maxLengthRule(length: number, message = "error") {
     return (value: string | null | undefined) =>
-        !value ||
-        ((value || value?.trim() == "") && value.length <= length) ||
-        message;
+      !value ||
+      ((value || value?.trim() == "") && value.length <= length) ||
+      message;
   }
 
   function notEmptyRule(message = "error") {
@@ -34,18 +34,18 @@ export function useRules() {
 
   function regexRule(regex: RegExp, message = "error") {
     return (value: string | null | undefined) =>
-        (value && regex.test(value)) || message;
+      (value && regex.test(value)) || message;
   }
 
   function rangeRule(min: number, max: number, message = "error") {
     return (value: number | null | undefined) =>
-        (value != null && value >= min && value <= max) || message;
+      (value != null && value >= min && value <= max) || message;
   }
 
   function integerRule(message = "error") {
     return (value: number | string | null | undefined) =>
-        (value != null && value !== "" && Number.isInteger(Number(value))) ||
-        message;
+      (value != null && value !== "" && Number.isInteger(Number(value))) ||
+      message;
   }
 
   type Config = SnowConfig | AwxConfig | InfobloxConfig | BaasConfig;
@@ -59,15 +59,15 @@ export function useRules() {
   }
 
   function allowNext(
-      step: number,
-      instlServerDetails: installServerDetails
+    step: number,
+    instlServerDetails: installServerDetails
   ): boolean {
     const validationRules = useRules();
     if (
-        !instlServerDetails.category?.label.match(
-            /MariaDB|PostgreSQL|MySQL|OracleDB|MSSQL/
-        ) &&
-        step != 1
+      !instlServerDetails.category?.label.match(
+        /MariaDB|PostgreSQL|MySQL|OracleDB|MSSQL/
+      ) &&
+      step != 1
     ) {
       step += 1;
     }
@@ -77,19 +77,19 @@ export function useRules() {
     switch (step) {
       case 1:
         if (
-            (instlServerDetails.categoryType == categoryType.DB ||
-                instlServerDetails.categoryType == categoryType.Mixed) &&
-            !instlServerDetails.category?.label.match(/PostgreSQL/)
+          (instlServerDetails.categoryType == categoryType.DB ||
+            instlServerDetails.categoryType == categoryType.Mixed) &&
+          !instlServerDetails.category?.label.match(/PostgreSQL/)
         ) {
           const baseValid =
-              instlServerDetails.appservice != null &&
-              instlServerDetails.osType != null &&
-              instlServerDetails.osVersion != null &&
-              instlServerDetails.categoryType != null &&
-              instlServerDetails.category != null;
+            instlServerDetails.appservice != null &&
+            instlServerDetails.osType != null &&
+            instlServerDetails.osVersion != null &&
+            instlServerDetails.categoryType != null &&
+            instlServerDetails.category != null;
 
           const reasonValid = nonPostgresReasonRules.every(
-              (rule) => rule(instlServerDetails.nonPostgresReason) === true
+            (rule) => rule(instlServerDetails.nonPostgresReason) === true
           );
 
           return baseValid && reasonValid;
@@ -97,94 +97,94 @@ export function useRules() {
 
         if (instlServerDetails.categoryType == "Standard") {
           return (
-              instlServerDetails.appservice != null &&
-              instlServerDetails.osType != null &&
-              instlServerDetails.osVersion != null
+            instlServerDetails.appservice != null &&
+            instlServerDetails.osType != null &&
+            instlServerDetails.osVersion != null
           );
         }
         if (instlServerDetails.categoryType == categoryType.App) {
           return (
-              instlServerDetails.appservice != null &&
-              instlServerDetails.osType != null &&
-              instlServerDetails.osVersion != null &&
-              instlServerDetails.applications.length > 0
-          );
-        }
-        return (
             instlServerDetails.appservice != null &&
             instlServerDetails.osType != null &&
             instlServerDetails.osVersion != null &&
-            instlServerDetails.categoryType != null &&
-            instlServerDetails.category != null
+            instlServerDetails.applications.length > 0
+          );
+        }
+        return (
+          instlServerDetails.appservice != null &&
+          instlServerDetails.osType != null &&
+          instlServerDetails.osVersion != null &&
+          instlServerDetails.categoryType != null &&
+          instlServerDetails.category != null
         );
       case 2:
         if (
-            instlServerDetails.category?.label.match(
-                /MariaDB|PostgreSQL|MySQL|OracleDB/
-            )
+          instlServerDetails.category?.label.match(
+            /MariaDB|PostgreSQL|MySQL|OracleDB/
+          )
         ) {
           return validateObject(
-              instlServerDetails.dbParams!.mariaPostgresMysqlOracle,
-              {
-                db_version: getDynamicRules(
-                    "db_version",
-                    instlServerDetails.category.label
-                ),
-                customer_db_name: getDynamicRules(
-                    "customer_db_name",
-                    instlServerDetails.category.label
-                ),
-                customer_db_user: getDynamicRules(
-                    "customer_db_user",
-                    instlServerDetails.category.label
-                ),
-                customer_db_schema: getDynamicRules(
-                    "customer_db_schema",
-                    instlServerDetails.category.label
-                ),
-                customer_db_charset: getDynamicRules(
-                    "customer_db_charset",
-                    instlServerDetails.category.label
-                ),
-                oracle_datasize: getDynamicRules(
-                    "oracle_datasize",
-                    instlServerDetails.category.label
-                ),
-              }
+            instlServerDetails.dbParams!.mariaPostgresMysqlOracle,
+            {
+              db_version: getDynamicRules(
+                "db_version",
+                instlServerDetails.category.label
+              ),
+              customer_db_name: getDynamicRules(
+                "customer_db_name",
+                instlServerDetails.category.label
+              ),
+              customer_db_user: getDynamicRules(
+                "customer_db_user",
+                instlServerDetails.category.label
+              ),
+              customer_db_schema: getDynamicRules(
+                "customer_db_schema",
+                instlServerDetails.category.label
+              ),
+              customer_db_charset: getDynamicRules(
+                "customer_db_charset",
+                instlServerDetails.category.label
+              ),
+              oracle_datasize: getDynamicRules(
+                "oracle_datasize",
+                instlServerDetails.category.label
+              ),
+            }
           );
         }
         return !!instlServerDetails.category?.label.match(/MSSQL/);
 
       case 3:
         return (
-            instlServerDetails.expectedServerName != null &&
-            instlServerDetails.expectedServerName != ""
+          instlServerDetails.expectedServerName != null &&
+          instlServerDetails.expectedServerName != ""
         );
       case 4:
         return (
-            instlServerDetails.memory > 0 &&
-            instlServerDetails.cpu > 0 &&
-            instlServerDetails.networkGroup != null &&
-            instlServerDetails.appservice != null
+          instlServerDetails.memory > 0 &&
+          instlServerDetails.cpu > 0 &&
+          instlServerDetails.networkGroup != null &&
+          instlServerDetails.appservice != null
         );
       case 5: {
         const nowPlusOne = new Date();
         nowPlusOne.setHours(nowPlusOne.getHours() + 1);
         return (
-            validationRules.notEmptyRule("Abbauzeitpunkt darf nicht leer sein.")(
-                instlServerDetails.removeScheduleTime.toISOString()
-            ) === true &&
-            validationRules.isNotPastTime(
-                nowPlusOne,
-                instlServerDetails.removeScheduleTime,
-                "Abbauzeitpunkt muss 1h nach Aufbau Zeitpunkt liegen."
-            ) === true &&
-            validationRules.isNotAfterTime(
-                new Date(),
-                instlServerDetails.removeScheduleTime,
-                14,
-                "Abbauzeitpunkt darf nicht mehr als 2 Wochen in der Zukunft liegen."
-            ) === true
+          validationRules.notEmptyRule("Abbauzeitpunkt darf nicht leer sein.")(
+            instlServerDetails.removeScheduleTime.toISOString()
+          ) === true &&
+          validationRules.isNotPastTime(
+            nowPlusOne,
+            instlServerDetails.removeScheduleTime,
+            "Abbauzeitpunkt muss 1h nach Aufbau Zeitpunkt liegen."
+          ) === true &&
+          validationRules.isNotAfterTime(
+            new Date(),
+            instlServerDetails.removeScheduleTime,
+            14,
+            "Abbauzeitpunkt darf nicht mehr als 2 Wochen in der Zukunft liegen."
+          ) === true
         );
       }
       case 6:
@@ -196,7 +196,7 @@ export function useRules() {
 
   function notEmptySelectRule(message = "error") {
     return (value: string | null | undefined) =>
-        (value && value != "") || message;
+      (value && value != "") || message;
   }
 
   function validateObject(object: any, rules: Record<string, any[]>): boolean {
@@ -214,8 +214,8 @@ export function useRules() {
       postgresql: [
         notEmptyRule("Datenbank Schema ist erforderlich"),
         regexRule(
-            /^[a-zA-Z0-9_-]+$/,
-            "Nur Buchstaben, Zahlen, Bindestriche und Unterstriche erlaubt"
+          /^[a-zA-Z0-9_-]+$/,
+          "Nur Buchstaben, Zahlen, Bindestriche und Unterstriche erlaubt"
         ),
         maxLengthRule(20, "Maximal 20 Zeichen"),
       ],
@@ -227,8 +227,8 @@ export function useRules() {
       all: [
         notEmptyRule("Datenbank Name ist erforderlich"),
         regexRule(
-            /^[a-zA-Z0-9_-]+$/,
-            "Nur Buchstaben, Zahlen, Bindestriche und Unterstriche erlaubt"
+          /^[a-zA-Z0-9_-]+$/,
+          "Nur Buchstaben, Zahlen, Bindestriche und Unterstriche erlaubt"
         ),
         maxLengthRule(20, "Maximal 20 Zeichen"),
       ],
@@ -237,24 +237,24 @@ export function useRules() {
       postgresql: [
         notEmptyRule("Datenbank User ist erforderlich"),
         regexRule(
-            /^[a-zA-Z0-9_-]+$/,
-            "Nur Buchstaben, Zahlen, Bindestriche und Unterstriche erlaubt"
+          /^[a-zA-Z0-9_-]+$/,
+          "Nur Buchstaben, Zahlen, Bindestriche und Unterstriche erlaubt"
         ),
         maxLengthRule(20, "Maximal 20 Zeichen"),
       ],
       mariadb: [
         notEmptyRule("Datenbank User ist erforderlich"),
         regexRule(
-            /^[a-zA-Z0-9_-]+$/,
-            "Nur Buchstaben, Zahlen, Bindestriche und Unterstriche erlaubt"
+          /^[a-zA-Z0-9_-]+$/,
+          "Nur Buchstaben, Zahlen, Bindestriche und Unterstriche erlaubt"
         ),
         maxLengthRule(20, "Maximal 20 Zeichen"),
       ],
       mysql: [
         notEmptyRule("Datenbank User ist erforderlich"),
         regexRule(
-            /^[a-zA-Z0-9_-]+$/,
-            "Nur Buchstaben, Zahlen, Bindestriche und Unterstriche erlaubt"
+          /^[a-zA-Z0-9_-]+$/,
+          "Nur Buchstaben, Zahlen, Bindestriche und Unterstriche erlaubt"
         ),
         maxLengthRule(20, "Maximal 20 Zeichen"),
       ],
@@ -288,13 +288,13 @@ export function useRules() {
   function stripLcmPrefix(value: string | null | undefined) {
     if (!value) return value;
     return value.startsWith(LCM_PREFIX)
-        ? value.slice(LCM_PREFIX.length)
-        : value;
+      ? value.slice(LCM_PREFIX.length)
+      : value;
   }
 
   // Bei Textanpassung von LCM_PREFIX muss die Variable auch in GeneralSettings.vue angepasst werden
   const LCM_PREFIX =
-      "Diese Installation findet im Rahmen des Lifecyclemanagements statt. ";
+    "Diese Installation findet im Rahmen des Lifecyclemanagements statt. ";
 
   const MAX_TOTAL_LENGTH = 500;
 
@@ -303,7 +303,7 @@ export function useRules() {
   }
 
   function getRemainingNonPostgresReasonChars(
-      value: string | null | undefined
+    value: string | null | undefined
   ): number {
     const raw = value ?? "";
     const text = stripLcmPrefix(raw) ?? "";
@@ -333,27 +333,27 @@ export function useRules() {
   }
 
   function isNotPastTime(
-      toCompareDate: Date,
-      toValidateDate: Date,
-      message = "Error"
+    toCompareDate: Date,
+    toValidateDate: Date,
+    message = "Error"
   ) {
     return toValidateDate > toCompareDate || message;
   }
 
   function isNotAfterTime(
-      toCompareDate: Date,
-      toValidateDate: Date,
-      timeSpanDays: number,
-      message = "Error"
+    toCompareDate: Date,
+    toValidateDate: Date,
+    timeSpanDays: number,
+    message = "Error"
   ) {
     toCompareDate.setDate(toCompareDate.getDate() + timeSpanDays);
     return toValidateDate < toCompareDate || message;
   }
 
   function isNotSameTextRule(
-      toCompareText: string,
-      toValidateText: string,
-      message = "Error"
+    toCompareText: string,
+    toValidateText: string,
+    message = "Error"
   ) {
     return toCompareText === toCompareText;
   }

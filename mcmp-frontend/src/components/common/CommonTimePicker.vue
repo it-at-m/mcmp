@@ -126,9 +126,9 @@ function roundTimeToHalfHour(time: string) {
 function increase() {
   if (!time.value) return "";
   // Parse time with default values to prevent undefined
-  let [hours = 0, minutes = 0] = time.value.split(":").map(Number);
+  const [hours = 0, currentMinutes = 0] = time.value.split(":").map(Number);
 
-  minutes += 1;
+  const minutes = currentMinutes + 1;
 
   // Zeit wieder als String formatieren (z. B. "09:00")
   const h = String(hours).padStart(2, "0");

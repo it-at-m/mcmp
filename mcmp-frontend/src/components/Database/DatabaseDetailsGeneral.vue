@@ -771,7 +771,7 @@ function toBooleanField(
 }
 
 function compactFields(
-  entries: Array<DatabaseDetailField | null>
+  entries: (DatabaseDetailField | null)[]
 ): DatabaseDetailField[] {
   return entries.filter(
     (entry): entry is DatabaseDetailField => entry !== null

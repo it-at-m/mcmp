@@ -30,7 +30,7 @@ import installServerDetails, {
   categoryType,
 } from "@/types/installServerDetails";
 
-const props = defineProps<{
+defineProps<{
   instlServerDetails: installServerDetails;
 }>();
 </script>

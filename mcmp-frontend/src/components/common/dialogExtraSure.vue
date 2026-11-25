@@ -38,7 +38,7 @@ import { ref } from "vue";
 import CommonAlert from "@/components/common/CommonAlert.vue";
 import CommonDialog from "@/components/common/CommonDialog.vue";
 
-const props = defineProps<{
+defineProps<{
   title: string;
   text: string;
   checkboxText: string;
@@ -46,10 +46,7 @@ const props = defineProps<{
   hint?: string;
 }>();
 
-const emits = defineEmits<{
-  (e: "do"): void;
-  (e: "cancel"): void;
-}>();
+const emits = defineEmits<(e: "do" | "cancel") => void>();
 
 const dialog = ref(true);
 const checked = ref(false);

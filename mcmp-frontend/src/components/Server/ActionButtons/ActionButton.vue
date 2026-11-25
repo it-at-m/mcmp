@@ -76,7 +76,7 @@
         Ausgewählte Server:
       </div>
       <div
-        v-else-if="props.isBatchOperation"
+        v-if="!server && props.isBatchOperation"
         class="confirm-entity-name"
       >
         {{ props.selectedServerIds?.length }} Server

@@ -178,7 +178,6 @@ import appserviceService from "@/api/appserviceService";
 import jobService from "@/api/jobService";
 import AppServiceDetailHistory from "@/components/Appservice/AppServiceDetailHistory.vue";
 import AppserviceDetailsAllgemein from "@/components/Appservice/AppserviceDetailsAllgemein.vue";
-import AppServiceDetailGreenIT from "@/components/Appservice/AppServiceDetailsGreenIT.vue";
 import AppServiceDetailsGreenIT from "@/components/Appservice/AppServiceDetailsGreenIT.vue";
 import AppserviceDetailsLoadbalancer from "@/components/Appservice/AppserviceDetailsLoadbalancer.vue";
 import AppserviceDetailsOpenshift from "@/components/Appservice/AppserviceDetailsOpenshift.vue";

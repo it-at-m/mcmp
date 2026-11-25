@@ -53,9 +53,6 @@ import { mdiPencil } from "@mdi/js";
 import { inject, ref, watch } from "vue";
 
 import CommonDialog from "@/components/common/CommonDialog.vue";
-import { useFormatter } from "@/composables/formatter.js";
-
-const formatter = useFormatter();
 
 const props = defineProps<{
   selectedServer: Server;

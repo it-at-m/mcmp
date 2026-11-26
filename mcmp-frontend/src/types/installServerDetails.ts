@@ -56,7 +56,7 @@ export interface DiskEntry {
 export default class installServerDetails {
   constructor(
     // general
-    public appservice: AppserviceList | null,
+    public appservice: Pick<AppserviceList, "id" | "name"> | null,
     public osType: OsType | null,
     public osVersion: OsVersion | null,
     public categoryType: categoryType | null,

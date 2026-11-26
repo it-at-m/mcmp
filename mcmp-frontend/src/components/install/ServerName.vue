@@ -3,7 +3,7 @@
     <v-form ref="form">
       <!-- Cluster Checkbox statt Präfix-Dropdown -->
       <v-checkbox
-        v-if="instlServerDetails.category?.allowedPrefixes.length > 0"
+        v-if="(instlServerDetails.category?.allowedPrefixes.length ?? 0) > 0"
         v-model="useClusterPrefix"
         label="Server wird Teil eines DB-Clusters"
         @change="onClusterToggle"

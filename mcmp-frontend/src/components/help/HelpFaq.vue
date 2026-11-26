@@ -57,7 +57,7 @@
 
     <div
       v-for="(category, index) in sortedCategories"
-      :key="category.id"
+      :key="category.id ?? undefined"
       class="mb-8"
     >
       <v-expansion-panels :model-value="0">
@@ -73,12 +73,12 @@
             <common-card
               v-for="faq in getFaqsByCategory(category.id)"
               :id="`faq-${faq.id}`"
-              :key="faq.id"
+              :key="faq.id ?? undefined"
               :title="faq.question"
               :card-id="`faq-${faq.id}`"
               top-margin="0"
-              :model-value="!collapsed[faq.id]"
-              @update:model-value="(v) => (collapsed[faq.id] = !v)"
+              :model-value="!isCollapsed(faq)"
+              @update:model-value="(v) => setCollapsed(faq, !v)"
             >
               <template #toolbar-actions>
                 <template v-if="isAdmin">
@@ -142,10 +142,13 @@
                 </v-btn>
               </template>
 
+              <!-- FAQ-Inhalte werden nur von Admins gepflegt und als HTML gerendert -->
+              <!-- eslint-disable vue/no-v-html -->
               <div
                 class="faq-content"
                 v-html="faq.answerHtml"
               ></div>
+              <!-- eslint-enable vue/no-v-html -->
             </common-card>
           </v-expansion-panel-text>
         </v-expansion-panel>
@@ -223,6 +226,9 @@
 </template>
 
 <script setup lang="ts">
+import type Faq from "@/types/Faq";
+import type FaqCategory from "@/types/FaqCategory";
+
 import {
   mdiDelete,
   mdiLink,
@@ -247,15 +253,18 @@ const props = defineProps({
 const route = useRoute();
 
 const loading = ref(false);
-const faqs = ref([]);
-const categories = ref([]);
-const collapsed = ref({});
+const faqs = ref<Faq[]>([]);
+const categories = ref<FaqCategory[]>([]);
+const collapsed = ref<Record<number, boolean>>({});
 
 const faqDialog = ref(false);
 const deleteConfirmDialog = ref(false);
-const faqToDelete = ref(null);
+const faqToDelete = ref<Faq | null>(null);
 
-const defaultFaq = {
+// Beim Anlegen ist noch keine Kategorie gewählt
+type EditedFaq = Omit<Faq, "categoryId"> & { categoryId: number | null };
+
+const defaultFaq: EditedFaq = {
   id: null,
   categoryId: null,
   question: "",
@@ -264,7 +273,7 @@ const defaultFaq = {
   sortOrder: 0,
   isPublished: true,
 };
-const editedFaq = ref({ ...defaultFaq });
+const editedFaq = ref<EditedFaq>({ ...defaultFaq });
 const allCollapsed = computed(() => {
   return Object.values(collapsed.value).every((val) => val === true);
 });
@@ -283,7 +292,7 @@ async function loadData() {
 
     // Initial alle einklappen
     allFaqs.forEach((f) => {
-      if (collapsed.value[f.id] === undefined) {
+      if (f.id !== null && collapsed.value[f.id] === undefined) {
         collapsed.value[f.id] = true;
       }
     });
@@ -291,11 +300,19 @@ async function loadData() {
     // Prüfen, ob eine ID in der URL ist und dahin scrollen
     scrollToFaq(route.params.faqId);
   } catch (error) {
-    console.error("Fehler beim Laden der FAQ Daten", error);
+    console.debug("Fehler beim Laden der FAQ Daten", error);
   }
 }
 
-function getFaqsByCategory(categoryId) {
+function isCollapsed(faq: Faq) {
+  return faq.id !== null && collapsed.value[faq.id] === true;
+}
+
+function setCollapsed(faq: Faq, value: boolean) {
+  if (faq.id !== null) collapsed.value[faq.id] = value;
+}
+
+function getFaqsByCategory(categoryId: number | null) {
   return faqs.value
     .filter(
       (f) => f.categoryId === categoryId && (props.isAdmin || f.isPublished)
@@ -306,59 +323,66 @@ function getFaqsByCategory(categoryId) {
 function toggleAll() {
   const targetState = !allCollapsed.value;
   faqs.value.forEach((f) => {
-    collapsed.value[f.id] = targetState;
+    if (f.id !== null) collapsed.value[f.id] = targetState;
   });
 }
 
-function openFaqDialog(faq = null) {
+function openFaqDialog(faq: Faq | null = null) {
   if (faq) {
     editedFaq.value = { ...faq };
   } else {
-    editedFaq.value = { ...defaultFaq, categoryId: categories.value[0]?.id };
+    editedFaq.value = {
+      ...defaultFaq,
+      categoryId: categories.value[0]?.id ?? null,
+    };
   }
   faqDialog.value = true;
 }
 
 async function saveFaq() {
+  const { categoryId } = editedFaq.value;
+  if (categoryId === null) return;
+  const faq: Faq = { ...editedFaq.value, categoryId };
   try {
-    if (editedFaq.value.id) {
-      await faqService.updateFaq(loading, editedFaq.value.id, editedFaq.value);
+    if (faq.id) {
+      await faqService.updateFaq(loading, faq.id, faq);
     } else {
-      await faqService.createFaq(loading, editedFaq.value);
+      await faqService.createFaq(loading, faq);
     }
     faqDialog.value = false;
     await loadData();
   } catch (error) {
-    console.error("Fehler beim Speichern der FAQ", error);
+    console.debug("Fehler beim Speichern der FAQ", error);
   }
 }
 
-function confirmDeleteFaq(faq) {
+function confirmDeleteFaq(faq: Faq) {
   faqToDelete.value = faq;
   deleteConfirmDialog.value = true;
 }
 
 async function deleteFaq() {
-  if (!faqToDelete.value) return;
+  if (!faqToDelete.value?.id) return;
   try {
     await faqService.deleteFaq(loading, faqToDelete.value.id);
     deleteConfirmDialog.value = false;
     await loadData();
   } catch (error) {
-    console.error("Fehler beim Löschen der FAQ", error);
+    console.debug("Fehler beim Löschen der FAQ", error);
   }
 }
 
-function copyFaqLink(faqId) {
+function copyFaqLink(faqId: number | null) {
   const url = `${window.location.origin}${window.location.pathname}#/help/${faqId}`;
   navigator.clipboard.writeText(url);
 }
 
-function scrollToFaq(faqId) {
+function scrollToFaq(routeFaqId: string | string[] | undefined) {
+  const faqId = Array.isArray(routeFaqId) ? routeFaqId[0] : routeFaqId;
   if (!faqId || faqs.value.length === 0) return;
 
   const targetFaq = faqs.value.find((f) => f.id === parseInt(faqId));
-  if (targetFaq) {
+  if (targetFaq?.id != null) {
     collapsed.value[targetFaq.id] = false;
     // Scroll zur FAQ nach kurzem Delay
     setTimeout(() => {

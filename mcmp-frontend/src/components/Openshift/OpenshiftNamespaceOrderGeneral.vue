@@ -51,7 +51,6 @@
 </template>
 
 <script setup lang="ts">
-import type AppserviceList from "@/types/AppserviceList.ts";
 import type OpenshiftNamespaceOrder from "@/types/OpenshiftNamespaceOrder.ts";
 
 import { computed, ref, watch } from "vue";
@@ -65,7 +64,9 @@ const order = defineModel<OpenshiftNamespaceOrder>("order", { required: true });
 const rules = useRules();
 const isValid = ref(false);
 const emit = defineEmits(["validation-change"]);
-const applicationServices = ref<AppserviceList[]>([]);
+const applicationServices = ref<
+  NonNullable<OpenshiftNamespaceOrder["appservice"]>[]
+>([]);
 const loading = ref(false);
 const search = ref("");
 const offset = ref(0);

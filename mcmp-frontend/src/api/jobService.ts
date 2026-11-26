@@ -19,7 +19,7 @@ export default {
     loading: Ref<boolean>,
     actionIdentifier: string,
     serverId: number,
-    awxExtraVars: Record<string, any> | null = null
+    awxExtraVars: Record<string, unknown> | null = null
   ): Promise<void> {
     loading.value = true;
     return fetch(

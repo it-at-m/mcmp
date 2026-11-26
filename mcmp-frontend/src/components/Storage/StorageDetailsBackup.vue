@@ -143,11 +143,11 @@ const policyTitles: Record<string, string> = {
 const policies = computed(() => {
   const prefix = policyPrefix.value;
   return [
-    { value: `${prefix}-6h`, title: policyTitles["6h"] },
-    { value: `${prefix}-24h`, title: policyTitles["24h"] },
-    { value: `${prefix}-24h4d`, title: policyTitles["24h4d"] },
-    { value: `${prefix}-24h7d`, title: policyTitles["24h7d"] },
-    { value: "none", title: policyTitles["none"] },
+    ...["6h", "24h", "24h4d", "24h7d"].map((suffix) => ({
+      value: `${prefix}-${suffix}`,
+      title: policyTitles[suffix] ?? suffix,
+    })),
+    { value: "none", title: policyTitles["none"] ?? "none" },
   ];
 });
 

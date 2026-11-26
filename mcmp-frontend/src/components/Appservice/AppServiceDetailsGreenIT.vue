@@ -46,15 +46,17 @@
           <v-tooltip location="top">
             <template #activator="{ props: tooltipProps }">
               <v-icon
-                  v-bind="tooltipProps"
-                  :icon="mdiLeaf"
-                  :color="cpuLeafColor"
-                  size="20"
-                  class="ml-2"
+                v-bind="tooltipProps"
+                :icon="mdiLeaf"
+                :color="cpuLeafColor"
+                size="20"
+                class="ml-2"
               />
             </template>
             <span class="text-caption">
-              Zum aktuellen Zeitpunkt maximal mögliche Einsparung inkl. ausgeschalteten Servern <br /> und Servern mit abgelehnten Green-IT Maßnahmen
+              Zum aktuellen Zeitpunkt maximal mögliche Einsparung inkl.
+              ausgeschalteten Servern <br />
+              und Servern mit abgelehnten Green-IT Maßnahmen
             </span>
           </v-tooltip>
         </h3>
@@ -103,15 +105,17 @@
           <v-tooltip location="top">
             <template #activator="{ props: tooltipProps }">
               <v-icon
-                  v-bind="tooltipProps"
-                  :icon="mdiLeaf"
-                  :color="ramLeafColor"
-                  size="20"
-                  class="ml-2"
+                v-bind="tooltipProps"
+                :icon="mdiLeaf"
+                :color="ramLeafColor"
+                size="20"
+                class="ml-2"
               />
             </template>
             <span class="text-caption">
-              Zum aktuellen Zeitpunkt maximal mögliche Einsparung inkl. ausgeschalteten Servern <br /> und Servern mit abgelehnten Green-IT Maßnahmen
+              Zum aktuellen Zeitpunkt maximal mögliche Einsparung inkl.
+              ausgeschalteten Servern <br />
+              und Servern mit abgelehnten Green-IT Maßnahmen
             </span>
           </v-tooltip>
         </h3>

@@ -57,6 +57,7 @@ const props = withDefaults(
     required: true,
     excludeLocked: true,
     editableOnly: false,
+    targetServerId: undefined,
   }
 );
 

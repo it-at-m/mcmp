@@ -50,7 +50,7 @@ export default {
   },
 
   deleteChangelog(loading: Ref<boolean>, id: number): Promise<void> {
-    return apiFetch<void>(
+    return apiFetch<undefined>(
       `${BASE_URL()}/${id}`,
       {
         method: "DELETE",

@@ -48,7 +48,7 @@ import CommonDialog from "@/components/common/CommonDialog.vue";
 
 const props = defineProps<{
   snapshot: Snapshot;
-  action: string;
+  action: "delete" | "revert";
   jobToCall: string;
 }>();
 

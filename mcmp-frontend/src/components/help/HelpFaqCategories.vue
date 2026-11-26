@@ -128,21 +128,29 @@
 </template>
 
 <script setup lang="ts">
+import type FaqCategory from "@/types/FaqCategory";
+import type { DataTableHeader } from "vuetify";
+
 import { mdiDelete, mdiPencil, mdiPlus } from "@mdi/js";
 import { onMounted, ref } from "vue";
 
 import faqCategoryService from "@/api/faqCategoryService";
 
 const loading = ref(false);
-const categories = ref([]);
+const categories = ref<FaqCategory[]>([]);
 const categoryDialog = ref(false);
 const deleteConfirmDialog = ref(false);
 
-const defaultCategory = { id: null, name: "", sortOrder: 0, description: "" };
-const editedCategory = ref({ ...defaultCategory });
-const categoryToDelete = ref(null);
+const defaultCategory: FaqCategory = {
+  id: null,
+  name: "",
+  sortOrder: 0,
+  description: "",
+};
+const editedCategory = ref<FaqCategory>({ ...defaultCategory });
+const categoryToDelete = ref<FaqCategory | null>(null);
 
-const categoryHeaders = [
+const categoryHeaders: DataTableHeader[] = [
   { title: "Name", key: "name" },
   { title: "Beschreibung", key: "description" },
   { title: "Sortierung", key: "sortOrder", width: "30px" },
@@ -153,11 +161,11 @@ async function loadCategories() {
   try {
     categories.value = await faqCategoryService.getAllCategories(loading);
   } catch (error) {
-    console.error("Fehler beim Laden der FAQ Kategorien", error);
+    console.debug("Fehler beim Laden der FAQ Kategorien", error);
   }
 }
 
-function openCategoryDialog(category = null) {
+function openCategoryDialog(category: FaqCategory | null = null) {
   if (category) {
     editedCategory.value = { ...category };
   } else {
@@ -180,24 +188,24 @@ async function saveCategory() {
     categoryDialog.value = false;
     await loadCategories();
   } catch (error) {
-    console.error("Fehler beim Speichern der Kategorie", error);
+    console.debug("Fehler beim Speichern der Kategorie", error);
   }
 }
 
-function confirmDeleteCategory(category) {
+function confirmDeleteCategory(category: FaqCategory) {
   categoryToDelete.value = category;
   deleteConfirmDialog.value = true;
 }
 
 async function deleteCategory() {
-  if (!categoryToDelete.value) return;
+  if (!categoryToDelete.value?.id) return;
   try {
     await faqCategoryService.deleteCategory(loading, categoryToDelete.value.id);
     deleteConfirmDialog.value = false;
     categoryToDelete.value = null;
     await loadCategories();
   } catch (error) {
-    console.error("Fehler beim Löschen der Kategorie", error);
+    console.debug("Fehler beim Löschen der Kategorie", error);
   }
 }
 

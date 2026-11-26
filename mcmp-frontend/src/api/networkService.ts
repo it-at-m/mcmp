@@ -1,5 +1,6 @@
 import type Network from "@/types/Network";
 import type NetworkGroup from "@/types/NetworkGroup";
+import type { NetworkGroupInput } from "@/types/NetworkGroup";
 import type { Ref } from "vue";
 
 import {
@@ -56,7 +57,7 @@ export default {
 
   updateNetworkGroup(
     loading: Ref<boolean>,
-    networkGroup: NetworkGroup
+    networkGroup: NetworkGroupInput
   ): Promise<void> {
     loading.value = true;
     return fetch(
@@ -77,7 +78,7 @@ export default {
 
   addNetworkGroup(
     loading: Ref<boolean>,
-    networkGroup: NetworkGroup
+    networkGroup: NetworkGroupInput
   ): Promise<void> {
     loading.value = true;
     return fetch(

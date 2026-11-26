@@ -36,23 +36,15 @@
       <v-col
         v-if="
           instlServerDetails.osType == 'Windows' &&
-          instlServerDetails.categoryType == 'Standard'
+          instlServerDetails.categoryType == 'Standard' &&
+          windowsStandardDisk
         "
       >
         <disk-size-input
-          v-model="
-            instlServerDetails.disk[OsType.Windows][categoryType.Standard][0]
-              .size
-          "
+          v-model="windowsStandardDisk.size"
           title="Größe Festplatte C:\"
-          :min-size-in-g-b="
-            instlServerDetails.disk[OsType.Windows][categoryType.Standard][0]
-              .min_size
-          "
-          :max-size-in-g-b="
-            instlServerDetails.disk[OsType.Windows][categoryType.Standard][0]
-              .max_size
-          "
+          :min-size-in-g-b="windowsStandardDisk.min_size"
+          :max-size-in-g-b="windowsStandardDisk.max_size"
         />
       </v-col>
       <v-col
@@ -139,6 +131,10 @@ import installServerDetails, {
 const instlServerDetails = defineModel<installServerDetails>(
   "instlServerDetails",
   { required: true }
+);
+const windowsStandardDisk = computed(
+  () =>
+    instlServerDetails.value.disk[OsType.Windows]?.[categoryType.Standard]?.[0]
 );
 const minMemory = computed(() =>
   ["OracleDB", "MSSQL"].includes(instlServerDetails.value.category?.label ?? "")

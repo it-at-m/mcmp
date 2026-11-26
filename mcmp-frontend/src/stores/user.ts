@@ -30,7 +30,7 @@ export const useUserStore = defineStore("user", () => {
     try {
       loginPage.value = await userService.getLoginPage(loading);
     } catch (error) {
-      console.error("Fehler beim Laden der Login-Page:", error);
+      console.debug("Fehler beim Laden der Login-Page:", error);
       loginPage.value = null;
     }
   }

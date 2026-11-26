@@ -152,6 +152,7 @@ import type Disk from "@/types/Disk";
 import type MountPoint from "@/types/MountPoint";
 import type Snapshot from "@/types/Snapshot.ts";
 import type { UnifiedStorageMountItem } from "@/types/UnifiedStorageMountItem.ts";
+import type { DataTableHeader } from "vuetify";
 
 import { mdiLock } from "@mdi/js";
 import { computed, ref } from "vue";
@@ -174,12 +175,12 @@ const props = defineProps<{
   snapshots: Snapshot[];
 }>();
 
-const headers = [
+const headers: DataTableHeader[] = [
   { title: "Device", key: "device", width: 50, align: "start" },
   { title: "Größe", key: "capacityInBytes", width: "64%", align: "center" },
 ];
 
-const mountHeaders = [
+const mountHeaders: DataTableHeader[] = [
   {
     title: "Pfad",
     key: "diskPath",
@@ -225,7 +226,7 @@ const mountHeaders = [
   },
 ];
 
-const shareMountHeaders = [
+const shareMountHeaders: DataTableHeader[] = [
   {
     title: "Pfad",
     key: "mountPoint",

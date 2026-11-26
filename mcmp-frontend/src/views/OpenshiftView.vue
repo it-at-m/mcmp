@@ -232,9 +232,8 @@ async function syncSelectionFromRoute(idParam: string | string[] | undefined) {
       {
         id: selectedDetail.value.id,
         name: selectedDetail.value.name,
-        clusterName: selectedDetail.value.clusterName,
-        environment: selectedDetail.value.environment,
-        appserviceName: selectedDetail.value.appservices[0]?.name ?? null,
+        clusterEnvironment: selectedDetail.value.clusterEnvironment ?? "",
+        isFavorite: false,
       },
     ];
   } catch {

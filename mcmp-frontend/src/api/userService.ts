@@ -34,7 +34,7 @@ export default {
   },
 
   updateAdminPermission(user: AdminUser, loading: Ref<boolean>): Promise<void> {
-    return apiFetch<void>(
+    return apiFetch<undefined>(
       `${getApiBase()}${USER_BASE}/admin`,
       putConfig(user),
       loading
@@ -42,7 +42,7 @@ export default {
   },
 
   setDarkMode(darkMode: boolean, loading: Ref<boolean>): Promise<void> {
-    return apiFetch<void>(
+    return apiFetch<undefined>(
       `${getApiBase()}${USER_BASE}/darkmode?darkMode=${darkMode}`,
       postConfig(undefined),
       loading
@@ -58,7 +58,7 @@ export default {
   },
 
   setLoginPage(loginPage: string, loading: Ref<boolean>): Promise<void> {
-    return apiFetch<void>(
+    return apiFetch<undefined>(
       `${getApiBase()}${USER_BASE}/loginpage?loginPage=${encodeURIComponent(loginPage)}`,
       { method: "PUT" },
       loading

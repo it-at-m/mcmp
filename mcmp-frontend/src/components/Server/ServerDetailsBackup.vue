@@ -300,7 +300,7 @@ const filteredBackups = computed(() => {
 function getBackupTypeFromServerName(serverName: string): string {
   const match = serverName.match(/(da|db|dh|dm|dp|ds|dy)([ckps])\d{3}.*/i);
   if (match) {
-    const backupTypeKey = match[1];
+    const backupTypeKey = match[1] ?? "";
     return backupTypeNames[backupTypeKey] || backupTypeKey;
   }
   return "Unbekannt"; // Fallback, falls kein Match gefunden wird

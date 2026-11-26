@@ -335,6 +335,8 @@ async function syncSelectionFromRoute(
         name: matchedStorage.name,
         type: matchedStorage.type,
         protocol: matchedStorage.protocol,
+        editable: matchedStorage.canEdit,
+        isFavorite: false,
       },
     ];
     const canonicalPath = `/storage/${matchedStorage.type}/${matchedStorage.uuid}`;

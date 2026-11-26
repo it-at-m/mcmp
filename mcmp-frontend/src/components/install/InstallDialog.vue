@@ -89,12 +89,7 @@
             v-model:instl-server-details="instlServerDetails"
           />
           <delete-schedule
-            v-else-if="
-              !(
-                instlServerDetails.categoryType === categoryType.DB ||
-                instlServerDetails.categoryType === categoryType.Mixed
-              ) && instlServerDetails.schedule
-            "
+            v-else-if="instlServerDetails.schedule"
             v-model:instl-server-details="instlServerDetails"
           />
           <install-summary
@@ -398,7 +393,7 @@ function order() {
     const json = JSON.parse(instlServerDetails.value.linuxCustomExtraVars);
     Object.assign(json, { linux_custom: true });
 
-    if (instlServerDetails.value.osType == OsType.Linux) {
+    if (action && instlServerDetails.value.osType == OsType.Linux) {
       jobService.startJob(loading, action, -1, { ...json, ...schedule });
       emit("order-done");
       close();
@@ -488,7 +483,7 @@ function order() {
       ram: instlServerDetails.value.memory,
       cpu: instlServerDetails.value.cpu,
       disks: instlServerDetails.value.categoryType
-        ? instlServerDetails.value.disk[OsType.Windows][
+        ? instlServerDetails.value.disk[OsType.Windows]?.[
             instlServerDetails.value.categoryType
           ]
         : undefined,
@@ -503,7 +498,9 @@ function order() {
           : null,
       ...schedule,
     };
-  } else {
+  }
+
+  if (!action || !json) {
     alert(
       "Für die ausgewählte Betriebssystemversion ist derzeit keine Bestellung möglich."
     );

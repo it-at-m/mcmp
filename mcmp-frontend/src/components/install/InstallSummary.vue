@@ -112,9 +112,9 @@
           </div>
           <br
             v-if="
-              instlServerDetails.disk[instlServerDetails.osType]?.[
+              (instlServerDetails.disk[instlServerDetails.osType]?.[
                 instlServerDetails.categoryType!
-              ]?.length > 1
+              ]?.length ?? 0) > 1
             "
           />
         </v-col>

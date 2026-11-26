@@ -151,9 +151,7 @@
           </template>
           <v-list>
             <v-list-item
-              v-for="ticket in anwendungsserviceSnowTickets.sort((a, b) =>
-                a.Name.localeCompare(b.Name)
-              )"
+              v-for="ticket in sortedSnowTickets"
               :key="ticket.Name"
             >
               <v-btn
@@ -244,4 +242,7 @@ const anwendungsserviceSnowTickets = [
     href: "https://it-services.muenchen.de/sp?id=sc_cat_item&sys_id=58f6edb71b77ec10e52dfddacd4bcb6c",
   },
 ];
+const sortedSnowTickets = [...anwendungsserviceSnowTickets].sort((a, b) =>
+  a.Name.localeCompare(b.Name)
+);
 </script>

@@ -3,7 +3,7 @@ import type { SnowConfig } from "@/types/SnowConfig";
 import type { TaggingAction } from "@/types/TaggingAction";
 
 export default class Action {
-  [key: string]: any;
+  [key: string]: unknown;
   constructor(
     public snowConfig: SnowConfig | null,
     public awxConfig: AwxConfig | null,

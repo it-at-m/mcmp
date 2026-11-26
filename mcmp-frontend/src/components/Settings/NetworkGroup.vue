@@ -26,7 +26,7 @@
       no-data-text="Keine Netzwerkgruppen gefunden"
       :sort-by="sortBy"
       show-expand
-      :expanded="expanded"
+      :expanded="expandedRows"
     >
       <template #item="{ item }">
         <tr
@@ -304,6 +304,7 @@ const networkFields = [
 ];
 
 const expanded = ref<number[]>([]);
+const expandedRows = computed(() => expanded.value as unknown as string[]);
 
 function toggleExpand(id: number) {
   const idx = expanded.value.indexOf(id);

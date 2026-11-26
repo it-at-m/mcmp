@@ -498,7 +498,7 @@ function exportCsv() {
   const date = new Date().toISOString().slice(0, 10);
   const filename = `nicht-verwaltete-vms_${date}.csv`;
 
-  downloadCsv(filename, buildCsv(items.value, csvColumns));
+  downloadCsv(filename, buildCsv(tableItems.value, csvColumns));
 }
 
 // Reload whenever filters are added, removed or reset.

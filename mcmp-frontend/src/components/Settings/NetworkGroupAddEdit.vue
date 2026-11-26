@@ -71,6 +71,7 @@
 
 <script setup lang="ts">
 import type NetworkGroup from "@/types/NetworkGroup.ts";
+import type { NetworkGroupInput } from "@/types/NetworkGroup.ts";
 
 import { mdiClose } from "@mdi/js";
 import { onMounted, ref } from "vue";
@@ -90,7 +91,7 @@ const ariaLabel = props.networkGroup
 const form = ref<HTMLFormElement>();
 const rules = useRules();
 const dialog = ref(false);
-const networkGroupTmp = ref<NetworkGroup>({
+const networkGroupTmp = ref<NetworkGroupInput>({
   id: props.networkGroup?.id || undefined,
   name: props.networkGroup?.name !== undefined ? props.networkGroup.name : "",
   application: props.networkGroup?.application || false,
@@ -100,7 +101,8 @@ const networkGroupTmp = ref<NetworkGroup>({
 });
 const selectedType = ref<"application" | "database" | "storage" | null>(null);
 
-const emit = defineEmits<(e: "save", networkGroup: NetworkGroup) => void>();
+const emit =
+  defineEmits<(e: "save", networkGroup: NetworkGroupInput) => void>();
 
 onMounted(() => {
   if (props.networkGroup) {

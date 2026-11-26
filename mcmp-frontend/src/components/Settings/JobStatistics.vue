@@ -79,7 +79,7 @@
         <tr :class="item.action === 'SUMME' ? 'sum-row' : ''">
           <td
             v-for="col in columns"
-            :key="col.key"
+            :key="col.key ?? undefined"
             :class="[
               col.key === 'totalJobs' ? 'total-jobs-cell' : '',
               col.key === 'changeRequired' ? 'text-center' : '',
@@ -230,7 +230,7 @@ function toggleSort(key: string) {
 }
 
 const headers = ref<DataTableHeader[]>([
-  { title: "Aktion", key: "action", align: "left", sortable: true },
+  { title: "Aktion", key: "action", align: "start", sortable: true },
   {
     title: "Change erforderlich",
     key: "changeRequired",
@@ -272,7 +272,6 @@ const headers = ref<DataTableHeader[]>([
     key: "totalJobs",
     align: "end",
     sortable: true,
-    cellClass: "total-jobs-cell",
   },
   {
     title: "AWX Status Failed",
@@ -332,7 +331,7 @@ onMounted(() => {
 
 function exportToCsv() {
   const columnOrder = headers.value.map((h) => h.key as string);
-  const columnTitles = headers.value.map((h) => h.title);
+  const columnTitles = headers.value.map((h) => h.title ?? "");
 
   const rows = sortedStatistics.value.map((item) =>
     columnOrder.map((key) => {

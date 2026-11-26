@@ -196,7 +196,6 @@ import { onMounted, onUnmounted, ref, watch } from "vue";
 
 import jobService from "@/api/jobService";
 import CommonDatePicker from "@/components/common/CommonDatePicker.vue";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import CommonHistory from "@/components/common/CommonHistory.vue";
 import LoadbalancerAutocompleteField from "@/components/common/LoadbalancerAutocompleteField.vue";
 import OpenshiftNamespaceAutocompleteField from "@/components/common/OpenshiftNamespaceAutocompleteField.vue";
@@ -221,7 +220,7 @@ const searchCreatedAtFrom = ref<string | null>(null);
 const searchCreatedAtTo = ref<string | null>(null);
 const searchChangeStartDateFrom = ref<string | null>(null);
 const searchChangeStartDateTo = ref<string | null>(null);
-const refreshInterval = ref<NodeJS.Timeout | null>(null);
+const refreshInterval = ref<ReturnType<typeof setInterval> | null>(null);
 const allActionIdentifiers = ref<string[]>([]);
 const allStatusIdentifiers = ref<string[]>([]);
 

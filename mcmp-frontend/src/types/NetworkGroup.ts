@@ -14,3 +14,5 @@ export default class NetworkGroup {
     public environment: EnvironmentType
   ) {}
 }
+
+export type NetworkGroupInput = Omit<NetworkGroup, "appservices" | "restrict">;

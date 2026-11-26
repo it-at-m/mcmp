@@ -123,35 +123,35 @@ export function useRules() {
             /MariaDB|PostgreSQL|MySQL|OracleDB/
           )
         ) {
-          return validateObject(
-            instlServerDetails.dbParams!.mariaPostgresMysqlOracle,
-            {
-              db_version: getDynamicRules(
-                "db_version",
-                instlServerDetails.category.label
-              ),
-              customer_db_name: getDynamicRules(
-                "customer_db_name",
-                instlServerDetails.category.label
-              ),
-              customer_db_user: getDynamicRules(
-                "customer_db_user",
-                instlServerDetails.category.label
-              ),
-              customer_db_schema: getDynamicRules(
-                "customer_db_schema",
-                instlServerDetails.category.label
-              ),
-              customer_db_charset: getDynamicRules(
-                "customer_db_charset",
-                instlServerDetails.category.label
-              ),
-              oracle_datasize: getDynamicRules(
-                "oracle_datasize",
-                instlServerDetails.category.label
-              ),
-            }
-          );
+          const dbParams =
+            instlServerDetails.dbParams?.mariaPostgresMysqlOracle;
+          if (!dbParams) return false;
+          return validateObject(dbParams, {
+            db_version: getDynamicRules(
+              "db_version",
+              instlServerDetails.category.label
+            ),
+            customer_db_name: getDynamicRules(
+              "customer_db_name",
+              instlServerDetails.category.label
+            ),
+            customer_db_user: getDynamicRules(
+              "customer_db_user",
+              instlServerDetails.category.label
+            ),
+            customer_db_schema: getDynamicRules(
+              "customer_db_schema",
+              instlServerDetails.category.label
+            ),
+            customer_db_charset: getDynamicRules(
+              "customer_db_charset",
+              instlServerDetails.category.label
+            ),
+            oracle_datasize: getDynamicRules(
+              "oracle_datasize",
+              instlServerDetails.category.label
+            ),
+          });
         }
         return !!instlServerDetails.category?.label.match(/MSSQL/);
 
@@ -199,10 +199,15 @@ export function useRules() {
       (value && value != "") || message;
   }
 
-  function validateObject(object: any, rules: Record<string, any[]>): boolean {
+  function validateObject(
+    object: object,
+    rules: Record<string, ((value: never) => unknown)[]>
+  ): boolean {
     return Object.entries(rules).every(([key, fieldRules]) => {
-      const value = object[key];
-      return fieldRules.every((rule) => rule(value) === true);
+      const value = (object as Record<string, unknown>)[key];
+      return fieldRules.every(
+        (rule) => (rule as (v: unknown) => unknown)(value) === true
+      );
     });
   }
 

@@ -302,8 +302,9 @@ function observeScroll() {
     if (!root || !scrollSentinel.value) return;
 
     observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !props.loading && props.hasMore) {
+      (entries) => {
+        const entry = entries[0];
+        if (entry?.isIntersecting && !props.loading && props.hasMore) {
           emit("loadMore");
         }
       },

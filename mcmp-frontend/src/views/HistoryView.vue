@@ -27,7 +27,7 @@ import CommonHistory from "@/components/common/CommonHistory.vue";
 
 const history = ref<JobList[]>([]);
 const loading = ref(false);
-const refreshInterval = ref<NodeJS.Timeout | null>(null);
+const refreshInterval = ref<ReturnType<typeof setInterval> | null>(null);
 const totalItems = ref(0);
 
 const currentPage = ref(1);

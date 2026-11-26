@@ -18,7 +18,7 @@
         v-if="!appStore.isReadOnly && !appStore.isLocked"
         nav
       >
-        <shop
+        <shop-menu
           rail-mode
           :collapsed="rail"
         />
@@ -155,11 +155,12 @@
         class="d-flex justify-center align-center py-2 text-center"
         style="color: rgba(0, 0, 0, 0.87) !important"
       >
-        <!-- eslint-disable-next-line vue/no-v-html -->
+        <!-- eslint-disable vue/no-v-html -->
         <span
           class="text-h6 font-weight-bold"
           v-html="appStore.maintenanceMessage"
         ></span>
+        <!-- eslint-enable vue/no-v-html -->
       </v-alert>
       <v-container
         fluid
@@ -185,13 +186,14 @@
                   The maintenance message is converted from Markdown to HTML and sanitized on the backend.
                   Using v-html is necessary here to render the formatted content (e.g., bold text, links).
                 -->
-                <!-- eslint-disable-next-line vue/no-v-html -->
+                <!-- eslint-disable vue/no-v-html -->
                 <div
                   v-html="
                     appStore.maintenanceMessage ||
                     'Die Anwendung befindet sich aktuell im Wartungsmodus.'
                   "
                 ></div>
+                <!-- eslint-enable vue/no-v-html -->
               </v-card-text>
               <v-card-actions class="justify-center">
                 <v-btn
@@ -266,7 +268,7 @@ import jobService from "@/api/jobService";
 import testenvService from "@/api/testenvService";
 import { getUser } from "@/api/user-client";
 import userService from "@/api/userService";
-import Shop from "@/components/shop/Shop.vue";
+import ShopMenu from "@/components/shop/ShopMenu.vue";
 import TheSnackbar from "@/components/TheSnackbar.vue";
 import UserMenu from "@/components/User/UserMenu.vue";
 import { useAppStore } from "@/stores/app";

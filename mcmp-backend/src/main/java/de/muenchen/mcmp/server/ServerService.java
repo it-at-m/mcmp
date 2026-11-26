@@ -74,6 +74,7 @@ public class ServerService {
                 osFilter.isNonOracle(),
                 osFilter.isUnmanaged(),
                 noAppservice,
+                osFilter.isVirtualAppliance(),
                 favorites,
                 sortBy,
                 sortOrder,

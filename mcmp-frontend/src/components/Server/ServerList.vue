@@ -1,194 +1,205 @@
 <template>
   <div class="server-list-container links">
     <scrollable-list-table
-      ref="tableRef"
-      :items="filteredServers"
-      :total-items="totalServers"
-      :loading="loadingServer"
-      :headers="headers"
-      :sort-by="sortBy"
-      :items-per-page="itemsPerPage"
-      :has-more="hasMore"
-      :search="search"
-      search-label="Server suchen..."
-      @update:sort-by="updateSortBy"
-      @update:search="onSearchUpdate"
-      @row-click="onRowClick"
-      @load-more="onLoadMore"
-      @row-keydown="onRowKeydown"
+        ref="tableRef"
+        :items="filteredServers"
+        :total-items="totalServers"
+        :loading="loadingServer"
+        :headers="headers"
+        :sort-by="sortBy"
+        :items-per-page="itemsPerPage"
+        :has-more="hasMore"
+        :search="search"
+        search-label="Server suchen..."
+        @update:sort-by="updateSortBy"
+        @update:search="onSearchUpdate"
+        @row-click="onRowClick"
+        @load-more="onLoadMore"
+        @row-keydown="onRowKeydown"
     >
       <template #[`header.status`]>
         <div class="header-container">
           <div class="filter-buttons">
             <!-- Filter-Symbol bleibt ganz links -->
             <v-badge
-              :model-value="hasActiveFilters"
-              dot
-              color="warning"
+                :model-value="hasActiveFilters"
+                dot
+                color="warning"
             >
               <v-menu :close-on-content-click="false">
                 <template #activator="{ props: activatorProps }">
                   <v-btn
-                    v-bind="activatorProps"
-                    icon
-                    size="x-small"
-                    variant="text"
-                    title="Filter anzeigen"
+                      v-bind="activatorProps"
+                      icon
+                      size="x-small"
+                      variant="text"
+                      title="Filter anzeigen"
                   >
                     <v-icon>{{ mdiFilterVariant }}</v-icon>
                   </v-btn>
                 </template>
                 <v-list
-                  density="compact"
-                  style="border-width: thin"
+                    density="compact"
+                    style="border-width: thin"
                 >
                   <v-list-subheader>Status</v-list-subheader>
                   <v-list-item
-                    density="compact"
-                    class="py-0"
+                      density="compact"
+                      class="py-0"
                   >
                     <v-checkbox
-                      v-model="statusFilter"
-                      label="On"
-                      value="poweredOn"
-                      hide-details
-                      density="compact"
+                        v-model="statusFilter"
+                        label="On"
+                        value="poweredOn"
+                        hide-details
+                        density="compact"
                     />
                   </v-list-item>
                   <v-list-item
-                    density="compact"
-                    class="py-0"
+                      density="compact"
+                      class="py-0"
                   >
                     <v-checkbox
-                      v-model="statusFilter"
-                      label="Off"
-                      value="poweredOff"
-                      hide-details
-                      density="compact"
+                        v-model="statusFilter"
+                        label="Off"
+                        value="poweredOff"
+                        hide-details
+                        density="compact"
                     />
                     <v-checkbox
-                      v-model="favoritesFilter"
-                      label="Favoriten"
-                      density="compact"
-                      hide-details
-                      color="primary"
+                        v-model="favoritesFilter"
+                        label="Favoriten"
+                        density="compact"
+                        hide-details
+                        color="primary"
                     />
                   </v-list-item>
                   <v-divider class="my-2" />
                   <v-list-subheader>Betriebssystem</v-list-subheader>
                   <v-radio-group
-                    v-model="osFilter"
-                    hide-details
-                    density="compact"
+                      v-model="osFilter"
+                      hide-details
+                      density="compact"
                   >
                     <v-list-item
-                      density="compact"
-                      class="py-0"
+                        density="compact"
+                        class="py-0"
                     >
                       <v-radio
-                        label="Alle"
-                        value=""
-                        hide-details
-                        density="compact"
+                          label="Alle"
+                          value=""
+                          hide-details
+                          density="compact"
                       />
                     </v-list-item>
                     <v-list-item
-                      density="compact"
-                      class="py-0"
+                        density="compact"
+                        class="py-0"
                     >
                       <v-radio
-                        label="Alle Windows"
-                        value="windows"
-                        hide-details
-                        density="compact"
+                          label="Alle Windows"
+                          value="windows"
+                          hide-details
+                          density="compact"
                       />
                     </v-list-item>
                     <v-list-item
-                      density="compact"
-                      class="py-0"
+                        density="compact"
+                        class="py-0"
                     >
                       <v-radio
-                        label="Managed Windows"
-                        value="mng-windows"
-                        hide-details
-                        density="compact"
+                          label="Managed Windows"
+                          value="mng-windows"
+                          hide-details
+                          density="compact"
                       />
                     </v-list-item>
                     <v-list-item
-                      density="compact"
-                      class="py-0"
+                        density="compact"
+                        class="py-0"
                     >
                       <v-radio
-                        label="Alle Linux"
-                        value="linux"
-                        hide-details
-                        density="compact"
+                          label="Alle Linux"
+                          value="linux"
+                          hide-details
+                          density="compact"
                       />
                     </v-list-item>
                     <v-list-item
-                      density="compact"
-                      class="py-0"
+                        density="compact"
+                        class="py-0"
                     >
                       <v-radio
-                        label="Managed Linux"
-                        value="mng-linux"
-                        hide-details
-                        density="compact"
+                          label="Managed Linux"
+                          value="mng-linux"
+                          hide-details
+                          density="compact"
                       />
                     </v-list-item>
                     <v-list-item
-                      density="compact"
-                      class="py-0"
+                        density="compact"
+                        class="py-0"
                     >
                       <v-radio
-                        label="Managed Oracle"
-                        value="oracle"
-                        hide-details
-                        density="compact"
+                          label="Managed Oracle"
+                          value="oracle"
+                          hide-details
+                          density="compact"
                       />
                     </v-list-item>
                     <v-list-item
-                      density="compact"
-                      class="py-0"
+                        density="compact"
+                        class="py-0"
                     >
                       <v-radio
-                        label="Managed Non-Oracle"
-                        value="non-oracle"
-                        hide-details
-                        density="compact"
+                          label="Managed Non-Oracle"
+                          value="non-oracle"
+                          hide-details
+                          density="compact"
                       />
                     </v-list-item>
                     <v-list-item
-                      density="compact"
-                      class="py-0"
+                        density="compact"
+                        class="py-0"
                     >
                       <v-radio
-                        label="Windows Clients"
-                        value="windows-client"
-                        hide-details
-                        density="compact"
+                          label="Windows Clients"
+                          value="windows-client"
+                          hide-details
+                          density="compact"
                       />
                     </v-list-item>
                     <v-list-item
-                      density="compact"
-                      class="py-0"
+                        density="compact"
+                        class="py-0"
                     >
                       <v-radio
-                        label="Unmanaged"
-                        value="unmanaged"
-                        hide-details
-                        density="compact"
+                          label="Unmanaged"
+                          value="unmanaged"
+                          hide-details
+                          density="compact"
                       />
                     </v-list-item>
                     <v-list-item
-                      density="compact"
-                      class="py-0"
+                        density="compact"
+                        class="py-0"
                     >
                       <v-radio
-                        label="Ohne Anwendungsservice"
-                        value="no-appservice"
-                        hide-details
+                          label="Ohne Anwendungsservice"
+                          value="no-appservice"
+                          hide-details
+                          density="compact"
+                      />
+                    </v-list-item>
+                    <v-list-item
                         density="compact"
+                        class="py-0"
+                    >
+                      <v-radio
+                          label="Virtual Appliances"
+                          value="virtual-appliance"
+                          hide-details
+                          density="compact"
                       />
                     </v-list-item>
                   </v-radio-group>
@@ -198,12 +209,12 @@
 
             <!-- X-Button rechts neben dem Filter-Button -->
             <v-btn
-              v-if="hasActiveFilters"
-              icon
-              size="x-small"
-              variant="text"
-              title="Filter zurücksetzen"
-              @click.stop="resetFilters"
+                v-if="hasActiveFilters"
+                icon
+                size="x-small"
+                variant="text"
+                title="Filter zurücksetzen"
+                @click.stop="resetFilters"
             >
               <v-icon size="18">{{ mdiClose }}</v-icon>
             </v-btn>
@@ -214,45 +225,45 @@
       <template #[`item.status`]="{ item }">
         <div class="server-status-cell">
           <v-btn
-            icon
-            variant="text"
-            density="compact"
-            :color="item.isFavorite ? 'warning' : 'grey-lighten-1'"
-            class="mr-1 ml-2"
-            tabindex="-1"
-            title="Favorit (Taste F, wenn Zeile fokussiert)"
-            @click.stop="toggleFavorite(item)"
+              icon
+              variant="text"
+              density="compact"
+              :color="item.isFavorite ? 'warning' : 'grey-lighten-1'"
+              class="mr-1 ml-2"
+              tabindex="-1"
+              title="Favorit (Taste F, wenn Zeile fokussiert)"
+              @click.stop="toggleFavorite(item)"
           >
             <v-icon>{{ item.isFavorite ? mdiStar : mdiStarOutline }}</v-icon>
           </v-btn>
           <div class="power-state-icon-inline">
             <v-icon
-              :color="
+                :color="
                 item.powerState === 'poweredOn'
                   ? 'btn_green'
                   : item.powerState === 'poweredOff'
                     ? 'btn_red'
                     : 'accent'
               "
-              size="25"
-              @mouseenter="onPowerStateIconHover($event, item)"
-              @mouseleave="onPowerStateIconLeave"
-              @focus="onPowerStateIconHover($event, item)"
-              @blur="onPowerStateIconLeave"
+                size="25"
+                @mouseenter="onPowerStateIconHover($event, item)"
+                @mouseleave="onPowerStateIconLeave"
+                @focus="onPowerStateIconHover($event, item)"
+                @blur="onPowerStateIconLeave"
             >
               {{
                 item.powerState === "poweredOn"
-                  ? mdiPlayCircle
-                  : item.powerState === "poweredOff"
-                    ? mdiStopCircle
-                    : mdiPauseCircle
+                    ? mdiPlayCircle
+                    : item.powerState === "poweredOff"
+                        ? mdiStopCircle
+                        : mdiPauseCircle
               }}
             </v-icon>
           </div>
           <os-cell
-            :os-full-name="item.os || ''"
-            size="small"
-            class="os-icon-inline"
+              :os-full-name="item.os || ''"
+              size="small"
+              class="os-icon-inline"
           />
         </div>
       </template>
@@ -261,17 +272,17 @@
         <div class="server-name-cell">
           <span class="server-name-text">{{ item.name.split(".")[0] }}</span>
           <v-tooltip
-            v-if="item.hasWarnings"
-            location="top"
-            text="Handlung erforderlich"
+              v-if="item.hasWarnings"
+              location="top"
+              text="Handlung erforderlich"
           >
             <template #activator="{ props: tooltipProps }">
               <v-icon
-                v-bind="tooltipProps"
-                :icon="mdiAlert"
-                color="orange"
-                size="20"
-                class="ml-1"
+                  v-bind="tooltipProps"
+                  :icon="mdiAlert"
+                  color="orange"
+                  size="20"
+                  class="ml-1"
               />
             </template>
           </v-tooltip>
@@ -283,15 +294,15 @@
         <v-row>
           <v-col>
             <v-alert
-              v-if="search && search.length > 0"
-              type="info"
+                v-if="search && search.length > 0"
+                type="info"
             >
               <h2>Keine Server gefunden</h2>
               <span>Bitte überprüfen Sie Ihre Filtereinstellungen</span>
             </v-alert>
             <v-alert
-              v-else
-              type="info"
+                v-else
+                type="info"
             >
               <h2>Keine Server verfügbar</h2>
               <span>
@@ -299,9 +310,9 @@
                 zugeordnet sind.<br />Weitere Informationen finden Sie
               </span>
               <a
-                :href="APPSERVICE_EXPLAIN_URL"
-                target="_blank"
-                >hier</a
+                  :href="APPSERVICE_EXPLAIN_URL"
+                  target="_blank"
+              >hier</a
               >
             </v-alert>
           </v-col>
@@ -310,9 +321,9 @@
     </scrollable-list-table>
 
     <v-tooltip
-      :model-value="!!powerStateTooltipActivator"
-      :activator="powerStateTooltipActivator"
-      :text="powerStateTooltipText"
+        :model-value="!!powerStateTooltipActivator"
+        :activator="powerStateTooltipActivator"
+        :text="powerStateTooltipText"
     />
   </div>
 </template>
@@ -349,7 +360,7 @@ const props = defineProps<{
 const initialUrlId = useRoute().params.id;
 
 const favoritesFilter = ref(
-  localStorage.getItem("mcmp_favorites_filter") === "true"
+    localStorage.getItem("mcmp_favorites_filter") === "true"
 );
 
 const powerStateTooltipActivator = ref<HTMLElement | undefined>(undefined);
@@ -389,7 +400,7 @@ const tableRef = ref<{
 } | null>(null);
 
 const statusFilter = ref<string[]>(
-  JSON.parse(localStorage.getItem("mcmp_status_filter") || "[]")
+    JSON.parse(localStorage.getItem("mcmp_status_filter") || "[]")
 );
 const osFilter = ref<string>(localStorage.getItem("mcmp_os_filter") || "");
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -409,9 +420,9 @@ const filteredServers = computed(() => servers.value);
 
 const hasActiveFilters = computed(() => {
   return (
-    statusFilter.value.length !== 0 ||
-    osFilter.value !== "" ||
-    favoritesFilter.value
+      statusFilter.value.length !== 0 ||
+      osFilter.value !== "" ||
+      favoritesFilter.value
   );
 });
 
@@ -438,7 +449,7 @@ function removeIfBeyondLoadedRange(server: ServerList) {
   if (!hasMore.value) return;
   const order = sortBy.value[0]?.order === "desc" ? -1 : 1;
   const nonFavorites = servers.value.filter(
-    (s) => !s.isFavorite && s.id !== server.id
+      (s) => !s.isFavorite && s.id !== server.id
   );
   if (nonFavorites.length === 0) return;
   const lastName = nonFavorites[nonFavorites.length - 1].name;
@@ -481,10 +492,10 @@ async function toggleFavorite(server: ServerList) {
 watch([statusFilter, osFilter, favoritesFilter], async () => {
   currentPage.value = 1;
   await loadServers(
-    1,
-    statusFilter.value,
-    osFilter.value,
-    favoritesFilter.value
+      1,
+      statusFilter.value,
+      osFilter.value,
+      favoritesFilter.value
   );
   await nextTick();
   tableRef.value?.triggerObserveScroll();
@@ -503,15 +514,15 @@ watch(osFilter, (newVal) => {
 });
 
 watch(
-  () => props.unActivateServerRow,
-  (newValue) => {
-    if (newValue) {
-      selectedRow.value = null;
-      emit("update:selected", []);
-      tableRef.value?.resetSelection();
-      emit("resetUnActivateServerRow");
+    () => props.unActivateServerRow,
+    (newValue) => {
+      if (newValue) {
+        selectedRow.value = null;
+        emit("update:selected", []);
+        tableRef.value?.resetSelection();
+        emit("resetUnActivateServerRow");
+      }
     }
-  }
 );
 
 function updateSortBy(newSortBy: { key: string; order: "asc" | "desc" }[]) {
@@ -531,27 +542,27 @@ function onSearchUpdate(val: string) {
 }
 
 watch(
-  () => props.initialSearch,
-  (val) => {
-    if (val !== undefined && val !== search.value) search.value = val;
-  }
+    () => props.initialSearch,
+    (val) => {
+      if (val !== undefined && val !== search.value) search.value = val;
+    }
 );
 
 async function onLoadMore() {
   currentPage.value++;
   await loadServers(
-    currentPage.value,
-    statusFilter.value,
-    osFilter.value,
-    favoritesFilter.value
+      currentPage.value,
+      statusFilter.value,
+      osFilter.value,
+      favoritesFilter.value
   );
 }
 
 async function loadServers(
-  page = 1,
-  status: string[] = [],
-  os = "",
-  favorites = false
+    page = 1,
+    status: string[] = [],
+    os = "",
+    favorites = false
 ) {
   loadingServer.value = true;
   const offset = (page - 1) * itemsPerPage.value;
@@ -561,15 +572,15 @@ async function loadServers(
 
   try {
     const res = await serverService.getVisibleServers(
-      loadingServer,
-      offset,
-      itemsPerPage.value,
-      currentSort.key,
-      currentSort.order,
-      search.value,
-      status,
-      os,
-      favorites
+        loadingServer,
+        offset,
+        itemsPerPage.value,
+        currentSort.key,
+        currentSort.order,
+        search.value,
+        status,
+        os,
+        favorites
     );
     if (page === 1) {
       servers.value = res.content;
@@ -580,20 +591,20 @@ async function loadServers(
     hasMore.value = servers.value.length < totalServers.value;
 
     const hasUrlId =
-      !!initialUrlId &&
-      (Array.isArray(initialUrlId) ? initialUrlId.length > 0 : true);
+        !!initialUrlId &&
+        (Array.isArray(initialUrlId) ? initialUrlId.length > 0 : true);
     const hasUrlAppId =
-      !!props.urlParamsAppId &&
-      (Array.isArray(props.urlParamsAppId)
-        ? props.urlParamsAppId.length > 0
-        : true);
+        !!props.urlParamsAppId &&
+        (Array.isArray(props.urlParamsAppId)
+            ? props.urlParamsAppId.length > 0
+            : true);
 
     if (
-      props.selected.length === 0 &&
-      servers.value.length > 0 &&
-      !hasUrlId &&
-      !hasUrlAppId &&
-      !selectedRow.value
+        props.selected.length === 0 &&
+        servers.value.length > 0 &&
+        !hasUrlId &&
+        !hasUrlAppId &&
+        !selectedRow.value
     ) {
       emit("update:selected", [servers.value[0]]);
     } else if (totalServers.value === 0) {
@@ -615,10 +626,10 @@ watch(search, () => {
     emit("update:search", search.value);
     currentPage.value = 1;
     await loadServers(
-      1,
-      statusFilter.value,
-      osFilter.value,
-      favoritesFilter.value
+        1,
+        statusFilter.value,
+        osFilter.value,
+        favoritesFilter.value
     );
     await nextTick();
     tableRef.value?.triggerObserveScroll();
@@ -632,10 +643,10 @@ onMounted(async () => {
     emit("update:selected", [{ id: parseInt(id) } as ServerList]);
   }
   await loadServers(
-    1,
-    statusFilter.value,
-    osFilter.value,
-    favoritesFilter.value
+      1,
+      statusFilter.value,
+      osFilter.value,
+      favoritesFilter.value
   );
 });
 

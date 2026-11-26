@@ -88,6 +88,7 @@ public interface ServerRepository extends JpaRepository<Server, Long> {
             AND (:nonOracle = FALSE OR s.role_non_oracle)
             AND (:unmanaged = FALSE OR s.managed = FALSE)
             AND (:noAppservice = FALSE OR NOT EXISTS (SELECT 1 FROM cmp.server_assignment sa_none WHERE sa_none.server_id = s.id))
+            AND (:virtualAppliance = FALSE OR s.virtual_appliance = TRUE)
         )AND (:favorites = FALSE OR EXISTS (
               SELECT 1 FROM cmp.user_favorite_server ufs
               JOIN cmp.user u_fav ON ufs.user_id = u_fav.id
@@ -138,6 +139,7 @@ public interface ServerRepository extends JpaRepository<Server, Long> {
             AND (:nonOracle = FALSE OR s.role_non_oracle)
             AND (:unmanaged = FALSE OR s.managed = FALSE)
             AND (:noAppservice = FALSE OR NOT EXISTS (SELECT 1 FROM cmp.server_assignment sa_none WHERE sa_none.server_id = s.id))
+            AND (:virtualAppliance = FALSE OR s.virtual_appliance = TRUE)
     )AND (:favorites = FALSE OR EXISTS (
                              SELECT 1 FROM cmp.user_favorite_server ufs
                              JOIN cmp.user u_fav ON ufs.user_id = u_fav.id
@@ -165,10 +167,13 @@ public interface ServerRepository extends JpaRepository<Server, Long> {
                                         @Param("nonOracle") boolean nonOracle,
                                         @Param("unmanaged") boolean unmanaged,
                                         @Param("noAppservice") boolean noAppservice,
+                                        @Param("virtualAppliance") boolean virtualAppliance,
                                         @Param("favorites") boolean favorites,
                                         @Param("sortBy") String sortBy,
                                         @Param("sortOrder") String sortOrder,
                                         Pageable pageable);
+
+
     @Modifying
     @Query(value = """
         INSERT INTO cmp.user_favorite_server (user_id, server_id)

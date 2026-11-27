@@ -252,7 +252,7 @@ watch(searchText, () => {
 function onUpdateOptions(options: {
   page: number;
   itemsPerPage: number;
-  sortBy: Array<{ key: string; order: "asc" | "desc" }>;
+  sortBy: { key: string; order: "asc" | "desc" }[];
 }) {
   currentPage.value = options.page;
   itemsPerPage.value = options.itemsPerPage;
@@ -365,7 +365,7 @@ async function copyEmailsToClipboard() {
       color: "success",
     };
   } catch (err) {
-    console.error("Fehler beim Kopieren der E-Mail-Adressen:", err);
+    console.debug("Fehler beim Kopieren der E-Mail-Adressen:", err);
     snackbar.value = {
       show: true,
       text: "Fehler beim Kopieren in die Zwischenablage.",

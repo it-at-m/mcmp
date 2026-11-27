@@ -10,9 +10,9 @@
     @dialog-cancel="close"
     @dialog-confirm="save"
   >
-    <template #activator="{ props }">
+    <template #activator="{ props: activatorProps }">
       <v-btn
-        v-bind="props"
+        v-bind="activatorProps"
         icon
         variant="flat"
         aria-label="Zeit für zukünftige Patchnight anpassen"
@@ -53,9 +53,6 @@ import { mdiPencil } from "@mdi/js";
 import { inject, ref, watch } from "vue";
 
 import CommonDialog from "@/components/common/CommonDialog.vue";
-import { useFormatter } from "@/composables/formatter.js";
-
-const formatter = useFormatter();
 
 const props = defineProps<{
   selectedServer: Server;

@@ -28,7 +28,7 @@
 
     <v-card
       v-for="entry in changelogs"
-      :key="entry.id"
+      :key="entry.id ?? undefined"
       outlined
       border
       elevation="2"
@@ -85,10 +85,13 @@
       </v-card-title>
       <v-divider></v-divider>
       <v-card-text>
+        <!-- Changelog-Inhalte werden nur von Admins gepflegt und als HTML gerendert -->
+        <!-- eslint-disable vue/no-v-html -->
         <div
           class="changelog-content"
           v-html="entry.contentHtml || entry.contentMarkdown"
         ></div>
+        <!-- eslint-enable vue/no-v-html -->
       </v-card-text>
     </v-card>
 
@@ -163,7 +166,9 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import type Changelog from "@/types/Changelog";
+
 import { mdiDelete, mdiPencil, mdiPlus } from "@mdi/js";
 import { onMounted, ref } from "vue";
 
@@ -179,20 +184,20 @@ defineProps({
 
 const { formatToBerlinDate } = useFormatter();
 const loading = ref(false);
-const changelogs = ref([]);
+const changelogs = ref<Changelog[]>([]);
 const editDialog = ref(false);
 const currentPage = ref(1);
 const totalPages = ref(0);
 const itemsPerPage = 5;
 
-const defaultEntry = {
+const defaultEntry: Changelog = {
   id: null,
   appVersion: "",
   contentMarkdown: "",
   isPublished: false,
   createdAt: new Date().toISOString().substr(0, 10),
 };
-const editedEntry = ref({ ...defaultEntry });
+const editedEntry = ref<Changelog>({ ...defaultEntry });
 
 async function loadChangelogs() {
   try {
@@ -207,14 +212,15 @@ async function loadChangelogs() {
       totalPages.value = response.page.totalPages || 0;
     } else {
       changelogs.value = response.content || [];
-      totalPages.value = response.totalPages || 0;
+      // ältere Antwortform ohne "page"-Objekt
+      totalPages.value = (response as { totalPages?: number }).totalPages || 0;
     }
   } catch (error) {
-    console.error("Fehler beim Laden der Changelogs", error);
+    console.debug("Fehler beim Laden der Changelogs", error);
   }
 }
 
-function openEditDialog(entry = null) {
+function openEditDialog(entry: Changelog | null = null) {
   if (entry) {
     const datePart = entry.createdAt
       ? entry.createdAt.split("T")[0]
@@ -244,17 +250,17 @@ async function saveEntry() {
     editDialog.value = false;
     await loadChangelogs();
   } catch (error) {
-    console.error("Fehler beim Speichern", error);
+    console.debug("Fehler beim Speichern", error);
   }
 }
 
-async function deleteEntry(id) {
-  if (confirm("Möchten Sie diesen Eintrag wirklich löschen?")) {
+async function deleteEntry(id: number | null) {
+  if (id !== null && confirm("Möchten Sie diesen Eintrag wirklich löschen?")) {
     try {
       await changelogService.deleteChangelog(loading, id);
       await loadChangelogs();
     } catch (error) {
-      console.error("Fehler beim Löschen", error);
+      console.debug("Fehler beim Löschen", error);
     }
   }
 }

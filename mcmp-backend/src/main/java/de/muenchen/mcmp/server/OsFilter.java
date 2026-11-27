@@ -12,6 +12,7 @@ public class OsFilter {
     private final boolean oracle;
     private final boolean nonOracle;
     private final boolean unmanaged;
+    private final boolean virtualAppliance;
 
     public OsFilter(final String os) {
         this.linux = "linux".equalsIgnoreCase(os);
@@ -22,6 +23,6 @@ public class OsFilter {
         this.oracle = "oracle".equalsIgnoreCase(os);
         this.nonOracle = "non-oracle".equalsIgnoreCase(os);
         this.unmanaged = "unmanaged".equalsIgnoreCase(os);
-
+        this.virtualAppliance = "virtual-appliance".equalsIgnoreCase(os);
     }
 }

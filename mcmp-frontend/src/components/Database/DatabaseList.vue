@@ -37,9 +37,8 @@ import { ref } from "vue";
 import ScrollableListTable from "@/components/common/ScrollableListTable.vue";
 import { databaseListItems } from "@/components/Database/databaseDummyData";
 
-const emit = defineEmits<{
-  (e: "update:selected", item: DatabaseListItem | null): void;
-}>();
+const emit =
+  defineEmits<(e: "update:selected", item: DatabaseListItem | null) => void>();
 
 const search = ref("");
 const sortBy = ref<{ key: string; order: "asc" | "desc" }[]>([

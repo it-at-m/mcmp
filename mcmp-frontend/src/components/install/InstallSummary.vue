@@ -75,6 +75,7 @@
         <div
           v-for="(value, key) in instlServerDetails.dbParams
             ?.mariaPostgresMysqlOracle"
+          :key="key"
         >
           <v-row>
             <v-col
@@ -105,14 +106,15 @@
             v-for="diskConf in instlServerDetails.disk[
               instlServerDetails.osType
             ]?.[instlServerDetails.categoryType!]"
+            :key="diskConf.label"
           >
             {{ diskConf.label }}: {{ diskConf.size }} GB
           </div>
           <br
             v-if="
-              instlServerDetails.disk[instlServerDetails.osType]?.[
+              (instlServerDetails.disk[instlServerDetails.osType]?.[
                 instlServerDetails.categoryType!
-              ]?.length > 1
+              ]?.length ?? 0) > 1
             "
           />
         </v-col>
@@ -165,22 +167,24 @@ import Appservice from "@/types/Appservice.ts";
 import installServerDetails, {
   categoryType,
   OsType,
+  OsVersion,
 } from "@/types/installServerDetails.ts";
 
 const userStore = useUserStore();
-const props = defineProps<{
-  instlServerDetails: installServerDetails;
-}>();
+const instlServerDetails = defineModel<installServerDetails>(
+  "instlServerDetails",
+  { required: true }
+);
 const formatter = useFormatter();
 const jsonError = ref("");
 const loading = ref(false);
 
 watch(
-  () => props.instlServerDetails.isLinuxCustom,
+  () => instlServerDetails.value.isLinuxCustom,
   (isChecked) => {
     if (isChecked) {
-      const copy = JSON.parse(JSON.stringify(props.instlServerDetails));
-      const selectedApplications = props.instlServerDetails
+      const copy = JSON.parse(JSON.stringify(instlServerDetails.value));
+      const selectedApplications = instlServerDetails.value
         .selectedApplications()
         .map((app) => app.label);
 
@@ -221,7 +225,18 @@ watch(
       delete copy.networkGroup;
       Object.assign(copy, { fqdn: copy.expectedServerName });
       delete copy.expectedServerName;
-      Object.assign(copy, { os_name: "rhel" });
+
+      switch (instlServerDetails.value.osVersion) {
+        case OsVersion.RHEL10:
+        case OsVersion.RHEL9:
+          Object.assign(copy, { os_name: "rhel" });
+          break;
+        case OsVersion.ALMA10:
+        case OsVersion.ALMA9:
+          Object.assign(copy, { os_name: "alma" });
+          break;
+      }
+
       // get only number from copy.osVersion
       Object.assign(copy, { os_version: copy.osVersion.match(/\d+/)?.[0] });
       delete copy.osVersion;
@@ -248,7 +263,7 @@ watch(
         })
         .finally(() => {
           // String initial setzen
-          props.instlServerDetails.linuxCustomExtraVars = JSON.stringify(
+          instlServerDetails.value.linuxCustomExtraVars = JSON.stringify(
             copy,
             null,
             2
@@ -257,16 +272,16 @@ watch(
         });
     } else {
       // Reset wenn deaktiviert
-      props.instlServerDetails.linuxCustomExtraVars = "";
+      instlServerDetails.value.linuxCustomExtraVars = "";
       jsonError.value = "";
     }
   }
 );
 
 watch(
-  () => props.instlServerDetails.linuxCustomExtraVars,
+  () => instlServerDetails.value.linuxCustomExtraVars,
   (newVal) => {
-    if (!props.instlServerDetails.isLinuxCustom) return;
+    if (!instlServerDetails.value.isLinuxCustom) return;
 
     if (!newVal.trim()) {
       jsonError.value = "";

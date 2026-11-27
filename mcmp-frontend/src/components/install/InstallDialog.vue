@@ -8,6 +8,8 @@
     :check-for-enabled-actions="[
       'LINUX_RHEL9_SERVER',
       'LINUX_RHEL10_SERVER',
+      // 'LINUX_ALMA9_SERVER',
+      // 'LINUX_ALMA10_SERVER',
       'WINDOWS_SERVER_2025',
       'WINDOWS_SERVER_2022',
     ]"
@@ -41,7 +43,7 @@
     >
       <template #item.1>
         <div style="min-height: 500px">
-          <general-settings :instl-server-details="instlServerDetails" />
+          <general-settings v-model:instl-server-details="instlServerDetails" />
         </div>
       </template>
 
@@ -56,7 +58,7 @@
           />
           <server-name
             v-else
-            :instl-server-details="instlServerDetails"
+            v-model:instl-server-details="instlServerDetails"
           />
         </div>
       </template>
@@ -68,11 +70,11 @@
               instlServerDetails.categoryType === categoryType.DB ||
               instlServerDetails.categoryType === categoryType.Mixed
             "
-            :instl-server-details="instlServerDetails"
+            v-model:instl-server-details="instlServerDetails"
           />
           <hardware-settings
             v-else
-            :instl-server-details="instlServerDetails"
+            v-model:instl-server-details="instlServerDetails"
           />
         </div>
       </template>
@@ -84,20 +86,15 @@
               instlServerDetails.categoryType === categoryType.DB ||
               instlServerDetails.categoryType === categoryType.Mixed
             "
-            :instl-server-details="instlServerDetails"
+            v-model:instl-server-details="instlServerDetails"
           />
           <delete-schedule
-            v-else-if="
-              !(
-                instlServerDetails.categoryType === categoryType.DB ||
-                instlServerDetails.categoryType === categoryType.Mixed
-              ) && instlServerDetails.schedule
-            "
-            :instl-server-details="instlServerDetails"
+            v-else-if="instlServerDetails.schedule"
+            v-model:instl-server-details="instlServerDetails"
           />
           <install-summary
             v-else
-            :instl-server-details="instlServerDetails"
+            v-model:instl-server-details="instlServerDetails"
           />
         </div>
       </template>
@@ -110,11 +107,11 @@
                 instlServerDetails.categoryType === categoryType.Mixed) &&
               instlServerDetails.schedule
             "
-            :instl-server-details="instlServerDetails"
+            v-model:instl-server-details="instlServerDetails"
           />
           <install-summary
             v-else
-            :instl-server-details="instlServerDetails"
+            v-model:instl-server-details="instlServerDetails"
           />
         </div>
       </template>
@@ -123,12 +120,12 @@
         <div style="min-height: 500px">
           <install-summary
             v-if="instlServerDetails.schedule"
-            :instl-server-details="instlServerDetails"
+            v-model:instl-server-details="instlServerDetails"
           />
         </div>
       </template>
 
-      <template #actions="{ next, prev }">
+      <template #actions="{ prev }">
         <div class="d-flex justify-space-between w-100 mt-4 mb-4 px-4">
           <v-btn
             :prepend-icon="mdiArrowLeft"
@@ -188,9 +185,7 @@ const props = defineProps<{
   appservice?: Appservice | null;
 }>();
 
-const emit = defineEmits<{
-  (e: "order-done"): void;
-}>();
+const emit = defineEmits<(e: "order-done") => void>();
 
 const validationRules = useRules();
 const userStore = useUserStore();
@@ -352,6 +347,35 @@ function createDefaultInstallServerDetails(): installServerDetails {
   return details;
 }
 
+function getAction() {
+  switch (instlServerDetails.value.osType) {
+    case OsType.Linux:
+      switch (instlServerDetails.value.osVersion) {
+        case OsVersion.RHEL10:
+          return "LINUX_RHEL10_SERVER";
+        case OsVersion.RHEL9:
+          return "LINUX_RHEL9_SERVER";
+        case OsVersion.ALMA10:
+          return "LINUX_ALMA10_SERVER";
+        case OsVersion.ALMA9:
+          return "LINUX_ALMA9_SERVER";
+        default:
+          return null;
+      }
+    case OsType.Windows:
+      switch (instlServerDetails.value.osVersion) {
+        case OsVersion.Windows2025:
+          return "WINDOWS_SERVER_2025";
+        case OsVersion.Windows2022:
+          return "WINDOWS_SERVER_2022";
+        default:
+          return null;
+      }
+    default:
+      return null;
+  }
+}
+
 function order() {
   let schedule = {};
   if (instlServerDetails.value.schedule) {
@@ -365,30 +389,12 @@ function order() {
     instlServerDetails.value.isLinuxCustom &&
     userStore.getUser?.authorities?.includes("ROLE_LINUX")
   ) {
+    const action = getAction();
     const json = JSON.parse(instlServerDetails.value.linuxCustomExtraVars);
-
     Object.assign(json, { linux_custom: true });
 
-    if (
-      instlServerDetails.value.osType == OsType.Linux &&
-      instlServerDetails.value.osVersion == OsVersion.RHEL10
-    ) {
-      jobService.startJob(loading, "LINUX_RHEL10_SERVER", -1, {
-        ...json,
-        ...schedule,
-      });
-      emit("order-done");
-      close();
-      return;
-    }
-    if (
-      instlServerDetails.value.osType == OsType.Linux &&
-      instlServerDetails.value.osVersion == OsVersion.RHEL9
-    ) {
-      jobService.startJob(loading, "LINUX_RHEL9_SERVER", -1, {
-        ...json,
-        ...schedule,
-      });
+    if (action && instlServerDetails.value.osType == OsType.Linux) {
+      jobService.startJob(loading, action, -1, { ...json, ...schedule });
       emit("order-done");
       close();
       return;
@@ -405,7 +411,12 @@ function order() {
     return;
   }
 
-  let serverType = instlServerDetails.value.serverName!.serverType;
+  const serverName = instlServerDetails.value.serverName;
+  if (serverName == null) {
+    return;
+  }
+
+  let serverType = serverName.serverType;
   if (
     instlServerDetails.value.category &&
     "kenner" in instlServerDetails.value.category &&
@@ -418,55 +429,27 @@ function order() {
   }
 
   if (serverType.length == 0) {
-    if (OperatingSystem.Linux.includes(instlServerDetails.value.osVersion!)) {
+    const osVersion = instlServerDetails.value.osVersion ?? "";
+    if (OperatingSystem.Linux.includes(osVersion)) {
       serverType = serverType + "lx";
-    } else if (
-      OperatingSystem.Windows.includes(instlServerDetails.value.osVersion!)
-    ) {
+    } else if (OperatingSystem.Windows.includes(osVersion)) {
       serverType = serverType + "wi";
     } else {
-      console.error("OsVersion is not in linux or windows.");
+      console.debug("OsVersion is not in linux or windows.");
       return;
     }
   }
-  instlServerDetails.value.serverName!.prefix =
-    instlServerDetails.value.serverName!.prefix || "";
-  instlServerDetails.value.serverName!.serverType = serverType;
+  serverName.prefix = serverName.prefix || "";
+  serverName.serverType = serverType;
 
   const applicationLabels = instlServerDetails.value
     .selectedApplications()
     .map((app) => app.label);
 
-  // 1. RHEL 10
-  if (
-    instlServerDetails.value.osType == OsType.Linux &&
-    instlServerDetails.value.osVersion == OsVersion.RHEL10
-  ) {
-    jobService.startJob(loading, "LINUX_RHEL10_SERVER", -1, {
-      fqdn: instlServerDetails.value.serverName,
-      categoryType: instlServerDetails.value.categoryType,
-      serverType: instlServerDetails.value.category,
-      applications: applicationLabels,
-      ram: instlServerDetails.value.memory,
-      cpu: instlServerDetails.value.cpu,
-      network_group_id: instlServerDetails.value.networkGroup.id,
-      application_service_id: instlServerDetails.value.appservice.id,
-      db_params:
-        instlServerDetails.value.categoryType == categoryType.DB ||
-        instlServerDetails.value.categoryType == categoryType.Mixed
-          ? instlServerDetails.value.dbParams
-          : null,
-      non_postgres_reason: instlServerDetails.value.nonPostgresReason,
-      middleware_user: instlServerDetails.value.middlewareUser,
-      ...schedule,
-    });
-  }
-  // 2. RHEL 9
-  else if (
-    instlServerDetails.value.osType == OsType.Linux &&
-    instlServerDetails.value.osVersion == OsVersion.RHEL9
-  ) {
-    jobService.startJob(loading, "LINUX_RHEL9_SERVER", -1, {
+  const action = getAction();
+  let json;
+  if (instlServerDetails.value.osType == OsType.Linux) {
+    json = {
       fqdn: instlServerDetails.value.serverName,
       categoryType: instlServerDetails.value.categoryType,
       serverType: instlServerDetails.value.category,
@@ -482,23 +465,28 @@ function order() {
           : null,
       non_postgres_reason: instlServerDetails.value.nonPostgresReason,
       ...schedule,
-    });
-  }
-  // 3. Windows Server 2022
-  else if (
-    instlServerDetails.value.osType == OsType.Windows &&
-    instlServerDetails.value.osVersion == OsVersion.Windows2022
-  ) {
-    jobService.startJob(loading, "WINDOWS_SERVER_2022", -1, {
+    };
+
+    if (
+      instlServerDetails.value.osVersion == OsVersion.RHEL10 ||
+      instlServerDetails.value.osVersion == OsVersion.ALMA10
+    ) {
+      Object.assign(json, {
+        middleware_user: instlServerDetails.value.middlewareUser,
+      });
+    }
+  } else if (instlServerDetails.value.osType == OsType.Windows) {
+    json = {
       fqdn: instlServerDetails.value.serverName,
       categoryType: instlServerDetails.value.categoryType,
       serverType: instlServerDetails.value.category,
       ram: instlServerDetails.value.memory,
       cpu: instlServerDetails.value.cpu,
-      disks:
-        instlServerDetails.value.disk[OsType.Windows][
-          instlServerDetails.value.categoryType!
-        ],
+      disks: instlServerDetails.value.categoryType
+        ? instlServerDetails.value.disk[OsType.Windows]?.[
+            instlServerDetails.value.categoryType
+          ]
+        : undefined,
       network_group_id: instlServerDetails.value.networkGroup.id,
       application_service_id: instlServerDetails.value.appservice.id,
       osVersion: instlServerDetails.value.osVersion,
@@ -509,41 +497,17 @@ function order() {
           ? instlServerDetails.value.dbParams
           : null,
       ...schedule,
-    });
+    };
   }
-  // 4. Windows Server 2025
-  else if (
-    instlServerDetails.value.osType == OsType.Windows &&
-    instlServerDetails.value.osVersion == OsVersion.Windows2025
-  ) {
-    jobService.startJob(loading, "WINDOWS_SERVER_2025", -1, {
-      fqdn: instlServerDetails.value.serverName,
-      categoryType: instlServerDetails.value.categoryType,
-      serverType: instlServerDetails.value.category,
-      ram: instlServerDetails.value.memory,
-      cpu: instlServerDetails.value.cpu,
-      disks:
-        instlServerDetails.value.disk[OsType.Windows][
-          instlServerDetails.value.categoryType!
-        ],
-      network_group_id: instlServerDetails.value.networkGroup.id,
-      application_service_id: instlServerDetails.value.appservice.id,
-      osVersion: instlServerDetails.value.osVersion,
-      non_postgres_reason: instlServerDetails.value.nonPostgresReason,
-      db_params:
-        instlServerDetails.value.categoryType == categoryType.DB ||
-        instlServerDetails.value.categoryType == categoryType.Mixed
-          ? instlServerDetails.value.dbParams
-          : null,
-      ...schedule,
-    });
-  } else {
+
+  if (!action || !json) {
     alert(
       "Für die ausgewählte Betriebssystemversion ist derzeit keine Bestellung möglich."
     );
     return;
   }
 
+  jobService.startJob(loading, action, -1, json);
   emit("order-done");
   close();
 }

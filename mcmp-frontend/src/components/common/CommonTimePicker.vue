@@ -47,13 +47,15 @@
 </template>
 
 <script setup lang="ts">
+import type { ValidationRule } from "vuetify";
+
 import { mdiChevronDown, mdiChevronUp } from "@mdi/js";
 import { computed, ref, watch } from "vue";
 
 const props = defineProps<{
   lableText: string;
-  timeRules?: any[];
-  dateRules?: any[];
+  timeRules?: ValidationRule[];
+  dateRules?: ValidationRule[];
   rawDateIn: Date;
   round?: boolean;
   withButtons?: boolean;
@@ -126,9 +128,9 @@ function roundTimeToHalfHour(time: string) {
 function increase() {
   if (!time.value) return "";
   // Parse time with default values to prevent undefined
-  let [hours = 0, minutes = 0] = time.value.split(":").map(Number);
+  const [hours = 0, currentMinutes = 0] = time.value.split(":").map(Number);
 
-  minutes += 1;
+  const minutes = currentMinutes + 1;
 
   // Zeit wieder als String formatieren (z. B. "09:00")
   const h = String(hours).padStart(2, "0");

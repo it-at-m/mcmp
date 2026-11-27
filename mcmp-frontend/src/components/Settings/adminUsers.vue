@@ -68,6 +68,7 @@
 
 <script setup lang="ts">
 import type { AdminUser } from "@/types/AdminUser";
+import type { DataTableHeader } from "vuetify";
 
 import { mdiClose, mdiDelete, mdiPlus } from "@mdi/js";
 import { onMounted, ref } from "vue";
@@ -89,7 +90,7 @@ onMounted(() => {
   getAdminUsers();
 });
 
-const headers = [
+const headers: DataTableHeader[] = [
   { title: "Loginname", key: "username" },
   { title: "Abteilung", key: "department" },
   { title: "Löschen", key: "edit", sortable: false, align: "end" },

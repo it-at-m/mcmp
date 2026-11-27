@@ -140,7 +140,7 @@
             v-if="isAdmin"
             value="Actions"
           >
-            <actions />
+            <action-list />
           </v-tabs-window-item>
 
           <v-tabs-window-item
@@ -161,7 +161,7 @@
             v-if="false"
             value="Price"
           >
-            <prices />
+            <price-list />
           </v-tabs-window-item>
 
           <v-tabs-window-item
@@ -252,7 +252,7 @@ import {
 import { computed, nextTick, onMounted, provide, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 
-import Actions from "@/components/Settings/actions.vue";
+import ActionList from "@/components/Settings/ActionList.vue";
 import AdminHistory from "@/components/Settings/AdminHistory.vue";
 import adminUsers from "@/components/Settings/adminUsers.vue";
 import AppConfig from "@/components/Settings/appConfig.vue";
@@ -262,7 +262,7 @@ import IntegrationSettings from "@/components/Settings/IntegrationSettings.vue";
 import JobStatistics from "@/components/Settings/JobStatistics.vue";
 import NetworkGroup from "@/components/Settings/NetworkGroup.vue";
 import PatchnightStatus from "@/components/Settings/PatchnightStatus.vue";
-import Prices from "@/components/Settings/Prices.vue";
+import PriceList from "@/components/Settings/PriceList.vue";
 import UnmanagedServer from "@/components/Settings/UnmanagedServer.vue";
 import UnmappedForemanHosts from "@/components/Settings/UnmappedForemanHosts.vue";
 import UserHistory from "@/components/Settings/UserHistory.vue";

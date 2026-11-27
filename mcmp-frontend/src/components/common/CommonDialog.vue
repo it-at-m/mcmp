@@ -6,10 +6,10 @@
     class="modern-dialog"
     @keyup.esc="onDialogCancel()"
   >
-    <template #activator="{ props }">
+    <template #activator="{ props: activatorProps }">
       <slot
         name="activator"
-        :props="props"
+        :props="activatorProps"
       />
     </template>
     <v-card
@@ -198,6 +198,11 @@ const props = withDefaults(
     closeAncestorMenusOnOpen?: boolean;
   }>(),
   {
+    title: undefined,
+    icon: undefined,
+    color: undefined,
+    maxWidth: undefined,
+    checkForEnabledActions: undefined,
     closeAncestorMenusOnOpen: true,
   }
 );

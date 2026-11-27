@@ -11,9 +11,9 @@
     @dialog-cancel="close"
     @dialog-confirm="save"
   >
-    <template #activator="{ props }">
+    <template #activator="{ props: activatorProps }">
       <v-list-item-title
-        v-bind="props"
+        v-bind="activatorProps"
         style="cursor: pointer"
         >Oracle Backup erstellen
       </v-list-item-title>
@@ -97,13 +97,7 @@ const oracleBackupType = [
   //{ key: "Offline Sicherung", value: "offline_Sicherung" },
 ];
 
-const registerOpenDialog = inject<() => void>("registerOpenDialog");
 const unregisterOpenDialog = inject<() => void>("unregisterOpenDialog");
-
-function open() {
-  dialog.value = true;
-  registerOpenDialog?.();
-}
 
 function resetForm() {
   selectedBackupType.value = "inkrementelle_Sicherung";

@@ -5,6 +5,8 @@ import type { ServerList } from "@/types/ServerList";
 import type { ServerListExtended } from "@/types/ServerListExtended";
 import type { Ref } from "vue";
 
+import { ref } from "vue";
+
 import { apiFetch } from "@/api/fetch-utils";
 import { getApiBase, SERVER_BASE } from "@/constants";
 import Server from "@/types/Server";
@@ -138,7 +140,7 @@ export default {
     return apiFetch(
       `${getApiBase()}${SERVER_BASE}/${serverId}/favorite`,
       { method: "PUT" },
-      {} // Leeres Objekt verhindert Lade-Ringe auf allen Zeilen
+      ref(false) // Eigenes Ref verhindert Lade-Ringe auf allen Zeilen
     );
   },
 
@@ -146,7 +148,7 @@ export default {
     return apiFetch(
       `${getApiBase()}${SERVER_BASE}/${serverId}/favorite`,
       { method: "DELETE" },
-      {} // Leeres Objekt verhindert Lade-Ringe auf allen Zeilen
+      ref(false) // Eigenes Ref verhindert Lade-Ringe auf allen Zeilen
     );
   },
 };

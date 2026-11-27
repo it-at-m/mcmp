@@ -6,4 +6,5 @@ export interface ServerList {
   serverKind?: string;
   serverType?: string;
   hasWarnings?: boolean;
+  isFavorite?: boolean;
 }

@@ -175,13 +175,15 @@ import { computed, ref, watch } from "vue";
 import InlineTooltip from "@/components/common/InlineTooltip.vue";
 import { useRules } from "@/composables/rules.ts";
 
+const ldblOrder = defineModel<LoadbalancerOrder>("ldblOrder", {
+  required: true,
+});
 const props = defineProps<{
-  ldblOrder: LoadbalancerOrder;
   protocol?: "tcp" | "http" | "https";
 }>();
 const rules = useRules();
 const isValid = ref(false);
-const emit = defineEmits(["validation-change"]);
+const emit = defineEmits<(e: "validation-change", valid: boolean) => void>();
 
 const listenerProtocols = ref<{ title: string; value: string }[]>([
   { title: "HTTPS", value: "https" },
@@ -200,10 +202,10 @@ watch(
       // Nur TCP verfügbar
       listenerProtocols.value = [{ title: "TCP", value: "tcp" }];
       if (
-        props.ldblOrder.listener[0].listener_type !== "tcp" &&
-        props.ldblOrder.listener[0].listener_type !== "fast-tcp"
+        ldblOrder.value.listener[0].listener_type !== "tcp" &&
+        ldblOrder.value.listener[0].listener_type !== "fast-tcp"
       ) {
-        props.ldblOrder.listener[0].listener_type = "tcp";
+        ldblOrder.value.listener[0].listener_type = "tcp";
       }
     } else if (protocol === "http") {
       // HTTP und HTTPS verfügbar
@@ -211,16 +213,16 @@ watch(
         { title: "HTTPS", value: "https" },
         { title: "HTTP", value: "http" },
       ];
-      props.ldblOrder.listener[0].listener_type = "http";
-      props.ldblOrder.listener[0].clientside_tls = true;
-      props.ldblOrder.listener[0].port = 443;
+      ldblOrder.value.listener[0].listener_type = "http";
+      ldblOrder.value.listener[0].clientside_tls = true;
+      ldblOrder.value.listener[0].port = 443;
     } else if (protocol === "https" || protocol === undefined) {
-      // Nur HTTPS verfügbar (auch Standard wenn kein Protokoll gesetzt)
+      // Nur HTTPS verfügbar (auch Standard, wenn kein Protokoll gesetzt)
       listenerProtocols.value = [{ title: "HTTPS", value: "https" }];
       // Listener bleibt of type 'http' but clientside_tls = true
-      props.ldblOrder.listener[0].listener_type = "http";
-      props.ldblOrder.listener[0].clientside_tls = true;
-      props.ldblOrder.listener[0].port = 443;
+      ldblOrder.value.listener[0].listener_type = "http";
+      ldblOrder.value.listener[0].clientside_tls = true;
+      ldblOrder.value.listener[0].port = 443;
     }
   },
   { immediate: true }
@@ -228,16 +230,16 @@ watch(
 
 // Watcher für listener_type Änderungen durch Benutzer
 watch(
-  () => props.ldblOrder?.listener?.[0]?.listener_type,
+  () => ldblOrder.value?.listener?.[0]?.listener_type,
   (newVal) => {
     if (!newVal) return;
     if (newVal === "http") {
-      props.ldblOrder.listener[0].persistence = "cookie";
+      ldblOrder.value.listener[0].persistence = "cookie";
       // clientside_tls und port werden durch selectedProtocol gesetzt
     } else if (newVal === "tcp" || newVal === "fast-tcp") {
-      props.ldblOrder.listener[0].persistence = "source-address";
-      props.ldblOrder.listener[0].clientside_tls = false;
-      props.ldblOrder.listener[0].serverside_tls = false;
+      ldblOrder.value.listener[0].persistence = "source-address";
+      ldblOrder.value.listener[0].clientside_tls = false;
+      ldblOrder.value.listener[0].serverside_tls = false;
     }
   }
 );
@@ -245,24 +247,25 @@ watch(
 // Separater computed um zwischen http/https Auswahl zu vermitteln
 const selectedProtocol = computed({
   get: () => {
-    if (props.ldblOrder.listener[0].listener_type === "http") {
-      return props.ldblOrder.listener[0].clientside_tls ? "https" : "http";
+    if (ldblOrder.value.listener[0].listener_type === "http") {
+      return ldblOrder.value.listener[0].clientside_tls ? "https" : "http";
     }
-    return props.ldblOrder.listener[0].listener_type;
+    return ldblOrder.value.listener[0].listener_type;
   },
   set: (value: string) => {
     if (value === "http") {
-      props.ldblOrder.listener[0].listener_type = "http";
-      props.ldblOrder.listener[0].clientside_tls = false;
-      props.ldblOrder.listener[0].port = 80;
+      ldblOrder.value.listener[0].listener_type = "http";
+      ldblOrder.value.listener[0].clientside_tls = false;
+      ldblOrder.value.listener[0].port = 80;
     } else if (value === "https") {
-      props.ldblOrder.listener[0].listener_type = "http";
-      props.ldblOrder.listener[0].clientside_tls = true;
-      if (props.ldblOrder.listener[0].port === 80) {
-        props.ldblOrder.listener[0].port = 443;
+      ldblOrder.value.listener[0].listener_type = "http";
+      ldblOrder.value.listener[0].clientside_tls = true;
+      if (ldblOrder.value.listener[0].port === 80) {
+        ldblOrder.value.listener[0].port = 443;
       }
     } else {
-      props.ldblOrder.listener[0].listener_type = value as any;
+      ldblOrder.value.listener[0].listener_type =
+        value as LoadbalancerOrder["listener"][0]["listener_type"];
     }
   },
 });

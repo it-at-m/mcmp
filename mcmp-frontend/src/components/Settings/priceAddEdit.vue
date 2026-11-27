@@ -3,9 +3,9 @@
     v-model="dialog"
     width="70%"
   >
-    <template #activator="{ props }">
+    <template #activator="{ props: activatorProps }">
       <v-btn
-        v-bind="props"
+        v-bind="activatorProps"
         :icon="icon"
         :aria-label="ariaLabel"
       >

@@ -1,8 +1,4 @@
-import {
-  defaultCatchHandler,
-  defaultResponseHandler,
-  getConfig,
-} from "@/api/fetch-utils";
+import { defaultCatchHandler, getConfig } from "@/api/fetch-utils";
 import { getApiBase, USER_BASE } from "@/constants.ts";
 import User from "@/types/User";
 

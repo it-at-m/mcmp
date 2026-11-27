@@ -43,35 +43,35 @@
         <openshift-namespace-order-general
           :ref="(el) => (stepRefs[1] = el)"
           v-model:order="orderProp"
-          @validation-change="(val) => (stepValidity[1] = val)"
+          @validation-change="(val: boolean) => (stepValidity[1] = val)"
         />
       </template>
       <template #item.2>
         <openshift-namespace-order-namespace
           :ref="(el) => (stepRefs[2] = el)"
           v-model:order="orderProp"
-          @validation-change="(val) => (stepValidity[2] = val)"
+          @validation-change="(val: boolean) => (stepValidity[2] = val)"
         />
       </template>
       <template #item.3>
         <openshift-namespace-order-network
           :ref="(el) => (stepRefs[3] = el)"
           v-model:order="orderProp"
-          @validation-change="(val) => (stepValidity[3] = val)"
+          @validation-change="(val: boolean) => (stepValidity[3] = val)"
         />
       </template>
       <template #item.4>
         <openshift-namespace-order-hardware
           :ref="(el) => (stepRefs[4] = el)"
           v-model:order="orderProp"
-          @validation-change="(val) => (stepValidity[4] = val)"
+          @validation-change="(val: boolean) => (stepValidity[4] = val)"
         />
       </template>
       <template #item.5>
         <openshift-namespace-order-optional
           :ref="(el) => (stepRefs[5] = el)"
           v-model:order="orderProp"
-          @validation-change="(val) => (stepValidity[5] = val)"
+          @validation-change="(val: boolean) => (stepValidity[5] = val)"
         />
       </template>
 
@@ -127,9 +127,7 @@ const props = defineProps<{
   appservice?: Appservice | null;
 }>();
 
-const emit = defineEmits<{
-  (e: "order-done"): void;
-}>();
+const emit = defineEmits<(e: "order-done") => void>();
 
 const registerOpenDialog = inject<() => void>("registerOpenDialog");
 const unregisterOpenDialog = inject<() => void>("unregisterOpenDialog");

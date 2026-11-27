@@ -228,7 +228,9 @@ export async function defaultResponseHandler(
     if (response.status === 401) {
       const userStore = useUserStore();
       userStore.setUser(null);
-      router.push("/unauthorized").catch(() => {});
+      router.push("/unauthorized").catch(() => {
+        // a failed navigation is irrelevant here
+      });
       throw new ApiError({
         level: STATUS_INDICATORS.ERROR,
         message: "Nicht authentifiziert.",

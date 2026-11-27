@@ -85,6 +85,8 @@ public class JobController {
     public static final String LINUX_MOUNTPOINT_CHANGE = "LINUX_MOUNTPOINT_CHANGE";
     public static final String LINUX_RHEL10_SERVER = "LINUX_RHEL10_SERVER";
     public static final String LINUX_RHEL9_SERVER = "LINUX_RHEL9_SERVER";
+    public static final String LINUX_ALMA10_SERVER = "LINUX_ALMA10_SERVER";
+    public static final String LINUX_ALMA9_SERVER = "LINUX_ALMA9_SERVER";
 
     public static final String WINDOWS_DELETE_SERVER = "WINDOWS_DELETE_SERVER";
     public static final String WINDOWS_PARTITION_CHANGE = "WINDOWS_PARTITION_CHANGE";
@@ -812,55 +814,77 @@ public class JobController {
         jobService.linuxMountpointChange(serverId, actionName, mountPointPath, newSize, logicalName, volumeGroup);
     }
 
+
     @PostMapping("/create/" + LINUX_RHEL10_SERVER)
-    public void linuxRhel10Server(@RequestParam(name = "serverId") final Long serverId,
-                                  @RequestBody final Map<String, Object> awxExtraVars){
-        // Custom Linux
-        Object linux_custom = awxExtraVars.get("linux_custom");
-        if (linux_custom != null && Boolean.parseBoolean(linux_custom.toString()) && AuthUtils.getCurrentUserRoles().hasLinuxRole()) {
-            jobService.linuxCustomRhelServer(awxExtraVars, "LINUX_RHEL10_SERVER");
-            return;
-        }
+    public void linuxRhel10Server(@RequestBody final Map<String, Object> vars) {
+        linuxServer(LINUX_RHEL10_SERVER, vars);
+    }
 
-        linuxRecord linuxRecord = getAndCheckLinuxRhelVars(awxExtraVars);
-        Object middlewareUserObj = awxExtraVars.get("middleware_user");
-        checkServerInstallCanUserEditAppservice(linuxRecord.applicationServiceId());
-
-        // RHEL 10 specific middleware user check
-        if (middlewareUserObj == null) {
-            log.info("Middleware user not provided by user: {} to order a RHEL 10 server.", AuthUtils.getUsername());
-            throw new MissingFormatArgumentException("Middleware user must be provided.");
-        }
-        if (!(middlewareUserObj instanceof Boolean)) {
-            log.warn("Invalid middleware user value provided by user: {} to order a RHEL 10 server.", AuthUtils.getUsername());
-            throw new IllegalArgumentException("Middleware user must be a boolean value.");
-        }
-        boolean middlewareUser = (Boolean) middlewareUserObj;
-        if(Objects.equals(linuxRecord.categoryType, "DB") && middlewareUser) {
-            log.info("Middleware user cannot be set for database servers by user: {} to order a RHEL 10 server.", AuthUtils.getUsername());
-            throw new IllegalArgumentException("Middleware user cannot be set for database servers.");
-        }
-
-
-        logCreatedJob(LINUX_RHEL10_SERVER, serverId);
-        jobService.linuxRhelServer(linuxRecord.fqdnBuildingBlocks(), linuxRecord.categoryType(), linuxRecord.serverTypeMap(), linuxRecord.applications(), linuxRecord.ram(), linuxRecord.cpu(), linuxRecord.networkGroupId(), linuxRecord.applicationServiceId(), linuxRecord.dbParams(), linuxRecord.nonPostgresReason(), middlewareUser, LINUX_RHEL10_SERVER);
+    @PostMapping("/create/" + LINUX_ALMA10_SERVER)
+    public void linuxAlma10Server(@RequestBody final Map<String, Object> vars) {
+        linuxServer(LINUX_ALMA10_SERVER, vars);
     }
 
     @PostMapping("/create/" + LINUX_RHEL9_SERVER)
-    public void linuxRhel9Server(@RequestParam(name = "serverId") final Long serverId,
-                                 @RequestBody final Map<String, Object> awxExtraVars){
-        // Custom Linux
-        Object linux_custom = awxExtraVars.get("linux_custom");
-        if (linux_custom != null && Boolean.parseBoolean(linux_custom.toString()) && AuthUtils.getCurrentUserRoles().hasLinuxRole()) {
-            jobService.linuxCustomRhelServer(awxExtraVars, "LINUX_RHEL9_SERVER");
+    public void linuxRhel9Server(@RequestBody final Map<String, Object> vars) {
+        linuxServer(LINUX_RHEL9_SERVER, vars);
+    }
+
+    @PostMapping("/create/" + LINUX_ALMA9_SERVER)
+    public void linuxAlma9Server(@RequestBody final Map<String, Object> vars) {
+        linuxServer(LINUX_ALMA9_SERVER, vars);
+    }
+
+    private void linuxServer(final String action, final Map<String, Object> vars) {
+        // Custom servers get to bypass our sanity checks
+        if (Boolean.parseBoolean(vars.getOrDefault("linux_custom", "false").toString())) {
+            jobService.linuxCustomServer(action, vars);
+            logCreatedJob(action, -1L);
             return;
         }
 
-        linuxRecord linuxRecord = getAndCheckLinuxRhelVars(awxExtraVars);
-        checkServerInstallCanUserEditAppservice(linuxRecord.applicationServiceId());
+        // Parse & validate extra variables
+        var data = getAndCheckLinuxRhelVars(vars);
+        boolean middlewareUser = false;
 
-        logCreatedJob(LINUX_RHEL9_SERVER, serverId);
-        jobService.linuxRhelServer(linuxRecord.fqdnBuildingBlocks(), linuxRecord.categoryType(), linuxRecord.serverTypeMap(), linuxRecord.applications(), linuxRecord.ram(), linuxRecord.cpu(), linuxRecord.networkGroupId(), linuxRecord.applicationServiceId(), linuxRecord.dbParams(), linuxRecord.nonPostgresReason(), false, LINUX_RHEL9_SERVER);
+        // Check for permissions
+        checkServerInstallCanUserEditAppservice(data.applicationServiceId());
+
+        // RHEL/ALMA 10 only checks
+        if (LINUX_RHEL10_SERVER.equals(action) || LINUX_ALMA10_SERVER.equals(action)) {
+            var middlewareUserValue = vars.get("middleware_user");
+
+            if (middlewareUserValue == null) {
+                log.info("Middleware user not provided by user: {} to order a RHEL 10 server.", AuthUtils.getUsername());
+                throw new MissingFormatArgumentException("Middleware user must be provided.");
+            }
+
+            if (!(middlewareUserValue instanceof Boolean)) {
+                log.warn("Invalid middleware user value provided by user: {} to order a RHEL 10 server.", AuthUtils.getUsername());
+                throw new IllegalArgumentException("Middleware user must be a boolean value.");
+            }
+
+            middlewareUser = (Boolean) middlewareUserValue;
+
+            if (Objects.equals(data.categoryType, "DB") && middlewareUser) {
+                log.info("Middleware user cannot be set for database servers by user: {} to order a RHEL 10 server.", AuthUtils.getUsername());
+                throw new IllegalArgumentException("Middleware user cannot be set for database servers.");
+            }
+        }
+
+        jobService.linuxServer(action,
+                               data.fqdnBuildingBlocks(),
+                               data.categoryType(),
+                               data.serverTypeMap(),
+                               data.applications(),
+                               data.ram(),
+                               data.cpu(),
+                               data.networkGroupId(),
+                               data.applicationServiceId(),
+                               data.dbParams(),
+                               data.nonPostgresReason(),
+                               middlewareUser);
+        logCreatedJob(action, -1L);
     }
 
     private linuxRecord getAndCheckLinuxRhelVars(Map<String, Object> awxExtraVars) {
@@ -938,7 +962,15 @@ public class JobController {
         return new linuxRecord(fqdnBuildingBlocks, dbParams, categoryType, ram, cpu, applicationServiceId, serverTypeMap, applications, nonPostgresReason, networkGroupId);
     }
 
-    private record linuxRecord(Map<?,?> fqdnBuildingBlocks, Map<String, Map<?,?>> dbParams, String categoryType, int ram, int cpu, long applicationServiceId, Map<?,?> serverTypeMap, Set<LinuxServerApplication> applications, String nonPostgresReason, long networkGroupId) {
+    private record linuxRecord(Map<?,?> fqdnBuildingBlocks,
+                               Map<String, Map<?,?>> dbParams,
+                               String categoryType,
+                               int ram, int cpu,
+                               long applicationServiceId,
+                               Map<?,?> serverTypeMap,
+                               Set<LinuxServerApplication> applications,
+                               String nonPostgresReason,
+                               long networkGroupId) {
     }
 
     // -----------------------------------------------------------------------------------------------------------------
@@ -1385,8 +1417,18 @@ public class JobController {
             return;
         }
 
+        // A team belongs to an organization and the user must be admin of that organization.
+        final String teamOrg = requireAwxName(awxExtraVars.get("organization"), "Organization name");
+        final AwxOrgTeamService.AwxNameCheckDTO orgCheck = awxOrgTeamService.checkOrganization(teamOrg);
+        if (!orgCheck.exists()) {
+            throw new IllegalArgumentException("Organization " + teamOrg + " does not exist.");
+        }
+        if (!orgCheck.allowed()) {
+            logTriedToCreateJob(AWX_ORG_TEAM, null);
+            throw new AccessDeniedException("You are not allowed to manage teams of this organization.");
+        }
         logCreatedJob(AWX_ORG_TEAM, null);
-        jobService.awxCreateOrEditTeam(AWX_ORG_TEAM, name, staticMembers, ldapMembers, check.exists());
+        jobService.awxCreateOrEditTeam(AWX_ORG_TEAM, name, teamOrg, staticMembers, ldapMembers, check.exists());
     }
 
     private String requireAwxName(final Object nameObj, final String fieldName) {

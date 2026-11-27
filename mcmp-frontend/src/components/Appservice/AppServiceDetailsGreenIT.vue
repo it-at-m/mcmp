@@ -39,15 +39,26 @@
 
     <v-row>
       <!-- CPU Spalte -->
+      <!-- CPU Spalte -->
       <v-col cols="6">
         <h3 class="d-flex align-center">
           CPU Ressourcen
-          <v-icon
-            :icon="mdiLeaf"
-            :color="cpuLeafColor"
-            size="20"
-            class="ml-2"
-          />
+          <v-tooltip location="top">
+            <template #activator="{ props: tooltipProps }">
+              <v-icon
+                v-bind="tooltipProps"
+                :icon="mdiLeaf"
+                :color="cpuLeafColor"
+                size="20"
+                class="ml-2"
+              />
+            </template>
+            <span class="text-caption">
+              Zum aktuellen Zeitpunkt maximal mögliche Einsparung inkl.
+              ausgeschalteten Servern <br />
+              und Servern mit abgelehnten Green-IT Maßnahmen
+            </span>
+          </v-tooltip>
         </h3>
         <div class="mt-2">
           <p><strong>Gesamt (Ist):</strong> {{ totalCpuCurrent }} Cores</p>
@@ -87,15 +98,26 @@
       </v-col>
 
       <!-- RAM Spalte -->
+      <!-- RAM Spalte -->
       <v-col cols="6">
         <h3 class="d-flex align-center">
           RAM Ressourcen
-          <v-icon
-            :icon="mdiLeaf"
-            :color="ramLeafColor"
-            size="20"
-            class="ml-2"
-          />
+          <v-tooltip location="top">
+            <template #activator="{ props: tooltipProps }">
+              <v-icon
+                v-bind="tooltipProps"
+                :icon="mdiLeaf"
+                :color="ramLeafColor"
+                size="20"
+                class="ml-2"
+              />
+            </template>
+            <span class="text-caption">
+              Zum aktuellen Zeitpunkt maximal mögliche Einsparung inkl.
+              ausgeschalteten Servern <br />
+              und Servern mit abgelehnten Green-IT Maßnahmen
+            </span>
+          </v-tooltip>
         </h3>
         <div class="mt-2">
           <p>
@@ -145,6 +167,7 @@
 
 <script setup lang="ts">
 import type Appservice from "@/types/Appservice.ts";
+import type { ServerListExtended } from "@/types/ServerListExtended.ts";
 
 import { mdiFileExportOutline, mdiInformationOutline, mdiLeaf } from "@mdi/js";
 import { computed } from "vue";
@@ -160,10 +183,11 @@ const formatter = useFormatter();
 
 const servers = computed(() => props.selectedAppservice?.servers || []);
 
-const isPoweredOff = (server: any) => server.powerState === "poweredOff";
+const isPoweredOff = (server: ServerListExtended) =>
+  server.powerState === "poweredOff";
 
 const hasPoweredOffServers = computed(() =>
-  servers.value.some((server: any) => isPoweredOff(server))
+  servers.value.some((server: ServerListExtended) => isPoweredOff(server))
 );
 
 const getResizeSavings = (current: number, recVal: unknown): number => {
@@ -179,14 +203,16 @@ const getResizeSavings = (current: number, recVal: unknown): number => {
 // --- 1. Aktuelle Gesamtzahlen (Ist) berechnen ---
 const totalCpuCurrent = computed(() => {
   return servers.value.reduce(
-    (sum: number, server: any) => sum + Number(server.numCpu || 0),
+    (sum: number, server: ServerListExtended) =>
+      sum + Number(server.numCpu || 0),
     0
   );
 });
 
 const totalRamCurrentMb = computed(() => {
   return servers.value.reduce(
-    (sum: number, server: any) => sum + Number(server.memoryMb || 0),
+    (sum: number, server: ServerListExtended) =>
+      sum + Number(server.memoryMb || 0),
     0
   );
 });
@@ -194,14 +220,14 @@ const totalRamCurrentMb = computed(() => {
 // --- 2. Einsparungen nach Hebel berechnen ---
 // Potenzielle Einsparung durch Abbau ausgeschalteter Server (belegen aktuell Ressourcen)
 const decommissionCpuSavings = computed(() => {
-  return servers.value.reduce((sum: number, server: any) => {
+  return servers.value.reduce((sum: number, server: ServerListExtended) => {
     if (!isPoweredOff(server)) return sum;
     return sum + Number(server.numCpu || 0);
   }, 0);
 });
 
 const decommissionRamSavingsMb = computed(() => {
-  return servers.value.reduce((sum: number, server: any) => {
+  return servers.value.reduce((sum: number, server: ServerListExtended) => {
     if (!isPoweredOff(server)) return sum;
     return sum + Number(server.memoryMb || 0);
   }, 0);
@@ -209,7 +235,7 @@ const decommissionRamSavingsMb = computed(() => {
 
 // Nur über Ressourcenanpassung (bei nicht ausgeschalteten Servern)
 const resizingOnlyCpuSavings = computed(() => {
-  return servers.value.reduce((sum: number, server: any) => {
+  return servers.value.reduce((sum: number, server: ServerListExtended) => {
     if (isPoweredOff(server)) return sum;
     const current = Number(server.numCpu || 0);
     return sum + getResizeSavings(current, server.numCpuRecommended);
@@ -217,7 +243,7 @@ const resizingOnlyCpuSavings = computed(() => {
 });
 
 const resizingOnlyRamSavingsMb = computed(() => {
-  return servers.value.reduce((sum: number, server: any) => {
+  return servers.value.reduce((sum: number, server: ServerListExtended) => {
     if (isPoweredOff(server)) return sum;
     const current = Number(server.memoryMb || 0);
     return sum + getResizeSavings(current, server.memoryMbRecommended);
@@ -290,7 +316,7 @@ const exportGreenItCsv = () => {
     "RAM Einsparung (MB)",
   ];
 
-  const rows = currentServers.map((server: any) => {
+  const rows = currentServers.map((server: ServerListExtended) => {
     const poweredOff = isPoweredOff(server);
     const currentCpu = Number(server.numCpu || 0);
     const recCpu = Number(server.numCpuRecommended || 0);

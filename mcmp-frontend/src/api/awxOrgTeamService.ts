@@ -11,6 +11,7 @@ export interface AwxNameCheck {
 
 export interface AwxOrgTeamDetails {
   name: string;
+  organization: string | null;
   staticMembers: string[];
   ldapMembers: string[];
   otherMembers: string[];

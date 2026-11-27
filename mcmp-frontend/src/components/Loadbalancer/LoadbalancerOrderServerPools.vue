@@ -174,7 +174,7 @@
                 ldblOrder.server_pools[0].monitors = ['tcp'];
                 showMonitors = false;
               } else {
-                const headers = { Host: props.ldblOrder.dns! };
+                const headers = { Host: ldblOrder.dns ?? '' };
                 const type: 'http' | 'https' =
                   val === 'https' ? 'https' : 'http';
                 ldblOrder.server_pools[0].monitors = [
@@ -307,18 +307,25 @@ import InlineTooltip from "@/components/common/InlineTooltip.vue";
 import { useRules } from "@/composables/rules.ts";
 import LoadbalancerOrder from "@/types/LoadbalancerOrder.ts";
 
+type MemberLike = Partial<member> & { raw?: Partial<member> };
+
 interface member {
   name: string;
   ip: string;
   ports: number[];
 }
 
+const ldblOrder = defineModel<LoadbalancerOrder>("ldblOrder", {
+  required: true,
+});
 const props = defineProps<{
-  ldblOrder: LoadbalancerOrder;
   servers: member[];
   protocol: "tcp" | "http" | "https";
 }>();
-const emit = defineEmits(["validation-change", "update:protocol"]);
+const emit = defineEmits<{
+  (e: "validation-change", valid: boolean): void;
+  (e: "update:protocol", protocol: "tcp" | "http" | "https"): void;
+}>();
 const rules = useRules();
 const isValid = ref(false);
 const showMonitors = ref(false);
@@ -340,10 +347,10 @@ function ensurePortCountFor(ip: string, ports?: number[]) {
   }
 }
 
-function decreasePortCount(item: any) {
+function decreasePortCount(item: { raw: member }) {
   const ip = item.raw.ip;
   ensurePortCountFor(ip, item.raw.ports);
-  portCountByIp[ip] = Math.max(1, portCountByIp[ip] - 1);
+  portCountByIp[ip] = Math.max(1, (portCountByIp[ip] ?? 1) - 1);
   // remove trailing port entries if ports array is longer than the count
   if (
     Array.isArray(item.raw.ports) &&
@@ -353,10 +360,10 @@ function decreasePortCount(item: any) {
   }
 }
 
-function increasePortCount(item: any) {
+function increasePortCount(item: { raw: member }) {
   const ip = item.raw.ip;
   ensurePortCountFor(ip, item.raw.ports);
-  portCountByIp[ip] = Math.min(10, portCountByIp[ip] + 1);
+  portCountByIp[ip] = Math.min(10, (portCountByIp[ip] ?? 1) + 1);
   if (!Array.isArray(item.raw.ports)) item.raw.ports = [];
   // push a sensible default if needed
   item.raw.ports.push(80);
@@ -386,12 +393,12 @@ watch(
 
 // ensure counters exist for currently selected members (v-select model)
 watch(
-  () => props.ldblOrder.server_pools[0].member,
+  () => ldblOrder.value.server_pools[0].member,
   (members) => {
     if (Array.isArray(members)) {
       if (!membersInitialized) {
         // First run (immediate): record all existing members as known, no auto-expand
-        members.forEach((m: any) => {
+        members.forEach((m: MemberLike) => {
           const ip = m?.raw?.ip ?? m?.ip;
           const ports = m?.raw?.ports ?? m?.ports;
           if (ip) {
@@ -404,7 +411,7 @@ watch(
       }
 
       const currentIps = new Set<string>();
-      members.forEach((m: any) => {
+      members.forEach((m: MemberLike) => {
         const ip = m?.raw?.ip ?? m?.ip;
         const ports = m?.raw?.ports ?? m?.ports;
         if (ip) {
@@ -440,20 +447,20 @@ watch(
 watch(localProtocol, (newVal) => {
   emit("update:protocol", newVal);
   // update serverside tls on listener
-  props.ldblOrder.listener[0].serverside_tls = newVal === "https";
+  ldblOrder.value.listener[0].serverside_tls = newVal === "https";
   if (newVal === "tcp") {
-    props.ldblOrder.listener[0].persistence = "source-address";
+    ldblOrder.value.listener[0].persistence = "source-address";
   }
 
   // If monitor selection conflicts with protocol, adjust monitors
   if (monitors.value === "http" && newVal === "https") {
     // keep monitors array consistent: prefer 'tcp' when conflict
     monitors.value = "tcp";
-    props.ldblOrder.server_pools[0].monitors = ["tcp"];
+    ldblOrder.value.server_pools[0].monitors = ["tcp"];
     showMonitors.value = false;
   } else if (monitors.value === "https" && newVal === "http") {
     monitors.value = "tcp";
-    props.ldblOrder.server_pools[0].monitors = ["tcp"];
+    ldblOrder.value.server_pools[0].monitors = ["tcp"];
     showMonitors.value = false;
   }
 });
@@ -464,12 +471,12 @@ watch(
   (val) => {
     // keep ldblOrder.server_pools[0].monitors in sync when user changes monitor selection
     if (val === "tcp") {
-      props.ldblOrder.server_pools[0].monitors = ["tcp"];
+      ldblOrder.value.server_pools[0].monitors = ["tcp"];
       showMonitors.value = false;
     } else {
-      const headers = { Host: props.ldblOrder.dns! };
+      const headers = { Host: ldblOrder.value.dns ?? "" };
       const type: "http" | "https" = val === "https" ? "https" : "http";
-      props.ldblOrder.server_pools[0].monitors = [
+      ldblOrder.value.server_pools[0].monitors = [
         {
           type: type,
           method: "GET",

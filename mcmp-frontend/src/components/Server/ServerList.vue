@@ -191,6 +191,17 @@
                         density="compact"
                       />
                     </v-list-item>
+                    <v-list-item
+                      density="compact"
+                      class="py-0"
+                    >
+                      <v-radio
+                        label="Virtual Appliances"
+                        value="virtual-appliance"
+                        hide-details
+                        density="compact"
+                      />
+                    </v-list-item>
                   </v-radio-group>
                 </v-list>
               </v-menu>
@@ -434,27 +445,28 @@ function sortServersByFavorite() {
   });
 }
 
-function removeIfBeyondLoadedRange(server: any) {
+function removeIfBeyondLoadedRange(server: ServerList) {
   if (!hasMore.value) return;
   const order = sortBy.value[0]?.order === "desc" ? -1 : 1;
   const nonFavorites = servers.value.filter(
     (s) => !s.isFavorite && s.id !== server.id
   );
   if (nonFavorites.length === 0) return;
-  const lastName = nonFavorites[nonFavorites.length - 1].name;
+  const lastName = nonFavorites[nonFavorites.length - 1]?.name;
+  if (lastName === undefined) return;
   const beyondRange = order * server.name.localeCompare(lastName) > 0;
   if (beyondRange) {
     servers.value = servers.value.filter((s) => s.id !== server.id);
   }
 }
 
-function onRowKeydown({ key, item }: { key: string; item: any }) {
+function onRowKeydown({ key, item }: { key: string; item: ServerList }) {
   if (key === "f" || key === "F") {
     toggleFavorite(item);
   }
 }
 
-async function toggleFavorite(server: any) {
+async function toggleFavorite(server: ServerList) {
   const originalState = server.isFavorite;
   server.isFavorite = !server.isFavorite;
 
@@ -469,7 +481,7 @@ async function toggleFavorite(server: any) {
     } else {
       await serverService.addServerToFavorites(server.id);
     }
-  } catch (error) {
+  } catch {
     server.isFavorite = originalState;
     if (!servers.value.find((s) => s.id === server.id)) {
       servers.value = [...servers.value, server];
@@ -595,7 +607,7 @@ async function loadServers(
       !hasUrlAppId &&
       !selectedRow.value
     ) {
-      emit("update:selected", [servers.value[0]]);
+      emit("update:selected", servers.value.slice(0, 1));
     } else if (totalServers.value === 0) {
       emit("update:selected", []);
     }
@@ -628,6 +640,7 @@ watch(search, () => {
 onMounted(async () => {
   if (initialUrlId) {
     const id = Array.isArray(initialUrlId) ? initialUrlId[0] : initialUrlId;
+    if (id === undefined) return;
     selectedRow.value = id.toString();
     emit("update:selected", [{ id: parseInt(id) } as ServerList]);
   }
@@ -646,7 +659,10 @@ onUnmounted(() => {
 function updateServerPowerState(serverId: number, newPowerState: string) {
   const idx = servers.value.findIndex((s) => s.id === serverId);
   if (idx !== -1) {
-    servers.value[idx].powerState = newPowerState;
+    servers.value[idx] = {
+      ...servers.value[idx],
+      powerState: newPowerState,
+    } as ServerList;
   }
 }
 

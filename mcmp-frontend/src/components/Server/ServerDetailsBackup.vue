@@ -139,9 +139,9 @@
         :close-on-content-click="false"
         location="right"
       >
-        <template #activator="{ props }">
+        <template #activator="{ props: activatorProps }">
           <v-btn
-            v-bind="props"
+            v-bind="activatorProps"
             density="compact"
             class="mr-4"
             :prepend-icon="mdiFilterVariant"
@@ -151,9 +151,11 @@
           </v-btn>
         </template>
         <v-list>
-          <v-list-item v-for="type in backupTypes">
+          <v-list-item
+            v-for="type in backupTypes"
+            :key="type"
+          >
             <v-checkbox
-              :key="type"
               v-model="selectedTypes"
               :label="getBackupTypeName(type)"
               :value="type"
@@ -298,7 +300,7 @@ const filteredBackups = computed(() => {
 function getBackupTypeFromServerName(serverName: string): string {
   const match = serverName.match(/(da|db|dh|dm|dp|ds|dy)([ckps])\d{3}.*/i);
   if (match) {
-    const backupTypeKey = match[1];
+    const backupTypeKey = match[1] ?? "";
     return backupTypeNames[backupTypeKey] || backupTypeKey;
   }
   return "Unbekannt"; // Fallback, falls kein Match gefunden wird

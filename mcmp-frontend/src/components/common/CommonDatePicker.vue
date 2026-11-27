@@ -3,9 +3,9 @@
     v-model="menu"
     :close-on-content-click="false"
   >
-    <template #activator="{ props }">
+    <template #activator="{ props: activatorProps }">
       <v-text-field
-        v-bind="props"
+        v-bind="activatorProps"
         :model-value="inputValue"
         :label="label"
         :rounded="rounded"
@@ -90,8 +90,15 @@ watch(
   { immediate: true }
 );
 
-function handleDateChange(newDate: string | null) {
-  emit("update:modelValue", newDate);
+function handleDateChange(newDate: string | Date | null) {
+  if (newDate instanceof Date) {
+    // Lokales Datum als ISO-String, analog zur manuellen Eingabe
+    const month = String(newDate.getMonth() + 1).padStart(2, "0");
+    const day = String(newDate.getDate()).padStart(2, "0");
+    emit("update:modelValue", `${newDate.getFullYear()}-${month}-${day}`);
+  } else {
+    emit("update:modelValue", newDate);
+  }
   menu.value = false;
 }
 
@@ -121,9 +128,9 @@ function handleManualInput(value: string | null) {
   if (formatted.length === 10) {
     const parts = formatted.split(".");
     if (parts.length === 3) {
-      const day = parseInt(parts[0], 10);
-      const month = parseInt(parts[1], 10) - 1;
-      const year = parseInt(parts[2], 10);
+      const day = parseInt(parts[0] ?? "", 10);
+      const month = parseInt(parts[1] ?? "", 10) - 1;
+      const year = parseInt(parts[2] ?? "", 10);
       const date = new Date(year, month, day);
       if (
         !isNaN(date.getTime()) &&

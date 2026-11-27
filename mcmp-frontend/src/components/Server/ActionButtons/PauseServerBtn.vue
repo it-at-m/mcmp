@@ -243,7 +243,7 @@ async function onDialogConfirm() {
 
     emit("change");
   } catch (err) {
-    console.error("Fehler beim Erstellen der geplanten Downtime:", err);
+    console.debug("Fehler beim Erstellen der geplanten Downtime:", err);
   } finally {
     loading.value = false;
   }

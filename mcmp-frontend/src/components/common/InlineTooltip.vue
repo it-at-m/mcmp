@@ -16,10 +16,12 @@
 </template>
 
 <script setup lang="ts">
+import type { Anchor } from "vuetify";
+
 import { mdiInformationSlabCircleOutline } from "@mdi/js";
 
-const props = defineProps<{
-  location?: string;
+defineProps<{
+  location?: Anchor;
   marginTop?: string;
 }>();
 </script>

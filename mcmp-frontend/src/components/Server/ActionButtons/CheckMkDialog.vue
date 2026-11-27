@@ -41,10 +41,10 @@
   >
     <template
       v-if="!isBatchOperation"
-      #activator="{ props }"
+      #activator="{ props: activatorProps }"
     >
       <v-list-item
-        v-bind="props"
+        v-bind="activatorProps"
         :title="title"
       />
     </template>
@@ -243,21 +243,21 @@ function save() {
               downtimePayload
             );
           });
-        } else {
+        } else if (props.server) {
           jobService.startJob(
             loading,
             "CHECKMK_SET_DOWNTIME",
-            props.server!.id,
+            props.server.id,
             downtimePayload
           );
         }
       }
 
-      if (props.title == "Service Discovery") {
+      if (props.title == "Service Discovery" && props.server) {
         jobService.startJob(
           loading,
           "CHECKMK_SERVICE_DISCOVERY",
-          props.server!.id,
+          props.server.id,
           {
             action: action.value,
           }

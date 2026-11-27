@@ -7,7 +7,10 @@ export type LoggingType = "no" | "yes" | "jsonparsing";
 export default class OpenshiftNamespaceOrder {
   constructor(
     // Allgemeines
-    public appservice: AppserviceList | null,
+    public appservice: Pick<
+      AppserviceList,
+      "id" | "name" | "environment"
+    > | null,
 
     // Namespace
     public namespaceName: string,

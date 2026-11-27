@@ -174,9 +174,9 @@ export function formatDuration(
     return "";
   }
 
-  let hours = 0;
-  let minutes = 0;
-  let seconds = 0;
+  let hours: number;
+  let minutes: number;
+  let seconds: number;
 
   // Convert string numbers to actual numbers
   const numericDuration =

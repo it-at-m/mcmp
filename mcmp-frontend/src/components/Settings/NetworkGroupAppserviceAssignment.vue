@@ -4,10 +4,10 @@
     width="80%"
     max-width="920px"
   >
-    <template #activator="{ props }">
+    <template #activator="{ props: activatorProps }">
       <v-btn
         variant="flat"
-        v-bind="props"
+        v-bind="activatorProps"
         :icon="mdiPencil"
         :aria-label="
           'Appservices der Netzwerkgruppe ' + networkgroup.name + ' bearbeiten'

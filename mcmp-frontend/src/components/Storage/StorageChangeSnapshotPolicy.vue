@@ -82,7 +82,7 @@ const title = computed(() => {
 });
 
 function openDialog() {
-  selectedPolicy.value = props.initialPolicy;
+  selectedPolicy.value = props.initialPolicy ?? null;
   validated.value = false;
   dialog.value = true;
 }

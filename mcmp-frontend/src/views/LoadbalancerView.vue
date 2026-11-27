@@ -232,6 +232,7 @@ async function syncSelectionFromRoute(idParam: string | string[] | undefined) {
         domain: selectedDetail.value.domains[0] ?? null,
         port: selectedDetail.value.port,
         appserviceName: selectedDetail.value.appservices[0]?.name ?? null,
+        isFavorite: false,
       },
     ];
   } catch {

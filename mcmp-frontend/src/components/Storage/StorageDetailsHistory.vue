@@ -1,5 +1,5 @@
 <template>
-  <history
+  <common-history
     :type="'user'"
     :history="history?.content || []"
     :loading="loading"
@@ -23,7 +23,7 @@ import type { Page } from "@/types/Page";
 
 import { ref } from "vue";
 
-import History from "@/components/common/History.vue";
+import CommonHistory from "@/components/common/CommonHistory.vue";
 
 defineProps<{
   history: Page<JobList> | null;

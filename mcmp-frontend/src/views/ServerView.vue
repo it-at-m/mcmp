@@ -328,7 +328,7 @@
                 <v-tabs-window v-model="tab">
                   <v-tabs-window-item value="Allgemeines">
                     <server-details-allgemein
-                      :selected-server="selectedServerItem"
+                      :selected-server="activeServer"
                       @changed="
                         () =>
                           getSelectedServerFromServerListComponent(
@@ -340,7 +340,7 @@
 
                   <v-tabs-window-item value="Patchnight">
                     <server-details-patchnight
-                      :selected-server="selectedServerItem"
+                      :selected-server="activeServer"
                       @changed="
                         () =>
                           getSelectedServerFromServerListComponent(
@@ -352,7 +352,7 @@
 
                   <v-tabs-window-item value="Festplatten">
                     <server-details-festplatten
-                      :selected-server="selectedServerItem"
+                      :selected-server="activeServer"
                       :disks="disks"
                       :mount-points="mountPoints"
                       :share-mount-points="shareMountPoints"
@@ -367,7 +367,7 @@
 
                   <v-tabs-window-item value="Backup">
                     <server-details-backup
-                      :selected-server="selectedServerItem"
+                      :selected-server="activeServer"
                       :snapshots="snapshots"
                       :backups="backups"
                       :loading="[loadingSnapshots, loadingBackups]"
@@ -415,9 +415,7 @@
                   </v-tabs-window-item>
 
                   <v-tabs-window-item value="Expert">
-                    <server-details-expert
-                      :selected-server="selectedServerItem"
-                    />
+                    <server-details-expert :selected-server="activeServer" />
                   </v-tabs-window-item>
                 </v-tabs-window>
               </v-col>
@@ -437,6 +435,7 @@ import type { LbServerMembership } from "@/types/LbServerMembership";
 import type MountPoint from "@/types/MountPoint";
 import type Nic from "@/types/Nic";
 import type Repository from "@/types/Repository";
+import type { ServerList as ServerListItem } from "@/types/ServerList";
 import type Snapshot from "@/types/Snapshot";
 import type { UnifiedStorageMountItem } from "@/types/UnifiedStorageMountItem.ts";
 
@@ -490,6 +489,8 @@ const showTabText = computed(() => width.value >= 1500);
 
 const selectedServer = ref<Server[]>([]);
 const selectedServerItem = computed(() => selectedServer.value[0] ?? null);
+// Nur dort verwenden, wo bereits geprüft ist, dass ein Server gewählt ist
+const activeServer = computed(() => selectedServer.value[0] as Server);
 const showReposTab = ref(false);
 const tab = ref("Allgemeines");
 const serverSearch = ref("");
@@ -573,7 +574,8 @@ function resizeRight() {
 function handleResize(event: MouseEvent | TouchEvent) {
   if (!isResizing.value) return;
 
-  const clientX = "touches" in event ? event.touches[0].clientX : event.clientX;
+  const clientX =
+    "touches" in event ? (event.touches[0]?.clientX ?? 0) : event.clientX;
   const containerRect = (event.target as HTMLElement)
     .closest(".split-container")
     ?.getBoundingClientRect();
@@ -627,7 +629,9 @@ onUnmounted(() => {
   stopAutoRefresh();
 });
 
-function getSelectedServerFromServerListComponent(newSelected: Server[]) {
+function getSelectedServerFromServerListComponent(
+  newSelected: ServerListItem[]
+) {
   notFound.value = false;
   notFoundId.value = null;
   const first = newSelected[0];
@@ -643,10 +647,9 @@ function getSelectedServerFromServerListComponent(newSelected: Server[]) {
 
 function getSelectedServer(silent = false, targetId?: number) {
   const loadingRef = silent ? ref(false) : loadingDetails;
-  const currentId = targetId ?? selectedServerItem.value?.id;
+  const serverId = targetId ?? selectedServerItem.value?.id;
 
-  if (!currentId) return;
-  const serverId = currentId!;
+  if (!serverId) return;
 
   serverService
     .getServerById(loadingRef, serverId)
@@ -892,7 +895,7 @@ watch(
     // Verhindere Reload wenn die neue ID bereits der aktuell geladene Server ist
     if (
       selectedServer.value.length > 0 &&
-      selectedServer.value[0].id === Number(newId)
+      selectedServer.value[0]?.id === Number(newId)
     ) {
       return;
     }

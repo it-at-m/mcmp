@@ -42,7 +42,7 @@
       <template #item.1>
         <loadbalancer-order-general
           :ref="(el) => (stepRefs[1] = el)"
-          :ldbl-order="LoadbalancerOrderProp"
+          v-model:ldbl-order="LoadbalancerOrderProp"
           :has-servers="hasServers"
           @validation-change="(val) => (stepValidity[1] = val)"
         />
@@ -51,7 +51,7 @@
         <loadbalancer-order-server-pools
           :ref="(el) => (stepRefs[2] = el)"
           v-model:protocol="protocol"
-          :ldbl-order="LoadbalancerOrderProp"
+          v-model:ldbl-order="LoadbalancerOrderProp"
           :servers="servers"
           @validation-change="(val) => (stepValidity[2] = val)"
         />
@@ -59,7 +59,7 @@
       <template #item.3>
         <loadbalancer-order-listener
           :ref="(el) => (stepRefs[3] = el)"
-          :ldbl-order="LoadbalancerOrderProp"
+          v-model:ldbl-order="LoadbalancerOrderProp"
           :protocol="protocol"
           @validation-change="(val) => (stepValidity[3] = val)"
         />
@@ -73,7 +73,7 @@
         />
       </template>
 
-      <template #actions="{ next, prev }">
+      <template #actions="{ prev }">
         <div class="d-flex justify-space-between w-100 mt-4 mb-4 px-4">
           <v-btn
             :prepend-icon="mdiArrowLeft"
@@ -124,9 +124,7 @@ const props = defineProps<{
   appservice?: Appservice | null;
 }>();
 
-const emit = defineEmits<{
-  (e: "order-done"): void;
-}>();
+const emit = defineEmits<(e: "order-done") => void>();
 
 const registerOpenDialog = inject<() => void>("registerOpenDialog");
 const unregisterOpenDialog = inject<() => void>("unregisterOpenDialog");
@@ -145,7 +143,7 @@ const dialog = ref(false);
 const loading = ref(false);
 const step = ref(1);
 const isValidating = ref(false);
-const stepRefs = ref<Record<number, any>>({});
+const stepRefs = ref<Record<number, unknown>>({});
 const stepValidity = ref<Record<number, boolean>>({});
 const servers = ref<member[]>([]);
 const hasServers = ref(true);

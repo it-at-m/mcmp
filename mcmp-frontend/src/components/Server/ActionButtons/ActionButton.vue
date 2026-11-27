@@ -76,7 +76,7 @@
         Ausgewählte Server:
       </div>
       <div
-        v-else-if="props.isBatchOperation"
+        v-if="!server && props.isBatchOperation"
         class="confirm-entity-name"
       >
         {{ props.selectedServerIds?.length }} Server
@@ -292,7 +292,7 @@ function makeJobCall() {
 
     Promise.all(promises)
       .then(() => emit("change"))
-      .catch((err) => console.error("Batch job error", err))
+      .catch((err) => console.debug("Batch job error", err))
       .finally(() => {
         loading.value = false;
         validated.value = true;
@@ -309,11 +309,16 @@ function makeJobCall() {
     return;
   }
 
+  const serverId = props.server?.id;
+  if (serverId === undefined) {
+    return;
+  }
+
   jobService
     .startJob(
       loading,
       singleJob,
-      props.server!.id,
+      serverId,
       schedule.value ? { scheduleTime: rawDate.value.toISOString() } : {}
     )
     .then(() => {

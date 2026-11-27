@@ -1,5 +1,5 @@
 <template>
-  <history
+  <common-history
     :type="'user'"
     :history="history"
     :loading="loading"
@@ -23,12 +23,11 @@ import type JobList from "@/types/JobList.ts";
 import { onMounted, onUnmounted, provide, ref, watch } from "vue";
 
 import jobService from "@/api/jobService";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import History from "@/components/common/History.vue";
+import CommonHistory from "@/components/common/CommonHistory.vue";
 
 const history = ref<JobList[]>([]);
 const loading = ref(false);
-const refreshInterval = ref<NodeJS.Timeout | null>(null);
+const refreshInterval = ref<ReturnType<typeof setInterval> | null>(null);
 const totalItems = ref(0);
 
 const currentPage = ref(1);

@@ -53,7 +53,7 @@ const props = withDefaults(defineProps<Props>(), {
   loading: false,
 });
 
-const items = ref<(UnifiedStorageItemList & { displayName: string })[]>([]);
+const items = ref<(UnifiedStorageItemList & { displayName?: string })[]>([]);
 const isLoading = ref(false);
 const loadingRef = ref(false);
 const searchInput = ref("");

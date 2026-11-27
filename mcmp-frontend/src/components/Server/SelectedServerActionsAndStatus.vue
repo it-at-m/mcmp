@@ -348,9 +348,9 @@ const canExecuteOperatorActions = computed(() => {
 });
 
 const emit = defineEmits<{
-  (e: "navigateToHistory"): void;
-  (e: "navigateToPatchnight"): void;
-  (e: "change"): void;
+  navigateToHistory: [];
+  navigateToPatchnight: [];
+  change: [];
 }>();
 
 const theme = useTheme();
@@ -443,10 +443,6 @@ const greenItBannerIntroText = computed(() => {
 
 const handleNavigateToHistory = () => {
   emit("navigateToHistory");
-};
-
-const handleNavigateToPatchnight = () => {
-  emit("navigateToPatchnight");
 };
 </script>
 

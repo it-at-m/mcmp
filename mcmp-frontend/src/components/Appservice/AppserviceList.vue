@@ -116,6 +116,7 @@ const props = withDefaults(
   }>(),
   {
     selected: () => [],
+    initialSearch: undefined,
   }
 );
 

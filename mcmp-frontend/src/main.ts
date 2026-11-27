@@ -23,7 +23,7 @@ async function loadConfig() {
       return await response.json();
     }
   } catch {
-    console.warn("config.json nicht gefunden, nutze .env Fallback");
+    console.debug("config.json nicht gefunden, nutze .env Fallback");
   }
 
   // Fallback auf VITE_ Umgebungsvariablen (für lokale Entwicklung)

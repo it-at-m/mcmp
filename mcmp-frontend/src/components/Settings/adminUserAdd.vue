@@ -62,8 +62,10 @@ const toAddUser = ref<AdminUser>();
 function saveEdit() {
   form.value?.validate().then((validation: { valid: boolean }) => {
     if (validation.valid) {
-      toAddUser.value.admin = true;
-      emit("toAdd", toAddUser.value);
+      const user = toAddUser.value;
+      if (!user) return;
+      user.admin = true;
+      emit("toAdd", user);
       emit("addDialog", false);
       form.value?.resetValidation();
     }

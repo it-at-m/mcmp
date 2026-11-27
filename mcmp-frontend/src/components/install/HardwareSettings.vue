@@ -36,23 +36,15 @@
       <v-col
         v-if="
           instlServerDetails.osType == 'Windows' &&
-          instlServerDetails.categoryType == 'Standard'
+          instlServerDetails.categoryType == 'Standard' &&
+          windowsStandardDisk
         "
       >
         <disk-size-input
-          v-model="
-            instlServerDetails.disk[OsType.Windows][categoryType.Standard][0]
-              .size
-          "
+          v-model="windowsStandardDisk.size"
           title="Größe Festplatte C:\"
-          :min-size-in-g-b="
-            instlServerDetails.disk[OsType.Windows][categoryType.Standard][0]
-              .min_size
-          "
-          :max-size-in-g-b="
-            instlServerDetails.disk[OsType.Windows][categoryType.Standard][0]
-              .max_size
-          "
+          :min-size-in-g-b="windowsStandardDisk.min_size"
+          :max-size-in-g-b="windowsStandardDisk.max_size"
         />
       </v-col>
       <v-col
@@ -136,11 +128,16 @@ import installServerDetails, {
   OsType,
 } from "@/types/installServerDetails";
 
-const props = defineProps<{
-  instlServerDetails: installServerDetails;
-}>();
+const instlServerDetails = defineModel<installServerDetails>(
+  "instlServerDetails",
+  { required: true }
+);
+const windowsStandardDisk = computed(
+  () =>
+    instlServerDetails.value.disk[OsType.Windows]?.[categoryType.Standard]?.[0]
+);
 const minMemory = computed(() =>
-  ["OracleDB", "MSSQL"].includes(props.instlServerDetails.category?.label ?? "")
+  ["OracleDB", "MSSQL"].includes(instlServerDetails.value.category?.label ?? "")
     ? 6
     : 4
 );
@@ -148,8 +145,8 @@ const minMemory = computed(() =>
 watch(
   minMemory,
   (min) => {
-    if (props.instlServerDetails.memory < min) {
-      props.instlServerDetails.memory = min;
+    if (instlServerDetails.value.memory < min) {
+      instlServerDetails.value.memory = min;
     }
   },
   { immediate: true }
@@ -158,12 +155,13 @@ const loading = ref(false);
 const networkgroups = ref<NetworkGroup[]>([]);
 
 function getNetworkGroups() {
-  if (props.instlServerDetails.appservice?.id) {
+  const appserviceId = instlServerDetails.value.appservice?.id;
+  if (appserviceId) {
     networkService
       .getFilteredNetworkGroups(
         loading,
-        props.instlServerDetails.appservice?.id!,
-        props.instlServerDetails.isDatabase()!
+        appserviceId,
+        instlServerDetails.value.isDatabase()
       )
       .then((networkGroups) => {
         networkgroups.value = networkGroups;
@@ -177,14 +175,14 @@ onMounted(async () => {
 
 watch(
   () => [
-    props.instlServerDetails.category,
-    props.instlServerDetails.appservice,
-    props.instlServerDetails.applications.length,
+    instlServerDetails.value.category,
+    instlServerDetails.value.appservice,
+    instlServerDetails.value.applications.length,
   ],
   ([category, applicationServiceClass, applicationCount]) => {
     if ((category || applicationCount) && applicationServiceClass) {
       getNetworkGroups();
-      props.instlServerDetails.networkGroup = null;
+      instlServerDetails.value.networkGroup = null;
     }
   }
 );

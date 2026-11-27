@@ -17,6 +17,8 @@ export enum OsType {
 export enum OsVersion {
   RHEL9 = "RHEL 9",
   RHEL10 = "RHEL 10",
+  ALMA9 = "ALMA 9",
+  ALMA10 = "ALMA 10",
   Windows2025 = "Windows Server 2025",
   Windows2022 = "Windows Server 2022",
 }
@@ -27,7 +29,12 @@ export interface Os {
 }
 
 export const OperatingSystem: Os = {
-  Linux: [OsVersion.RHEL9, OsVersion.RHEL10],
+  Linux: [
+    OsVersion.RHEL9,
+    OsVersion.RHEL10,
+    // OsVersion.ALMA9,
+    // OsVersion.ALMA10,
+  ],
   Windows: [OsVersion.Windows2025, OsVersion.Windows2022],
 };
 
@@ -49,7 +56,7 @@ export interface DiskEntry {
 export default class installServerDetails {
   constructor(
     // general
-    public appservice: AppserviceList | null,
+    public appservice: Pick<AppserviceList, "id" | "name"> | null,
     public osType: OsType | null,
     public osVersion: OsVersion | null,
     public categoryType: categoryType | null,

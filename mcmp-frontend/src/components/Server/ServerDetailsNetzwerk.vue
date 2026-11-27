@@ -75,7 +75,7 @@ import { mdiCheckCircle, mdiCloseCircle } from "@mdi/js";
 
 import CommonCard from "@/components/common/CommonCard.vue";
 
-const props = defineProps<{
+defineProps<{
   nics: Nic[];
   loading: boolean;
   lbMemberships: LbServerMembership[];

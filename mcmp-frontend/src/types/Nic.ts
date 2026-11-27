@@ -6,7 +6,7 @@ export default interface Nic {
   ips: {
     ip: string;
     ipType: string;
-  };
+  }[];
   vnicKey: number;
   unitNumber: number | null;
   device: string;

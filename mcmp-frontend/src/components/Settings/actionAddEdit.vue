@@ -310,9 +310,9 @@
               location="left"
               text="Extra Vars die fest definiert sind."
             >
-              <template #activator="{ props }">
+              <template #activator="{ props: activatorProps }">
                 <v-icon
-                  v-bind="props"
+                  v-bind="activatorProps"
                   :icon="mdiInformation"
                   size="large"
                   aria-label="Extra Vars Infos Link öffnen"
@@ -484,9 +484,9 @@
                   location="left"
                   text="Minimal geschätzte Laufzeit des AWX-Jobs in Minuten. Die erste Statusabfrage wird erst nach Ablauf der geschätzten Laufzeit ausgeführt."
                 >
-                  <template #activator="{ props }">
+                  <template #activator="{ props: activatorProps }">
                     <v-icon
-                      v-bind="props"
+                      v-bind="activatorProps"
                       :icon="mdiInformation"
                       size="large"
                     />

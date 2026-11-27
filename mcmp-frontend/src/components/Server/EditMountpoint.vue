@@ -183,11 +183,7 @@
           <v-slider
             v-model="newCapacityGB"
             label="Größe"
-            :min="
-              Math.ceil(
-                formatter.calculateBtoGB(mountPoint?.capacityInBytes ?? 0)
-              )
-            "
+            :min="sliderMinGB"
             :max="3000"
             step="1"
           />
@@ -200,31 +196,8 @@
             v-model="newCapacityGB"
             label="Größe in GB"
             type="number"
-            :min="
-              Math.ceil(
-                formatter.calculateBtoGB(
-                  mountPoint?.capacityInBytes ?? 1024 ** 3
-                )
-              )
-            "
-            :rules="[
-              rules.integerRule('Größe muss eine ganze Zahl sein.'),
-              (v) => v >= 1 || 'Neue Größe darf nicht kleiner 1 GB sein.',
-              (v) =>
-                v >
-                  Math.ceil(
-                    formatter.calculateBtoGB(
-                      mountPoint?.capacityInBytes ?? 1024 ** 3
-                    )
-                  ) ||
-                'Der neue Wert darf nicht kleiner oder gleich der alten Größe sein',
-              () =>
-                isLinux ||
-                newMountpoint ||
-                (mountPoint != null &&
-                  formatter.calculateBtoGB(mountPoint.freeSpaceInBytes) >= 2) ||
-                'Für eine Speichererweiterung müssen min. 2 GB freier Speicherplatz verfügbar sein',
-            ]"
+            :min="fieldMinGB"
+            :rules="capacityRules"
           />
         </v-col>
         <v-col
@@ -236,15 +209,7 @@
             v-model="newVolumeGroup"
             clearable
             maxlength="50"
-            :rules="[
-              rules.notEmptyRule(
-                'Es muss eine Volume Gruppe angegeben werden.'
-              ),
-              rules.regexRule(
-                /^[a-z0-9]+$/,
-                'Pfad darf nur aus Kleinbuchstaben und Zahlen bestehen.'
-              ),
-            ]"
+            :rules="volumeGroupRules"
           />
         </v-col>
       </v-row>
@@ -300,6 +265,38 @@ const isLinux = computed(
     false
 );
 
+const sliderMinGB = computed(() =>
+  Math.ceil(formatter.calculateBtoGB(mountPoint.value?.capacityInBytes ?? 0))
+);
+
+const fieldMinGB = computed(() =>
+  Math.ceil(
+    formatter.calculateBtoGB(mountPoint.value?.capacityInBytes ?? 1024 ** 3)
+  )
+);
+
+const capacityRules = computed(() => [
+  rules.integerRule("Größe muss eine ganze Zahl sein."),
+  (v: number) => v >= 1 || "Neue Größe darf nicht kleiner 1 GB sein.",
+  (v: number) =>
+    v > fieldMinGB.value ||
+    "Der neue Wert darf nicht kleiner oder gleich der alten Größe sein",
+  () =>
+    isLinux.value ||
+    props.newMountpoint ||
+    (mountPoint.value != null &&
+      formatter.calculateBtoGB(mountPoint.value.freeSpaceInBytes) >= 2) ||
+    "Für eine Speichererweiterung müssen min. 2 GB freier Speicherplatz verfügbar sein",
+]);
+
+const volumeGroupRules = [
+  rules.notEmptyRule("Es muss eine Volume Gruppe angegeben werden."),
+  rules.regexRule(
+    /^[a-z0-9]+$/,
+    "Pfad darf nur aus Kleinbuchstaben und Zahlen bestehen."
+  ),
+];
+
 // Dialog-Status überwachen
 watch(dialog, (newValue) => {
   if (newValue) {
@@ -338,8 +335,10 @@ function save() {
           newCapacityGB.value,
           newVolumeGroup.value
         );
-      } else {
+      } else if (mountPoint.value) {
         emit("save", mountPoint.value, newCapacityGB.value, "");
+      } else {
+        return;
       }
       dialog.value = false;
       resetForm();

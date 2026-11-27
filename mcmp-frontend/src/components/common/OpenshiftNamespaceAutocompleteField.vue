@@ -53,7 +53,9 @@ const props = withDefaults(defineProps<Props>(), {
   loading: false,
 });
 
-const items = ref<(OpenshiftNamespaceListItem & { displayName: string })[]>([]);
+const items = ref<(OpenshiftNamespaceListItem & { displayName?: string })[]>(
+  []
+);
 const isLoading = ref(false);
 const loadingRef = ref(false);
 const searchInput = ref("");

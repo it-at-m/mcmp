@@ -3,7 +3,7 @@
     :text="status ?? ''"
     :disabled="hideTooltip"
   >
-    <template #activator="{ props }">
+    <template #activator="{ props: activatorProps }">
       <div
         :class="[
           'status-icon',
@@ -12,7 +12,7 @@
         ]"
       >
         <v-icon
-          v-bind="props"
+          v-bind="activatorProps"
           :icon="icon"
           :color="color"
           :class="backgroundClass"

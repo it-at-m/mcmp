@@ -616,7 +616,7 @@ const props = defineProps<{
   selectedServer: Server;
 }>();
 
-const emit = defineEmits<{
+defineEmits<{
   changed: [];
 }>();
 
@@ -632,7 +632,7 @@ function isTrue(val: unknown): boolean {
 // Liest Middleware und Datenbanken aus (flache String-Liste aller aktiven Komponenten)
 const installedServices = computed<string[]>(() => {
   const services: string[] = [];
-  const server = props.selectedServer as Record<string, any>;
+  const server = props.selectedServer as unknown as Record<string, unknown>;
 
   // --- Middleware ---
   if (

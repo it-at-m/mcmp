@@ -43,9 +43,9 @@
       location="bottom"
       :close-on-content-click="true"
     >
-      <template v-slot:activator="{ props }">
+      <template #activator="{ props: activatorProps }">
         <v-text-field
-          v-bind="props"
+          v-bind="activatorProps"
           :model-value="selectedPageTitle"
           variant="outlined"
           density="comfortable"
@@ -144,7 +144,7 @@ watch(themeName, (newTheme) => {
   localStorage.setItem("theme", newTheme);
 
   userService.setDarkMode(newTheme === "dark", themeLoading).catch((e) => {
-    console.error("Error saving dark mode to DB", e);
+    console.debug("Error saving dark mode to DB", e);
   });
 });
 
@@ -201,7 +201,7 @@ const selectLoginPage = (newPath: string) => {
       userStore.setLoginPage(newPath);
     })
     .catch((e) => {
-      console.error("Error saving login_page to DB", e);
+      console.debug("Error saving login_page to DB", e);
     });
 };
 </script>

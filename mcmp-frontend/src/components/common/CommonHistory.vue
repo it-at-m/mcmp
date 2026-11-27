@@ -483,9 +483,9 @@
                             v-if="node.jobIsRootCause"
                             text="Root Cause"
                           >
-                            <template #activator="{ props }">
+                            <template #activator="{ props: activatorProps }">
                               <v-icon
-                                v-bind="props"
+                                v-bind="activatorProps"
                                 :icon="mdiCheckCircle"
                                 color="error"
                                 class="ml-1"
@@ -502,8 +502,8 @@
                           "
                           :text="node.jobReturnMessage"
                         >
-                          <template #activator="{ props }">
-                            <span v-bind="props">{{
+                          <template #activator="{ props: activatorProps }">
+                            <span v-bind="activatorProps">{{
                               truncateString(node.jobReturnMessage, 10)
                             }}</span>
                           </template>
@@ -518,8 +518,8 @@
                           "
                           :text="node.jobErrorMessage"
                         >
-                          <template #activator="{ props }">
-                            <span v-bind="props">{{
+                          <template #activator="{ props: activatorProps }">
+                            <span v-bind="activatorProps">{{
                               truncateString(node.jobErrorMessage, 10)
                             }}</span>
                           </template>
@@ -540,9 +540,9 @@
                           v-if="node.jobReturnCompleted !== null"
                           :text="node.jobReturnCompleted ? 'true' : 'false'"
                         >
-                          <template #activator="{ props }">
+                          <template #activator="{ props: activatorProps }">
                             <v-icon
-                              v-bind="props"
+                              v-bind="activatorProps"
                               :icon="
                                 node.jobReturnCompleted
                                   ? mdiCheckCircle
@@ -839,9 +839,9 @@
           <v-tooltip
             :text="item.awxTemplateType === 'workflow' ? 'Workflow' : 'Job'"
           >
-            <template #activator="{ props }">
+            <template #activator="{ props: activatorProps }">
               <v-icon
-                v-bind="props"
+                v-bind="activatorProps"
                 size="x-small"
                 class="ml-1"
                 :icon="item.awxTemplateType === 'workflow' ? mdiCogs : mdiCog"
@@ -907,6 +907,7 @@ const props = withDefaults(
     itemsPerPageOptions: () => [10, 25, 50, 100],
     showRefresh: false, // Neu
     refreshIcon: mdiRefresh, // Neu
+    title: undefined,
   }
 );
 

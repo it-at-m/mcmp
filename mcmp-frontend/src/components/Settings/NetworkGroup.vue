@@ -26,7 +26,7 @@
       no-data-text="Keine Netzwerkgruppen gefunden"
       :sort-by="sortBy"
       show-expand
-      :expanded="expanded"
+      :expanded="expandedRows"
     >
       <template #item="{ item }">
         <tr
@@ -304,6 +304,7 @@ const networkFields = [
 ];
 
 const expanded = ref<number[]>([]);
+const expandedRows = computed(() => expanded.value as unknown as string[]);
 
 function toggleExpand(id: number) {
   const idx = expanded.value.indexOf(id);
@@ -350,11 +351,10 @@ function networksForGroup(groupId: number) {
 
 function handleDrop(groupId: number | null, event: Event) {
   event.preventDefault();
-  if (draggedNetwork.value) {
+  const dragged = draggedNetwork.value;
+  if (dragged) {
     const sourceGroup =
-      networkGroups.value?.find(
-        (g) => g.id === draggedNetwork.value!.networkGroupId
-      ) ?? null;
+      networkGroups.value?.find((g) => g.id === dragged.networkGroupId) ?? null;
     const targetGroup =
       networkGroups.value?.find((g) => g.id === groupId) ?? null;
 
@@ -375,8 +375,9 @@ function assingAppservicesToNetworkgroup(
   networkGroup: NetworkGroup,
   appservices: number[]
 ) {
+  if (networkGroup.id == null) return;
   networkService
-    .assignAppservicesToGroup(loading, networkGroup.id!, appservices)
+    .assignAppservicesToGroup(loading, networkGroup.id, appservices)
     .then(() => {
       getNetworkGroups();
     });

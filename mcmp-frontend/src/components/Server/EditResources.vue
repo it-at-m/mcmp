@@ -81,11 +81,12 @@
         <v-col
           v-if="
             ram < formatter.calculateMBtoGB(server.memoryMb) ||
-            ram > formatter.calculateMBtoGB(server.hotPlugMemoryLimit) ||
+            (server.hotPlugMemoryLimit != null &&
+              ram > formatter.calculateMBtoGB(server.hotPlugMemoryLimit)) ||
             (ram > formatter.calculateMBtoGB(server.memoryMb) &&
               !server.memoryHotAddEnabled) ||
             cpus < server.numCpu ||
-            (cpus > server.numCpu && !server.cpuHotAddEnabled)
+            cpuIncreaseNeedsDowntime
           "
           cols="12"
         >
@@ -280,6 +281,14 @@ const form = ref<HTMLFormElement>();
 const dialog = ref(false);
 const cpus = ref<number>(
   props.server.numCpu != undefined ? props.server.numCpu : 1
+);
+// Proxmox can only hot-add CPUs up to the cores of one socket
+const cpuIncreaseNeedsDowntime = computed(
+  () =>
+    cpus.value > props.server.numCpu &&
+    (!props.server.cpuHotAddEnabled ||
+      (props.server.cloud?.cloudType == "PROXMOX" &&
+        cpus.value > props.server.numCoresPerSocket))
 );
 const currentRam = formatter.calculateMBtoGB(props.server.memoryMb);
 const ram = ref<number>(

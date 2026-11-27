@@ -15,13 +15,12 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 import de.muenchen.mcmp.config.InfobloxProperties;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Component
 @RequiredArgsConstructor
@@ -62,16 +61,45 @@ public class EaiRouteBuilder extends RouteBuilder {
     public static final String DIRECT_GET_JWT_TOKEN = "direct:get-jwt-token";
     public static final String DIRECT_BACKUP_JSON = "direct:backup-json";
     public static final String ID_ROUTE_BACKUP_JSON = "ID_ROUTE_BACKUP_JSON";
+    public static final String DIRECT_SHUTDOWN = "direct:shutdown";
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final ApplicationContext applicationContext;
     private final Map<Integer, String> cidrToNetmaskCache = new ConcurrentHashMap<>();
+    private final AtomicBoolean shutdownStarted = new AtomicBoolean(false);
 
     @Override
     public void configure() {
         onException(Exception.class)
                 .handled(true)
                 .log(LoggingLevel.ERROR, "Fehler bei der Verarbeitung: ${exception.message}");
+
+        // Dedicated shutdown route: guarantees that the JVM terminates and releases the HTTP port,
+        // even when the processing route fails or is aborted.
+        from(DIRECT_SHUTDOWN)
+                .routeId("shutdown-route")
+                .log(LoggingLevel.INFO, "Infoblox processing finished - shutting down application")
+                .process(exchange -> {
+                    // Only start the shutdown once, even if several routes trigger it.
+                    if (!shutdownStarted.compareAndSet(false, true)) {
+                        return;
+                    }
+                    // Run asynchronously so the current exchange can complete first.
+                    final Thread shutdownThread = new Thread(() -> {
+                        try {
+                            Thread.sleep(2000);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                        }
+                        // Closing the Spring context stops Tomcat and releases port 8090.
+                        final int exitCode = SpringApplication.exit(applicationContext, () -> 0);
+                        log.info("Application context closed with exit code {}. Terminating JVM.", exitCode);
+                        // Force JVM termination even if non-daemon threads are still alive.
+                        System.exit(exitCode);
+                    }, "eai-shutdown-thread");
+                    shutdownThread.setDaemon(false);
+                    shutdownThread.start();
+                });
 
         // Backup-Route für JSON-Daten
         from(DIRECT_BACKUP_JSON)
@@ -101,22 +129,22 @@ public class EaiRouteBuilder extends RouteBuilder {
                 .to("http://dummy?throwExceptionOnFailure=false")
                 .log(LoggingLevel.DEBUG, "HTTP Response Code: ${header.CamelHttpResponseCode}");
 
-        // Rest Ihrer bestehenden Routen...
+        // The timer fires exactly once. onCompletion makes sure the shutdown route runs
+        // both on success and on failure, so the port is always released.
         from("timer://infobloxTimer?delay=5000&repeatCount=1")
                 .routeId("infoblox-timer-route")
+                .onCompletion()
+                .to(DIRECT_SHUTDOWN)
+                .end()
                 .log(LoggingLevel.INFO, "Timer ausgelöst - starte Infoblox Verarbeitung")
-                .to(DIRECT_INFOBLOX_ROUTE)
-                .process(exchange -> {
-                    log.info("Infoblox Verarbeitung abgeschlossen - beende Anwendung");
-                    new Thread(() -> {
-                        try {
-                            Thread.sleep(20000);
-                            SpringApplication.exit(applicationContext, () -> 0);
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                        }
-                    }).start();
-                });
+                .to(DIRECT_INFOBLOX_ROUTE);
+
+        // Safety net: force shutdown if processing hangs (e.g. blocked HTTP call).
+        from("timer://shutdownWatchdog?delay=300000&repeatCount=1")
+                .routeId("shutdown-watchdog-route")
+                .log(LoggingLevel.WARN, "Maximum runtime exceeded - forcing shutdown")
+                .to(DIRECT_SHUTDOWN);
+
 
         from(DIRECT_ROUTE)
                 .routeId("eai-route")
@@ -273,7 +301,8 @@ public class EaiRouteBuilder extends RouteBuilder {
             log.info("Antwort erhalten: {} Zeichen", response != null ? response.length() : 0);
             // Prüfe auf erfolgreichen HTTP Status Code
             if (responseCode == null || responseCode < 200 || responseCode >= 300) {
-                log.error("HTTP Fehler für Infoblox API Call. Response Code: {}", responseCode);
+                // Infoblox WAPI returns a descriptive JSON error body; log it so the root cause is visible
+                log.error("HTTP error for Infoblox API call (status {}). Response body: {}", responseCode, response);
                 return null;
             }
             return response;
